@@ -13,6 +13,9 @@ export default {
           600: '#169d92',
         },
       },
+      fontFamily: {
+        jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
+      },
     },
   },
   plugins: [],

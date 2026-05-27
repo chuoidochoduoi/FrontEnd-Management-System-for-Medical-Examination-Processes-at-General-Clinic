@@ -5,6 +5,7 @@ import PatientProfilePage from './pages/PatientProfilePage';
 import WaitingRoomPage from './pages/WaitingRoomPage';
 import ExaminationPage from './pages/ExaminationPage';
 import ReceptionPage from './pages/ReceptionPage';
+import DispatchDashboard from './pages/PatientDispatchPage';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
       <Route path="/waiting-room" element={<WaitingRoomPage />} />
       <Route path="/examination" element={<ExaminationPage />} />
       <Route path="/receptionist" element={<ReceptionPage />} />
+      <Route path="/dispatch" element={<DispatchDashboard />} />
     </Routes>
   )
 }

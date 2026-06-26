@@ -17,6 +17,7 @@ const LoginForm = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [remember, setRemember] = useState(false);
     const [apiError, setApiError] = useState('');
+    const navigate = useNavigate();
 
     const fields = LOGIN_PAGE.fields;
     const initialValues = fields.reduce((acc, f) => ({ ...acc, [f.name]: '' }), {});
@@ -33,24 +34,26 @@ const LoginForm = () => {
                     remember,
                 });
 
+                const userData = response.data || response;
+
                 localStorage.setItem(
                     'token',
-                    response.token
+                    userData.token
                 );
 
                 localStorage.setItem(
                     'user',
-                    JSON.stringify(response.user)
+                    JSON.stringify(userData)
                 );
 
-                switch (response.user.role) {
+                switch (userData.role?.toLowerCase()) {
 
                     case 'admin':
                         navigate('/admin');
                         break;
 
                     case 'doctor':
-                        navigate('/doctor');
+                        navigate('/waiting-room');
                         break;
 
                     case 'lab':
@@ -58,7 +61,7 @@ const LoginForm = () => {
                         break;
 
                     case 'receptionist':
-                        navigate('/receptionist');
+                        navigate('/PatientProfilePage');
                         break;
 
                     default:

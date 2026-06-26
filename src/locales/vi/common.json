@@ -1,0 +1,16 @@
+{
+  "nav": {
+    "appointment": "Book Appointment",
+    "doctors": "Our Doctors",
+    "pricing": "Pricing",
+    "guide": "Patient Guide",
+    "contact": "Contact",
+    "login": "Login",
+    "register": "Register"
+  },
+  "loading": "Processing...",
+  "error": "An error occurred",
+  "save": "Save",
+  "cancel": "Cancel",
+  "confirm": "Confirm"
+}

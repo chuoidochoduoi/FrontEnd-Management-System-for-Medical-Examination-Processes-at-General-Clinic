@@ -1,0 +1,99 @@
+{
+  "sidebar": {
+    "logo": "Logo",
+    "subtitle": "Hệ thống Y tế v2.1",
+    "checkIn": "Tiếp đón & Check-in",
+    "createTicket": "Tạo phiếu khám",
+    "manageRecords": "Quản lý hồ sơ",
+    "settings": "Settings",
+    "support": "Support"
+  },
+  "header": {
+    "queuSummary": "Quầy · Tiếp đón · Tổng hợp"
+  },
+  "checkIn": {
+    "title": "Tiếp nhận Bệnh nhân",
+    "search": "Thông tin tìm kiếm",
+    "searchPlaceholder": "Tên khách hàng, SĐT hoặc Mã hẹn...",
+    "viewDate": "Xem lịch hẹn ngày",
+    "timeSlot": "Khung buổi",
+    "all": "Tất cả",
+    "morning": "Buổi sáng",
+    "afternoon": "Buổi chiều",
+    "filter": "Lọc lịch",
+    "createTicket": "Tạo phiếu khám",
+    "table": {
+      "timeSlot": "Khung ca",
+      "code": "Mã lịch đặt",
+      "patient": "Thông tin khách hàng",
+      "specialty": "Chuyên khoa chỉ định",
+      "status": "Trạng thái",
+      "actions": "Thao tác xử lý quầy"
+    },
+    "actions": {
+      "viewDetail": "Xem chi tiết",
+      "printTicket": "In phiếu khám"
+    },
+    "status": {
+      "waiting": "Chờ Check-in",
+      "pending": "pending",
+      "done": "Hoàn thành"
+    },
+    "slots": {
+      "morning": "SÁNG",
+      "afternoon": "CHIỀU"
+    },
+    "dob": "Năm sinh",
+    "phone": "SĐT",
+    "loading": "Đang tải...",
+    "noData": "Không có lịch hẹn nào."
+  },
+  "appointmentDetail": {
+    "title": "thông tin lịch hẹn",
+    "subtitle": "Thay đổi thông tin hành chính hoặc điều phối lại dịch vụ/khung giờ cho khách hàng.",
+    "backToList": "Quay lại danh sách",
+    "loading": "Đang tải...",
+    "step1": {
+      "heading": "Thông tin khách hàng",
+      "fullName": "Họ và tên",
+      "phone": "Số điện thoại",
+      "age": "Tuổi",
+      "gender": "Giới tính",
+      "email": "Email (Nếu có)",
+      "emailPlaceholder": "Không áp dụng",
+      "insurance": "Bảo hiểm y tế (nếu có)",
+      "insuranceExpiry": "Hạn sử dụng (nếu có)",
+      "genderOptions": {
+        "male": "Nam",
+        "female": "Nữ",
+        "other": "Khác"
+      }
+    },
+    "step2": {
+      "heading": "Dịch vụ y tế",
+      "service": "Chọn loại dịch vụ cần đăng ký",
+      "reason": "Lý do đến khám / Triệu chứng"
+    },
+    "step3": {
+      "heading": "Thời gian khám",
+      "chooseDate": "Chọn ngày khám",
+      "timeSlot": "Khung buổi",
+      "morning": "Buổi sáng",
+      "morningTime": "07:00 – 10:00",
+      "afternoon": "Buổi chiều",
+      "afternoonTime": "13:00 – 17:00"
+    },
+    "errors": {
+      "loadFailed": "Không thể tải thông tin ca hẹn.",
+      "saveFailed": "Lưu thất bại. Vui lòng thử lại.",
+      "checkInFailed": "Check-in thất bại. Vui lòng thử lại.",
+      "unknown": "Có lỗi xảy ra."
+    },
+    "actions": {
+      "save": "Lưu cập nhật hẹn",
+      "saving": "Đang lưu...",
+      "checkIn": "Check in",
+      "checkingIn": "Đang xử lý..."
+    }
+  }
+}

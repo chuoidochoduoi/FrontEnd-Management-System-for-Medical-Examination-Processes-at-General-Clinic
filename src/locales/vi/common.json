@@ -3,10 +3,16 @@
     "appointment": "Book Appointment",
     "doctors": "Our Doctors",
     "pricing": "Pricing",
-    "guide": "Patient Guide",
+    "guide": "Customer Guide",
     "contact": "Contact",
     "login": "Login",
-    "register": "Register"
+    "register": "Register",
+    "profile":        "Trang cá nhân",
+    "myAppointments": "Lịch khám của tôi",
+    "medicalRecord":  "Hồ sơ bệnh án",
+    "settings":       "Cài đặt",
+    "logout":         "Đăng xuất",
+    "loggedInAs":     "Đăng nhập với vai trò"
   },
   "loading": "Processing...",
   "error": "An error occurred",

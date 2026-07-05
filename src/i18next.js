@@ -6,10 +6,13 @@ import viCommon from './locales/vi/common.json';
 import viAuth   from './locales/vi/auth.json';
 import enCommon from './locales/en/common.json';
 import enAuth   from './locales/en/auth.json';
+import viAppointment from './locales/vi/appointment.json';
+import viReceptionist from './locales/vi/receptionist.json';
+import viCustomer from './locales/vi/customer.json';
 
 // Thêm page mới thì import thêm ở đây, ví dụ:
-// import viPatient from '../locales/vi/patient.json';
-// import enPatient from '../locales/en/patient.json';
+// import viCustomer from '../locales/vi/customer.json';
+// import enCustomer from '../locales/en/customer.json';
 
 i18n
     .use(LanguageDetector)
@@ -21,7 +24,9 @@ i18n
             vi: {
                 common: viCommon,
                 auth:   viAuth,
-                // patient: viPatient,
+                appointment: viAppointment,
+                receptionist: viReceptionist,
+                customer: viCustomer
             },
             en: {
                 common: enCommon,

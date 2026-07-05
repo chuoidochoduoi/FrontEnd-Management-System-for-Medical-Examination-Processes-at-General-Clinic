@@ -12,7 +12,7 @@ const Hero = () => {
         <span className="text-[#1ab2a6]">for General Clinics</span>
       </h1>
       <p className="text-lg text-slate-600 max-w-3xl mx-auto mb-10 leading-relaxed">
-        The system supports patient registration, appointment scheduling, medical examination, laboratory requests, prescription management, pharmacy operations and billing in general clinics.
+        The system supports customer registration, appointment scheduling, medical examination, laboratory requests, prescription management, pharmacy operations and billing in general clinics.
       </p>
     </section>
   );

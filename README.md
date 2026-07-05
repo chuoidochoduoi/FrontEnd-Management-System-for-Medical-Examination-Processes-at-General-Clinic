@@ -4,7 +4,7 @@ A modern React + Tailwind CSS landing page for Hospl, an AI-powered clinic manag
 
 ## Features
 
-- **AI-powered clinic management** - Automate appointment booking, patient communication, and payments
+- **AI-powered clinic management** - Automate appointment booking, customer communication, and payments
 - **Responsive design** - Works seamlessly on desktop, tablet, and mobile devices
 - **Modern UI** - Built with React and Tailwind CSS for a professional look
 - **Fast performance** - Optimized with Vite for quick development and production builds

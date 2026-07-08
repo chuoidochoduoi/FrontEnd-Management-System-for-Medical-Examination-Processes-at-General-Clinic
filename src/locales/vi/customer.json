@@ -1,0 +1,86 @@
+{
+  "sidebar": {
+    "logo": "MediFlow",
+    "subtitle": "Cổng thông tin khách hàng",
+    "home": "Trang chủ",
+    "appointment": "Đặt lịch hẹn khám",
+    "visitHistory": "Lịch sử khám bệnh",
+    "testResults": "Kết quả xét nghiệm",
+    "paymentHistory": "Lịch sử thanh toán",
+    "profile": "Hồ sơ",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất"
+  },
+  "header": {
+    "id": "ID"
+  },
+  "profile": {
+    "pageTitle": "Hồ sơ cá nhân",
+    "customerCode": "Mã KH",
+    "bloodType": "Nhóm máu",
+    "insurance": "Bảo hiểm",
+    "edit": "Chỉnh sửa",
+    "save": "Lưu",
+    "saving": "Đang lưu...",
+    "cancel": "Huỷ",
+    "personalInfo": {
+      "title": "Thông tin cá nhân",
+      "fullName": "Họ và tên",
+      "dob": "Ngày sinh",
+      "gender": "Giới tính",
+      "phone": "Số điện thoại",
+      "email": "Địa chỉ Email",
+      "address": "Địa chỉ thường trú",
+      "insuranceId": "Bảo hiểm y tế",
+      "age": "tuổi",
+      "genderOptions": {
+        "male": "Nam",
+        "female": "Nữ",
+        "other": "Khác"
+      },
+      "bloodTypeOptions": {
+        "A": "A",
+        "B": "B",
+        "AB": "AB",
+        "O": "O",
+        "A_POSITIVE": "A+",
+        "A_NEGATIVE": "A-",
+        "B_POSITIVE": "B+",
+        "B_NEGATIVE": "B-",
+        "AB_POSITIVE": "AB+",
+        "AB_NEGATIVE": "AB-",
+        "O_POSITIVE": "O+",
+        "O_NEGATIVE": "O-"
+      }
+    },
+    "medicalInfo": {
+      "title": "Thông tin y tế cơ bản",
+      "height": "Chiều cao",
+      "heightUnit": "cm",
+      "weight": "Cân nặng",
+      "weightUnit": "kg",
+      "bmi": "Chỉ số BMI",
+      "allergies": "Tiền sử dị ứng thuộc"
+    },
+    "testResults": {
+      "title": "Kết quả xét nghiệm mới nhất",
+      "viewAll": "Xem tất cả kết quả"
+    },
+    "appointments": {
+      "title": "Các cuộc hẹn khám gần đây",
+      "viewAll": "Xem tất cả",
+      "date": "Ngày khám",
+      "doctor": "Bác sĩ phụ trách",
+      "specialty": "Chuyên khoa",
+      "status": "Trạng thái",
+      "statusDone": "HOÀN THÀNH",
+      "statusUpcoming": "SẮP DIỄN RA"
+    },
+    "loading": "Đang tải hồ sơ...",
+    "errors": {
+      "loadFailed": "Không thể tải hồ sơ khách hàng.",
+      "saveFailed": "Lưu thất bại. Vui lòng thử lại.",
+      "unknown": "Có lỗi xảy ra."
+    }
+  }
+}

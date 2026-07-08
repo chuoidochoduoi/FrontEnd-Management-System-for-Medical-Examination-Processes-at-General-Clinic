@@ -9,6 +9,8 @@ import enAuth   from './locales/en/auth.json';
 import viAppointment from './locales/vi/appointment.json';
 import viReceptionist from './locales/vi/receptionist.json';
 import viCustomer from './locales/vi/customer.json';
+import viCreateTicketConfirmModal from './locales/vi/createTicketConfirmModal.json';
+import viCashier from './locales/vi/cashier.json';
 
 // Thêm page mới thì import thêm ở đây, ví dụ:
 // import viCustomer from '../locales/vi/customer.json';
@@ -26,7 +28,9 @@ i18n
                 auth:   viAuth,
                 appointment: viAppointment,
                 receptionist: viReceptionist,
-                customer: viCustomer
+                customer: viCustomer,
+                createTicketConfirmModal: viCreateTicketConfirmModal,
+                cashier: viCashier
             },
             en: {
                 common: enCommon,

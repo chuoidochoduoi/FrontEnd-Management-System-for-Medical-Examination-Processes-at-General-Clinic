@@ -9,6 +9,8 @@ import CheckInPage from '@/pages/receptionist/CheckInPage';
 import AppointmentDetailPage from '@/pages/receptionist/AppointmentDetailPage';
 import ProfilePage from '@/pages/customer/ProfilePage';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import CreateTicketPage from '@/pages/receptionist/CreateTicketPage';
+import InvoiceListPage from '@/pages/cashier/InvoiceListPage';
 
 import {ROUTES} from "@/constants/routes.js";
 
@@ -32,6 +34,14 @@ function App() {
                 <AppointmentDetailPage />
             </ProtectedRoute>
         } />
+        <Route path={ROUTES.RECEPTIONIST_CREATE_TICKET} element={
+            <ProtectedRoute allowedRoles={['RECEPTIONIST', 'NURSE', 'DOCTOR', 'ADMIN']}>
+                <CreateTicketPage />
+            </ProtectedRoute>
+
+        } />
+
+        <Route path={ROUTES.CASHIER_INVOICES} element={<InvoiceListPage />} />
 
     </Routes>
   )

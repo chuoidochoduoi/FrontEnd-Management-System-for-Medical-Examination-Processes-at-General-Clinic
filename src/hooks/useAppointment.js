@@ -19,6 +19,13 @@ const toTimeSlotEnum = (timeSlot) => {
     return timeSlot.toUpperCase();
 };
 
+// Helper: chuyển đổi gender sang format Enum backend (MALE, FEMALE, OTHER)
+const toGenderEnum = (gender) => {
+    if (!gender) return null;
+    const genderMap = { male: 'MALE', female: 'FEMALE', other: 'OTHER' };
+    return genderMap[gender.toLowerCase()] || gender.toUpperCase();
+};
+
 export function useAppointment() {
     const [services, setServices] = useState([]);
     const [loadingServices, setLoadingServices] = useState(false);
@@ -89,7 +96,7 @@ export function useAppointment() {
                       guestPhone: formData.phone,
                       guestAddress: formData.address || null,
                       guestAge: Number(formData.age),
-                      guestGender: formData.gender,
+                      guestGender: toGenderEnum(formData.gender),
                       scheduledAt,
                       timeSlot: timeSlotEnum,
                       serviceIds: formData.selectedServices.map(s => s.id),

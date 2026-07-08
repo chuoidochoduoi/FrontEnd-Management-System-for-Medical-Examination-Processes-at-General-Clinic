@@ -8,9 +8,18 @@ import { useCheckIn } from '@/hooks/useCheckIn';
 import { ROUTES } from '@/constants/routes';
 
 const STATUS_STYLE = {
-    'Chờ Check-in': 'bg-orange-100 text-orange-600',
+    // Status values are mapped to lowercase in hook
     'pending':       'bg-green-100 text-green-700',
-    'Hoàn thành':   'bg-gray-100 text-gray-500',
+    'confirmed':     'bg-blue-100 text-blue-700',
+    'cancelled':     'bg-red-100 text-red-700',
+    'completed':     'bg-gray-100 text-gray-500',
+};
+
+const STATUS_LABEL = {
+    'pending': 'Chờ Check-in',
+    'confirmed': 'Đã xác nhận',
+    'cancelled': 'Đã hủy',
+    'completed': 'Hoàn thành',
 };
 
 const SLOT_STYLE = {
@@ -31,7 +40,7 @@ export default function CheckInPage() {
 
     const [search,   setSearch]   = useState('');
     const [date,     setDate]     = useState('');
-    const [timeSlot, setTimeSlot] = useState(t('checkIn.morning'));
+    const [timeSlot, setTimeSlot] = useState('MORNING');
 
     // Load lần đầu
     useEffect(() => {
@@ -113,12 +122,15 @@ export default function CheckInPage() {
                 {/* Table */}
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                     {/* Header */}
-                    <div className="grid grid-cols-[80px_140px_220px_1fr_140px_160px] px-6 py-3 border-b border-gray-100">
+                    <div className="grid grid-cols-[80px_140px_180px_1fr_120px_120px_1fr_140px_160px] px-6 py-3 border-b border-gray-100">
                         {[
                             t('checkIn.table.timeSlot'),
                             t('checkIn.table.code'),
                             t('checkIn.table.patient'),
-                            t('checkIn.table.specialty'),
+                            t('checkIn.table.phone'),
+                            t('checkIn.table.age'),
+                            t('checkIn.table.gender'),
+                            t('checkIn.table.address'),
                             t('checkIn.table.status'),
                             t('checkIn.table.actions'),
                         ].map(col => (
@@ -133,46 +145,47 @@ export default function CheckInPage() {
                     {error && (
                         <p className="text-sm text-red-500 text-center py-10">{error}</p>
                     )}
-                    {!loading && !error && appointments.length === 0 && (
+                    {!loading && !error && Array.isArray(appointments) && appointments.length === 0 && (
                         <p className="text-sm text-gray-400 text-center py-10">{t('checkIn.noData')}</p>
                     )}
 
                     {/* Filter appointments by timeSlot on frontend */}
-                    {!loading && appointments
+                    {!loading && Array.isArray(appointments) && appointments
                         .filter(appt => !timeSlot || appt.timeSlot === timeSlot)
                         .map((appt, idx) => (
                         <div
                             key={appt.id ?? idx}
-                            className="grid grid-cols-[80px_140px_220px_1fr_140px_160px] px-6 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors items-start"
+                            className="grid grid-cols-[80px_140px_180px_1fr_120px_120px_1fr_140px_160px] px-6 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors items-start"
                         >
                             {/* Khung ca */}
                             <span className={`text-xs ${SLOT_STYLE[appt.timeSlot] ?? 'text-gray-600'}`}>
-                {TIME_SLOT_LABEL[appt.timeSlot] ?? appt.timeSlot}
-              </span>
+                                {TIME_SLOT_LABEL[appt.timeSlot] ?? appt.timeSlot}
+                            </span>
 
                             {/* Mã lịch */}
                             <span className="text-sm text-gray-700">{appt.code}</span>
 
-                            {/* Khách hàng */}
-                            <div>
-                                <p className="text-sm font-medium text-gray-900">{appt.patientName}</p>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                    {t('checkIn.phone')}: {appt.phone} • {t('checkIn.dob')}: {appt.yearOfBirth}
-                                </p>
-                            </div>
+                            {/* Tên bệnh nhân */}
+                            <span className="text-sm font-medium text-gray-900">{appt.patientName}</span>
 
-                            {/* Chuyên khoa */}
-                            <div>
-                                <p className="text-sm text-gray-800">{appt.specialty}</p>
-                                <p className="text-xs text-gray-400 mt-0.5">{appt.room}</p>
-                            </div>
+                            {/* So dien thoai */}
+                            <span className="text-sm text-gray-700">{appt.phone || '-'}</span>
+
+                            {/* Tuoi */}
+                            <span className="text-sm text-gray-700">{appt.age || '-'}</span>
+
+                            {/* Gioi tinh */}
+                            <span className="text-sm text-gray-700">{appt.gender || '-'}</span>
+
+                            {/* Dia chi */}
+                            <span className="text-sm text-gray-700 truncate">{appt.address || '-'}</span>
 
                             {/* Trạng thái */}
                             <div>
-                <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full ${STATUS_STYLE[appt.status] ?? 'bg-gray-100 text-gray-500'}`}>
-                  {appt.status === 'pending' && <span>✓</span>}
-                    {appt.status}
-                </span>
+                                <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full ${STATUS_STYLE[appt.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                                    {appt.status === 'pending' && <span>✓</span>}
+                                    {STATUS_LABEL[appt.status] ?? appt.status}
+                                </span>
                             </div>
 
                             {/* Actions */}

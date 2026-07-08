@@ -2,7 +2,7 @@
 import { useTranslation } from 'react-i18next';
 
 export default function AppointmentConfirmModal({ data, onClose, onConfirm }) {
-    const { t } = useTranslation('appointment');
+    const { t } = useTranslation('receptionist');
 
     const patientRows = [
         { key: t('confirmModal.fullName'),   val: data.fullName,   bold: true },

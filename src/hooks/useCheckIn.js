@@ -3,6 +3,37 @@ import { useState, useCallback } from 'react';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
+// Map API response (AppointmentResponse) to component format
+const mapAppointment = (appt) => {
+    if (!appt) return null;
+
+    // Map status to lowercase for component compatibility
+    const status = appt.status
+        ? appt.status.toString().toLowerCase()
+        : '';
+
+    // Map gender
+    const genderMap = { MALE: 'Nam', FEMALE: 'Nữ', OTHER: 'Khác' };
+    const gender = appt.guestGender
+        ? genderMap[appt.guestGender] || appt.guestGender
+        : '';
+
+    return {
+        id: appt.appointmentId,
+        code: appt.appointmentId?.toString().slice(0, 8) || '',
+        patientName: appt.customerName || appt.guestFullName || '',
+        phone: appt.guestPhone || '',
+        age: appt.guestAge || '',
+        gender,
+        address: appt.guestAddress || '',
+        status,
+        timeSlot: appt.timeSlot || '',
+        scheduledAt: appt.scheduledAt || '',
+        services: appt.services || [],
+        ...appt, // Include original fields for backward compatibility
+    };
+};
+
 export function useCheckIn() {
     const [appointments, setAppointments] = useState([]);
     const [loading, setLoading]           = useState(false);
@@ -36,7 +67,14 @@ export function useCheckIn() {
             );
             if (!res.ok) throw new Error('Không thể tải danh sách lịch hẹn.');
             const data = await res.json();
-            setAppointments(data);
+            console.log('CheckIn API raw response:', data);
+            // Ensure data is always an array (handle paginated response with 'content' or { data: [...] } response)
+            const appointmentsArray = Array.isArray(data) ? data : (data?.content ?? data?.data ?? []);
+            console.log('CheckIn appointmentsArray:', appointmentsArray);
+            // Map API response to component format
+            const mappedAppointments = appointmentsArray.map(mapAppointment).filter(Boolean);
+            console.log('CheckIn mappedAppointments:', mappedAppointments);
+            setAppointments(mappedAppointments);
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra.');
         } finally {

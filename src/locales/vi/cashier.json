@@ -1,0 +1,54 @@
+{
+  "sidebar": {
+    "logo": "Logo",
+    "subtitle": "Hệ thống Kế toán viện phí v2.1",
+    "invoiceList": "Danh sách hóa đơn",
+    "revenueReport": "Báo cáo doanh thu ca",
+    "printerConfig": "Cấu hình máy in",
+    "quickHelp": "Trợ giúp nhanh"
+  },
+  "header": {
+    "queuSummary": "Quầy · Thu ngân · Số 2"
+  },
+  "invoiceList": {
+    "pageTitle": "Danh sách hóa đơn",
+    "filter": {
+      "search": "Tra cứu chứng từ",
+      "searchPlaceholder": "Nhập Mã hóa đơn, Tên bệnh nhân, Số điện thoại...",
+      "status": "Trạng thái xử lý",
+      "category": "Danh mục viện phí",
+      "submit": "Tìm kiếm"
+    },
+    "table": {
+      "invoiceCode": "Mã số hóa đơn",
+      "patient": "Bệnh nhân / Mã định danh",
+      "services": "Nội dung chỉ định thu phí",
+      "total": "Tổng tiền (VNĐ)",
+      "status": "Trạng thái",
+      "actions": "Thao tác quầy thu"
+    },
+    "status": {
+      "pending": "Chờ thanh toán",
+      "paid": "Đã thu tiền",
+      "cancelled": "Đã huỷ"
+    },
+    "actions": {
+      "pay": "Thanh toán",
+      "print": "In hóa đơn"
+    },
+    "services": {
+      "andMore": "+{{count}} dịch vụ khác",
+      "modalTitle": "Chi tiết dịch vụ",
+      "close": "Đóng",
+      "serviceName": "Tên dịch vụ",
+      "price": "Đơn giá",
+      "total": "Tổng cộng"
+    },
+    "loading": "Đang tải...",
+    "noData": "Không có hóa đơn nào.",
+    "errors": {
+      "loadFailed": "Không thể tải danh sách hóa đơn.",
+      "unknown": "Có lỗi xảy ra."
+    }
+  }
+}

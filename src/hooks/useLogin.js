@@ -33,7 +33,13 @@ export function useLogin() {
             storage.setItem('username',  data.account.username);
             storage.setItem('accountId', data.account.accountId);
 
-            navigate(ROUTES.PROFILE);
+            // Redirect based on role
+            const role = data.account.role;
+            if (role === 'RECEPTIONIST' || role === 'NURSE' || role === 'DOCTOR' || role === 'ADMIN') {
+                navigate(ROUTES.RECEPTIONIST_CHECKIN);
+            } else {
+                navigate(ROUTES.PROFILE);
+            }
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra');
         } finally {

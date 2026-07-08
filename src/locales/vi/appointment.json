@@ -25,7 +25,9 @@
     "chooseDate": "Chọn ngày khám",
     "timeSlot": "Khung giờ",
     "morning": "Buổi sáng",
-    "afternoon": "Buổi chiều"
+    "morningTime": "07:00 – 10:00",
+    "afternoon": "Buổi chiều",
+    "afternoonTime": "13:00 – 17:00"
   },
   "submit": "Tiến hành đặt lịch và cấp số phiếu",
   "errors": {

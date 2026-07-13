@@ -1,0 +1,59 @@
+{
+  "sidebar": {
+    "logoTitle": "Logo",
+    "logoSubtitle": "Phòng khám đa khoa",
+    "dashboard": "Bảng điều khiển",
+    "queue": "Phòng chờ",
+    "patients": "Bệnh nhân",
+    "records": "Hồ sơ",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất"
+  },
+  "tabs": {
+    "all": "Tất cả",
+    "waiting": "Đang chờ",
+    "called": "Đã gọi",
+    "inProgress": "Đang khám",
+    "done": "Hoàn thành",
+    "skipped": "Đã bỏ qua",
+    "absent": "Vắng mặt"
+  },
+  "search": {
+    "placeholder": "Tìm kiếm bệnh nhân theo mã bệnh nhân, họ và tên, mã bệnh"
+  },
+  "sort": {
+    "newestFirst": "Mới nhất trước",
+    "oldestFirst": "Cũ nhất trước"
+  },
+  "table": {
+    "patientCode": "Mã bệnh nhân",
+    "fullName": "Họ và tên",
+    "lastVisit": "Lần khám gần nhất",
+    "history": "Tiền sử bệnh",
+    "status": "Trạng thái",
+    "actions": "Hành động"
+  },
+  "status": {
+    "waiting": "Chờ khám",
+    "called": "Đã gọi",
+    "inProgress": "Đang khám",
+    "done": "Hoàn thành",
+    "skipped": "Đã bỏ qua"
+  },
+
+  "actions": {
+    "view": "Xem",
+    "callIn": "Gọi vào",
+    "startExam": "Bắt đầu khám",
+    "markAbsent": "Vắng",
+    "returnToQueue": "Quay lại chờ",
+    "finish": "Hoàn thành"
+  },
+  "pagination": {
+    "showing": "Hiển thị {{from}} đến {{to}} của {{total}} bệnh nhân"
+  },
+  "loading": "Đang tải danh sách bệnh nhân...",
+  "error": "Không thể tải danh sách. Vui lòng thử lại.",
+  "retry": "Thử lại",
+  "empty": "Không có bệnh nhân nào phù hợp"
+}

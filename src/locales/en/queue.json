@@ -1,0 +1,58 @@
+{
+  "sidebar": {
+    "logoTitle": "Logo",
+    "logoSubtitle": "Polyclinic",
+    "dashboard": "Dashboard",
+    "queue": "Waiting Room",
+    "patients": "Patients",
+    "records": "Records",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "tabs": {
+    "all": "All",
+    "waiting": "Waiting",
+    "called": "Called",
+    "inProgress": "In Progress",
+    "done": "Done",
+    "skipped": "Skipped",
+    "absent": "Absent"
+  },
+  "search": {
+    "placeholder": "Search patients by code, name, or medical code"
+  },
+  "sort": {
+    "newestFirst": "Newest first",
+    "oldestFirst": "Oldest first"
+  },
+  "table": {
+    "patientCode": "Patient Code",
+    "fullName": "Full Name",
+    "lastVisit": "Last Visit",
+    "history": "History",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "status": {
+    "waiting": "Waiting",
+    "called": "Called",
+    "inProgress": "In Progress",
+    "done": "Done",
+    "skipped": "Skipped"
+  },
+  "actions": {
+    "view": "View",
+    "callIn": "Call In",
+    "startExam": "Start Exam",
+    "markAbsent": "Mark Absent",
+    "returnToQueue": "Return to Queue",
+    "finish": "Finish"
+  },
+  "pagination": {
+    "showing": "Showing {{from}} to {{to}} of {{total}} patients"
+  },
+  "loading": "Loading patient list...",
+  "error": "Failed to load list. Please try again.",
+  "retry": "Retry",
+  "empty": "No matching patients found"
+}

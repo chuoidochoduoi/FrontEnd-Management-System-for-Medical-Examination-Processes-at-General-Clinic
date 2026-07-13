@@ -11,6 +11,10 @@ import ProfilePage from '@/pages/customer/ProfilePage';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import CreateTicketPage from '@/pages/receptionist/CreateTicketPage';
 import InvoiceListPage from '@/pages/cashier/InvoiceListPage';
+import InvoiceDetailPage from '@/pages/cashier/InvoiceDetailPage';
+import InvoicePrintPage from '@/pages/cashier/InvoicePrintPage';
+import ExaminationPage from '@/pages/doctor/ExaminationPage';
+import DoctorDepartmentPage from '@/pages/doctor/DoctorDepartmentPage';
 
 import {ROUTES} from "@/constants/routes.js";
 
@@ -41,7 +45,34 @@ function App() {
 
         } />
 
-        <Route path={ROUTES.CASHIER_INVOICES} element={<InvoiceListPage />} />
+        {/* Cashier routes */}
+        <Route path={ROUTES.CASHIER_INVOICES} element={
+            <ProtectedRoute allowedRoles={['CASHIER', 'ADMIN']}>
+                <InvoiceListPage />
+            </ProtectedRoute>
+        } />
+
+        <Route path={ROUTES.CASHIER_INVOICE_DETAIL}>
+            <Route index element={
+                <ProtectedRoute allowedRoles={['CASHIER', 'ADMIN']}>
+                    <InvoiceDetailPage />
+                </ProtectedRoute>
+            } />
+            <Route path="print" element={
+                <ProtectedRoute allowedRoles={['CASHIER', 'ADMIN']}>
+                    <InvoicePrintPage />
+                </ProtectedRoute>
+            } />
+        </Route>
+
+        <Route path={ROUTES.DOCTOR_DEPARTMENTS} element={
+            <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'ADMIN']}>
+                <DoctorDepartmentPage />
+            </ProtectedRoute>
+        } />
+        <Route path={ROUTES.DOCTOR_EXAMINATION} element={<ExaminationPage />} />
+
+
 
     </Routes>
   )

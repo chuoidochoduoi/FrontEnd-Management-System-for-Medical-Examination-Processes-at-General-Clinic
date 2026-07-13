@@ -45,7 +45,7 @@ export default function CashierLayout({ children }) {
         <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden">
 
             {/* ── Sidebar ── */}
-            <aside className="w-52 bg-gray-950 flex flex-col shrink-0">
+            <aside className="w-52 bg-gray-950 flex flex-col shrink-0 print:hidden">
                 <div className="px-5 py-5 border-b border-gray-800">
                     <p className="text-white text-sm font-semibold">{t('sidebar.logo')}</p>
                     <p className="text-gray-500 text-xs mt-0.5">{t('sidebar.subtitle')}</p>
@@ -74,7 +74,7 @@ export default function CashierLayout({ children }) {
             <div className="flex-1 flex flex-col overflow-hidden">
 
                 {/* Header */}
-                <header className="h-14 bg-white border-b border-gray-200 px-8 flex items-center justify-end shrink-0">
+                <header className="h-14 bg-white border-b border-gray-200 px-8 flex items-center justify-end shrink-0 print:hidden">
                     <div className="relative">
                         <button
                             onClick={() => setProfileOpen(v => !v)}
@@ -111,7 +111,7 @@ export default function CashierLayout({ children }) {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-8">
+                <main className="flex-1 overflow-y-auto p-8 bg-gray-50 print:bg-white print:p-0">
                     {children}
                 </main>
             </div>

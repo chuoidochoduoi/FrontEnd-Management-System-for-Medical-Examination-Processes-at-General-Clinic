@@ -328,6 +328,7 @@ export default function AppointmentPage() {
                     {/* Modal xác nhận */}
                     {showConfirmModal && (
                         <AppointmentConfirmModal
+                            namespace="appointment"
                             data={{
                                 fullName: profile ? profile.fullName : fullName,
                                 phone: profile ? profile.phone : phone,

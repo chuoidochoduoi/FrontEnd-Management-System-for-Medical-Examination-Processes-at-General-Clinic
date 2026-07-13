@@ -18,5 +18,8 @@
   "error": "An error occurred",
   "save": "Save",
   "cancel": "Cancel",
-  "confirm": "Confirm"
+  "confirm": "Confirm",
+  "male": "Nam",
+  "female": "Nữ",
+  "other": "Khác"
 }

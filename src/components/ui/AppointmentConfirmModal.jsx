@@ -1,8 +1,8 @@
 // components/ui/AppointmentConfirmModal.jsx
 import { useTranslation } from 'react-i18next';
 
-export default function AppointmentConfirmModal({ data, onClose, onConfirm }) {
-    const { t } = useTranslation('receptionist');
+export default function AppointmentConfirmModal({ data, onClose, onConfirm, namespace = 'receptionist' }) {
+    const { t } = useTranslation(namespace);
 
     const patientRows = [
         { key: t('confirmModal.fullName'),   val: data.fullName,   bold: true },

@@ -8,10 +8,10 @@ const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const roleToRoute = {
     PATIENT: ROUTES.PROFILE,
     RECEPTIONIST: ROUTES.RECEPTION,
-    NURSE: ROUTES.RECEPTION,
-    DOCTOR: ROUTES.RECEPTION,
-    CASHIER: ROUTES.RECEPTION,
-    ADMIN: ROUTES.RECEPTION,
+    NURSE: ROUTES.QUEUE,
+    DOCTOR: ROUTES.QUEUE,
+    CASHIER: ROUTES.CASHIER_INVOICES,
+    ADMIN: ROUTES.QUEUE,
 };
 
 export default function ProtectedRoute({ allowedRoles, children }) {

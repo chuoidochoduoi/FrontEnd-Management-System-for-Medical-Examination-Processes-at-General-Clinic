@@ -8,10 +8,10 @@ const authHeader = () => ({ Authorization: `Bearer ${get('token')}` });
 export function useProfile() {
     const { t } = useTranslation('customer');
 
-    const [profile,  setProfile]  = useState(null);
-    const [loading,  setLoading]  = useState(false);
-    const [saving,   setSaving]   = useState(false);
-    const [error,    setError]    = useState('');
+    const [profile, setProfile] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         const hasToken = !!get('token');

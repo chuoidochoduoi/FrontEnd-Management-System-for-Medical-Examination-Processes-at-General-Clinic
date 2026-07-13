@@ -11,6 +11,9 @@ import viReceptionist from './locales/vi/receptionist.json';
 import viCustomer from './locales/vi/customer.json';
 import viCreateTicketConfirmModal from './locales/vi/createTicketConfirmModal.json';
 import viCashier from './locales/vi/cashier.json';
+import viQueue from './locales/vi/queue.json';
+import enQueue from './locales/en/queue.json';
+import viDoctor from './locales/vi/doctor.json';
 
 // Thêm page mới thì import thêm ở đây, ví dụ:
 // import viCustomer from '../locales/vi/customer.json';
@@ -30,12 +33,13 @@ i18n
                 receptionist: viReceptionist,
                 customer: viCustomer,
                 createTicketConfirmModal: viCreateTicketConfirmModal,
-                cashier: viCashier
+                cashier: viCashier,
+                queue: viQueue, doctor: viDoctor
             },
             en: {
                 common: enCommon,
                 auth:   enAuth,
-                // patient: enPatient,
+                queue: enQueue,
             },
         },
         interpolation: { escapeValue: false },

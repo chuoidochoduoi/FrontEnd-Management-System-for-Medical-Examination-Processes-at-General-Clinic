@@ -34,9 +34,13 @@ export function useLogin() {
             storage.setItem('accountId', data.account.accountId);
 
             // Redirect based on role
-            const role = data.account.role;
-            if (role === 'RECEPTIONIST' || role === 'NURSE' || role === 'DOCTOR' || role === 'ADMIN') {
+            const role = data.account.role?.toUpperCase();
+            if (role === 'RECEPTIONIST') {
                 navigate(ROUTES.RECEPTIONIST_CHECKIN);
+            } else if (role === 'NURSE' || role === 'DOCTOR') {
+                navigate(ROUTES.DOCTOR_DEPARTMENTS);
+            } else if (role === 'ADMIN') {
+                navigate(ROUTES.DOCTOR_DEPARTMENTS);
             } else {
                 navigate(ROUTES.PROFILE);
             }

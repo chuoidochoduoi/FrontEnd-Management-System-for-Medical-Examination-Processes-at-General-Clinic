@@ -28,9 +28,11 @@
       "actions": "Thao tác quầy thu"
     },
     "status": {
-      "pending": "Chờ thanh toán",
-      "paid": "Đã thu tiền",
-      "cancelled": "Đã huỷ"
+      "draft": "Mới tạo",
+      "issued": "Đã xuất",
+      "paid": "Đã thanh toán",
+      "cancelled": "Đã huỷ",
+      "pending": "Chờ thanh toán"
     },
     "actions": {
       "pay": "Thanh toán",
@@ -50,5 +52,95 @@
       "loadFailed": "Không thể tải danh sách hóa đơn.",
       "unknown": "Có lỗi xảy ra."
     }
+  },
+  "invoiceDetail": {
+    "loading": "Đang tải hóa đơn...",
+    "dept": "Quầy thu ngân",
+    "deptSubtitle": "Chi tiết hóa đơn viện phí",
+    "queue": "Số 2",
+    "queueLabel": "Số queue:",
+    "invoiceCode": "Mã hóa đơn",
+    "patientCode": "Mã bệnh nhân",
+    "visitDate": "Ngày khám",
+    "address": "Địa chỉ",
+    "dob": "Ngày sinh",
+    "bhytCode": "Mã BHYT",
+    "status": {
+      "draft": "Mới tạo",
+      "issued": "Đã xuất",
+      "pending": "Chờ thanh toán",
+      "paid": "Đã thanh toán",
+      "cancelled": "Đã huỷ"
+    },
+    "table": {
+      "stt": "STT",
+      "item": "Hạng mục chỉ định & Danh mục BHYT",
+      "qty": "SL",
+      "basePrice": "Đơn giá",
+      "subtotal": "Tổng tính",
+      "bhytRate": "BHYT %",
+      "bhytPay": "BHYT chi trả",
+      "patientPay": "Bệnh nhân trả"
+    },
+    "summary": {
+      "totalServices": "Tổng dịch vụ",
+      "bhytDeduct": "Giảm BHYT",
+      "vat": "Thuế VAT",
+      "grandTotal": "Tổng cộng",
+      "inWords": "Viết bằng chữ"
+    },
+    "actions": {
+      "print": "In hóa đơn",
+      "confirm": "Xác nhận thanh toán",
+      "confirming": "Đang xử lý..."
+    },
+    "errors": {
+      "loadFailed": "Không thể tải chi tiết hóa đơn.",
+      "payFailed": "Không thể xác nhận thanh toán.",
+      "unknown": "Có lỗi xảy ra."
+    }
+  },
+  "detail": {
+    "pageHeaderTitle": "Hóa đơn viện phí",
+    "printButton": "In hóa đơn",
+    "clinicName": "Phòng khám đa khoa",
+    "taxCode": "Mã số thuế",
+    "hotline": "Hotline",
+    "address": "Địa chỉ",
+    "receiptTitle": "Phiếu thu",
+    "symbol": "Ký hiệu",
+    "docNumber": "Số CT",
+    "issueDate": "Ngày",
+    "mainTitle": "Phiếu thu viện phí",
+    "subTitle": "Dành cho bệnh nhân thanh toán",
+    "patientName": "Tên bệnh nhân",
+    "patientCode": "Mã bệnh nhân",
+    "patientAddress": "Địa chỉ",
+    "dob": "Ngày sinh",
+    "bhytCode": "Mã BHYT",
+    "paymentMethod": "PT thanh toán",
+    "paymentStatus": "Trạng thái",
+    "statusPaid": "Đã thanh toán",
+    "statusPending": "Chờ thanh toán",
+    "loading": "Đang tải...",
+    "error": "Lỗi tải dữ liệu",
+    "retry": "Thử lại",
+    "notFound": "Không tìm thấy hóa đơn",
+    "backToList": "Quay lại",
+    "col": {
+      "stt": "STT",
+      "service": "Tên dịch vụ",
+      "qty": "SL",
+      "price": "Thành tiền",
+      "bhyt": "BHYT giảm",
+      "patientPay": "Bệnh nhân trả"
+    },
+    "sectionTitle": "Danh mục dịch vụ chi tiết",
+    "note": "Ghi chú: Thanh toán đề phòng trong ngày khi nhận dịch vụ",
+    "totalGross": "Tổng tiền dịch vụ",
+    "bhytDeduct": "Giảm BHYT",
+    "vat": "VAT",
+    "grandTotalLabel": "Tổng cộng",
+    "grandTotalWordsWrap": "(Bằng chữ): {{words}}"
   }
 }

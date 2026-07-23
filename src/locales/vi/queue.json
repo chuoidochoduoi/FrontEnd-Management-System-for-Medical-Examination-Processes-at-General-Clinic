@@ -16,6 +16,7 @@
     "inProgress": "Đang khám",
     "done": "Hoàn thành",
     "skipped": "Đã bỏ qua",
+    "waitingForTest": "Chờ xét nghiệm",
     "absent": "Vắng mặt"
   },
   "search": {
@@ -38,7 +39,9 @@
     "called": "Đã gọi",
     "inProgress": "Đang khám",
     "done": "Hoàn thành",
-    "skipped": "Đã bỏ qua"
+    "skipped": "Đã bỏ qua",
+    "waitingForTest": "Chờ xét nghiệm",
+    "testDone": "Xét nghiệm xong"
   },
 
   "actions": {

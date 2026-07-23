@@ -30,8 +30,17 @@ export const ROUTES = {
     CASHIER_INVOICE_DETAIL: '/cashier/invoices/:id',
     CASHIER_INVOICE_PRINT: '/cashier/invoices/:id/print',
 
-    DOCTOR_DEPARTMENTS: '/doctor/departments',
+    DOCTOR_ROOMS: '/doctor/rooms',
+    DOCTOR_DEPARTMENTS: '/doctor/departments/:departmentId',
     DOCTOR_PATIENTS:    '/doctor/patients',
     DOCTOR_RECORDS:     '/doctor/records',
     DOCTOR_EXAMINATION: '/doctor/examinations/department/:departmentId',
+    DOCTOR_LAB: '/doctor/lab/:departmentId',
+
+    DOCTOR_LAB_DETAIL: '/lab/:id',
+
+
+    ADMIN_ACCOUNTS: '/admin/accounts',
+    ADMIN_ROOMS:    '/admin/rooms',
+    ADMIN_SERVICES: '/admin/services',
 };

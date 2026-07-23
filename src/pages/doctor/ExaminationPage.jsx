@@ -6,8 +6,8 @@ import { Search, Bell, User, X } from 'lucide-react';
 import DoctorLayout from '@/components/layout/DoctorLayout';
 import { useInProgressPatient } from '@/hooks/useInProgressPatient';
 import { useDiagnosis, useTagSearch } from '@/hooks/useDiagnosis';
-import { usePrescription } from '@/hooks/usePrescription';
 import { useLabServices } from '@/hooks/useLabServices';
+import { toast } from 'react-toastify';
 import { ROUTES } from '@/constants/routes';
 
 /* ── helpers ── */
@@ -18,7 +18,7 @@ const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const authHeader = () => ({ Authorization: `Bearer ${get('token')}` });
 
 /* ── SearchDropdown: shared component for diagnosis / referral / lab ── */
-function SearchDropdown({ query, results, loading, onSearch, onAdd, placeholder, addLabel }) {
+function SearchDropdown({ query, results, loading, onSearch, onAdd, placeholder, addLabel, showAddButton = true }) {
     const ref = useRef(null);
     const [open, setOpen] = useState(false);
 
@@ -49,18 +49,20 @@ function SearchDropdown({ query, results, loading, onSearch, onAdd, placeholder,
                                 className="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
                             >
                                 {r.code && <span className="font-mono text-xs text-gray-400 mr-2">{r.code}</span>}
-                                {r.name ?? r.label}
+                                {r.name ?? r.label ?? r.codeName ?? r.title}
                             </button>
                         ))}
                     </div>
                 )}
             </div>
-            <button
-                onMouseDown={() => { if (query.trim()) onAdd({ id: Date.now(), name: query }); }}
-                className="px-3 h-9 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600 whitespace-nowrap transition-colors"
-            >
-                {addLabel}
-            </button>
+            {showAddButton && (
+                <button
+                    onMouseDown={() => { if (query.trim()) onAdd({ id: Date.now(), name: query }); }}
+                    className="px-3 h-9 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600 whitespace-nowrap transition-colors"
+                >
+                    {addLabel}
+                </button>
+            )}
         </div>
     );
 }
@@ -124,20 +126,66 @@ export default function ExaminationPage() {
                 setHeight(mr.vitalSigns.height?.toString() ?? '');
                 setWeight(mr.vitalSigns.weight?.toString() ?? '');
             }
+            // Load ICD-10 selections nếu có
+            if (mr.icdSelections && Array.isArray(mr.icdSelections)) {
+                diagnosis.setSelected(mr.icdSelections.map(item => ({
+                    code: item.code,
+                    label: item.codeName ?? item.name
+                })));
+            }
         }
     }, [examination]);
 
     const diagnosis    = useDiagnosis([]);
     const referrals    = useTagSearch([], '/api/doctor/specialties');
     const labOrders    = useTagSearch([], '/api/doctor/lab-tests');
-    const prescription = usePrescription([]);
     const { services: labServices, loading: loadingLabServices } = useLabServices();
     const [labSelect, setLabSelect] = useState('');
+
+    // Prescription state
+    const [prescriptionItems, setPrescriptionItems] = useState([{ id: Date.now(), name: '', quantity: '', unit: 'viên', note: '', frequencyPerDay: '' }]);
+    const [showPrescription, setShowPrescription] = useState(true);
+
+    const addPrescriptionRow = () => {
+        setPrescriptionItems([...prescriptionItems, { id: Date.now(), name: '', quantity: '', unit: 'viên', note: '', frequencyPerDay: '' }]);
+    };
+
+    const updatePrescription = (id, field, value) => {
+        setPrescriptionItems(items => items.map(item => item.id === id ? { ...item, [field]: value } : item));
+    };
+
+    const removePrescription = (id) => {
+        setPrescriptionItems(items => items.filter(item => item.id !== id));
+    };
 
     // Button states
     const [saving, setSaving] = useState(false);
     const [completing, setCompleting] = useState(false);
     const [error, setError] = useState('');
+    const [testRequests, setTestRequests] = useState([]);
+
+    // Fetch test requests from medical record
+    useEffect(() => {
+        if (!examination?.recordId) return;
+        const fetchTestRequests = async () => {
+            try {
+                const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+                const token = get('token');
+                const res = await fetch(
+                    `${apiBase}/api/v1/medical-records/${examination.recordId}`,
+                    { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
+                );
+                if (res.ok) {
+                    const data = await res.json();
+                    const items = data.testRequests ?? data.data?.testRequests ?? [];
+                    setTestRequests(items);
+                }
+            } catch (err) {
+                console.error('Fetch test requests failed:', err);
+            }
+        };
+        fetchTestRequests();
+    }, [examination?.recordId]);
 
     // Map dữ liệu từ QueueTicketResponse sang format patient cho UI
     const patient = examination ? {
@@ -185,6 +233,7 @@ export default function ExaminationPage() {
     const saveDraft = async () => {
         if (!examination?.recordId) {
             setError('Chưa có hồ sơ bệnh án');
+            toast.error('Chưa có hồ sơ bệnh án');
             return;
         }
         setSaving(true);
@@ -203,14 +252,27 @@ export default function ExaminationPage() {
                         chiefComplaint: symptoms,
                         clinicalFindings: examResult,
                         conclusion: notes,
+                        // Gửi danh sách thuốc
+                        prescriptionItems: prescriptionItems.map(med => ({
+                            medicineName: med.name,
+                            quantity: med.quantity ? parseInt(med.quantity) : null,
+                            unit: med.unit,
+                            note: med.note,
+                            frequencyPerDay: med.frequencyPerDay ? parseInt(med.frequencyPerDay) : null,
+                        })),
+                        // Gửi danh sách ICD-10 chẩn đoán
+                        icdSelections: diagnosis.selected.map(item => ({
+                            code: item.code
+                        })),
                     }),
                 }
             );
             if (!res.ok) throw new Error(tDoctor('examination.errors.saveFailed'));
             await res.json();
-            console.log('Lưu nháp thành công');
+            toast.success('Lưu nháp thành công!');
         } catch (err) {
             setError(err.message || tDoctor('examination.errors.unknown'));
+            toast.error(err.message || tDoctor('examination.errors.saveFailed'));
         } finally {
             setSaving(false);
         }
@@ -220,22 +282,44 @@ export default function ExaminationPage() {
     const completeExam = async () => {
         if (!examination?.recordId) {
             setError('Chưa có hồ sơ bệnh án');
+            toast.error('Chưa có hồ sơ bệnh án');
             return;
         }
         setCompleting(true);
         setError('');
         try {
+            // Lưu vital signs trước
+            await saveVitalSigns();
+
             const res = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/v1/medical-records/${examination.recordId}/complete`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', ...authHeader() },
+                    body: JSON.stringify({
+                        chiefComplaint: symptoms,
+                        clinicalFindings: examResult,
+                        conclusion: notes,
+                        prescriptionItems: prescriptionItems.map(med => ({
+                            medicineName: med.name,
+                            quantity: med.quantity ? parseInt(med.quantity) : null,
+                            unit: med.unit,
+                            note: med.note,
+                            frequencyPerDay: med.frequencyPerDay ? parseInt(med.frequencyPerDay) : null,
+                        })),
+                        // Gửi danh sách ICD-10 chẩn đoán
+                        icdSelections: diagnosis.selected.map(item => ({
+                            code: item.code
+                        })),
+                    }),
                 }
             );
             if (!res.ok) throw new Error(tDoctor('examination.errors.completeFailed'));
-            navigate(ROUTES.DOCTOR_DEPARTMENTS);
+            toast.success('Hoàn thành khám thành công!');
+            setTimeout(() => navigate(ROUTES.DOCTOR_DEPARTMENTS), 1500);
         } catch (err) {
             setError(err.message || tDoctor('examination.errors.unknown'));
+            toast.error(err.message || tDoctor('examination.errors.completeFailed'));
         } finally {
             setCompleting(false);
         }
@@ -389,15 +473,37 @@ export default function ExaminationPage() {
                             </ul>
                         </div>
 
-                        {/* Xét nghiệm cũ */}
+                        {/* Xét nghiệm đã yêu cầu */}
                         <div className="bg-white border border-gray-200 rounded-2xl p-4">
                             <p className="text-xs font-semibold text-gray-500 tracking-wide mb-3">{tDoctor('examination.labResults.title')}</p>
                             <ul className="space-y-1.5">
-                                {(examination?.previousLabs ?? []).map((lab, i) => (
-                                    <li key={i} className="text-sm text-gray-700 flex items-start gap-1.5">
-                                        <span className="text-gray-300 mt-0.5">•</span>{lab}
+                                {testRequests.map((lab, i) => (
+                                    <li key={i} className="text-sm text-gray-700 flex items-between gap-1.5">
+                                        <span className="flex-1">{lab.serviceName || lab.testRequestId}</span>
+                                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                            lab.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                                            lab.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
+                                            lab.status === 'WAITING_FOR_RESULT' ? 'bg-purple-100 text-purple-700' :
+                                            lab.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                                            'bg-amber-100 text-amber-700'
+                                        }`}>
+                                            {lab.status === 'COMPLETED' ? 'Hoàn thành' :
+                                             lab.status === 'IN_PROGRESS' ? 'Đang xử lý' :
+                                             lab.status === 'WAITING_FOR_RESULT' ? 'Chờ kết quả' :
+                                             lab.status === 'CANCELLED' ? 'Đã hủy' :
+                                             'Chờ xử lý'}
+                                        </span>
+                                        <button
+                                            onClick={() => navigate(`${ROUTES.DOCTOR_LAB_DETAIL.replace(':id', lab.testRequestId)}`)}
+                                            className="text-xs text-primary-500 hover:text-primary-600 ml-2"
+                                        >
+                                            Chi tiết
+                                        </button>
                                     </li>
                                 ))}
+                                {testRequests.length === 0 && (
+                                    <li className="text-sm text-gray-400">Chưa có xét nghiệm nào</li>
+                                )}
                             </ul>
                         </div>
                     </div>
@@ -436,6 +542,7 @@ export default function ExaminationPage() {
                             onAdd={diagnosis.add}
                             placeholder={tDoctor('examination.diagnosis.searchPlaceholder')}
                             addLabel={tDoctor('examination.diagnosis.addBtn')}
+                            showAddButton={false}
                         />
                         <TagList items={diagnosis.selected} labelKey="label" codeKey="code" onRemove={diagnosis.remove} />
                     </div>
@@ -445,8 +552,29 @@ export default function ExaminationPage() {
                         <div className="flex items-center justify-between mb-3">
                             <p className="text-xs font-semibold text-gray-500 tracking-wide">{tDoctor('examination.labOrders.title')}</p>
                             <button
-                                onClick={() => {
-                                    console.log('[Lab Orders] Creating lab orders:', labOrders.selected);
+                                onClick={async () => {
+                                    if (!examination?.recordId || labOrders.selected.length === 0) return;
+                                    try {
+                                        const res = await fetch(
+                                            `${import.meta.env.VITE_API_URL}/api/v1/test-requests/batch`,
+                                            {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json', ...authHeader() },
+                                                body: JSON.stringify({
+                                                    medicalRecordId: examination.recordId,
+                                                    serviceIds: labOrders.selected.map(s => s.id),
+                                                    performingDepartmentId: departmentId,
+                                                    requestedById: get('staffId') || get('accountId'),
+                                                    notes: ''
+                                                }),
+                                            }
+                                        );
+                                        if (!res.ok) throw new Error('Gửi yêu cầu xét nghiệm thất bại');
+                                        toast.success('Gửi yêu cầu xét nghiệm thành công!');
+                                        labOrders.clear && labOrders.clear();
+                                    } catch (err) {
+                                        toast.error(err.message || 'Gửi yêu cầu xét nghiệm thất bại');
+                                    }
                                 }}
                                 disabled={labOrders.selected.length === 0}
                                 className="px-3 h-7 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-colors"
@@ -481,75 +609,71 @@ export default function ExaminationPage() {
                     <div className="bg-white border border-gray-200 rounded-2xl p-5">
                         <div className="flex items-center justify-between mb-3">
                             <p className={sectionTitle}>{tDoctor('examination.prescription.title')}</p>
-                            <div className="relative">
-                                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-300" />
-                                <input
-                                    type="text"
-                                    value={prescription.query}
-                                    onChange={e => prescription.search(e.target.value)}
-                                    placeholder="Tìm thuốc..."
-                                    className="h-8 pl-8 pr-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500 bg-white w-48"
-                                />
-                                {prescription.results.length > 0 && (
-                                    <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-30 max-h-40 overflow-y-auto">
-                                        {prescription.results.map(med => (
-                                            <button
-                                                key={med.id}
-                                                onMouseDown={() => prescription.add(med)}
-                                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-50 last:border-0"
-                                            >
-                                                {med.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={addPrescriptionRow}
+                                    className="px-3 h-7 text-xs border border-primary-500 text-primary-500 rounded-lg hover:bg-primary-50 transition-colors"
+                                >
+                                    + Thêm thuốc
+                                </button>
+                                <button
+                                    onClick={() => setShowPrescription(!showPrescription)}
+                                    className="text-xs text-gray-500 hover:text-primary-500"
+                                >
+                                    {showPrescription ? 'Thu gọn' : 'Mở rộng'}
+                                </button>
                             </div>
                         </div>
 
-                        <div className="space-y-3">
-                            {prescription.items.map(item => (
-                                <div key={item.id} className="border border-gray-100 rounded-xl p-3">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-gray-900">{item.name}</p>
-                                            <input
-                                                type="text"
-                                                value={item.dosage}
-                                                onChange={e => prescription.update(item.id, 'dosage', e.target.value)}
-                                                placeholder="Liều dùng..."
-                                                className="mt-1.5 w-full text-xs border-0 border-b border-gray-100 outline-none pb-0.5 focus:border-primary-400 bg-transparent"
-                                            />
-                                            <div className="flex gap-4 mt-2">
-                                                <div className="flex items-center gap-1.5">
-                                                    <input
-                                                        type="number"
-                                                        value={item.quantity}
-                                                        onChange={e => prescription.update(item.id, 'quantity', e.target.value)}
-                                                        className="w-14 h-7 px-2 text-xs border border-gray-200 rounded-lg outline-none focus:border-primary-500 text-center"
-                                                    />
-                                                    <span className="text-xs text-gray-400">{item.unit}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <input
-                                                        type="number"
-                                                        value={item.duration}
-                                                        onChange={e => prescription.update(item.id, 'duration', e.target.value)}
-                                                        className="w-14 h-7 px-2 text-xs border border-gray-200 rounded-lg outline-none focus:border-primary-500 text-center"
-                                                    />
-                                                    <span className="text-xs text-gray-400">{tDoctor('examination.prescription.days')}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => prescription.remove(item.id)}
-                                            className="text-gray-300 hover:text-gray-600 transition-colors ml-3 mt-0.5"
-                                        >
-                                            <X size={14} />
-                                        </button>
-                                    </div>
+                        {showPrescription && (
+                            <div className="space-y-2">
+                            {prescriptionItems.map(item => (
+                                <div key={item.id} className="border border-gray-100 rounded-lg p-3 grid grid-cols-[1fr_120px_80px_80px_80px_30px] gap-2 items-center">
+                                    <input
+                                        type="text"
+                                        value={item.name}
+                                        onChange={e => updatePrescription(item.id, 'name', e.target.value)}
+                                        placeholder="Tên thuốc..."
+                                        className="text-sm font-medium text-gray-900 border border-gray-200 rounded-lg px-2 py-1 focus:border-primary-500"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={item.note}
+                                        onChange={e => updatePrescription(item.id, 'note', e.target.value)}
+                                        placeholder="Liều dùng"
+                                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:border-primary-500"
+                                    />
+                                    <input
+                                        type="number"
+                                        value={item.quantity}
+                                        onChange={e => updatePrescription(item.id, 'quantity', e.target.value)}
+                                        placeholder="Số lượng"
+                                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-center focus:border-primary-500"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={item.unit}
+                                        onChange={e => updatePrescription(item.id, 'unit', e.target.value)}
+                                        placeholder="Đơn vị"
+                                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:border-primary-500"
+                                    />
+                                    <input
+                                        type="number"
+                                        value={item.frequencyPerDay}
+                                        onChange={e => updatePrescription(item.id, 'frequencyPerDay', e.target.value)}
+                                        placeholder="Sáng/Ngày"
+                                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-center focus:border-primary-500"
+                                    />
+                                    <button
+                                        onClick={() => removePrescription(item.id)}
+                                        className="text-gray-300 hover:text-red-500 transition-colors"
+                                    >
+                                        <X size={14} />
+                                    </button>
                                 </div>
                             ))}
                         </div>
+                        )}
                     </div>
 
                     {/* Ghi chú */}

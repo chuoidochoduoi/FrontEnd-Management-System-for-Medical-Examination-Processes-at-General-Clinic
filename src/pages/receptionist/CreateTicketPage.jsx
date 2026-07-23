@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { RotateCcw } from 'lucide-react';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { useCreateTicket } from '@/hooks/useCreateTicket';
+import { useToast } from '@/hooks/useToast';
 import CreateTicketConfirmModal from '@/components/ui/CreateTicketConfirmModal';
 
 const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
@@ -107,16 +108,16 @@ export default function CreateTicketPage() {
         setShowConfirmModal(true);
     };
 
-    // Helper to get accountId from storage for issuedById
-    const getAccountId = () => {
+    // Helper to get accountId/staffId from storage for issuedById
+    const getIssuerId = () => {
         const storage = localStorage.getItem('token') ? localStorage : sessionStorage;
-        return storage.getItem('accountId');
+        return storage.getItem('staffId') || storage.getItem('accountId');
     };
 
     const handleConfirm = () => {
         submit({
             serviceIds: selectedServiceIds,
-            issuedById: getAccountId(),
+            issuedById: getIssuerId(),
             reason,
             guestFullName: fullName,
             guestPhone: phone,

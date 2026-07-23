@@ -16,16 +16,28 @@ export function useDiagnosis(initial = []) {
         setLoading(true);
         try {
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/doctor/icd10?q=${encodeURIComponent(q)}`,
+                `${import.meta.env.VITE_API_URL}/api/v1/icd10-codes?q=${encodeURIComponent(q)}`,
                 { headers: bearer() }
             );
-            if (res.ok) setResults(await res.json());
+            if (res.ok) {
+                const data = await res.json();
+                console.log('ICD-10 API response:', data);
+                // Handle paginated response with 'content' array
+                const items = data?.content ?? data ?? [];
+                console.log('ICD-10 items:', items);
+                setResults(items);
+            }
         } finally { setLoading(false); }
     }, []);
 
     const add = (item) => {
         if (!selected.find(s => s.code === item.code)) {
-            setSelected(prev => [...prev, item]);
+            // Normalize ICD-10 item - backend may return codeName instead of name/label
+            const normalized = {
+                code: item.code,
+                label: item.name ?? item.label ?? item.codeName ?? item.title ?? ''
+            };
+            setSelected(prev => [...prev, normalized]);
         }
         setQuery(''); setResults([]);
     };
@@ -52,7 +64,11 @@ export function useTagSearch(initial = [], endpoint) {
                 `${import.meta.env.VITE_API_URL}${endpoint}?q=${encodeURIComponent(q)}`,
                 { headers: bearer() }
             );
-            if (res.ok) setResults(await res.json());
+            if (res.ok) {
+                const data = await res.json();
+                // Handle paginated response with 'content' array
+                setResults(data?.content ?? data ?? []);
+            }
         } finally { setLoading(false); }
     }, [endpoint]);
 
@@ -66,5 +82,7 @@ export function useTagSearch(initial = [], endpoint) {
     const remove = (id) =>
         setSelected(prev => prev.filter(s => s.id !== id));
 
-    return { selected, results, query, loading, search, add, remove, setSelected };
+    const clear = () => setSelected([]);
+
+    return { selected, results, query, loading, search, add, remove, setSelected, clear };
 }

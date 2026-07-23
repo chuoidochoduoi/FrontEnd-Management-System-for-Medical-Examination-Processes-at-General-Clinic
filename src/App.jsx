@@ -1,4 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 
 // thêm page mới
@@ -15,66 +17,116 @@ import InvoiceDetailPage from '@/pages/cashier/InvoiceDetailPage';
 import InvoicePrintPage from '@/pages/cashier/InvoicePrintPage';
 import ExaminationPage from '@/pages/doctor/ExaminationPage';
 import DoctorDepartmentPage from '@/pages/doctor/DoctorDepartmentPage';
+import DoctorRoomsPage from '@/pages/doctor/DoctorRoomsPage';
+import LabQueuePage from '@/pages/lab/LabQueuePage';
+import LabDetailPage from '@/pages/lab/LabDetailPage';
+import AccountManagementPage from '@/pages/admin/AccountManagementPage';
+import ServiceManagementPage from '@/pages/admin/ServiceManagementPage';
 
 import {ROUTES} from "@/constants/routes.js";
 
 
 function App() {
   return (
-    <Routes>
+    <>
+      <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<LoginRegister />} />
         <Route path={ROUTES.APPOINTMENT} element={<AppointmentPage />} />
-        <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
 
-        {/* Routes cho nhân viên - RECEPTIONIST, NURSE, DOCTOR, ADMIN được truy cập */}
+        {/* CUSTOMER routes - bệnh nhân */}
+        <Route path={ROUTES.PROFILE} element={
+          <ProtectedRoute allowedRoles={['CUSTOMER']}>
+            <ProfilePage />
+          </ProtectedRoute>
+        } />
+
+        {/* Routes cho nhân viên - dựa trên systemRole */}
+        {/* RECEPTIONIST - lễ tân */}
         <Route path={ROUTES.RECEPTIONIST_CHECKIN} element={
-            <ProtectedRoute allowedRoles={['RECEPTIONIST', 'NURSE', 'DOCTOR', 'ADMIN']}>
-                <CheckInPage />
-            </ProtectedRoute>
+          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+            <CheckInPage />
+          </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_APPOINTMENT_DETAIL} element={
-            <ProtectedRoute allowedRoles={['RECEPTIONIST', 'NURSE', 'DOCTOR', 'ADMIN']}>
-                <AppointmentDetailPage />
-            </ProtectedRoute>
+          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'NURSE', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}>
+            <AppointmentDetailPage />
+          </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_CREATE_TICKET} element={
-            <ProtectedRoute allowedRoles={['RECEPTIONIST', 'NURSE', 'DOCTOR', 'ADMIN']}>
-                <CreateTicketPage />
-            </ProtectedRoute>
-
+          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+            <CreateTicketPage />
+          </ProtectedRoute>
         } />
 
-        {/* Cashier routes */}
+        {/* CASHIER - thu ngân */}
         <Route path={ROUTES.CASHIER_INVOICES} element={
-            <ProtectedRoute allowedRoles={['CASHIER', 'ADMIN']}>
-                <InvoiceListPage />
-            </ProtectedRoute>
+          <ProtectedRoute allowedRoles={['CASHIER']}>
+            <InvoiceListPage />
+          </ProtectedRoute>
         } />
 
         <Route path={ROUTES.CASHIER_INVOICE_DETAIL}>
-            <Route index element={
-                <ProtectedRoute allowedRoles={['CASHIER', 'ADMIN']}>
-                    <InvoiceDetailPage />
-                </ProtectedRoute>
-            } />
-            <Route path="print" element={
-                <ProtectedRoute allowedRoles={['CASHIER', 'ADMIN']}>
-                    <InvoicePrintPage />
-                </ProtectedRoute>
-            } />
+          <Route index element={
+            <ProtectedRoute allowedRoles={['CASHIER']}>
+              <InvoiceDetailPage />
+            </ProtectedRoute>
+          } />
+          <Route path="print" element={
+            <ProtectedRoute allowedRoles={['CASHIER']}>
+              <InvoicePrintPage />
+            </ProtectedRoute>
+          } />
         </Route>
 
-        <Route path={ROUTES.DOCTOR_DEPARTMENTS} element={
-            <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'ADMIN']}>
-                <DoctorDepartmentPage />
-            </ProtectedRoute>
+        {/* DOCTOR + NURSE - bác sĩ/y tá */}
+        <Route path={ROUTES.DOCTOR_ROOMS} element={
+          <ProtectedRoute allowedRoles={['NURSE', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'CLINIC_MANAGER']}>
+            <DoctorRoomsPage />
+          </ProtectedRoute>
         } />
-        <Route path={ROUTES.DOCTOR_EXAMINATION} element={<ExaminationPage />} />
+        <Route path={ROUTES.DOCTOR_DEPARTMENTS} element={
+          <ProtectedRoute allowedRoles={['GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'CLINIC_MANAGER']}>
+            <DoctorDepartmentPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.DOCTOR_EXAMINATION} element={
+          <ProtectedRoute allowedRoles={['GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}>
+            <ExaminationPage />
+          </ProtectedRoute>
+        } />
 
+        {/* LAB - xét nghiệm (NURSE có thể truy cập) */}
+        <Route path={ROUTES.DOCTOR_LAB} element={
+          <ProtectedRoute allowedRoles={['NURSE', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}>
+            <LabQueuePage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.DOCTOR_LAB_DETAIL} element={
+          <ProtectedRoute allowedRoles={['NURSE', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}>
+            <LabDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.ADMIN_ACCOUNTS} element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AccountManagementPage />
+          </ProtectedRoute>
+        } />
 
+        <Route path={ROUTES.ADMIN_SERVICES} element={<ServiceManagementPage />} />
+              </Routes>
 
-    </Routes>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnHover
+        draggable
+        theme="light"
+      />
+    </>
   )
 }
 export default App;

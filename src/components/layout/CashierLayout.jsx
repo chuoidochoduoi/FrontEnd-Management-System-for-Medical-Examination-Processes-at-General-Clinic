@@ -17,7 +17,7 @@ export default function CashierLayout({ children }) {
     const [profileOpen, setProfileOpen] = useState(false);
 
     const handleLogout = () => {
-        ['token', 'refreshToken', 'role', 'username', 'accountId'].forEach(k => {
+        ['token', 'refreshToken', 'role', 'username', 'accountId', 'systemRole', 'staffId'].forEach(k => {
             localStorage.removeItem(k);
             sessionStorage.removeItem(k);
         });

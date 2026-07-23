@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, Users, FolderOpen, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, FolderOpen, Settings, LogOut, FlaskConical } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -13,16 +13,14 @@ export default function DoctorLayout({ children }) {
     const username = get('username') || 'Bác sĩ';
 
     const handleLogout = () => {
-        ['token', 'refreshToken', 'role', 'username', 'accountId'].forEach(k => {
+        ['token', 'refreshToken', 'role', 'username', 'accountId', 'systemRole', 'staffId'].forEach(k => {
             localStorage.removeItem(k); sessionStorage.removeItem(k);
         });
         navigate(ROUTES.LOGIN);
     };
 
     const mainNav = [
-        { to: ROUTES.DOCTOR_DEPARTMENTS,   icon: LayoutDashboard, label: t('sidebar.departments') },
-        { to: ROUTES.DOCTOR_PATIENTS,    icon: Users,           label: t('sidebar.patients') },
-        { to: ROUTES.DOCTOR_RECORDS,     icon: FolderOpen,      label: t('sidebar.records') },
+        { to: ROUTES.DOCTOR_ROOMS, icon: LayoutDashboard, label: t('sidebar.departments') },
     ];
 
     const linkClass = ({ isActive }) =>

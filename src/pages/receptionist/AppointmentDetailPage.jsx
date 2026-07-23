@@ -512,6 +512,7 @@ export default function AppointmentDetailPage() {
                 {/* Modal xác nhận */}
                 {showConfirmModal && (
                     <AppointmentConfirmModal
+                        namespace="receptionist"
                         data={{
                             fullName: isPatientEditable ? fullName : (appointment?.guestFullName || appointment?.fullName || ''),
                             phone: isPatientEditable ? phone : (appointment?.guestPhone || appointment?.phone || ''),

@@ -19,17 +19,39 @@ function useAuth() {
     }, []);
 
     const logout = () => {
-        ['token', 'refreshToken', 'role', 'username', 'accountId'].forEach(key => {
+        ['token', 'refreshToken', 'role', 'username', 'accountId', 'systemRole'].forEach(key => {
             localStorage.removeItem(key);
             sessionStorage.removeItem(key);
         });
         setToken(null);
     };
 
+    // Helper để lấy tên role hiển thị
+    const getDisplayRole = () => {
+        const role = get('role')?.toUpperCase();
+        const systemRole = get('systemRole')?.toUpperCase();
+
+        if (role === 'CUSTOMER') return 'Bệnh nhân';
+        if (role === 'STAFF' && systemRole) {
+            const roleLabels = {
+                GENERAL_DOCTOR: 'Bác sĩ đa khoa',
+                SPECIALIST_DOCTOR: 'Bác sĩ chuyên khoa',
+                NURSE: 'Y tá',
+                RECEPTIONIST: 'Lễ tân',
+                CASHIER: 'Thu ngân',
+                CLINIC_MANAGER: 'Quản lý phòng khám',
+            };
+            return roleLabels[systemRole] || systemRole;
+        }
+        return role || '';
+    };
+
     return {
         isLoggedIn: !!token,
         role:       get('role'),
+        systemRole: get('systemRole'),
         username:   get('username'),
+        displayRole: getDisplayRole(),
         logout,
     };
 }
@@ -37,7 +59,7 @@ function useAuth() {
 export default function Navbar() {
     const { t } = useTranslation('common');
     const { currentLanguage, changeLanguage, languages } = useLanguage();
-    const { isLoggedIn, role, username, logout } = useAuth();
+    const { isLoggedIn, role, systemRole, username, displayRole, logout } = useAuth();
     const navigate = useNavigate();
 
     const [open, setOpen] = useState(false);
@@ -114,7 +136,7 @@ export default function Navbar() {
                                     <div className="px-4 py-2.5 border-b border-gray-100">
                                         <p className="text-xs text-gray-400">{t('nav.loggedInAs')}</p>
                                         <p className="text-sm font-medium text-gray-700">{username}</p>
-                                        <p className="text-xs text-gray-400 capitalize">{role}</p>
+                                        <p className="text-xs text-gray-400">{displayRole}</p>
                                     </div>
                                 )}
 

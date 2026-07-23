@@ -1,13 +1,14 @@
 import { useCallback } from 'react';
+import { toast } from 'react-toastify';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
-// Simple notification helper (shows alert for now, can be replaced with toast)
+// Notification helper using toast
 const notify = (message, type = 'error') => {
     if (type === 'error') {
-        alert(`Lỗi: ${message}`);
+        toast.error(message);
     } else {
-        console.log(`[Notify] ${message}`);
+        toast.success(message);
     }
 };
 

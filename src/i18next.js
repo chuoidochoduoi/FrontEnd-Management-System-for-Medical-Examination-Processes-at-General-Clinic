@@ -14,6 +14,9 @@ import viCashier from './locales/vi/cashier.json';
 import viQueue from './locales/vi/queue.json';
 import enQueue from './locales/en/queue.json';
 import viDoctor from './locales/vi/doctor.json';
+import viLab from './locales/vi/lab.json';
+import viAdmin from './locales/vi/admin.json';
+import viServices from './locales/vi/services.json';
 
 // Thêm page mới thì import thêm ở đây, ví dụ:
 // import viCustomer from '../locales/vi/customer.json';
@@ -34,7 +37,7 @@ i18n
                 customer: viCustomer,
                 createTicketConfirmModal: viCreateTicketConfirmModal,
                 cashier: viCashier,
-                queue: viQueue, doctor: viDoctor
+                queue: viQueue, doctor: viDoctor, lab: viLab, admin: viAdmin, services: viServices
             },
             en: {
                 common: enCommon,

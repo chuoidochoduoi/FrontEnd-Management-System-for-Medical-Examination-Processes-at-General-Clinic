@@ -149,9 +149,18 @@ export default function CheckInPage() {
                         <p className="text-sm text-gray-400 text-center py-10">{t('checkIn.noData')}</p>
                     )}
 
-                    {/* Filter appointments by timeSlot on frontend */}
+                    {/* Filter appointments by search, timeSlot on frontend */}
                     {!loading && Array.isArray(appointments) && appointments
-                        .filter(appt => !timeSlot || appt.timeSlot === timeSlot)
+                        .filter(appt => {
+                            // Search filter
+                            if (search && !(appt.patientName?.toLowerCase().includes(search.toLowerCase()) ||
+                                           appt.phone?.includes(search) ||
+                                           appt.code?.includes(search))) {
+                                return false;
+                            }
+                            // Time slot filter
+                            return !timeSlot || appt.timeSlot === timeSlot;
+                        })
                         .map((appt, idx) => (
                         <div
                             key={appt.id ?? idx}

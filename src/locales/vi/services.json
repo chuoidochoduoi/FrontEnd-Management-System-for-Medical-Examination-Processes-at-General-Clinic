@@ -1,0 +1,88 @@
+{
+  "serviceManagement": {
+    "pageTitle": "Quản lí dịch vụ",
+    "statusStructure": "Cấu trúc trạng thái:",
+    "statusStructureValue": "3 Trạng thái chuẩn",
+    "stats": {
+      "total": "Tổng số dịch vụ",
+      "active": "Đang áp dụng",
+      "suspended": "Tạm ngưng",
+      "draft": "Bản nháp (Có thể xóa)"
+    },
+    "filter": {
+      "searchPlaceholder": "Tìm kiếm tên dịch vụ...",
+      "serviceType": "Loại hình cốt lõi",
+      "specialty": "Lọc theo Chuyên khoa dịch",
+      "status": "Trạng thái vận hành",
+      "statusAll": "Tất cả trạng thái",
+      "addBtn": "+ Tạo dịch vụ mới (Nháp)",
+      "searchBtn": "Tìm kiếm"
+    },
+    "table": {
+      "code": "Mã DV",
+      "name": "Tên dịch vụ y tế",
+      "type": "Loại gốc",
+      "specialty": "Chuyên khoa hiển thị cần thiết",
+      "price": "Giá niêm yết",
+      "status": "Trạng thái vận hành",
+      "actions": "Thao tác xử lý"
+    },
+    "status": {
+      "active":    "Đang áp dụng",
+      "suspended": "Tạm ngưng",
+      "draft":     "Bản nháp"
+    },
+    "statusCfg": {
+      "active":    { "cls": "bg-blue-50 text-blue-600 border border-blue-200" },
+      "suspended": { "cls": "bg-orange-50 text-orange-500 border border-orange-200" },
+      "draft":     { "cls": "bg-gray-100 text-gray-500 border border-gray-200" }
+    },
+    "actions": {
+      "configure": "⚙ Cấu hình giá",
+      "edit": "Sửa",
+      "delete": "Xóa 🗑",
+      "suspend": "Ngưng vận hành"
+    },
+    "configModal": {
+      "title": "Câu hình danh mục & Luồng hiện thị",
+      "serviceName": "Tên hạng mục dịch vụ",
+      "serviceType": "Loại hình cốt lõi",
+      "price": "Giá thu phí (VNĐ)",
+      "specialty": "Chuyên khoa hiển thị cần thiết (Dành cho Xét nghiệm)",
+      "duration": "Thời gian thực hiện",
+      "durationPlaceholder": "30 phút",
+      "status": "Trạng thái",
+      "cancel": "Huỷ",
+      "submit": "Cập nhật cấu hình",
+      "submitting": "Đang lưu..."
+    },
+    "addModal": {
+      "title": "Tạo dịch vụ mới",
+      "serviceCode": "Mã dịch vụ",
+      "serviceCodePlaceholder": "Ví dụ: DV-101",
+      "serviceName": "Tên dịch vụ y tế",
+      "serviceNamePlaceholder": "Nhập tên dịch vụ...",
+      "serviceType": "Loại hình cốt lõi",
+      "serviceTypeDefault": "-- Chọn loại --",
+      "price": "Giá niêm yết (VNĐ)",
+      "pricePlaceholder": "0",
+      "specialty": "Chuyên khoa hiển thị",
+      "specialtyPlaceholder": "Ví dụ: Khoa: Sản Phụ Khoa",
+      "duration": "Thời gian thực hiện",
+      "durationPlaceholder": "30 phút",
+      "cancel": "Huỷ bỏ",
+      "submit": "Tạo bản nháp",
+      "submitting": "Đang tạo..."
+    },
+    "deleteConfirm": "Xác nhận xóa dịch vụ này?",
+    "suspendConfirm": "Xác nhận ngưng vận hành dịch vụ này?",
+    "publishConfirm": "Xác nhận phát hành dịch vụ này?",
+    "loading": "Đang tải...",
+    "noData": "Không có dịch vụ nào.",
+    "errors": {
+      "loadFailed": "Không thể tải danh sách dịch vụ.",
+      "saveFailed": "Lưu thất bại. Vui lòng thử lại.",
+      "unknown": "Có lỗi xảy ra."
+    }
+  }
+}

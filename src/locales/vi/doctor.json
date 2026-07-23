@@ -7,7 +7,8 @@
     "patients": "Bệnh nhân",
     "records": "Hồ sơ",
     "settings": "Cài đặt",
-    "logout": "Đăng xuất"
+    "logout": "Đăng xuất",
+    "labOrders": "Xét nghiệm"
   },
   "examination": {
     "pageTitle": "Examination",
@@ -98,6 +99,13 @@
     "called": "Đã gọi",
     "inProgress": "Đang khám",
     "done": "Hoàn thành",
-    "skipped": "Bỏ qua"
+    "skipped": "Bỏ qua",
+    "waitingForTest": "Chờ xét nghiệm",
+    "testDone": "Xét nghiệm xong"
+  },
+  "selectRoom": "Chọn phòng khám",
+  "rooms": {
+    "consultation": "Phòng khám",
+    "lab": "Phòng xét nghiệm"
   }
 }

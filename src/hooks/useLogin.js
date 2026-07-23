@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
+import { decodeToken } from '@/utils/jwtUtils';
 
 export function useLogin() {
     const [loading, setLoading] = useState(false);
@@ -24,23 +25,47 @@ export function useLogin() {
             }
 
             const data = await res.json();
-            // data = { accessToken, refreshToken, tokenType, expiresIn, account: { accountId, username, role } }
+            // data = { accessToken, refreshToken, tokenType, expiresIn, account: { accountId, username, role, systemRole } }
 
             const storage = remember ? localStorage : sessionStorage;
-            storage.setItem('token',     data.accessToken);
-            storage.setItem('refreshToken', data.refreshToken);
-            storage.setItem('role',      data.account.role);
-            storage.setItem('username',  data.account.username);
-            storage.setItem('accountId', data.account.accountId);
+            storage.setItem('token',          data.accessToken);
+            storage.setItem('refreshToken',   data.refreshToken);
+            storage.setItem('role',           data.account.role);           // CUSTOMER | STAFF
+            storage.setItem('username',       data.account.username);
+            storage.setItem('accountId',      data.account.accountId);
+            storage.setItem('systemRole',     data.account.systemRole || ''); // GENERAL_DOCTOR | SPECIALIST_DOCTOR | NURSE | RECEPTIONIST | CASHIER | CLINIC_MANAGER | null
 
-            // Redirect based on role
+            // Decode JWT to extract staffId (sid claim) for staff users
+            const decoded = decodeToken(data.accessToken);
+            console.log('[useLogin] Decoded token:', decoded);
+            if (decoded?.sid) {
+                console.log('[useLogin] Saving staffId:', decoded.sid);
+                storage.setItem('staffId', decoded.sid);
+            } else {
+                console.log('[useLogin] No sid claim in token (may be customer user)');
+            }
+
+            // Redirect based on role + systemRole
             const role = data.account.role?.toUpperCase();
-            if (role === 'RECEPTIONIST') {
-                navigate(ROUTES.RECEPTIONIST_CHECKIN);
-            } else if (role === 'NURSE' || role === 'DOCTOR') {
-                navigate(ROUTES.DOCTOR_DEPARTMENTS);
-            } else if (role === 'ADMIN') {
-                navigate(ROUTES.DOCTOR_DEPARTMENTS);
+            const systemRole = data.account.systemRole?.toUpperCase();
+
+            if (role === 'ADMIN') {
+                navigate(ROUTES.ADMIN_ACCOUNTS);
+            } else if (role === 'CUSTOMER') {
+                navigate(ROUTES.CUSTOMER_HOME);
+            } else if (role === 'STAFF') {
+                // Redirect based on systemRole
+                if (systemRole === 'RECEPTIONIST') {
+                    navigate(ROUTES.RECEPTIONIST_CHECKIN);
+                } else if (systemRole === 'NURSE' || systemRole === 'GENERAL_DOCTOR' || systemRole === 'SPECIALIST_DOCTOR') {
+                    navigate(ROUTES.DOCTOR_ROOMS);
+                } else if (systemRole === 'CASHIER') {
+                    navigate(ROUTES.CASHIER_INVOICES);
+                } else if (systemRole === 'CLINIC_MANAGER') {
+                    navigate(ROUTES.ADMIN_ROOMS);
+                } else {
+                    navigate(ROUTES.PROFILE);
+                }
             } else {
                 navigate(ROUTES.PROFILE);
             }

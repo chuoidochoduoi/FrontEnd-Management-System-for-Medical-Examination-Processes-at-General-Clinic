@@ -25,6 +25,7 @@ const STATUS_MAP = {
     IN_PROGRESS: 'inProgress',
     DONE: 'done',
     SKIPPED: 'skipped',
+    WAITING_FOR_TEST: 'waitingForTest',
 };
 
 const STATUS_STYLES = {
@@ -33,6 +34,7 @@ const STATUS_STYLES = {
     inProgress: 'bg-blue-50 text-blue-700',
     done: 'bg-gray-100 text-gray-600',
     skipped: 'bg-red-50 text-red-700',
+    waitingForTest: 'bg-purple-50 text-purple-700',
 };
 
 function initialsColor(seed = '') {
@@ -105,7 +107,7 @@ export default function QueuePage() {
                     {/* Tabs + sort */}
                     <div className="mb-4 flex items-center justify-between">
                         <div className="flex gap-1 rounded-lg bg-white p-1 shadow-sm">
-                            {['all', 'waiting', 'called', 'inProgress', 'done', 'skipped', 'absent'].map((key) => (
+                            {['all', 'waiting', 'called', 'inProgress', 'done', 'skipped', 'waitingForTest', 'absent'].map((key) => (
                                 <button
                                     key={key}
                                     onClick={() => setActiveTab(key)}

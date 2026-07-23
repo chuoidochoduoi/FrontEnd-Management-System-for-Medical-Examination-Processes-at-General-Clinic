@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
+import { toast } from 'react-toastify';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = () => ({ Authorization: `Bearer ${get('token')}` });
@@ -55,9 +56,11 @@ export function useCreateTicket() {
                 }
             );
             if (!res.ok) throw new Error('Tạo phiếu thất bại. Vui lòng thử lại.');
-            navigate(ROUTES.RECEPTIONIST_CHECKIN);
+            toast.success('Tạo phiếu khám thành công!');
+            setTimeout(() => navigate(ROUTES.RECEPTIONIST_CHECKIN), 1500);
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra.');
+            toast.error(err.message || 'Tạo phiếu thất bại. Vui lòng thử lại.');
         } finally {
             setSubmitting(false);
         }

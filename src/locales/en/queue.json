@@ -38,7 +38,9 @@
     "called": "Called",
     "inProgress": "In Progress",
     "done": "Done",
-    "skipped": "Skipped"
+    "skipped": "Skipped",
+    "waitingForTest": "Waiting for test",
+    "testDone": "Test done"
   },
   "actions": {
     "view": "View",

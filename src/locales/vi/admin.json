@@ -1,0 +1,94 @@
+{
+  "sidebar": {
+    "logo": "MediFlow Premium",
+    "subtitle": "Admin Workspace",
+    "rooms": "Quản lý phòng",
+    "services": "Quản lý giá dịch vụ",
+    "accounts": "Quản lý Tài khoản",
+    "admin": "Quản trị viên",
+    "logout": "Đăng xuất hệ thống"
+  },
+  "accountManagement": {
+    "pageTitle": "Quản lý tài khoản vận hành",
+    "lastUpdated": "Cập nhật phiên bản:",
+    "tabs": {
+      "staff": "Danh sách nhân sự điều hành",
+      "patients": "Tài khoản bệnh nhân hệ thống"
+    },
+    "addStaffBtn": "+ Thêm nhân sự mới",
+    "staff": {
+      "searchPlaceholder": "Tìm tên, mã hoặc tài khoản đăng nhập...",
+      "table": {
+        "code": "Mã số",
+        "nameAndDept": "Họ tên / Bộ phận",
+        "loginAccount": "Tài khoản đăng nhập",
+        "password": "Mật khẩu cấp phát",
+        "role": "Vai trò",
+        "actions": "Hành động"
+      },
+      "showPassword": "Hiện",
+      "hidePassword": "Ẩn",
+      "actions": {
+        "edit": "Sửa hồ sơ",
+        "lock": "Khóa",
+        "unlock": "Mở khóa"
+      },
+      "pagination": "Hiển thị {{from}}-{{to}} trên tổng số {{total}} bệnh nhân"
+    },
+    "patients": {
+      "searchPlaceholder": "Tìm tên bệnh nhân, mã số hoặc số điện thoại...",
+      "statusFilter": "-- Tất cả trạng thái --",
+      "table": {
+        "code": "Mã số",
+        "nameAndAddress": "Bệnh nhân / Địa chỉ",
+        "loginAccount": "Tài khoản đăng nhập",
+        "password": "Mật khẩu",
+        "personalInfo": "Thông tin cá nhân",
+        "actions": "Hành động"
+      },
+      "actions": {
+        "update": "Cập nhật",
+        "lock": "Khóa"
+      },
+      "pagination": "Hiển thị {{from}}-{{to}} trên tổng số {{total}} bệnh nhân"
+    },
+    "addStaffModal": {
+      "title": "Thêm nhân sự mới",
+      "section1": "Thông tin tài khoản",
+      "section2": "Thông tin cá nhân",
+      "section3": "Học vị & Bằng cấp",
+      "fields": {
+        "fullName": "Họ và tên",
+        "loginAccount": "Tên đăng nhập",
+        "password": "Mật khẩu",
+        "phone": "Số điện thoại",
+        "email": "Email",
+        "gender": "Giới tính",
+        "address": "Địa chỉ",
+        "department": "ID phòng ban",
+        "systemTitle": "Vai trò hệ thống"
+      },
+      "cancel": "Hủy bỏ",
+      "submit": "Lưu & Cấp tài khoản",
+      "submitting": "Đang xử lý..."
+    },
+    "updatePatientModal": {
+      "title": "CẬP NHẬT TÀI KHOẢN BỆNH NHÂN",
+      "patientCode": "MÃ HỒ SƠ",
+      "section1": "THÔNG TIN TÀI KHOẢN & BẢO MẬT",
+      "fields": {
+        "loginAccount": "TÊN ĐĂNG NHẬP (SĐT)",
+        "newPassword": "MẬT KHẨU MỚI",
+        "newPasswordPlaceholder": "Để trống nếu không đổi"
+      },
+      "cancel": "Hủy",
+      "submit": "Cập nhật",
+      "submitting": "Đang lưu..."
+    },
+    "errors": {
+      "loadFailed": "Không thể tải danh sách.",
+      "saveFailed": "Lưu thất bại. Vui lòng thử lại.",
+      "unknown": "Có lỗi xảy ra."
+    }
+  }
+}

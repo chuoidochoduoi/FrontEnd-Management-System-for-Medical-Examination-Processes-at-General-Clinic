@@ -41,7 +41,6 @@ export default function CustomerLayout({ children }) {
         { to: ROUTES.CUSTOMER_HOME,           icon: Home,          label: t('sidebar.home') },
         { to: ROUTES.APPOINTMENT,            icon: CalendarPlus,  label: t('sidebar.appointment') },
         { to: ROUTES.CUSTOMER_VISIT_HISTORY,  icon: ClipboardList, label: t('sidebar.visitHistory') },
-        { to: ROUTES.CUSTOMER_TEST_RESULTS,   icon: FlaskConical,  label: t('sidebar.testResults') },
         { to: ROUTES.CUSTOMER_PAYMENT,        icon: CreditCard,    label: t('sidebar.paymentHistory') },
         { to: ROUTES.PROFILE,                icon: UserCircle,    label: t('sidebar.profile') },
     ];

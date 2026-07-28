@@ -50,9 +50,9 @@ export function useLogin() {
             const systemRole = data.account.systemRole?.toUpperCase();
 
             if (role === 'ADMIN') {
-                navigate(ROUTES.ADMIN_ACCOUNTS);
+                navigate(ROUTES.ADMIN_ROOMS);
             } else if (role === 'CUSTOMER') {
-                navigate(ROUTES.CUSTOMER_HOME);
+                navigate(ROUTES.PROFILE);
             } else if (role === 'STAFF') {
                 // Redirect based on systemRole
                 if (systemRole === 'RECEPTIONIST') {

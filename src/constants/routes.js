@@ -14,7 +14,7 @@ export const ROUTES = {
     CUSTOMER_VISIT_HISTORY: '/customer/visits',
     CUSTOMER_TEST_RESULTS: '/customer/tests',
     CUSTOMER_PAYMENT: '/customer/payments',
-
+    CUSTOMER_APPOINTMENT_DETAIL: '/my-appointments/:id',
     RECEPTIONIST_APPOINTMENT_DETAIL: '/receptionist/appointments/:id',
     RECEPTIONIST_CHECKIN:       '/receptionist/check-in',
     RECEPTIONIST_CREATE_TICKET: '/receptionist/create-ticket',
@@ -29,6 +29,8 @@ export const ROUTES = {
     CASHIER_HELP:     '/cashier/help',
     CASHIER_INVOICE_DETAIL: '/cashier/invoices/:id',
     CASHIER_INVOICE_PRINT: '/cashier/invoices/:id/print',
+    PATIENT_VISIT_HISTORY: '/patient/visits',
+    PATIENT_VISIT_DETAIL:  '/patient/visits',
 
     DOCTOR_ROOMS: '/doctor/rooms',
     DOCTOR_DEPARTMENTS: '/doctor/departments/:departmentId',
@@ -39,8 +41,13 @@ export const ROUTES = {
 
     DOCTOR_LAB_DETAIL: '/lab/:id',
 
-
     ADMIN_ACCOUNTS: '/admin/accounts',
     ADMIN_ROOMS:    '/admin/rooms',
     ADMIN_SERVICES: '/admin/services',
+
+    OWNER_SCHEDULE: '/owner/schedule',
+    OWNER_REPORT: '/owner/report',
+
+    STAFF_SCHEDULE: '/staff/schedule',
+    RECEPTIONIST_RECORD_DETAIL: '/receptionist/records/:id',
 };

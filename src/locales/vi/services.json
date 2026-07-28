@@ -41,7 +41,8 @@
       "configure": "⚙ Cấu hình giá",
       "edit": "Sửa",
       "delete": "Xóa 🗑",
-      "suspend": "Ngưng vận hành"
+      "suspend": "Ngưng vận hành",
+      "publish": "Phát hành"
     },
     "configModal": {
       "title": "Câu hình danh mục & Luồng hiện thị",
@@ -74,6 +75,20 @@
       "submit": "Tạo bản nháp",
       "submitting": "Đang tạo..."
     },
+    "editModal": {
+      "title": "Chỉnh sửa dịch vụ (Bản nháp)",
+      "serviceName": "Tên dịch vụ",
+      "serviceType": "Loại hình",
+      "specialty": "Chuyên khoa",
+      "category": "Danh mục",
+      "price": "Giá (VNĐ)",
+      "duration": "Thời gian",
+      "durationPlaceholder": "30 phút",
+      "status": "Trạng thái",
+      "cancel": "Huỷ",
+      "submit": "Lưu thay đổi",
+      "submitting": "Đang lưu..."
+    },
     "deleteConfirm": "Xác nhận xóa dịch vụ này?",
     "suspendConfirm": "Xác nhận ngưng vận hành dịch vụ này?",
     "publishConfirm": "Xác nhận phát hành dịch vụ này?",
@@ -82,6 +97,8 @@
     "errors": {
       "loadFailed": "Không thể tải danh sách dịch vụ.",
       "saveFailed": "Lưu thất bại. Vui lòng thử lại.",
+      "createFailed": "Tạo dịch vụ thất bại. Vui lòng thử lại.",
+      "updateFailed": "Cập nhật dịch vụ thất bại. Vui lòng thử lại.",
       "unknown": "Có lỗi xảy ra."
     }
   }

@@ -22,7 +22,15 @@ import LabQueuePage from '@/pages/lab/LabQueuePage';
 import LabDetailPage from '@/pages/lab/LabDetailPage';
 import AccountManagementPage from '@/pages/admin/AccountManagementPage';
 import ServiceManagementPage from '@/pages/admin/ServiceManagementPage';
-
+import RoomManagementPage from '@/pages/admin/RoomManagementPage';
+import SchedulePage from '@/pages/owner/SchedulePage';
+import ReportPage from '@/pages/owner/ReportPage';
+import MySchedulePage from '@/pages/staff/MySchedulePage';
+import RecordsManagementPage from '@/pages/receptionist/RecordsManagementPage';
+import PaymentHistoryPage from '@/pages/customer/PaymentHistoryPage';
+import ReceiptDetailPage  from '@/pages/customer/ReceiptDetailPage';
+import MedicalHistoryPage from '@/pages/customer/MedicalHistoryPage';
+import VisitDetailPage    from '@/pages/customer/VisitDetailPage';
 import {ROUTES} from "@/constants/routes.js";
 
 
@@ -38,6 +46,26 @@ function App() {
         <Route path={ROUTES.PROFILE} element={
           <ProtectedRoute allowedRoles={['CUSTOMER']}>
             <ProfilePage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.CUSTOMER_VISIT_HISTORY} element={
+          <ProtectedRoute allowedRoles={['CUSTOMER']}>
+            <MedicalHistoryPage />
+          </ProtectedRoute>
+        } />
+        <Route path={`${ROUTES.CUSTOMER_VISIT_HISTORY}/:id`} element={
+          <ProtectedRoute allowedRoles={['CUSTOMER']}>
+            <VisitDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.CUSTOMER_PAYMENT} element={
+          <ProtectedRoute allowedRoles={['CUSTOMER']}>
+            <PaymentHistoryPage />
+          </ProtectedRoute>
+        } />
+        <Route path={`${ROUTES.CUSTOMER_PAYMENT}/:id`} element={
+          <ProtectedRoute allowedRoles={['CUSTOMER']}>
+            <ReceiptDetailPage />
           </ProtectedRoute>
         } />
 
@@ -113,9 +141,41 @@ function App() {
           </ProtectedRoute>
         } />
 
-        <Route path={ROUTES.ADMIN_SERVICES} element={<ServiceManagementPage />} />
-              </Routes>
+        <Route path={ROUTES.ADMIN_ROOMS} element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <RoomManagementPage />
+          </ProtectedRoute>
+        } />
 
+        <Route path={ROUTES.ADMIN_SERVICES} element={<ServiceManagementPage />} />
+        <Route path={ROUTES.OWNER_SCHEDULE} element={
+          <ProtectedRoute allowedRoles={['CLINIC_MANAGER']}>
+            <SchedulePage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.OWNER_REPORT} element={
+          <ProtectedRoute allowedRoles={['CLINIC_MANAGER']}>
+            <ReportPage />
+          </ProtectedRoute>
+        } />
+
+      {/* Staff self schedule - receptionist, cashier, doctor, nurse */}
+      <Route path={ROUTES.STAFF_SCHEDULE} element={
+        <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CASHIER', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'NURSE']}>
+          <MySchedulePage />
+        </ProtectedRoute>
+      } />
+        <Route path={ROUTES.RECEPTIONIST_RECORDS} element={
+          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+            <RecordsManagementPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.RECEPTIONIST_RECORD_DETAIL} element={
+          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+            <div className="p-8">Trang chi tiết hồ sơ - đang phát triển</div>
+          </ProtectedRoute>
+        } />
+      </Routes>
       <ToastContainer
         position="top-right"
         autoClose={3000}

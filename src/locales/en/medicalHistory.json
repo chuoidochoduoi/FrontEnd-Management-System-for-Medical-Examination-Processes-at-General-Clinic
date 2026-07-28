@@ -1,0 +1,60 @@
+{
+  "medicalHistory": {
+    "pageTitle": "Medical history",
+    "searchPlaceholder": "Search by disease or doctor name...",
+    "table": {
+      "date": "Appointment Date",
+      "specialty": "Specialty",
+      "doctor": "Attending Doctor",
+      "diagnosis": "Diagnosis",
+      "status": "Status",
+      "actions": "View Results"
+    },
+    "statusAvailable": "Results Available",
+    "viewDetails": "VIEW DETAILS",
+    "showing": "Showing {{from}}-{{to}} of {{total}} appointments",
+    "loading": "Loading...",
+    "noData": "No appointments found.",
+    "errors": {
+      "loadFailed": "Cannot load medical history.",
+      "unknown": "An error occurred."
+    }
+  },
+  "visitDetail": {
+    "pageTitle": "VISIT DETAILS",
+    "backBtn": "← Back to Medical History",
+    "recordId": "Medical Record ID:",
+    "appointmentDate": "Appointment Date:",
+    "ratingBtn": "Rating",
+    "printBtn": "🖨 PRINT RESULTS",
+    "triage": {
+      "title": "INITIAL TRIAGE INFORMATION",
+      "symptoms": "SYMPTOMS & REASON FOR VISIT",
+      "clinicalResult": "CLINICAL EXAMINATION RESULTS (GENERAL)"
+    },
+    "diagnosis": {
+      "title": "DIAGNOSIS (ICD-10)",
+      "treatmentTitle": "TREATMENT PLAN & DOCTOR'S INSTRUCTIONS",
+      "followUp": "⚠ Follow-up Reminder:"
+    },
+    "prescription": {
+      "title": "PRESCRIPTION"
+    },
+    "tests": {
+      "title": "TEST",
+      "abnormal": "Abnormal Result",
+      "normal": "Normal",
+      "tableName": "TEST NAME (ABBREVIATION)",
+      "tableResult": "RESULT",
+      "tableRange": "REFERENCE RANGE",
+      "tableUnit": "UNIT",
+      "tableAssessment": "ASSESSMENT",
+      "high": "High",
+      "low": "Low"
+    },
+    "errors": {
+      "loadFailed": "Cannot load visit details.",
+      "unknown": "An error occurred."
+    }
+  }
+}

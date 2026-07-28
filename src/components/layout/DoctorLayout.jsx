@@ -21,6 +21,7 @@ export default function DoctorLayout({ children }) {
 
     const mainNav = [
         { to: ROUTES.DOCTOR_ROOMS, icon: LayoutDashboard, label: t('sidebar.departments') },
+        { to: ROUTES.STAFF_SCHEDULE, icon: () => <span className="text-gray-500">📅</span>, label: 'Lịch trực của tôi' },
     ];
 
     const linkClass = ({ isActive }) =>

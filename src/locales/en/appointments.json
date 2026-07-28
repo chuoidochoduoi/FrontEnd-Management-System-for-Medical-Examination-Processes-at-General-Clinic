@@ -1,0 +1,79 @@
+{
+  "myAppointments": {
+    "pageTitle": "MY APPOINTMENTS",
+    "notice": "Consultation Hours: Morning: 07:30–10:30 | Afternoon: 13:30–17:30.",
+    "noticeQueue": "Your doctor and queue number will be assigned at the reception desk.",
+    "newBtn": "+ NEW APPOINTMENT",
+    "filter": {
+      "code": "APPOINTMENT CODE",
+      "codePlaceholder": "Example: #AP-...",
+      "specialty": "CHUYÊN KHOA KHÁM",
+      "specialtyAll": "-- All --",
+      "status": "STATUS",
+      "statusAll": "-- All Statuses --",
+      "filterBtn": "FILTER APPOINTMENTS"
+    },
+    "table": {
+      "code": "APPOINTMENT CODE",
+      "dateTime": "TARGET DATE & TIME WINDOW",
+      "specialty": "REGISTERED SPECIALTY",
+      "queue": "QUEUE TICKET",
+      "status": "STATUS",
+      "actions": "ACTIONS"
+    },
+    "status": {
+      "upcoming":  "UPCOMING",
+      "completed": "COMPLETED",
+      "cancelled": "CANCELLED"
+    },
+    "queueWaiting": "Waiting for Queue Number Assignment",
+    "cancelBtn": "Cancel",
+    "viewBtn": "View",
+    "morningShift": "Morning Shift",
+    "afternoonShift": "Afternoon Shift",
+    "loading": "Loading...",
+    "noData": "No appointments found.",
+    "errors": {
+      "loadFailed": "Cannot load appointments.",
+      "cancelFailed": "Cancel failed. Please try again.",
+      "unknown": "An error occurred."
+    }
+  },
+  "appointmentDetail": {
+    "breadcrumb": "MY APPOINTMENTS",
+    "pageTitle": "APPOINTMENT DETAILS",
+    "backBtn": "Back to History",
+    "cancelBtn": "Cancel",
+    "rescheduleBtn": "Reschedule",
+    "printBtn": "Print Information Slip",
+    "appointmentCode": "APPOINTMENT CODE",
+    "statusLabel": "Status",
+    "sections": {
+      "appointment": "Appointment",
+      "orderedServices": "Ordered Services",
+      "reason": "Reason for Visit",
+      "complaint": "Chief Complaint / Symptoms"
+    },
+    "fields": {
+      "date": "Appointment Date",
+      "timeSlot": "Time Slot",
+      "queueTicket": "Queue Ticket",
+      "queueWaiting": "Waiting for Queue Number Assignment",
+      "queueNote": "Your official queue number will appear here after you check in at the reception desk.",
+      "queueNumber": "Queue Number:"
+    },
+    "table": {
+      "service": "Service Name",
+      "cost": "Cost",
+      "total": "Total:"
+    },
+    "items": "Items",
+    "footer": "Consultation Hours: Morning: 07:30–10:30 | Afternoon: 13:30–17:30.",
+    "cancelConfirm": "Are you sure you want to cancel this appointment?",
+    "errors": {
+      "loadFailed": "Cannot load appointment details.",
+      "cancelFailed": "Cancel failed.",
+      "unknown": "An error occurred."
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "paymentHistory": {
+    "pageTitle": "PAYMENT HISTORY",
+    "filter": {
+      "fromDate": "From Date",
+      "toDate": "To Date",
+      "paymentMethod": "Payment Method",
+      "searchBtn": "Search Invoice"
+    },
+    "listTitle": "List of Settled E-Receipts",
+    "table": {
+      "invoiceId": "Invoice ID",
+      "description": "Description",
+      "settlementDate": "Settlement Date",
+      "amount": "Amount",
+      "paymentMethod": "Payment Method",
+      "status": "Status",
+      "actions": "Action"
+    },
+    "status": { "paid": "Paid", "pending": "Pending", "cancelled": "Cancelled" },
+    "downloadBtn": "Download Invoice",
+    "loading": "Loading...",
+    "noData": "No payment records found.",
+    "errors": {
+      "loadFailed": "Cannot load payment history.",
+      "unknown": "An error occurred."
+    }
+  },
+  "receiptDetail": {
+    "pageTitle": "PAYMENT HISTORY",
+    "backBtn": "Back to History",
+    "savePDF": "Save PDF",
+    "clinicName": "MediFlow Clinic System",
+    "clinicAddress": "Address: Số Lô A1, A2 MN1",
+    "clinicHotline": "Hotline: 1900-4567 • Website: mediflow.vn",
+    "receiptTitle": "Hospital Payment Receipt",
+    "issuedLabel": "Issue Date:",
+    "patientLabel": "Patient:",
+    "patientIdLabel": "Patient ID:",
+    "dobLabel": "DOB",
+    "genderLabel": "Gender",
+    "examinationType": "General Medical Examination",
+    "doctorLabel": "Dr.",
+    "statusPaid": "PAID IN FULL",
+    "paymentDetails": "Payment Details",
+    "table": {
+      "no": "No.",
+      "service": "Medical Service",
+      "qty": "Amount",
+      "unitPrice": "Unit Price",
+      "total": "Thành tiền",
+      "bhytRate": "Tỷ lệBHYT",
+      "bhytAmt": "BHYT Tất"
+    },
+    "totalService": "Total Service Cost:",
+    "bhytCover": "BHYT Coverage:",
+    "patientPayment": "Patient Payment:",
+    "inWords": "In words:",
+    "thankYou": "Thank you for choosing MediFlow. This receipt serves as an official electronic proof of payment."
+  }
+}

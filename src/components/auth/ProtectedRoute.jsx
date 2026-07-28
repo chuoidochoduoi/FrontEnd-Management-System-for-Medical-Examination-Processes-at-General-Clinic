@@ -7,9 +7,9 @@ const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 // Mapping role + systemRole sang route mặc định
 const roleToRoute = {
     // ADMIN role
-    ADMIN: ROUTES.ADMIN_ACCOUNTS,
-    // CUSTOMER role - patient pages
-    CUSTOMER: ROUTES.CUSTOMER_HOME,
+    ADMIN: ROUTES.ADMIN_ROOMS,
+    // CUSTOMER role - patient pages, defaults to profile
+    CUSTOMER: ROUTES.PROFILE,
 };
 
 const systemRoleToRoute = {
@@ -18,7 +18,11 @@ const systemRoleToRoute = {
     SPECIALIST_DOCTOR: ROUTES.DOCTOR_DEPARTMENTS,
     NURSE: ROUTES.DOCTOR_DEPARTMENTS,
     CASHIER: ROUTES.CASHIER_INVOICES,
-    CLINIC_MANAGER: ROUTES.ADMIN_ROOMS,
+    CLINIC_MANAGER: ROUTES.OWNER_REPORT,
+};
+
+const adminRoleToRoute = {
+    ADMIN: ROUTES.ADMIN_ROOMS,
 };
 
 // Helper để lấy systemRole hiện tại
@@ -41,8 +45,13 @@ const isRoleAllowed = (allowedRoles) => {
         return true;
     }
 
-    // Kiểm tra STAFF role với systemRoles
-    if (role === 'STAFF' && systemRole) {
+    // Kiểm tra CLINIC_MANAGER role (staff với systemRole CLINIC_MANAGER hoặc role trực tiếp)
+    if (role === 'CLINIC_MANAGER' || systemRole === 'CLINIC_MANAGER') {
+        return allowedRoles.includes('CLINIC_MANAGER');
+    }
+
+    // Kiểm tra STAFF role với systemRoles khác
+    if (role === 'STAFF' && systemRole && !['CLINIC_MANAGER'].includes(systemRole)) {
         return allowedRoles.some(allowed => {
             // Cho phép role cũ (backward compatibility) hoặc systemRole mới
             const roleMapping = {
@@ -50,7 +59,6 @@ const isRoleAllowed = (allowedRoles) => {
                 'NURSE': ['NURSE'],
                 'RECEPTIONIST': ['RECEPTIONIST'],
                 'CASHIER': ['CASHIER'],
-                'ADMIN': ['CLINIC_MANAGER'],
             };
 
             // Nếu allowed role là role cũ (DOCTOR, NURSE, v.v.), map sang systemRole
@@ -75,14 +83,22 @@ const getDefaultRoute = () => {
     const role = get('role')?.toUpperCase();
     const systemRole = getSystemRole();
 
+    // ADMIN role
     if (role === 'ADMIN') {
-        return ROUTES.ADMIN_ROOMS;
+        return adminRoleToRoute[role] || ROUTES.ADMIN_ROOMS;
     }
 
+    // CUSTOMER role - mặc định vào trang hồ sơ
     if (role === 'CUSTOMER') {
-        return roleToRoute.CUSTOMER;
+        return roleToRoute.CUSTOMER || ROUTES.PROFILE;
     }
 
+    // CLINIC_MANAGER role
+    if (role === 'CLINIC_MANAGER' || systemRole === 'CLINIC_MANAGER') {
+        return systemRoleToRoute.CLINIC_MANAGER || ROUTES.OWNER_REPORT;
+    }
+
+    // STAFF role với systemRoles
     if (role === 'STAFF' && systemRole) {
         return systemRoleToRoute[systemRole] || ROUTES.LOGIN;
     }

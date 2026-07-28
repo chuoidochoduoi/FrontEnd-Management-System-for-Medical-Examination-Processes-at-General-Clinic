@@ -27,6 +27,7 @@ export default function CashierLayout({ children }) {
     const mainNav = [
         { to: ROUTES.CASHIER_INVOICES, icon: FileText,  label: t('sidebar.invoiceList') },
         { to: ROUTES.CASHIER_REPORT,   icon: BarChart2, label: t('sidebar.revenueReport') },
+        { to: ROUTES.STAFF_SCHEDULE,     icon: () => <span className="text-gray-400">📅</span>, label: 'Lịch trực của tôi' },
     ];
 
     const bottomNav = [

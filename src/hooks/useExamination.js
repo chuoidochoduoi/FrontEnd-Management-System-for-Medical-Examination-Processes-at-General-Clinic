@@ -54,12 +54,12 @@ export function useExamination(id) {
         } finally { setSaving(false); }
     };
 
-    // Hoàn thành khám
+    // Hoàn thành khám — gộp tạo yêu cầu xét nghiệm (testRequests) vào payload
     const complete = async (payload) => {
         setCompleting(true); setError('');
         try {
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/doctor/examinations/${id}/complete`,
+                `${import.meta.env.VITE_API_URL}/api/v1/queue-tickets/${id}/complete`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', ...bearer() },

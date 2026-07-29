@@ -251,7 +251,15 @@ export default function ExaminationPage() {
                     body: JSON.stringify({
                         chiefComplaint: symptoms,
                         clinicalFindings: examResult,
+                        diagnosis: diagnosis.selected.map(item => item.label).join(', '),
+                        prescriptionNote: '',
                         conclusion: notes,
+                        patientInstruction: '',
+                        bloodPressure,
+                        heartRate: heartRate ? parseInt(heartRate) : null,
+                        temperature: temperature ? parseFloat(temperature) : null,
+                        weight: weight ? parseFloat(weight) : null,
+                        height: height ? parseFloat(height) : null,
                         // Gửi danh sách thuốc
                         prescriptionItems: prescriptionItems.map(med => ({
                             medicineName: med.name,
@@ -278,7 +286,8 @@ export default function ExaminationPage() {
         }
     };
 
-    // Hoàn thành khám - gọi API medical-records/{recordId}/complete
+    // Hoàn thành khám — gộp tạo yêu cầu xét nghiệm (testRequests) vào payload
+    // Gọi API: POST /api/v1/queue-tickets/{ticketId}/complete
     const completeExam = async () => {
         if (!examination?.recordId) {
             setError('Chưa có hồ sơ bệnh án');
@@ -292,14 +301,27 @@ export default function ExaminationPage() {
             await saveVitalSigns();
 
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/v1/medical-records/${examination.recordId}/complete`,
+                `${import.meta.env.VITE_API_URL}/api/v1/queue-tickets/${examination.ticketId}/complete`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', ...authHeader() },
                     body: JSON.stringify({
+                        // Thông tin chính
                         chiefComplaint: symptoms,
                         clinicalFindings: examResult,
+                        diagnosis: diagnosis.selected.map(item => item.label).join(', '),
+                        prescriptionNote: '',
                         conclusion: notes,
+                        patientInstruction: '',
+
+                        // Vital signs
+                        bloodPressure,
+                        heartRate: heartRate ? parseInt(heartRate) : null,
+                        temperature: temperature ? parseFloat(temperature) : null,
+                        weight: weight ? parseFloat(weight) : null,
+                        height: height ? parseFloat(height) : null,
+
+                        // Đơn thuốc
                         prescriptionItems: prescriptionItems.map(med => ({
                             medicineName: med.name,
                             quantity: med.quantity ? parseInt(med.quantity) : null,
@@ -307,9 +329,16 @@ export default function ExaminationPage() {
                             note: med.note,
                             frequencyPerDay: med.frequencyPerDay ? parseInt(med.frequencyPerDay) : null,
                         })),
-                        // Gửi danh sách ICD-10 chẩn đoán
+
+                        // ICD-10 chẩn đoán
                         icdSelections: diagnosis.selected.map(item => ({
                             code: item.code
+                        })),
+
+                        // Yêu cầu xét nghiệm — gộp vào luồng hoàn thành
+                        testRequests: labOrders.selected.map(svc => ({
+                            serviceId: svc.id,
+                            notes: ''
                         })),
                     }),
                 }
@@ -547,41 +576,9 @@ export default function ExaminationPage() {
                         <TagList items={diagnosis.selected} labelKey="label" codeKey="code" onRemove={diagnosis.remove} />
                     </div>
 
-                    {/* Xét nghiệm chỉ định */}
+                    {/* Xét nghiệm chỉ định — gộp vào luồng hoàn thành khám */}
                     <div className="bg-white border border-gray-200 rounded-2xl p-5">
-                        <div className="flex items-center justify-between mb-3">
-                            <p className="text-xs font-semibold text-gray-500 tracking-wide">{tDoctor('examination.labOrders.title')}</p>
-                            <button
-                                onClick={async () => {
-                                    if (!examination?.recordId || labOrders.selected.length === 0) return;
-                                    try {
-                                        const res = await fetch(
-                                            `${import.meta.env.VITE_API_URL}/api/v1/test-requests/batch`,
-                                            {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/json', ...authHeader() },
-                                                body: JSON.stringify({
-                                                    medicalRecordId: examination.recordId,
-                                                    serviceIds: labOrders.selected.map(s => s.id),
-                                                    performingDepartmentId: departmentId,
-                                                    requestedById: get('staffId') || get('accountId'),
-                                                    notes: ''
-                                                }),
-                                            }
-                                        );
-                                        if (!res.ok) throw new Error('Gửi yêu cầu xét nghiệm thất bại');
-                                        toast.success('Gửi yêu cầu xét nghiệm thành công!');
-                                        labOrders.clear && labOrders.clear();
-                                    } catch (err) {
-                                        toast.error(err.message || 'Gửi yêu cầu xét nghiệm thất bại');
-                                    }
-                                }}
-                                disabled={labOrders.selected.length === 0}
-                                className="px-3 h-7 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-colors"
-                            >
-                                {tDoctor('examination.labOrders.createBtn')}
-                            </button>
-                        </div>
+                        <p className="text-xs font-semibold text-gray-500 tracking-wide mb-3">{tDoctor('examination.labOrders.title')}</p>
                         {loadingLabServices ? (
                             <p className="text-sm text-gray-400">{tDoctor('examination.loading')}</p>
                         ) : (

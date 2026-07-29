@@ -17,8 +17,8 @@ import InvoiceDetailPage from '@/pages/cashier/InvoiceDetailPage';
 import InvoicePrintPage from '@/pages/cashier/InvoicePrintPage';
 import ExaminationPage from '@/pages/doctor/ExaminationPage';
 import DoctorDepartmentPage from '@/pages/doctor/DoctorDepartmentPage';
-import DoctorRoomsPage from '@/pages/doctor/DoctorRoomsPage';
-import LabQueuePage from '@/pages/lab/LabQueuePage';
+import RoomListPage from '@/pages/doctor/RoomListPage';
+import LabTestPage from '@/pages/lab/LabTestPage.jsx';
 import LabDetailPage from '@/pages/lab/LabDetailPage';
 import AccountManagementPage from '@/pages/admin/AccountManagementPage';
 import ServiceManagementPage from '@/pages/admin/ServiceManagementPage';
@@ -110,7 +110,7 @@ function App() {
         {/* DOCTOR + NURSE - bác sĩ/y tá */}
         <Route path={ROUTES.DOCTOR_ROOMS} element={
           <ProtectedRoute allowedRoles={['NURSE', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'CLINIC_MANAGER']}>
-            <DoctorRoomsPage />
+            <RoomListPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.DOCTOR_DEPARTMENTS} element={
@@ -127,7 +127,7 @@ function App() {
         {/* LAB - xét nghiệm (NURSE có thể truy cập) */}
         <Route path={ROUTES.DOCTOR_LAB} element={
           <ProtectedRoute allowedRoles={['NURSE', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}>
-            <LabQueuePage />
+            <LabTestPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.DOCTOR_LAB_DETAIL} element={

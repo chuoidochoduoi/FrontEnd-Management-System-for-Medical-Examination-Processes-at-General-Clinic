@@ -26,6 +26,7 @@ import viMedicalHistory from './locales/vi/medicalHistory.json';
 import enPayment from './locales/en/payment.json';
 import enAppointments from './locales/en/appointments.json';
 import enMedicalHistory from './locales/en/medicalHistory.json';
+import enDoctor from './locales/en/doctor.json';
 
 // Thêm page mới thì import thêm ở đây, ví dụ:
 // import viCustomer from '../locales/vi/customer.json';
@@ -53,7 +54,8 @@ i18n
                 common: enCommon,
                 auth:   enAuth,
                 queue: enQueue,
-                payment: enPayment, appointments: enAppointments, medicalHistory: enMedicalHistory
+                payment: enPayment, appointments: enAppointments, medicalHistory: enMedicalHistory,
+                doctor: enDoctor
             },
         },
         interpolation: { escapeValue: false },

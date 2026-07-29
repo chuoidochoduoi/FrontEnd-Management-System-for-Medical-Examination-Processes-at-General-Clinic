@@ -75,6 +75,14 @@
       "title": "Hướng dẫn/Ghi chú",
       "placeholder": "Hướng dẫn theo dõi, chế độ ăn uống hoặc lời khuyên về lối sống..."
     },
+    "followUp": {
+      "title": "Yêu cầu khám lại",
+      "description": "Bệnh nhân cần quay lại khám. Ghi chú sẽ được gửi đến lễ tân để đặt lịch khám lại tự động.",
+      "noteLabel": "Lý do khám lại",
+      "notePlaceholder": "Ví dụ: Tái khám sau 2 tuần, theo dõi huyết áp, xét nghiệm lại...",
+      "noteHint": "Lễ tân sẽ nhận được thông báo để đặt lịch khám lại cho bệnh nhân",
+      "dateOptional": "Ngày khám đề xuất (tùy chọn)"
+    },
     "actions": {
       "draft": "LƯU NHÁP",
       "print": "IN",

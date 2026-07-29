@@ -1,0 +1,74 @@
+{
+  "myAppointments": {
+    "pageTitle": "Lịch hẹn của tôi",
+    "newBtn": "Tạo lịch hẹn mới",
+    "notice": "Bạn có thể hủy lịch hẹn khi trạng thái là UPCOMING",
+    "noticeQueue": "Số thứ tự sẽ được cập nhật vào ngày hẹn",
+    "filter": {
+      "code": "Mã lịch hẹn",
+      "codePlaceholder": "Nhập mã lịch hẹn",
+      "specialty": "Chuyên khoa",
+      "specialtyAll": "Tất cả chuyên khoa",
+      "status": "Trạng thái",
+      "statusAll": "Tất cả trạng thái",
+      "filterBtn": "Lọc"
+    },
+    "table": {
+      "code": "Mã lịch hẹn",
+      "dateTime": "Ngày giờ",
+      "specialty": "Chuyên khoa",
+      "queue": "Số thứ tự",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "loading": "Đang tải...",
+    "noData": "Không có lịch hẹn nào.",
+    "status": {
+      "upcoming": "Sắp tới",
+      "completed": "Hoàn thành",
+      "cancelled": "Đã hủy"
+    },
+    "viewBtn": "Xem chi tiết",
+    "cancelBtn": "Hủy lịch",
+    "queueWaiting": "Chưa có số thứ tự",
+    "errors": {
+      "loadFailed": "Không thể tải lịch hẹn.",
+      "cancelFailed": "Hủy lịch hẹn thất bại."
+    }
+  },
+  "appointmentDetail": {
+    "pageTitle": "Chi tiết lịch hẹn",
+    "breadcrumb": "Lịch hẹn của tôi",
+    "backBtn": "← Quay lại",
+    "cancelBtn": "Hủy lịch hẹn",
+    "rescheduleBtn": "Đặt lại",
+    "appointmentCode": "Mã lịch hẹn",
+    "statusLabel": "Trạng thái",
+    "sections": {
+      "appointment": "Thông tin lịch hẹn",
+      "orderedServices": "Dịch vụ đã đặt",
+      "reason": "Lý do khám"
+    },
+    "fields": {
+      "date": "Ngày khám",
+      "timeSlot": "Khung giờ",
+      "queueTicket": "Phiếu xếp hàng",
+      "queueNumber": "Số thứ tự:",
+      "queueWaiting": "Chưa có số thứ tự",
+      "queueNote": "Số thứ tự sẽ được gán trước ngày khám"
+    },
+    "items": "dịch vụ",
+    "table": {
+      "service": "Dịch vụ",
+      "cost": "Chi phí",
+      "total": "Tổng"
+    },
+    "footer": "Phiếu này được in tự động bởi hệ thống",
+    "printBtn": "In phiếu",
+    "errors": {
+      "loadFailed": "Không thể tải chi tiết lịch hẹn.",
+      "cancelFailed": "Hủy lịch hẹn thất bại."
+    },
+    "cancelConfirm": "Bạn có chắc muốn hủy lịch hẹn này?"
+  }
+}

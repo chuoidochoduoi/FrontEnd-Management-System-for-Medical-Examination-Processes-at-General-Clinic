@@ -1,0 +1,33 @@
+{
+  "departmentManagement": {
+    "pageTitle": "Quản lý Khoa/Phòng",
+    "addModal": {
+      "title": "Thêm khoa mới",
+      "roomCode": "Mã phòng",
+      "roomCodePlaceholder": "Ví dụ: R-101",
+      "roomType": "Loại khoa",
+      "roomTypeDefault": "-- Chọn loại --",
+      "roomName": "Tên khoa",
+      "roomNamePlaceholder": "Ví dụ: Khoa Khám Nội",
+      "doctor": "Bác sĩ trưởng",
+      "doctorPlaceholder": "-- Chọn bác sĩ --",
+      "equipment": "Mô tả",
+      "initialStatus": "Trạng thái ban đầu",
+      "cancel": "Hủy",
+      "submit": "Tạo khoa",
+      "submitting": "Đang tạo..."
+    },
+    "addModal": {
+      "title": "Thêm khoa mới",
+      "cancel": "Hủy",
+      "submit": "Tạo khoa",
+      "submitting": "Đang tạo...",
+      "description": "Mô tả"
+    },
+    "errors": {
+      "loadFailed": "Không thể tải danh sách khoa.",
+      "saveFailed": "Thao tác thất bại. Vui lòng thử lại.",
+      "doctorLoadFailed": "Không thể tải danh sách bác sĩ."
+    }
+  }
+}

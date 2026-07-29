@@ -1,0 +1,57 @@
+{
+  "medicalHistory": {
+    "pageTitle": "Lịch sử khám bệnh",
+    "searchPlaceholder": "Tìm kiếm theo mã phiếu khám, bác sĩ...",
+    "table": {
+      "date": "Ngày khám",
+      "specialty": "Chuyên khoa",
+      "doctor": "Bác sĩ",
+      "diagnosis": "Chuẩn đoán",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "loading": "Đang tải...",
+    "errors": {
+      "loadFailed": "Không thể tải lịch sử khám."
+    },
+    "noData": "Không có lịch sử khám.",
+    "statusAvailable": "HOÀN THÀNH",
+    "viewDetails": "Xem chi tiết"
+  },
+  "visitDetail": {
+    "pageTitle": "Chi tiết lần khám",
+    "backBtn": "Quay lại",
+    "recordId": "Mã hồ sơ",
+    "appointmentDate": "Ngày hẹn",
+    "ratingBtn": "Đánh giá",
+    "printBtn": "In phiếu",
+    "triage": {
+      "title": "Triage",
+      "symptoms": "Triệu chứng",
+      "clinicalResult": "Kết quả lâm sàng"
+    },
+    "diagnosis": {
+      "title": "Chuẩn đoán",
+      "treatmentTitle": "Phương pháp điều trị",
+      "followUp": "Theo dõi"
+    },
+    "prescription": {
+      "title": "Đơn thuốc"
+    },
+    "tests": {
+      "title": "Xét nghiệm",
+      "normal": "Bình thường",
+      "abnormal": "Bất thường",
+      "tableName": "Tên",
+      "tableResult": "Kết quả",
+      "tableRange": "Giá trị chuẩn",
+      "tableUnit": "Đơn vị",
+      "tableAssessment": "Đánh giá",
+      "high": "CAO",
+      "low": "THẤP"
+    },
+    "errors": {
+      "loadFailed": "Không thể tải chi tiết lần khám."
+    }
+  }
+}

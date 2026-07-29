@@ -48,7 +48,20 @@
       "afternoon": "CHIỀU"
     },
     "loading": "Đang tải...",
-    "noData": "Không có lịch hẹn nào."
+    "noData": "Không có lịch hẽ nào."
+  },
+
+  "followUp": {
+    "badge": "CẦN KHÁM LẠI",
+    "statusLabel": "Cần khám lại",
+    "doctorNote": "Bác sĩ ghi chú",
+    "preferredDate": "Ngày đề xuất",
+    "statusPending": "Chưa đặt lịch",
+    "statusScheduled": "Đã đặt lịch",
+    "scheduleBtn": "Đặt lịch ngay",
+    "scheduleSuccess": "Đặt lịch khám lại thành công!",
+    "scheduleFailed": "Đặt lịch thất bại. Vui lòng thử lại.",
+    "noNote": "Chưa có ghi chú từ bác sĩ"
   },
 
   "appointmentDetail": {

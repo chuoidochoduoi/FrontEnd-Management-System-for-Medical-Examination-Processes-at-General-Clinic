@@ -7,6 +7,7 @@ import DoctorLayout from '@/components/layout/DoctorLayout';
 import { useInProgressPatient } from '@/hooks/useInProgressPatient';
 import { useDiagnosis, useTagSearch } from '@/hooks/useDiagnosis';
 import { useLabServices } from '@/hooks/useLabServices';
+import FollowUpSection from '@/components/doctor/FollowUpSection';
 import { toast } from 'react-toastify';
 import { ROUTES } from '@/constants/routes';
 
@@ -164,6 +165,13 @@ export default function ExaminationPage() {
     const [error, setError] = useState('');
     const [testRequests, setTestRequests] = useState([]);
 
+    // Follow-up (khám lại) state
+    const [followUp, setFollowUp] = useState({
+        enabled: false,
+        note: '',
+        preferredDate: '',
+    });
+
     // Fetch test requests from medical record
     useEffect(() => {
         if (!examination?.recordId) return;
@@ -272,6 +280,11 @@ export default function ExaminationPage() {
                         icdSelections: diagnosis.selected.map(item => ({
                             code: item.code
                         })),
+                        // Gửi thông tin khám lại (follow-up)
+                        followUp: followUp.enabled ? {
+                            note: followUp.note,
+                            preferredDate: followUp.preferredDate || null,
+                        } : null,
                     }),
                 }
             );
@@ -340,6 +353,12 @@ export default function ExaminationPage() {
                             serviceId: svc.id,
                             notes: ''
                         })),
+
+                        // Thông tin khám lại (follow-up) — gửi đến lễ tân
+                        followUp: followUp.enabled ? {
+                            note: followUp.note,
+                            preferredDate: followUp.preferredDate || null,
+                        } : null,
                     }),
                 }
             );
@@ -684,6 +703,14 @@ export default function ExaminationPage() {
                             className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 resize-none"
                         />
                     </div>
+
+                    {/* Yêu cầu khám lại (Follow-up) */}
+                    <FollowUpSection
+                        enabled={followUp.enabled}
+                        note={followUp.note}
+                        preferredDate={followUp.preferredDate}
+                        onChange={setFollowUp}
+                    />
 
                     {error && <p className="text-red-500 text-sm text-center">{error}</p>}
                 </div>

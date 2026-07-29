@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search, Filter } from 'lucide-react';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
+import FollowUpAlert from '@/components/receptionist/FollowUpAlert';
 import { useCheckIn } from '@/hooks/useCheckIn';
 import { ROUTES } from '@/constants/routes';
 
@@ -41,6 +42,29 @@ export default function CheckInPage() {
     const [search,   setSearch]   = useState('');
     const [date,     setDate]     = useState('');
     const [timeSlot, setTimeSlot] = useState('MORNING');
+
+    // Follow-up alerts — danh sách bệnh nhân cần khám lại
+    const [followUpAlerts, setFollowUpAlerts] = useState([]);
+
+    // Fetch follow-up requests khi load trang
+    useEffect(() => {
+        const fetchFollowUps = async () => {
+            try {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                const res = await fetch(
+                    `${import.meta.env.VITE_API_URL}/api/v1/follow-ups/pending`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                if (res.ok) {
+                    const data = await res.json();
+                    setFollowUpAlerts(data.content || data || []);
+                }
+            } catch (err) {
+                console.error('Fetch follow-ups failed:', err);
+            }
+        };
+        fetchFollowUps();
+    }, []);
 
     // Load lần đầu
     useEffect(() => {
@@ -119,10 +143,19 @@ export default function CheckInPage() {
                     </button>
                 </div>
 
+                {/* Follow-up alerts */}
+                {followUpAlerts.map((alert, idx) => (
+                    <FollowUpAlert
+                        key={alert.id || idx}
+                        followUp={alert}
+                        onSchedule={() => navigate(ROUTES.RECEPTIONIST_CREATE_TICKET)}
+                    />
+                ))}
+
                 {/* Table */}
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                     {/* Header */}
-                    <div className="grid grid-cols-[80px_140px_180px_1fr_120px_120px_1fr_140px_160px] px-6 py-3 border-b border-gray-100">
+                    <div className="grid grid-cols-[80px_140px_180px_1fr_120px_120px_1fr_140px_140px_160px] px-6 py-3 border-b border-gray-100">
                         {[
                             t('checkIn.table.timeSlot'),
                             t('checkIn.table.code'),
@@ -132,6 +165,7 @@ export default function CheckInPage() {
                             t('checkIn.table.gender'),
                             t('checkIn.table.address'),
                             t('checkIn.table.status'),
+                            t('followUp.doctorNote'),
                             t('checkIn.table.actions'),
                         ].map(col => (
                             <span key={col} className="text-xs font-medium text-gray-400">{col}</span>
@@ -164,7 +198,9 @@ export default function CheckInPage() {
                         .map((appt, idx) => (
                         <div
                             key={appt.id ?? idx}
-                            className="grid grid-cols-[80px_140px_180px_1fr_120px_120px_1fr_140px_160px] px-6 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors items-start"
+                            className={`grid grid-cols-[80px_140px_180px_1fr_120px_120px_1fr_140px_140px_160px] px-6 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors items-start ${
+                                appt.followUp ? 'bg-amber-50/30' : ''
+                            }`}
                         >
                             {/* Khung ca */}
                             <span className={`text-xs ${SLOT_STYLE[appt.timeSlot] ?? 'text-gray-600'}`}>
@@ -175,7 +211,12 @@ export default function CheckInPage() {
                             <span className="text-sm text-gray-700">{appt.code}</span>
 
                             {/* Tên bệnh nhân */}
-                            <span className="text-sm font-medium text-gray-900">{appt.patientName}</span>
+                            <div className="flex items-center gap-1.5">
+                                {appt.followUp && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+                                )}
+                                <span className="text-sm font-medium text-gray-900">{appt.patientName}</span>
+                            </div>
 
                             {/* So dien thoai */}
                             <span className="text-sm text-gray-700">{appt.phone || '-'}</span>
@@ -191,10 +232,30 @@ export default function CheckInPage() {
 
                             {/* Trạng thái */}
                             <div>
-                                <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full ${STATUS_STYLE[appt.status] ?? 'bg-gray-100 text-gray-500'}`}>
-                                    {appt.status === 'pending' && <span>✓</span>}
-                                    {STATUS_LABEL[appt.status] ?? appt.status}
-                                </span>
+                                {appt.followUp ? (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                        {t('followUp.statusLabel')}
+                                    </span>
+                                ) : (
+                                    <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full ${STATUS_STYLE[appt.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                                        {appt.status === 'pending' && <span>✓</span>}
+                                        {STATUS_LABEL[appt.status] ?? appt.status}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Ghi chú BS (follow-up note) */}
+                            <div className="flex items-center">
+                                {appt.followUp?.note ? (
+                                    <span
+                                        className="text-xs text-gray-600 italic truncate max-w-[120px]"
+                                        title={appt.followUp.note}
+                                    >
+                                        {appt.followUp.note}
+                                    </span>
+                                ) : (
+                                    <span className="text-xs text-gray-400">—</span>
+                                )}
                             </div>
 
                             {/* Actions */}
@@ -202,6 +263,14 @@ export default function CheckInPage() {
                                 <button  onClick={() => navigate(`/receptionist/appointments/${appt.id}`)} className="text-xs text-gray-500 hover:text-primary-500 transition-colors">
                                     {t('checkIn.actions.viewDetail')}
                                 </button>
+                                {appt.followUp && (
+                                    <button
+                                        onClick={() => navigate(ROUTES.RECEPTIONIST_CREATE_TICKET)}
+                                        className="text-xs px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded transition-colors"
+                                    >
+                                        {t('followUp.scheduleBtn')}
+                                    </button>
+                                )}
                                 {appt.status === 'pending' && (
                                     <button className="text-xs px-2.5 py-1 border border-gray-300 rounded hover:border-primary-400 hover:text-primary-500 transition-colors">
                                         {t('checkIn.actions.printTicket')}

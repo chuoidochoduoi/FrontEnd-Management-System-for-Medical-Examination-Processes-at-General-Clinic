@@ -1,5 +1,5 @@
-// src/components/layout/DoctorLayout.jsx
-import { useState } from 'react';
+// src/components/layout/MedicalStaffLayout.jsx
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LayoutDashboard, Users, FolderOpen, Settings, LogOut, FlaskConical } from 'lucide-react';
@@ -7,10 +7,44 @@ import { ROUTES } from '@/constants/routes';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
-export default function DoctorLayout({ children }) {
+export default function MedicalStaffLayout({ children }) {
     const { t } = useTranslation('doctor');
     const navigate = useNavigate();
     const username = get('username') || 'Bác sĩ';
+    const staffId = get('staffId');
+    const systemRole = get('systemRole') || '';
+    
+    const [staffInfo, setStaffInfo] = useState(null);
+
+    useEffect(() => {
+        if (staffId) {
+            fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/${staffId}`, {
+                headers: { Authorization: `Bearer ${get('token')}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Tùy theo cấu trúc RestResponses của backend (thường là data.data)
+                if (data.data) {
+                    setStaffInfo(data.data);
+                } else {
+                    setStaffInfo(data);
+                }
+            })
+            .catch(err => console.error("Error fetching staff info:", err));
+        }
+    }, [staffId]);
+
+    // Format specialization / role
+    const getRoleName = () => {
+        if (staffInfo) {
+            if (staffInfo.specialization) return staffInfo.specialization.name;
+            if (systemRole === 'NURSE') return 'Y tá';
+            if (systemRole === 'RECEPTIONIST') return 'Lễ tân';
+            if (systemRole === 'GENERAL_DOCTOR') return 'Bác sĩ đa khoa';
+            if (systemRole === 'SPECIALIST_DOCTOR') return 'Bác sĩ chuyên khoa';
+        }
+        return 'Nhân viên y tế';
+    };
 
     const handleLogout = () => {
         ['token', 'refreshToken', 'role', 'username', 'accountId', 'systemRole', 'staffId'].forEach(k => {
@@ -40,9 +74,13 @@ export default function DoctorLayout({ children }) {
 
                 {/* Avatar */}
                 <div className="px-4 py-4 border-b border-gray-100">
-                    <div className="w-10 h-10 rounded-lg bg-red-400 mb-2" />
-                    <p className="text-xs font-semibold text-gray-800">{username}</p>
-                    <p className="text-xs text-gray-400">Bác sĩ đa khoa</p>
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
+                        <Users className="text-blue-500 w-6 h-6" />
+                    </div>
+                    <p className="text-xs font-semibold text-gray-800 break-words">
+                        {staffInfo?.profile?.fullName || username}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">{getRoleName()}</p>
                 </div>
 
                 <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">

@@ -1,65 +1,110 @@
 // src/components/layout/OwnerLayout.jsx
-import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { BarChart2, CalendarDays, LogOut, Users } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 
-const OwnerLayout = ({ children }) => {
-    const location = useLocation();
-    const navigate = useNavigate();
+const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
-    const menuItems = [
-        { path: ROUTES.OWNER_REPORT, label: 'Thống kê', icon: '📊' },
-        { path: ROUTES.OWNER_SCHEDULE, label: 'Lịch trình', icon: '📅' },
-    ];
+export default function OwnerLayout({ children }) {
+    const navigate = useNavigate();
+    const username = get('username') || 'Chủ phòng khám';
+    const staffId = get('staffId');
+    const systemRole = get('systemRole') || '';
+    
+    const [staffInfo, setStaffInfo] = useState(null);
+
+    useEffect(() => {
+        if (staffId) {
+            fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/${staffId}`, {
+                headers: { Authorization: `Bearer ${get('token')}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.data) {
+                    setStaffInfo(data.data);
+                } else {
+                    setStaffInfo(data);
+                }
+            })
+            .catch(err => console.error("Error fetching staff info:", err));
+        }
+    }, [staffId]);
+
+    const getRoleName = () => {
+        if (staffInfo && staffInfo.specialization) return staffInfo.specialization.name;
+        if (systemRole === 'NURSE') return 'Y tá';
+        if (systemRole === 'RECEPTIONIST') return 'Lễ tân';
+        if (systemRole === 'GENERAL_DOCTOR') return 'Bác sĩ đa khoa';
+        if (systemRole === 'SPECIALIST_DOCTOR') return 'Bác sĩ chuyên khoa';
+        if (systemRole === 'ADMIN') return 'Quản trị viên';
+        if (systemRole === 'CASHIER') return 'Thu ngân';
+        return 'Chủ phòng khám';
+    };
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('role');
-        localStorage.removeItem('systemRole');
+        ['token', 'refreshToken', 'role', 'username', 'accountId', 'systemRole', 'staffId'].forEach(k => {
+            localStorage.removeItem(k); sessionStorage.removeItem(k);
+        });
         navigate(ROUTES.LOGIN);
     };
 
+    const mainNav = [
+        { to: ROUTES.OWNER_REPORT,   icon: BarChart2,    label: 'Thống kê' },
+        { to: ROUTES.OWNER_SCHEDULE, icon: CalendarDays, label: 'Lịch trình' },
+    ];
+
+    const linkClass = ({ isActive }) =>
+        `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+            isActive ? 'bg-primary-50 text-primary-600 font-medium' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
+        }`;
+
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden">
             {/* Sidebar */}
-            <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
-                <div className="p-6 border-b border-gray-100">
-                    <h1 className="text-lg font-semibold text-gray-900">MediFlow</h1>
-                    <p className="text-xs text-gray-500 mt-1">Clinic Owner</p>
+            <aside className="w-44 bg-white border-r border-gray-200 flex flex-col shrink-0">
+                <div className="px-4 py-5 border-b border-gray-100">
+                    <p className="text-sm font-bold text-gray-900">MediFlow</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Clinic Management</p>
                 </div>
-                <nav className="flex-1 p-4">
-                    {menuItems.map(item => (
-                        <Link
-                            key={item.path}
-                            to={item.path}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors mb-1 ${
-                                location.pathname === item.path
-                                    ? 'bg-gray-900 text-white'
-                                    : 'text-gray-600 hover:bg-gray-50'
-                            }`}
-                        >
-                            <span>{item.icon}</span>
-                            {item.label}
-                        </Link>
+
+                {/* Avatar */}
+                <div className="px-4 py-4 border-b border-gray-100">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
+                        <Users className="text-blue-500 w-6 h-6" />
+                    </div>
+                    <p className="text-xs font-semibold text-gray-800 break-words">
+                        {staffInfo?.profile?.fullName || username}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">{getRoleName()}</p>
+                </div>
+
+                <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+                    {mainNav.map(({ to, icon: Icon, label }) => (
+                        <NavLink key={to} to={to} className={linkClass}>
+                            <Icon size={15} className="shrink-0" />
+                            {label}
+                        </NavLink>
                     ))}
                 </nav>
-                <div className="p-4 border-t border-gray-100">
+
+                <div className="px-2 py-3 border-t border-gray-100 space-y-0.5">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 w-full"
+                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
                     >
-                        <span>🚪</span>
+                        <LogOut size={15} className="shrink-0" />
                         Đăng xuất
                     </button>
                 </div>
-            </div>
+            </aside>
 
-            {/* Main content */}
-            <div className="flex-1 overflow-auto">
-                {children}
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <main className="flex-1 overflow-y-auto p-8">
+                    {children}
+                </main>
             </div>
         </div>
     );
-};
-
-export default OwnerLayout;
+}

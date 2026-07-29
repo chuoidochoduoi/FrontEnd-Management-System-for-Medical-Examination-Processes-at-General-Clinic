@@ -1,5 +1,5 @@
-// src/hooks/useMyDepartment.js
 import { useState, useEffect } from 'react';
+import { decodeToken } from '@/utils/jwtUtils';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -10,8 +10,13 @@ export function useMyDepartment() {
 
     useEffect(() => {
         const fetchMyDepartment = async () => {
-            const systemRole = get('systemRole');
-            if (systemRole !== 'DOCTOR' && systemRole !== 'ROLE_DOCTOR') {
+            const systemRole = get('systemRole')?.toUpperCase() || '';
+            const role = get('role')?.toUpperCase() || '';
+            const token = get('token');
+            const decoded = decodeToken(token);
+            const authorities = decoded?.authorities || [];
+            const isDoctor = authorities.includes('ROLE_DOCTOR') || authorities.includes('ROLE_GENERAL_DOCTOR') || authorities.includes('ROLE_SPECIALIST_DOCTOR') || role.includes('DOCTOR') || systemRole.includes('DOCTOR');
+            if (!isDoctor) {
                 setLoading(false);
                 return;
             }

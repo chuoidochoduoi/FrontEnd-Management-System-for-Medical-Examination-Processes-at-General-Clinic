@@ -13,7 +13,7 @@ const STATUS_CFG = {
     draft:     { label: 'Bản nháp',     cls: 'bg-gray-100 text-gray-500 border border-gray-200' },
 };
 
-const SERVICE_TYPES = ['Khám bệnh', 'Xét Nghiệm', 'Chẩn đoán Hình Ảnh', 'Thủ thuật'];
+const SERVICE_TYPES = ['Khám bệnh', 'Xét Nghiệm', 'Chẩn đoán Hình Ảnh'];
 const STATUSES      = ['active', 'suspended', 'draft'];
 
 const inputCls  = 'w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-gray-500 bg-white';
@@ -92,10 +92,7 @@ function ConfigModal({ service, onClose, onSubmit, t }) {
                     <label className={labelCls}>{t('serviceManagement.configModal.price')}</label>
                     <p className="text-sm text-gray-900">{fmt(service.price) || '—'}</p>
                 </div>
-                <div>
-                    <label className={labelCls}>{t('serviceManagement.configModal.duration')}</label>
-                    <p className="text-sm text-gray-900">{service.duration ? `${service.duration} phút` : '—'}</p>
-                </div>
+
             </div>
             <div>
                 <label className={labelCls}>{t('serviceManagement.configModal.status')}</label>
@@ -108,14 +105,13 @@ function ConfigModal({ service, onClose, onSubmit, t }) {
 }
 
 /* ── Edit Draft Modal ── */
-function EditModal({ service, onClose, onSubmit, categories, t }) {
+function EditModal({ service, onClose, onSubmit, t }) {
     const [form, setForm] = useState({
         name:     service.name     ?? '',
         type:     service.type     ?? '',
         price:    service.price    ?? '',
         specialty: service.specialty ?? '',
-        duration: service.duration ?? '',
-        categoryId: service.categoryId ?? '',
+
         status:   service.status   ?? 'draft',
     });
     const [submitting, setSubmitting] = useState(false);
@@ -162,24 +158,11 @@ function EditModal({ service, onClose, onSubmit, categories, t }) {
                            className={inputCls} />
                 </div>
             </div>
-            <div>
-                <label className={labelCls}>{t('serviceManagement.editModal.category') || 'Danh mục'}</label>
-                <select value={form.categoryId} onChange={e => setField('categoryId', e.target.value)} className={inputCls}>
-                    <option value="">-- Chọn danh mục --</option>
-                    {categories.map(cat => <option key={cat.categoryId || cat.id} value={cat.categoryId || cat.id}>{cat.name || cat.categoryName}</option>)}
-                </select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+
                 <div>
                     <label className={labelCls}>{t('serviceManagement.editModal.price') || t('serviceManagement.configModal.price')}</label>
                     <input type="number" value={form.price} onChange={e => setField('price', e.target.value)} className={inputCls} />
                 </div>
-                <div>
-                    <label className={labelCls}>{t('serviceManagement.editModal.duration') || t('serviceManagement.configModal.duration')}</label>
-                    <input value={form.duration} onChange={e => setField('duration', e.target.value)}
-                           placeholder={t('serviceManagement.editModal.durationPlaceholder') || t('serviceManagement.configModal.durationPlaceholder')} className={inputCls} />
-                </div>
-            </div>
             <div>
                 <label className={labelCls}>{t('serviceManagement.editModal.status') || t('serviceManagement.configModal.status')}</label>
                 <select value={form.status} onChange={e => setField('status', e.target.value)} className={inputCls}>
@@ -192,9 +175,9 @@ function EditModal({ service, onClose, onSubmit, categories, t }) {
 }
 
 /* ── Add Modal ── */
-function AddModal({ onClose, onSubmit, categories, t }) {
+function AddModal({ onClose, onSubmit, t }) {
     const [form, setForm] = useState({
-        code: '', name: '', type: '', price: '', duration: '', categoryId: '', status: 'draft',
+        code: '', name: '', type: '', price: '', status: 'draft',
     });
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -240,24 +223,11 @@ function AddModal({ onClose, onSubmit, categories, t }) {
                 <input value={form.name} onChange={e => set('name', e.target.value)}
                        placeholder={t('serviceManagement.addModal.serviceNamePlaceholder')} className={inputCls} />
             </div>
+
             <div>
-                <label className={labelCls}>Danh mục</label>
-                <select value={form.categoryId} onChange={e => set('categoryId', e.target.value)} className={inputCls}>
-                    <option value="">-- Chọn danh mục --</option>
-                    {categories.map(cat => <option key={cat.categoryId || cat.id} value={cat.categoryId || cat.id}>{cat.name || cat.categoryName}</option>)}
-                </select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className={labelCls}>{t('serviceManagement.addModal.price')}</label>
-                    <input type="number" value={form.price} onChange={e => set('price', e.target.value)}
-                           placeholder={t('serviceManagement.addModal.pricePlaceholder')} className={inputCls} />
-                </div>
-                <div>
-                    <label className={labelCls}>{t('serviceManagement.addModal.duration')}</label>
-                    <input value={form.duration} onChange={e => set('duration', e.target.value)}
-                           placeholder={t('serviceManagement.addModal.durationPlaceholder')} className={inputCls} />
-                </div>
+                <label className={labelCls}>{t('serviceManagement.addModal.price')}</label>
+                <input type="number" value={form.price} onChange={e => set('price', e.target.value)}
+                       placeholder={t('serviceManagement.addModal.pricePlaceholder')} className={inputCls} />
             </div>
             {error && <p className="text-red-500 text-xs">{error}</p>}
         </Modal>
@@ -283,7 +253,7 @@ function Pagination({ page, total, pageSize, onChange }) {
 /* ── Main Page ── */
 export default function ServiceManagementPage() {
     const { t } = useTranslation('services');
-    const { services, categories, stats, loading, error, total, page, PAGE_SIZE, fetchServices, createService, updateService, deleteService } = useServiceManagement();
+    const { services, stats, loading, error, total, page, PAGE_SIZE, fetchServices, createService, updateService, deleteService } = useServiceManagement();
 
     const [search,    setSearch]    = useState('');
     const [typeF,     setTypeF]     = useState('');
@@ -464,13 +434,13 @@ export default function ServiceManagementPage() {
 
             {/* Modals */}
             {showAdd && (
-                <AddModal t={t} categories={categories} onClose={() => setShowAdd(false)} onSubmit={handleCreate} />
+                <AddModal t={t} onClose={() => setShowAdd(false)} onSubmit={handleCreate} />
             )}
             {configSvc && (
                 <ConfigModal t={t} service={configSvc} onClose={() => setConfigSvc(null)} onSubmit={handleUpdate} />
             )}
             {editSvc && (
-                <EditModal t={t} service={editSvc} categories={categories} onClose={() => setEditSvc(null)} onSubmit={handleUpdate} />
+                <EditModal t={t} service={editSvc} onClose={() => setEditSvc(null)} onSubmit={handleUpdate} />
             )}
         </AdminLayout>
     );

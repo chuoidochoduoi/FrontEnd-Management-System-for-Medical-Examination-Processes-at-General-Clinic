@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useQueueList } from '@/hooks/useQueueList';
 import { useQueueActions } from '@/hooks/useQueueActions';
-import DoctorLayout from '@/components/layout/DoctorLayout';
+import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 
 // Map status from API (uppercase) to lowercase for translation lookup
 const STATUS_MAP = {
@@ -89,7 +89,7 @@ export default function QueuePage() {
     };
 
     return (
-        <DoctorLayout>
+        <MedicalStaffLayout>
             <main className="flex-1 overflow-y-auto">
                 {/* Top bar */}
                 <div className="flex items-center justify-end gap-4 border-b border-gray-200 bg-white px-6 py-3">
@@ -320,6 +320,6 @@ export default function QueuePage() {
                     </div>
                 </div>
             </main>
-        </DoctorLayout>
+        </MedicalStaffLayout>
     );
 }

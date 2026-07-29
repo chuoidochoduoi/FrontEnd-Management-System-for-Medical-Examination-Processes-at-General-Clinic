@@ -54,23 +54,26 @@ function Pagination({ page, total, pageSize, onChange }) {
   );
 }
 
-/* ── Password cell with show/hide ── */
+/* ── Password cell (always hidden) ── */
 function PasswordCell() {
-  const [show, setShow] = useState(false);
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm tracking-widest text-gray-400">
         {"•".repeat(8)}
       </span>
-      <button
-        onClick={() => setShow((v) => !v)}
-        className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
-      >
-        {show ? "Ẩn" : "Hiện"}
-      </button>
     </div>
   );
 }
+
+const systemRoleMap = {
+  ADMIN: "Quản trị viên",
+  CLINIC_MANAGER: "Quản lý phòng khám",
+  NURSE: "Y tá",
+  GENERAL_DOCTOR: "Bác sĩ đa khoa",
+  SPECIALIST_DOCTOR: "Bác sĩ chuyên khoa",
+  RECEPTIONIST: "Lễ tân",
+  CASHIER: "Thu ngân",
+};
 
 /* ── Modal: Thêm nhân sự ── */
 function AddStaffModal({ onClose, onSubmit, t }) {
@@ -83,7 +86,6 @@ function AddStaffModal({ onClose, onSubmit, t }) {
     email: "",
     gender: "",
     address: "",
-    departmentId: "",
     systemRole: "",
     specializationId: "",
     highestDegree: "",
@@ -289,18 +291,6 @@ function AddStaffModal({ onClose, onSubmit, t }) {
             </div>
           </div>
 
-          {/* Section 5 - Department */}
-          <div>
-            <label className={labelCls}>
-              {t("accountManagement.addStaffModal.fields.department")}
-            </label>
-            <input
-              placeholder="Nhập ID phòng ban"
-              value={form.departmentId}
-              onChange={(e) => set("departmentId", e.target.value)}
-              className={inputCls}
-            />
-          </div>
         </div>
 
         {error && <p className="text-red-500 text-xs px-7 pb-3">{error}</p>}
@@ -328,9 +318,228 @@ function AddStaffModal({ onClose, onSubmit, t }) {
   );
 }
 
-/* ── Modal: Cập nhật bệnh nhân ── */
-function UpdatePatientModal({ patient, onClose, onSubmit, t }) {
-  const [phone, setPhone] = useState(patient?.loginAccount ?? "");
+/* ── Modal: Cập nhật nhân sự ── */
+function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
+  const [form, setForm] = useState(null);
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const overlayRef = useRef(null);
+
+  useEffect(() => {
+    staffHook.fetchStaffByAccountId(account.accountId)
+      .then(res => {
+        setForm({
+          staffId: res.staffId,
+          username: res.profile?.username || "",
+          fullName: res.profile?.fullName || "",
+          phone: res.profile?.phone || "",
+          email: res.profile?.email || "",
+          gender: res.profile?.gender || "",
+          address: res.profile?.address || "",
+          systemRole: res.systemRole || "",
+          specializationId: res.specialization?.specializationId || "",
+          nationalId: res.nationalId || "",
+          highestDegree: res.highestDegree || "",
+          university: res.university || "",
+        });
+      })
+      .catch(err => setError(err.message));
+  }, [account.accountId]);
+
+  const set = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setError("");
+    try {
+      if (password) {
+        await staffHook.resetPassword(account.accountId, password);
+      }
+      await staffHook.updateStaffFull(form.staffId, form);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const inputCls =
+    "w-full border-0 border-b border-gray-200 outline-none text-sm text-gray-800 py-1.5 focus:border-gray-600 bg-transparent";
+  const labelCls =
+    "block text-xs font-semibold text-gray-500 tracking-wide mb-1.5";
+
+  if (!form) {
+    return (
+      <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+         <div className="bg-white rounded-2xl p-8 shadow-xl">Đang tải thông tin...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={overlayRef}
+      onClick={(e) => e.target === overlayRef.current && onClose()}
+      className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4"
+    >
+      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100 flex-shrink-0">
+          <div>
+            <h2 className="text-xs font-bold text-gray-900 tracking-widest">
+              Cập nhật nhân sự
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-300 hover:text-gray-600 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-7 py-6 space-y-8">
+          {/* Section 1 - Account */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 mb-4">
+              ■ {t("accountManagement.addStaffModal.section1")}
+            </p>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+              <div>
+                <label className={labelCls}>Tài khoản đăng nhập (Không thể sửa)</label>
+                <input
+                  value={form.username}
+                  disabled
+                  className={inputCls + " cursor-not-allowed opacity-70"}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Mật khẩu mới (bỏ trống nếu không đổi)</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu mới"
+                  className={inputCls + " placeholder:text-gray-300"}
+                />
+              </div>
+              <div className="col-span-2">
+                <label className={labelCls}>Vai trò hệ thống</label>
+                <select
+                  value={form.systemRole}
+                  onChange={(e) => set("systemRole", e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="">-- Chọn vai trò --</option>
+                  <option value="NURSE">Y tá</option>
+                  <option value="GENERAL_DOCTOR">Bác sĩ đa khoa</option>
+                  <option value="SPECIALIST_DOCTOR">Bác sĩ chuyên khoa</option>
+                  <option value="RECEPTIONIST">Lễ tân</option>
+                  <option value="CASHIER">Thu ngân</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2 - Personal Info */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 mb-4">
+              ■ {t("accountManagement.addStaffModal.section2")}
+            </p>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+              {[
+                { key: "fullName", label: t("accountManagement.addStaffModal.fields.fullName") },
+                { key: "phone", label: t("accountManagement.addStaffModal.fields.phone") },
+                { key: "email", label: t("accountManagement.addStaffModal.fields.email") },
+                { key: "gender", label: t("accountManagement.addStaffModal.fields.gender"), type: "select" },
+                { key: "nationalId", label: "CCCD/CMND" },
+              ].map(({ key, label, type = "text" }) => (
+                <div key={key}>
+                  <label className={labelCls}>{label}</label>
+                  {type === "select" ? (
+                    <select
+                      value={form[key]}
+                      onChange={(e) => set(key, e.target.value)}
+                      className={inputCls}
+                    >
+                      <option value="">-- Chọn --</option>
+                      <option value="MALE">Nam</option>
+                      <option value="FEMALE">Nữ</option>
+                    </select>
+                  ) : (
+                    <input
+                      value={form[key]}
+                      onChange={(e) => set(key, e.target.value)}
+                      className={inputCls}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Section 3 - Address */}
+          <div>
+            <label className={labelCls}>
+              {t("accountManagement.addStaffModal.fields.address")}
+            </label>
+            <input
+              value={form.address}
+              onChange={(e) => set("address", e.target.value)}
+              className={inputCls}
+            />
+          </div>
+
+          {/* Section 4 - Education */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 mb-4">
+              ■ {t("accountManagement.addStaffModal.section3")}
+            </p>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+              {[
+                { key: "highestDegree", label: "Học vị" },
+                { key: "university", label: "Trường đào tạo" },
+              ].map(({ key, label }) => (
+                <div key={key}>
+                  <label className={labelCls}>{label}</label>
+                  <input
+                    value={form[key]}
+                    onChange={(e) => set(key, e.target.value)}
+                    className={inputCls}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {error && <p className="text-red-500 text-xs px-7 pb-3 flex-shrink-0">{error}</p>}
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-7 py-5 border-t border-gray-100 flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="px-5 h-9 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            {t("accountManagement.addStaffModal.cancel")}
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="px-6 h-9 bg-gray-900 hover:bg-gray-700 disabled:opacity-60 text-white text-sm font-medium rounded-xl transition-colors"
+          >
+            {submitting ? "Đang xử lý..." : "Cập nhật"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Modal: Cập nhật tài khoản ── */
+function UpdateAccountModal({ account, onClose, onSubmit, resetPassword, t }) {
+  const [username, setUsername] = useState(account?.username ?? "");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -340,9 +549,11 @@ function UpdatePatientModal({ patient, onClose, onSubmit, t }) {
     setSubmitting(true);
     setError("");
     try {
-      await onSubmit(patient.id, {
-        loginAccount: phone,
-        newPassword: password || undefined,
+      if (password) {
+        await resetPassword(account.accountId, password);
+      }
+      await onSubmit(account.accountId, {
+        username: username,
       });
       onClose();
     } catch (err) {
@@ -367,11 +578,10 @@ function UpdatePatientModal({ patient, onClose, onSubmit, t }) {
         <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100">
           <div>
             <h2 className="text-xs font-bold text-gray-900 tracking-widest">
-              {t("accountManagement.updatePatientModal.title")}
+              Cập nhật tài khoản
             </h2>
             <p className="text-xs text-gray-400 mt-0.5">
-              {t("accountManagement.updatePatientModal.patientCode")}:{" "}
-              {patient?.patientCode}
+              Mã: {account?.code}
             </p>
           </div>
           <button
@@ -384,30 +594,26 @@ function UpdatePatientModal({ patient, onClose, onSubmit, t }) {
 
         <div className="px-7 py-6">
           <p className="text-xs font-bold text-gray-800 tracking-widest mb-5">
-            ■ {t("accountManagement.updatePatientModal.section1")}
+            ■ Thông tin tài khoản
           </p>
           <div className="grid grid-cols-2 gap-8">
             <div>
               <label className={labelCls}>
-                {t("accountManagement.updatePatientModal.fields.loginAccount")}
+                Tài khoản đăng nhập (Không thể sửa)
               </label>
               <input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className={inputCls}
+                value={username}
+                disabled
+                className={inputCls + " cursor-not-allowed opacity-70"}
               />
             </div>
             <div>
-              <label className={labelCls}>
-                {t("accountManagement.updatePatientModal.fields.newPassword")}
-              </label>
+              <label className={labelCls}>Mật khẩu mới (bỏ trống nếu không đổi)</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={t(
-                  "accountManagement.updatePatientModal.fields.newPasswordPlaceholder",
-                )}
+                placeholder="Nhập mật khẩu mới"
                 className={inputCls + " placeholder:text-gray-300"}
               />
             </div>
@@ -420,16 +626,14 @@ function UpdatePatientModal({ patient, onClose, onSubmit, t }) {
             onClick={onClose}
             className="px-5 h-9 text-sm text-gray-500 hover:text-gray-800 transition-colors"
           >
-            {t("accountManagement.updatePatientModal.cancel")}
+            Hủy
           </button>
           <button
             onClick={handleSubmit}
             disabled={submitting}
             className="px-6 h-9 bg-gray-900 hover:bg-gray-700 disabled:opacity-60 text-white text-sm font-medium rounded-xl transition-colors"
           >
-            {submitting
-              ? t("accountManagement.updatePatientModal.submitting")
-              : t("accountManagement.updatePatientModal.submit")}
+            {submitting ? "Đang xử lý..." : "Cập nhật"}
           </button>
         </div>
       </div>
@@ -445,7 +649,7 @@ export default function AccountManagementPage() {
 
   const [activeTab, setActiveTab] = useState("staff");
   const [showAddStaff, setShowAddStaff] = useState(false);
-  const [editPatient, setEditPatient] = useState(null);
+  const [editAccount, setEditAccount] = useState(null);
   const [staffSearch, setStaffSearch] = useState("");
   const [patientSearch, setPatientSearch] = useState("");
   const [patientStatus, setPatientStatus] = useState("");
@@ -556,6 +760,7 @@ export default function AccountManagementPage() {
                     t("accountManagement.staff.table.loginAccount"),
                     t("accountManagement.staff.table.password"),
                     t("accountManagement.staff.table.role"),
+                    "Trạng thái",
                     t("accountManagement.staff.table.actions"),
                   ].map((col) => (
                     <th key={col} className={thCls}>
@@ -616,11 +821,21 @@ export default function AccountManagementPage() {
                       <td className={tdCls}>
                         <PasswordCell />
                       </td>
-                      <td className={tdCls + " text-gray-400"}>{s.role}</td>
+                      <td className={tdCls + " text-gray-400"}>
+                        {s.systemRole ? systemRoleMap[s.systemRole] || s.systemRole : s.role}
+                      </td>
+                      <td className={tdCls}>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${s.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                          {s.isActive ? "Hoạt động" : "Bị khoá"}
+                        </span>
+                      </td>
                       <td className={tdCls}>
                         <div className="flex flex-col gap-0.5">
-                          <button className="text-sm font-semibold text-gray-800 hover:text-primary-500 text-left transition-colors">
-                            {t("accountManagement.staff.actions.edit")}
+                          <button
+                            onClick={() => setEditAccount({ ...s, type: 'staff' })}
+                            className="text-sm font-semibold text-gray-800 hover:text-primary-500 text-left transition-colors"
+                          >
+                            Chỉnh sửa
                           </button>
                           <button
                             onClick={() => staffHook.lockStaff(s.accountId)}
@@ -689,6 +904,7 @@ export default function AccountManagementPage() {
                     t("accountManagement.patients.table.loginAccount"),
                     t("accountManagement.patients.table.password"),
                     t("accountManagement.patients.table.personalInfo"),
+                    "Trạng thái",
                     t("accountManagement.patients.table.actions"),
                   ].map((col) => (
                     <th key={col} className={thCls}>
@@ -755,12 +971,17 @@ export default function AccountManagementPage() {
                       </td>
                       <td className={tdCls + " text-gray-400"}>{p.role}</td>
                       <td className={tdCls}>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${p.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                          {p.isActive ? "Hoạt động" : "Bị khoá"}
+                        </span>
+                      </td>
+                      <td className={tdCls}>
                         <div className="flex flex-col gap-0.5">
                           <button
-                            onClick={() => setEditPatient(p)}
+                            onClick={() => setEditAccount({ ...p, type: 'patient' })}
                             className="text-sm font-semibold text-gray-800 hover:text-primary-500 text-left transition-colors"
                           >
-                            {t("accountManagement.patients.actions.lock")}
+                            Chỉnh sửa
                           </button>
                           <button
                             onClick={() => patientHook.lockPatient(p.accountId)}
@@ -804,16 +1025,25 @@ export default function AccountManagementPage() {
           }}
         />
       )}
-      {editPatient && (
-        <UpdatePatientModal
-          t={t}
-          patient={editPatient}
-          onClose={() => setEditPatient(null)}
-          onSubmit={async (id, payload) => {
-            await patientHook.updatePatient(id, payload);
-            patientHook.fetchPatients();
-          }}
-        />
+      {editAccount && (
+        editAccount.type === 'staff' ? (
+          <UpdateStaffModal
+            t={t}
+            account={editAccount}
+            staffHook={staffHook}
+            onClose={() => setEditAccount(null)}
+          />
+        ) : (
+          <UpdateAccountModal
+            t={t}
+            account={editAccount}
+            onClose={() => setEditAccount(null)}
+            resetPassword={patientHook.resetPassword}
+            onSubmit={async (id, payload) => {
+              await patientHook.updatePatient(id, payload);
+            }}
+          />
+        )
       )}
     </AdminLayout>
   );

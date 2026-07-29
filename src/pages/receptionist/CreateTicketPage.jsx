@@ -1,5 +1,6 @@
 // src/pages/receptionist/CreateTicketPage.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RotateCcw } from 'lucide-react';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
@@ -49,6 +50,7 @@ export default function CreateTicketPage() {
     const { t } = useTranslation(['receptionist', 'createTicketConfirmModal']);
     const { services, loadingSvc, submitting, error: submitError, submit } = useCreateTicket();
     const [validationError, setValidationError] = useState('');
+    const [searchParams] = useSearchParams();
 
     /* ── service selection ── */
     const [selectedServiceIds, setSelectedServiceIds] = useState([]);
@@ -57,6 +59,7 @@ export default function CreateTicketPage() {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     /* ── form fields ── */
+    const [customerId, setCustomerId] = useState(null);
     const [reason,    setReason]  = useState('');
     const [fullName,  setFullName] = useState('');
     const [phone,     setPhone]    = useState('');
@@ -65,6 +68,35 @@ export default function CreateTicketPage() {
     const [address,   setAddress]  = useState('');
     const [bhytCode,  setBhytCode] = useState('');
     const [bhytExpiry, setBhytExpiry] = useState('');
+
+    /* ── autofill from URL ── */
+    useEffect(() => {
+        const queryPhone = searchParams.get('phone');
+        if (queryPhone) {
+            fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/search-by-phone?phone=${queryPhone}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}` }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    const patient = data[0]; // Auto-fill with the first matched result
+                    if (!patient.isGuest) {
+                        setCustomerId(patient.customerId);
+                    }
+                    setFullName(patient.fullName || '');
+                    setPhone(patient.phone || '');
+                    if (patient.dateOfBirth) setDob(patient.dateOfBirth.split('T')[0]);
+                    
+                    if (patient.gender) {
+                        const g = patient.gender.toLowerCase();
+                        setGender(g === 'male' || g === 'female' ? g : 'other');
+                    }
+                    setAddress(patient.address || '');
+                }
+            })
+            .catch(err => console.error('Failed to fetch patient data', err));
+        }
+    }, [searchParams]);
 
     const toggleService = (svc) =>
         setSelectedServiceIds(prev =>
@@ -87,6 +119,7 @@ export default function CreateTicketPage() {
         setGender('male');
         setAddress('');
         setBhytCode('');
+        setCustomerId(null);
         setBhytExpiry('');
     };
 
@@ -116,6 +149,7 @@ export default function CreateTicketPage() {
 
     const handleConfirm = () => {
         submit({
+            customerId,
             serviceIds: selectedServiceIds,
             issuedById: getIssuerId(),
             reason,

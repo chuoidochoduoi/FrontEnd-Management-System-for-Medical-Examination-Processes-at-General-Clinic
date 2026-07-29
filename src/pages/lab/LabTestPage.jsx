@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search, Bell, UserCircle, RotateCcw, ArrowUpDown } from 'lucide-react';
-import DoctorLayout from '@/components/layout/DoctorLayout.jsx';
+import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { useLabQueue } from '@/hooks/useLabQueue.js';
 import { ROUTES } from '@/constants/routes.js';
 
@@ -70,32 +70,27 @@ export default function LabTestPage() {
     const to   = Math.min(page * PAGE_SIZE, total);
 
     return (
-        <DoctorLayout>
-            {/* Top bar */}
-            <div className="h-13 bg-white border-b border-gray-100 px-6 flex items-center gap-3 shrink-0">
-                <div className="relative flex-1">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={e => handleSearch(e.target.value)}
-                        placeholder={t('labQueue.searchPlaceholder')}
-                        className="w-full h-10 pl-9 pr-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-100 bg-white"
-                    />
-                </div>
-                <button className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-colors">
-                    <Bell size={16} />
-                </button>
-                <button className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-colors">
-                    <UserCircle size={16} />
-                </button>
-            </div>
+        <MedicalStaffLayout>
 
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto bg-white px-8 py-6">
 
-                {/* Tabs + sort */}
-                <div className="flex items-center justify-between mb-5">
+                {/* Search, Tabs + sort */}
+                <div className="flex flex-col gap-4 mb-5">
+                    {/* Search row */}
+                    <div className="relative max-w-md">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={e => handleSearch(e.target.value)}
+                            placeholder={t('labQueue.searchPlaceholder')}
+                            className="w-full h-10 pl-9 pr-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-100 bg-white"
+                        />
+                    </div>
+                    
+                    {/* Tabs row */}
+                    <div className="flex items-center justify-between">
                     {/* Tabs */}
                     <div className="flex gap-1">
                         {TABS.map(tab => (
@@ -126,6 +121,7 @@ export default function LabTestPage() {
                             <RotateCcw size={14} />
                         </button>
                     </div>
+                </div>
                 </div>
 
                 {/* Table */}
@@ -249,6 +245,6 @@ export default function LabTestPage() {
                     </div>
                 )}
             </div>
-        </DoctorLayout>
+        </MedicalStaffLayout>
     );
 }

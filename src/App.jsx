@@ -12,6 +12,7 @@ import AppointmentDetailPage from '@/pages/receptionist/AppointmentDetailPage';
 import ProfilePage from '@/pages/customer/ProfilePage';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import CreateTicketPage from '@/pages/receptionist/CreateTicketPage';
+import FollowUpListPage from '@/pages/receptionist/FollowUpListPage';
 import InvoiceListPage from '@/pages/cashier/InvoiceListPage';
 import InvoiceDetailPage from '@/pages/cashier/InvoiceDetailPage';
 import InvoicePrintPage from '@/pages/cashier/InvoicePrintPage';
@@ -84,6 +85,11 @@ function App() {
         <Route path={ROUTES.RECEPTIONIST_CREATE_TICKET} element={
           <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
             <CreateTicketPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.RECEPTIONIST_FOLLOW_UPS} element={
+          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+            <FollowUpListPage />
           </ProtectedRoute>
         } />
 

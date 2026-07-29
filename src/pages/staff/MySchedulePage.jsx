@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import DoctorLayout from '@/components/layout/DoctorLayout';
+import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import CashierLayout from '@/components/layout/CashierLayout';
 
@@ -70,7 +70,7 @@ export default function MySchedulePage() {
     // Chọn layout dựa vào systemRole
     const systemRole = get('systemRole')?.toUpperCase();
     const Layout = systemRole === 'RECEPTIONIST' ? ReceptionistLayout :
-                   systemRole === 'CASHIER' ? CashierLayout : DoctorLayout;
+                   systemRole === 'CASHIER' ? CashierLayout : MedicalStaffLayout;
 
     return (
         <Layout>

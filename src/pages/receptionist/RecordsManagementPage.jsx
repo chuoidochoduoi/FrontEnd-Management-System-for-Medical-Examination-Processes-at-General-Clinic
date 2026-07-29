@@ -157,7 +157,7 @@ export default function RecordsManagementPage() {
                             className="grid grid-cols-[160px_1fr_100px_220px_200px] px-5 py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors items-center"
                         >
                             {/* Mã bệnh án */}
-                            <span className="text-sm font-bold text-gray-900">{rec.code}</span>
+                            <span className="text-sm font-bold text-gray-900">{rec.code || '—'}</span>
 
                             {/* Họ tên + SDT + tuổi + giới */}
                             <div>
@@ -185,7 +185,7 @@ export default function RecordsManagementPage() {
                                     Xem chi tiết
                                 </button>
                                 <button
-                                    onClick={() => navigate(`${ROUTES.RECEPTIONIST_CREATE_TICKET}?patientId=${rec.id}`)}
+                                    onClick={() => navigate(`${ROUTES.RECEPTIONIST_CREATE_TICKET}?phone=${rec.phone}`)}
                                     className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors"
                                 >
                                     📋 Tạo phiếu khám

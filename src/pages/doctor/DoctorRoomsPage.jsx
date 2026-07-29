@@ -5,15 +5,20 @@ import { FlaskConical, Stethoscope, Scan, AlertCircle } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { useAllDepartments } from '@/hooks/useAllDepartments';
 import { useMyDepartment } from '@/hooks/useMyDepartment';
-import DoctorLayout from '@/components/layout/DoctorLayout';
+import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
+import { decodeToken } from '@/utils/jwtUtils';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
 export default function DoctorRoomsPage() {
     const { t } = useTranslation('doctor');
     const navigate = useNavigate();
-    const systemRole = get('systemRole');
-    const isDoctor = systemRole === 'DOCTOR' || systemRole === 'ROLE_DOCTOR';
+    const systemRole = get('systemRole')?.toUpperCase() || '';
+    const role = get('role')?.toUpperCase() || '';
+    const token = get('token');
+    const decoded = decodeToken(token);
+    const authorities = decoded?.authorities || [];
+    const isDoctor = authorities.includes('ROLE_DOCTOR') || authorities.includes('ROLE_GENERAL_DOCTOR') || authorities.includes('ROLE_SPECIALIST_DOCTOR') || role.includes('DOCTOR') || systemRole.includes('DOCTOR');
 
     // Fetch all departments (for NURSE)
     const { examinationRooms, laboratoryRooms, imagingRooms, loading: allLoading, error: allError } = useAllDepartments();
@@ -29,7 +34,7 @@ export default function DoctorRoomsPage() {
 
     if (isDoctor) {
         return (
-            <DoctorLayout>
+            <MedicalStaffLayout>
                 <div className="max-w-4xl mx-auto px-6 py-8">
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('sidebar.logo')}</h1>
                     <p className="text-sm text-gray-500 mb-6">{t('sidebar.subtitle')}</p>
@@ -48,12 +53,12 @@ export default function DoctorRoomsPage() {
                         <p className="text-sm text-gray-500">Đang chuyển hướng đến phòng khám...</p>
                     )}
                 </div>
-            </DoctorLayout>
+            </MedicalStaffLayout>
         );
     }
 
     return (
-        <DoctorLayout>
+        <MedicalStaffLayout>
             <div className="max-w-4xl mx-auto px-6 py-8">
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('sidebar.logo')}</h1>
                 <p className="text-sm text-gray-500 mb-6">{t('sidebar.subtitle')}</p>
@@ -61,6 +66,11 @@ export default function DoctorRoomsPage() {
                 {/* Loading state */}
                 {allLoading && <p className="text-sm text-gray-400 mb-4">Đang tải danh sách phòng...</p>}
                 {allError && <p className="text-sm text-red-500 mb-4">{allError.message}</p>}
+
+                <div className="bg-red-50 p-4 rounded mb-4">
+                    <p className="text-red-600 font-bold">DEBUG INFO (Vui lòng chụp cho tôi xem dòng này):</p>
+                    <p>role: "{role}" | systemRole: "{systemRole}" | isDoctor: {isDoctor ? 'true' : 'false'}</p>
+                </div>
 
                 {/* Examination Rooms - Phòng khám (khám bệnh) */}
                 <p className="text-sm font-semibold text-gray-400 mb-3">{t('doctor:rooms.consultation')}</p>

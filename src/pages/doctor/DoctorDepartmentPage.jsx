@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Bell, UserCircle } from 'lucide-react';
-import DoctorLayout from '@/components/layout/DoctorLayout';
+import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { useInProgressPatient } from '@/hooks/useInProgressPatient';
 import { useQueueWaiting } from '@/hooks/useQueueWaiting';
 import { useQueueActions } from '@/hooks/useQueueActions';
@@ -82,23 +82,7 @@ export default function DoctorDepartmentPage() {
     const isDamaged = false;
 
     return (
-        <DoctorLayout>
-            {/* Top bar */}
-            <div className="h-13 bg-white border-b border-gray-100 px-6 flex items-center gap-3 shrink-0">
-                <div className="relative flex-1">
-                    <input
-                        type="text"
-                        placeholder="Tìm bệnh nhân..."
-                        className="w-full h-9 px-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500"
-                    />
-                </div>
-                <button className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-colors">
-                    <Bell size={16} />
-                </button>
-                <button className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-colors">
-                    <UserCircle size={16} />
-                </button>
-            </div>
+        <MedicalStaffLayout>
 
             <div className="flex-1 overflow-y-auto bg-white px-8 py-6">
                 <div className="max-w-4xl mx-auto">
@@ -132,8 +116,8 @@ export default function DoctorDepartmentPage() {
                                 <div className="flex-1 min-w-0">
                                     <h2 className="text-lg font-bold text-gray-900">{inProgressTicket.patientName ?? '—'}</h2>
                                     <p className="text-xs text-gray-400 mt-0.5">
-                                        {inProgressTicket.patientCode && `Mã BN: ${inProgressTicket.patientCode}`}<br/>
-                                        Dịch vụ: {inProgressTicket.serviceName ?? '—'}<br/>
+                                        {inProgressTicket.patientCode && `Mã BN: ${inProgressTicket.patientCode}`}<br />
+                                        Dịch vụ: {inProgressTicket.serviceName ?? '—'}<br />
                                         Số phiếu: {inProgressTicket.queueNumber ?? '—'}
                                     </p>
                                 </div>
@@ -242,6 +226,6 @@ export default function DoctorDepartmentPage() {
                     </div>
                 </div>
             </div>
-        </DoctorLayout>
+        </MedicalStaffLayout>
     );
 }

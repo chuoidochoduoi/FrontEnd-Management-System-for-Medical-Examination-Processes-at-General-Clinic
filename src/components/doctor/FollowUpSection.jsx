@@ -12,22 +12,17 @@ import { Calendar, Bell } from 'lucide-react';
  * @param {object}  props
  * @param {boolean} props.enabled         — trạng thái checkbox (controlled)
  * @param {string}  props.note            — ghi chú hiện tại
- * @param {string}  props.preferredDate   — ngày khám lại đề xuất (YYYY-MM-DD)
- * @param {function} props.onChange       — callback({ enabled, note, preferredDate })
+ * @param {function} props.onChange       — callback({ enabled, note })
  */
-export default function FollowUpSection({ enabled, note, preferredDate, onChange }) {
+export default function FollowUpSection({ enabled, note, onChange }) {
     const { t } = useTranslation('doctor');
 
     const handleCheckbox = (e) => {
-        onChange({ enabled: e.target.checked, note, preferredDate });
+        onChange({ enabled: e.target.checked, note });
     };
 
     const handleNoteChange = (e) => {
-        onChange({ enabled, note: e.target.value, preferredDate });
-    };
-
-    const handleDateChange = (e) => {
-        onChange({ enabled, note, preferredDate: e.target.value });
+        onChange({ enabled, note: e.target.value });
     };
 
     return (
@@ -73,15 +68,6 @@ export default function FollowUpSection({ enabled, note, preferredDate, onChange
                                 <Calendar size={11} />
                                 {t('examination.followUp.noteHint')}
                             </p>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-400">{t('examination.followUp.dateOptional')}</span>
-                                <input
-                                    type="date"
-                                    value={preferredDate}
-                                    onChange={handleDateChange}
-                                    className="h-7 px-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500"
-                                />
-                            </div>
                         </div>
                     </div>
                 </div>

@@ -61,7 +61,7 @@ export function useLogin() {
                     navigate(ROUTES.DOCTOR_ROOMS);
                 } else if (systemRole === 'CASHIER') {
                     navigate(ROUTES.CASHIER_INVOICES);
-                } else if (systemRole === 'CLINIC_MANAGER') {
+                } else if (systemRole === 'CLINIC_MANAGER' || systemRole === 'ADMIN') {
                     navigate(ROUTES.ADMIN_ROOMS);
                 } else {
                     navigate(ROUTES.PROFILE);

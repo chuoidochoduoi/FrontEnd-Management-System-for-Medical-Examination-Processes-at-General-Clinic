@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search, Bell, User, X } from 'lucide-react';
-import DoctorLayout from '@/components/layout/DoctorLayout';
+import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { useInProgressPatient } from '@/hooks/useInProgressPatient';
 import { useDiagnosis, useTagSearch } from '@/hooks/useDiagnosis';
 import { useLabServices } from '@/hooks/useLabServices';
@@ -169,7 +169,6 @@ export default function ExaminationPage() {
     const [followUp, setFollowUp] = useState({
         enabled: false,
         note: '',
-        preferredDate: '',
     });
 
     // Fetch test requests from medical record
@@ -354,10 +353,9 @@ export default function ExaminationPage() {
                             notes: ''
                         })),
 
-                        // Thông tin khám lại (follow-up) — gửi đến lễ tân
+                        // Thông tin khám lại (follow-up)
                         followUp: followUp.enabled ? {
                             note: followUp.note,
-                            preferredDate: followUp.preferredDate || null,
                         } : null,
                     }),
                 }
@@ -375,42 +373,22 @@ export default function ExaminationPage() {
 
     if (loading) {
         return (
-            <DoctorLayout>
-                <p className="text-sm text-gray-400 text-center py-20">{tDoctor('examination.loading')}</p>
-            </DoctorLayout>
+        <MedicalStaffLayout>
+            <p className="text-sm text-gray-400 text-center py-20">{tDoctor('examination.loading')}</p>
+        </MedicalStaffLayout>
         );
     }
 
     if (!examination) {
         return (
-            <DoctorLayout>
-                <p className="text-sm text-gray-400 text-center py-20">Không có bệnh nhân nào đang khám.</p>
-            </DoctorLayout>
+        <MedicalStaffLayout>
+            <p className="text-sm text-gray-400 text-center py-20">Không có bệnh nhân nào đang khám.</p>
+        </MedicalStaffLayout>
         );
     }
 
     return (
-        <DoctorLayout>
-            {/* ── Top bar ── */}
-            <div className="h-13 bg-white border-b border-gray-200 px-6 flex items-center gap-4 shrink-0">
-                <h1 className="text-sm font-semibold text-gray-800 shrink-0">{tDoctor('examination.pageTitle')}</h1>
-                <div className="relative flex-1 max-w-lg">
-                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
-                    <input
-                        type="text"
-                        placeholder={tDoctor('examination.searchPlaceholder')}
-                        className="w-full h-9 pl-9 pr-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 bg-gray-50"
-                    />
-                </div>
-                <div className="flex items-center gap-3 ml-auto">
-                    <button className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-colors">
-                        <Bell size={16} />
-                    </button>
-                    <button className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-colors">
-                        <User size={16} />
-                    </button>
-                </div>
-            </div>
+        <MedicalStaffLayout>
 
             {/* ── Scrollable body ── */}
             <div className="flex-1 overflow-y-auto bg-gray-50 pb-24">
@@ -708,7 +686,6 @@ export default function ExaminationPage() {
                     <FollowUpSection
                         enabled={followUp.enabled}
                         note={followUp.note}
-                        preferredDate={followUp.preferredDate}
                         onChange={setFollowUp}
                     />
 
@@ -740,6 +717,6 @@ export default function ExaminationPage() {
                     {tDoctor('examination.actions.complete')}
                 </button>
             </div>
-        </DoctorLayout>
+        </MedicalStaffLayout>
     );
 }

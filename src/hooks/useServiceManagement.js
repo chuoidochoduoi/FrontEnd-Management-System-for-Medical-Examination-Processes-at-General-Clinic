@@ -6,12 +6,11 @@ const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key)
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
 const PAGE_SIZE = 10;
 
-// Service type mapping: frontend label -> API enum value
-const SERVICE_TYPE_MAP = {
-    'Khám bệnh': 'CLINICAL_EXAM',
-    'Xét Nghiệm': 'LAB_TEST',
+// Department type mapping
+const DEPARTMENT_TYPE_MAP = {
+    'Khám bệnh': 'EXAMINATION',
+    'Xét Nghiệm': 'LABORATORY',
     'Chẩn đoán Hình Ảnh': 'IMAGING',
-    'Thủ thuật': 'PROCEDURE',
 };
 
 export function useServiceManagement() {
@@ -24,14 +23,28 @@ export function useServiceManagement() {
     const [page,     setPage]     = useState(1);
     const [total,    setTotal]     = useState(0);
 
+    const fetchStats = useCallback(async () => {
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services/stats`, { headers: bearer() });
+            if (res.ok) {
+                const data = await res.json();
+                setStats({
+                    total: data.total || 0,
+                    active: data.active || 0,
+                    suspended: data.suspended || 0,
+                    draft: data.draft || 0,
+                });
+            }
+        } catch (err) { console.error('Failed to load stats:', err); }
+    }, []);
+
     const fetchServices = useCallback(async (params = {}) => {
         setLoading(true); setError('');
         try {
             const { search, type, specialty, status, page } = params;
             const query = new URLSearchParams();
             if (search) query.append('search', search);
-            if (type) query.append('serviceType', type);
-            if (specialty) query.append('specialization', specialty);
+            if (type) query.append('departmentType', type);
             if (status) query.append('status', status);
             if (page) query.append('page', page - 1);
             query.append('size', PAGE_SIZE);
@@ -50,42 +63,24 @@ export function useServiceManagement() {
                 id: s.serviceId,
                 code: s.serviceCode,
                 name: s.name,
-                type: s.serviceType,
+                type: s.departmentType,
                 specialtyId: s.requiredSpecializationId || '',
                 specialty: s.requiredSpecializationName || '',
                 price: s.price,
                 status: s.status === 'ACTIVE' ? 'active' : s.status === 'INACTIVE' ? 'suspended' : 'draft',
-                duration: s.durationMinutes || '',
-                categoryId: s.categoryId || '',
-                categoryName: s.categoryName || '',
             }));
 
             setServices(mapped);
             setTotal(totalItems);
-            setStats({
-                total: totalItems,
-                active: mapped.filter(s => s.status === 'active').length,
-                suspended: mapped.filter(s => s.status === 'suspended').length,
-                draft: mapped.filter(s => s.status === 'draft').length,
-            });
+            fetchStats();
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
-    }, []);
-
-    const fetchCategories = useCallback(async () => {
-        try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/service-categories`, { headers: bearer() });
-            if (res.ok) {
-                const data = await res.json();
-                setCategories(Array.isArray(data) ? data : (data.content ?? []));
-            }
-        } catch (err) { console.error('Failed to fetch categories:', err); }
-    }, []);
+    }, [fetchStats]);
 
     useEffect(() => {
         fetchServices();
-        fetchCategories();
-    }, [fetchServices, fetchCategories]);
+        fetchStats();
+    }, [fetchServices, fetchStats]);
 
     const suspendService = async (id) => {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services/${id}/deactivate`, {
@@ -112,14 +107,12 @@ export function useServiceManagement() {
     };
 
     const createService = async (payload) => {
-        const apiType = SERVICE_TYPE_MAP[payload.type] || payload.type;
+        const apiType = DEPARTMENT_TYPE_MAP[payload.type] || payload.type;
         const body = {
             serviceCode: payload.code,
             name: payload.name,
-            serviceType: apiType,
+            departmentType: apiType,
             price: payload.price,
-            durationMinutes: parseInt(payload.duration) || null,
-            categoryId: payload.categoryId || null,
         };
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services`, {
             method: 'POST',
@@ -137,16 +130,14 @@ export function useServiceManagement() {
             draft: 'DRAFT',
         };
 
-        const apiType = payload.type ? (SERVICE_TYPE_MAP[payload.type] || payload.type) : null;
+        const apiType = payload.type ? (DEPARTMENT_TYPE_MAP[payload.type] || payload.type) : null;
 
         const body = {};
 
         // Include fields if provided (for EditModal)
         if (payload.name) body.name = payload.name;
-        if (apiType) body.serviceType = apiType;
+        if (apiType) body.departmentType = apiType;
         if (payload.price) body.price = payload.price;
-        if (payload.duration) body.durationMinutes = parseInt(payload.duration) || null;
-        if (payload.categoryId) body.categoryId = payload.categoryId;
 
         // Include status in body if provided
         if (payload.status) {
@@ -166,5 +157,5 @@ export function useServiceManagement() {
         fetchServices();
     };
 
-    return { services, categories, stats, loading, error, fetchServices, fetchCategories, suspendService, deleteService, createService, updateService, page, total, PAGE_SIZE };
+    return { services, categories, stats, loading, error, fetchServices, fetchStats, suspendService, deleteService, createService, updateService, page, total, PAGE_SIZE };
 }

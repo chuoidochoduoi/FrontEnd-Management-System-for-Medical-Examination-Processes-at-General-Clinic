@@ -1,20 +1,69 @@
 // src/pages/doctor/RoomListPage.jsx
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FlaskConical, Stethoscope, Scan } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { useAllDepartments } from '@/hooks/useAllDepartments';
-import DoctorLayout from '@/components/layout/DoctorLayout';
+import { useMyDepartment } from '@/hooks/useMyDepartment';
+import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
+import { decodeToken } from '@/utils/jwtUtils';
+import { AlertCircle } from 'lucide-react';
+
+const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
 export default function RoomListPage() {
     const { t } = useTranslation('doctor');
     const navigate = useNavigate();
 
+    const systemRole = get('systemRole')?.toUpperCase() || '';
+    const role = get('role')?.toUpperCase() || '';
+    const token = get('token');
+    const decoded = decodeToken(token);
+    const authorities = decoded?.authorities || [];
+    const isDoctor = authorities.includes('ROLE_DOCTOR') || authorities.includes('ROLE_GENERAL_DOCTOR') || authorities.includes('ROLE_SPECIALIST_DOCTOR') || role.includes('DOCTOR') || systemRole.includes('DOCTOR');
+
     // Fetch all departments
     const { examinationRooms, laboratoryRooms, imagingRooms, loading, error } = useAllDepartments();
 
+    // Fetch my department (for DOCTOR)
+    const { myDepartment, loading: myLoading, error: myError } = useMyDepartment();
+    
+
+
+    useEffect(() => {
+        if (isDoctor && myDepartment?.departmentId) {
+            navigate(ROUTES.DOCTOR_DEPARTMENTS.replace(':departmentId', myDepartment.departmentId));
+        }
+    }, [isDoctor, myDepartment, navigate]);
+
+    if (isDoctor) {
+        return (
+            <MedicalStaffLayout>
+                <div className="max-w-4xl mx-auto px-6 py-8">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('sidebar.logo')}</h1>
+                    <p className="text-sm text-gray-500 mb-6">{t('sidebar.subtitle')}</p>
+
+                    {myLoading ? (
+                        <p className="text-sm text-gray-400">Đang kiểm tra phòng được phân công...</p>
+                    ) : myError?.message === 'not_assigned' ? (
+                        <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col items-center justify-center text-center">
+                            <AlertCircle className="w-12 h-12 text-amber-500 mb-3" />
+                            <h2 className="text-lg font-bold text-gray-900 mb-1">Chưa được phân phòng</h2>
+                            <p className="text-sm text-gray-600">Bạn chưa được chỉ định phụ trách phòng khám nào. Vui lòng liên hệ Admin/Quản lý để được phân phòng.</p>
+                        </div>
+                    ) : myError ? (
+                        <p className="text-sm text-red-500">Có lỗi xảy ra: {myError.message}</p>
+                    ) : (
+                        <p className="text-sm text-gray-500">Đang chuyển hướng đến phòng khám...</p>
+                    )}
+                </div>
+            </MedicalStaffLayout>
+        );
+    }
+
     return (
-        <DoctorLayout>
+        <MedicalStaffLayout>
             <div className="max-w-4xl mx-auto px-6 py-8">
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('sidebar.logo')}</h1>
                 <p className="text-sm text-gray-500 mb-6">{t('sidebar.subtitle')}</p>
@@ -71,6 +120,6 @@ export default function RoomListPage() {
                     ))}
                 </div>
             </div>
-        </DoctorLayout>
+        </MedicalStaffLayout>
     );
 }

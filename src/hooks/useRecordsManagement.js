@@ -12,13 +12,19 @@ export function useRecordsManagement() {
     const [total,   setTotal]   = useState(0);
     const [page,    setPage]    = useState(1);
 
-    const fetchRecords = useCallback(async ({ search = '', gender = '', age = '', bloodType = '', page = 0 } = {}) => {
+    const fetchRecords = useCallback(async ({ search = '', gender = '', age = '', bloodType = '', page = 1 } = {}) => {
         setLoading(true); setError('');
         try {
-            // API search-by-phone chỉ nhận 'phone', dùng search field
-            const params = new URLSearchParams({ phone: search });
+            const params = new URLSearchParams();
+            if (search) params.append('search', search);
+            if (gender && gender !== 'All') params.append('gender', gender);
+            if (age && age !== 'All') params.append('age', age);
+            if (bloodType && bloodType !== 'All') params.append('bloodType', bloodType);
+            params.append('page', page - 1);
+            params.append('size', PAGE_SIZE);
+
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/receptionist/records/search-by-phone?${params}`,
+                `${import.meta.env.VITE_API_URL}/api/receptionist/records?${params}`,
                 { headers: bearer() }
             );
             if (!res.ok) throw new Error('Không thể tải danh sách hồ sơ.');

@@ -21,6 +21,7 @@ export const ROUTES = {
     RECEPTIONIST_RECORDS:       '/receptionist/records',
     RECEPTIONIST_SETTINGS:      '/receptionist/settings',
     RECEPTIONIST_SUPPORT:      '/receptionist/support',
+    RECEPTIONIST_FOLLOW_UPS:   '/receptionist/follow-ups',
 
 
     CASHIER_INVOICES: '/cashier/invoices',

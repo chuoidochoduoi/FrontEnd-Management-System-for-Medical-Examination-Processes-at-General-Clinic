@@ -44,11 +44,46 @@ export function useStaffList() {
     };
 
     const lockStaff = async (id) => {
-        await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/${id}/lock`, { method: 'POST', headers: bearer() });
+        await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/${id}/lock`, { method: 'PATCH', headers: bearer() });
         await fetchStaff({ page });
     };
 
-    return { staff, loading, error, total, page, PAGE_SIZE, fetchStaff, addStaff, lockStaff };
+    const updateStaff = async (id, payload) => {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...bearer() },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(t('accountManagement.errors.saveFailed'));
+        await fetchStaff({ page });
+    };
+
+    const updateStaffFull = async (staffId, payload) => {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/${staffId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...bearer() },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(t('accountManagement.errors.saveFailed'));
+        await fetchStaff({ page });
+    };
+
+    const fetchStaffByAccountId = async (accountId) => {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/account/${accountId}`, { headers: bearer() });
+        if (!res.ok) throw new Error("Không thể tải thông tin nhân sự");
+        return await res.json();
+    };
+
+    const resetPassword = async (accountId, newPassword) => {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/${accountId}/password-reset`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...bearer() },
+            body: JSON.stringify({ newPassword }),
+        });
+        if (!res.ok) throw new Error("Lỗi khi đặt lại mật khẩu");
+    };
+
+    return { staff, loading, error, total, page, PAGE_SIZE, fetchStaff, addStaff, lockStaff, updateStaff, updateStaffFull, fetchStaffByAccountId, resetPassword };
 }
 
 export function usePatientList() {
@@ -79,19 +114,28 @@ export function usePatientList() {
     }, []);
 
     const updatePatient = async (id, payload) => {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/customers/${id}`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', ...bearer() },
             body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error(t('accountManagement.errors.saveFailed'));
-        return await res.json();
-    };
-
-    const lockPatient = async (id) => {
-        await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/${id}/lock`, { method: 'POST', headers: bearer() });
         await fetchPatients({ page });
     };
 
-    return { patients, loading, error, total, page, PAGE_SIZE, fetchPatients, updatePatient, lockPatient };
+    const lockPatient = async (id) => {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/${id}/lock`, { method: 'PATCH', headers: bearer() });
+        await fetchPatients({ page });
+    };
+
+    const resetPassword = async (accountId, newPassword) => {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/${accountId}/password-reset`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...bearer() },
+            body: JSON.stringify({ newPassword }),
+        });
+        if (!res.ok) throw new Error("Lỗi khi đặt lại mật khẩu");
+    };
+
+    return { patients, loading, error, total, page, PAGE_SIZE, fetchPatients, updatePatient, lockPatient, resetPassword };
 }

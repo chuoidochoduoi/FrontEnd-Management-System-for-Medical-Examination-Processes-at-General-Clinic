@@ -1,7 +1,8 @@
 // src/pages/customer/ProfilePage.jsx
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pencil, UserCircle } from 'lucide-react';
+import { Pencil, UserCircle, Key } from 'lucide-react';
+import { toast } from 'react-toastify';
 import CustomerLayout from '@/components/layout/CustomerLayout';
 import { useProfile } from '@/hooks/useProfile';
 
@@ -15,6 +16,7 @@ export default function ProfilePage() {
     const { profile, loading, saving, error, saveProfile } = useProfile();
 
     const [editing, setEditing] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
 
     // Editable fields
     const [fullName,   setFullName]   = useState('');
@@ -121,6 +123,72 @@ export default function ProfilePage() {
         );
     }
 
+    // ── Change Password Modal ──
+    const ChangePasswordModal = () => {
+        const [oldPass, setOldPass] = useState('');
+        const [newPass, setNewPass] = useState('');
+        const [confirmPass, setConfirmPass] = useState('');
+        const [isSubmitting, setIsSubmitting] = useState(false);
+
+        const handleChangePass = async () => {
+            if (!oldPass || !newPass || !confirmPass) {
+                return toast.error('Vui lòng điền đủ thông tin');
+            }
+            if (newPass !== confirmPass) {
+                return toast.error('Mật khẩu xác nhận không khớp');
+            }
+
+            setIsSubmitting(true);
+            try {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/me/password`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ oldPassword: oldPass, newPassword: newPass })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.message || 'Mật khẩu cũ không đúng');
+                }
+
+                toast.success('Đổi mật khẩu thành công!');
+                setShowPasswordModal(false);
+            } catch (err) {
+                toast.error(err.message);
+            } finally {
+                setIsSubmitting(false);
+            }
+        };
+
+        return (
+            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Đổi mật khẩu</h3>
+                    <p className="text-sm text-gray-500 mb-5">Nhập mật khẩu hiện tại và mật khẩu mới để thay đổi.</p>
+
+                    <div className="space-y-4">
+                        <input type="password" placeholder="Mật khẩu hiện tại" value={oldPass} onChange={e => setOldPass(e.target.value)}
+                               className="w-full h-10 px-3 text-sm border border-gray-300 rounded-md outline-none focus:border-primary-500" />
+                        <input type="password" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" value={newPass} onChange={e => setNewPass(e.target.value)}
+                               className="w-full h-10 px-3 text-sm border border-gray-300 rounded-md outline-none focus:border-primary-500" />
+                        <input type="password" placeholder="Xác nhận mật khẩu mới" value={confirmPass} onChange={e => setConfirmPass(e.target.value)}
+                               className="w-full h-10 px-3 text-sm border border-gray-300 rounded-md outline-none focus:border-primary-500" />
+                        <div className="flex gap-3">
+                            <button onClick={() => setShowPasswordModal(false)} className="flex-1 h-10 border text-gray-600 rounded-md text-sm font-medium">Hủy</button>
+                            <button onClick={handleChangePass} disabled={isSubmitting} className="flex-1 h-10 bg-primary-500 text-white rounded-md text-sm font-medium disabled:opacity-60">
+                                {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <CustomerLayout>
             <div className="space-y-5">
@@ -129,21 +197,31 @@ export default function ProfilePage() {
                 {error && <p className="text-red-500 text-sm">{error}</p>}
 
                 {/* ── Identity card ── */}
-                <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-center gap-5">
-                    <div className="w-20 h-20 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-                        <UserCircle size={48} className="text-gray-300" />
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-center justify-between">
+                    <div className="flex items-center gap-5">
+                        <div className="w-20 h-20 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                            <UserCircle size={48} className="text-gray-300" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-semibold text-gray-900">{fullName || '—'}</h2>
+                            <p className="text-sm text-gray-400 mt-1">
+                                {t('profile.customerCode')}: <span className="text-gray-600">{profile?.customerCode ?? '—'}</span>
+                            </p>
+                            <p className="text-sm text-gray-400">
+                                {t('profile.bloodType')}: <span className="text-gray-600">{bloodTypeLabel(bloodType)}</span>
+                                <span className="mx-3 text-gray-200">|</span>
+                                {t('profile.insurance')}: <span className="text-gray-600">{profile?.insuranceId ?? '—'}</span>
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 className="text-xl font-semibold text-gray-900">{fullName || '—'}</h2>
-                        <p className="text-sm text-gray-400 mt-1">
-                            {t('profile.customerCode')}: <span className="text-gray-600">{profile?.customerCode ?? '—'}</span>
-                        </p>
-                        <p className="text-sm text-gray-400">
-                            {t('profile.bloodType')}: <span className="text-gray-600">{bloodTypeLabel(bloodType)}</span>
-                            <span className="mx-3 text-gray-200">|</span>
-                            {t('profile.insurance')}: <span className="text-gray-600">{profile?.insuranceId ?? '—'}</span>
-                        </p>
-                    </div>
+                    
+                    <button 
+                        onClick={() => setShowPasswordModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                        <Key size={16} />
+                        Đổi mật khẩu
+                    </button>
                 </div>
 
                 <div className="grid grid-cols-3 gap-5 items-start">
@@ -367,6 +445,8 @@ export default function ProfilePage() {
 
                 </div>
             </div>
+
+            {showPasswordModal && <ChangePasswordModal />}
         </CustomerLayout>
     );
 }

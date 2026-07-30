@@ -13,7 +13,7 @@ const STATUS_CFG = {
     draft:     { label: 'Bản nháp',     cls: 'bg-gray-100 text-gray-500 border border-gray-200' },
 };
 
-const SERVICE_TYPES = ['Khám bệnh', 'Xét Nghiệm', 'Chẩn đoán Hình Ảnh'];
+const SERVICE_TYPES = ['EXAMINATION', 'LABORATORY', 'IMAGING'];
 const STATUSES      = ['active', 'suspended', 'draft'];
 
 const inputCls  = 'w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-gray-500 bg-white';

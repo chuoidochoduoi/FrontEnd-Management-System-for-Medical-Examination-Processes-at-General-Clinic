@@ -120,6 +120,6 @@ export default function DoctorRoomsPage() {
                     ))}
                 </div>
             </div>
-        </DoctorLayout>
+        </MedicalStaffLayout>
     );
 }

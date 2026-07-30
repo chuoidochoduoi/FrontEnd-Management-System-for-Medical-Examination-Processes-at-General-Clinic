@@ -27,8 +27,6 @@ export default function CustomerLayout({ children }) {
     const accountId = get('accountId') || '—';
     const initials = username.slice(0, 2).toUpperCase();
 
-    const [profileOpen, setProfileOpen] = useState(false);
-
     const handleLogout = () => {
         ['token', 'refreshToken', 'role', 'username', 'accountId', 'systemRole', 'staffId'].forEach(k => {
             localStorage.removeItem(k);
@@ -39,13 +37,11 @@ export default function CustomerLayout({ children }) {
 
     const mainNav = [
         { to: ROUTES.CUSTOMER_HOME,           icon: Home,          label: t('sidebar.home') },
-        { to: ROUTES.APPOINTMENT,            icon: CalendarPlus,  label: t('sidebar.appointment') },
+        { to: ROUTES.CUSTOMER_APPOINTMENT,   icon: CalendarPlus,  label: t('sidebar.appointment') },
         { to: ROUTES.CUSTOMER_VISIT_HISTORY,  icon: ClipboardList, label: t('sidebar.visitHistory') },
         { to: ROUTES.CUSTOMER_PAYMENT,        icon: CreditCard,    label: t('sidebar.paymentHistory') },
         { to: ROUTES.PROFILE,                icon: UserCircle,    label: t('sidebar.profile') },
     ];
-
-    const bottomNav = [];
 
     const linkClass = ({ isActive }) =>
         `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors ${
@@ -55,73 +51,57 @@ export default function CustomerLayout({ children }) {
         }`;
 
     return (
-        <div className="flex h-screen bg-gray-100 font-jakarta overflow-hidden">
+        <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden">
 
             {/* ── Sidebar ── */}
-            <aside className="w-52 bg-white border-r border-gray-200 flex flex-col shrink-0">
+            <aside className="w-56 bg-white border-r border-gray-200 flex flex-col shrink-0">
                 {/* Logo */}
                 <div className="px-5 py-5 border-b border-gray-100">
                     <p className="text-primary-500 text-base font-bold">{t('sidebar.logo')}</p>
                     <p className="text-primary-400 text-xs mt-0.5">{t('sidebar.subtitle')}</p>
                 </div>
 
+                {/* Avatar */}
+                <div className="px-5 py-5 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-sm font-semibold text-primary-700 shrink-0">
+                            {initials}
+                        </div>
+                        <div className="overflow-hidden">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{username}</p>
+                            <p className="text-xs text-gray-400 truncate">{t('header.id')}: {accountId}</p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Main nav */}
-                <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+                <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
                     {mainNav.map(({ to, icon: Icon, label }) => (
                         <NavLink key={to} to={to} className={linkClass}>
-                            <Icon size={15} className="shrink-0" />
+                            <Icon size={16} className="shrink-0" />
                             {label}
                         </NavLink>
                     ))}
                 </nav>
+
+                {/* Bottom Actions */}
+                <div className="px-3 py-4 border-t border-gray-100 space-y-1">
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
+                    >
+                        <LogOut size={16} className="shrink-0" />
+                        {t('sidebar.logout')}
+                    </button>
+                </div>
             </aside>
 
             {/* ── Main ── */}
             <div className="flex-1 flex flex-col overflow-hidden">
-
-                {/* Header */}
-                <header className="h-14 bg-white border-b border-gray-200 px-8 flex items-center justify-end shrink-0">
-                    <div className="relative">
-                        <button
-                            onClick={() => setProfileOpen(v => !v)}
-                            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-                        >
-                            <div className="text-right">
-                                <p className="text-sm font-semibold text-gray-900">{username}</p>
-                                <p className="text-xs text-gray-400">{t('header.id')}: {accountId}</p>
-                            </div>
-                            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-700">
-                                {initials}
-                            </div>
-                            <ChevronDown size={14} className="text-gray-400" />
-                        </button>
-
-                        {profileOpen && (
-                            <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-50">
-                                <button
-                                    onClick={() => { setProfileOpen(false); navigate(ROUTES.PROFILE); }}
-                                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50"
-                                >
-                                    <User size={14} /> {t('sidebar.profile')}
-                                </button>
-                                <div className="border-t border-gray-100">
-                                    <button
-                                        onClick={handleLogout}
-                                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"
-                                    >
-                                        <LogOut size={14} /> {t('sidebar.logout')}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </header>
-
                 {/* Page content */}
                 <main className="flex-1 overflow-y-auto p-8">
                     {children}
                 </main>
-
             </div>
         </div>
     );

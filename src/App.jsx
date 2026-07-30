@@ -7,6 +7,7 @@ import 'react-toastify/dist/ReactToastify.css'
 import LoginPage from './pages/auth/LoginPage.jsx'
 import LoginRegister from './pages/auth/RegisterPage.jsx'
 import AppointmentPage from '@/pages/appointment/AppointmentPage';
+import CustomerAppointmentPage from '@/pages/customer/CustomerAppointmentPage';
 import CheckInPage from '@/pages/receptionist/CheckInPage';
 import AppointmentDetailPage from '@/pages/receptionist/AppointmentDetailPage';
 import ProfilePage from '@/pages/customer/ProfilePage';
@@ -44,6 +45,11 @@ function App() {
         <Route path={ROUTES.APPOINTMENT} element={<AppointmentPage />} />
 
         {/* CUSTOMER routes - bệnh nhân */}
+        <Route path={ROUTES.CUSTOMER_APPOINTMENT} element={
+          <ProtectedRoute allowedRoles={['CUSTOMER']}>
+            <CustomerAppointmentPage />
+          </ProtectedRoute>
+        } />
         <Route path={ROUTES.PROFILE} element={
           <ProtectedRoute allowedRoles={['CUSTOMER']}>
             <ProfilePage />

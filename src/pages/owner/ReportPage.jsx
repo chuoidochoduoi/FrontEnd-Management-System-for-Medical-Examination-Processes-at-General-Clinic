@@ -5,8 +5,8 @@ import OwnerLayout from '@/components/layout/OwnerLayout';
 import { useReport } from '@/hooks/useReport';
 
 /* ── helpers ── */
-const fmt     = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) : '—';
-const fmtVND  = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
+const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) : '—';
+const fmtVND = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
 const PERIODS = ['day', 'month', 'year'];
 
 /* ── Simple bar chart (SVG, no lib) ── */
@@ -46,18 +46,18 @@ function DonutChart({ segments, total, label }) {
                 {validSegments.map((seg, i) => {
                     const pct = seg.pct || 0;
                     const dash = (pct / 100) * circ;
-                    const gap  = circ - dash;
-                    const el   = (
+                    const gap = circ - dash;
+                    const el = (
                         <circle key={i} cx={CX} cy={CY} r={R}
-                                fill="none" stroke={colors[i % colors.length]} strokeWidth={STROKE}
-                                strokeDasharray={`${dash} ${gap}`} strokeDashoffset={-(offset * circ) / 100} />
+                            fill="none" stroke={colors[i % colors.length]} strokeWidth={STROKE}
+                            strokeDasharray={`${dash} ${gap}`} strokeDashoffset={-(offset * circ) / 100} />
                     );
                     offset += pct;
                     return el;
                 })}
                 {/* Center text */}
                 <text x={CX} y={CY + 1} textAnchor="middle" dominantBaseline="middle"
-                      className="rotate-90" style={{ transform: `rotate(90deg)`, transformOrigin: `${CX}px ${CY}px` }}>
+                    className="rotate-90" style={{ transform: `rotate(90deg)`, transformOrigin: `${CX}px ${CY}px` }}>
                     <tspan x={CX} dy="-6" fontSize="18" fontWeight="700" fill="#1a1a2e">{safeTotal}</tspan>
                     <tspan x={CX} dy="16" fontSize="9" fill="#9ca3af">{label}</tspan>
                 </text>
@@ -119,7 +119,11 @@ function Tab1({ data, t }) {
                     <p className="text-xs font-medium text-gray-500 mb-4">{t('report.tab1.sessionChart')}</p>
                     <div className="flex-1 flex items-center justify-center">
                         <DonutChart
-                            segments={sessionChart}
+                            segments={sessionChart.map(s => ({
+                                label: s.label,
+                                pct: totalSessions ? Math.round((s.value / totalSessions) * 100) : 0,
+                                value: s.value
+                            }))}
                             total={totalSessions}
                             label={t('report.tab1.totalSessions')}
                         />
@@ -134,36 +138,34 @@ function Tab1({ data, t }) {
                 </div>
                 <table className="w-full">
                     <thead className="border-b border-gray-100 bg-gray-50">
-                    <tr>
-                        {[
-                            t('report.tab1.table.code'),
-                            t('report.tab1.table.dept'),
-                            t('report.tab1.table.revenue'),
-                            t('report.tab1.table.sessions'),
-                            t('report.tab1.table.occupancy'),
-                            t('report.tab1.table.avgTime'),
-                            t('report.tab1.table.csat'),
-                        ].map(col => (
-                            <th key={col} className="text-xs font-medium text-gray-400 text-left px-5 py-3">{col}</th>
-                        ))}
-                    </tr>
+                        <tr>
+                            {[
+                                t('report.tab1.table.code'),
+                                t('report.tab1.table.dept'),
+                                t('report.tab1.table.revenue'),
+                                t('report.tab1.table.sessions'),
+                                t('report.tab1.table.occupancy'),
+                                t('report.tab1.table.csat'),
+                            ].map(col => (
+                                <th key={col} className="text-xs font-medium text-gray-400 text-left px-5 py-3">{col}</th>
+                            ))}
+                        </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                    {table.map((row, i) => (
-                        <tr key={i} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-5 py-4 text-xs text-gray-400 font-mono">{row.code}</td>
-                            <td className="px-5 py-4 text-sm font-semibold text-gray-900">{row.dept}</td>
-                            <td className="px-5 py-4 text-sm text-gray-700 tabular-nums">{fmtVND(row.revenue)}</td>
-                            <td className="px-5 py-4 text-sm text-gray-600">{row.sessions} ca</td>
-                            <td className="px-5 py-4 text-sm">
-                  <span className={row.occupancy >= 90 ? 'text-red-500 font-medium' : 'text-gray-700'}>
-                    {row.occupancy}% {row.occupancy >= 90 && '(Quá tải)'}
-                  </span>
-                            </td>
-                            <td className="px-5 py-4 text-sm text-gray-500">{row.avgTime} phút</td>
-                            <td className="px-5 py-4 text-sm font-semibold text-gray-800">{row.csat} / 5.0</td>
-                        </tr>
-                    ))}
+                        {table.map((row, i) => (
+                            <tr key={i} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-5 py-4 text-xs text-gray-400 font-mono">{row.code}</td>
+                                <td className="px-5 py-4 text-sm font-semibold text-gray-900">{row.dept}</td>
+                                <td className="px-5 py-4 text-sm text-gray-700 tabular-nums">{fmtVND(row.revenue)}</td>
+                                <td className="px-5 py-4 text-sm text-gray-600">{row.sessions} ca</td>
+                                <td className="px-5 py-4 text-sm">
+                                    <span className={row.occupancy >= 90 ? 'text-red-500 font-medium' : 'text-gray-700'}>
+                                        {row.occupancy}% {row.occupancy >= 90 && '(Quá tải)'}
+                                    </span>
+                                </td>
+                                <td className="px-5 py-4 text-sm font-semibold text-gray-800">{row.csat} / 5.0</td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
@@ -190,20 +192,20 @@ function Tab2({ data, t }) {
         .sort((a, b) => sortDesc ? b.totalRevenue - a.totalRevenue : a.totalRevenue - b.totalRevenue);
 
     const categories = [...new Set(table.map(r => r.category).filter(Boolean))];
-    const barColors  = ['bg-gray-900', 'bg-gray-400', 'bg-gray-300'];
+    const barColors = ['bg-gray-900', 'bg-gray-400', 'bg-gray-300'];
 
     return (
         <div className="space-y-5">
             {/* Stats */}
             <div className="grid grid-cols-4 gap-4">
                 <StatCard label={t('report.tab2.stats.totalRevenue')} value={fmtVND(totalRevenue)}
-                          note={t('report.tab2.stats.totalRevenueNote', { total: totalSessions })} />
+                    note={t('report.tab2.stats.totalRevenueNote', { total: totalSessions })} />
                 <StatCard label={t('report.tab2.stats.avgPerSession')} value={fmtVND(avgPerSession)}
-                          note={t('report.tab2.stats.avgPerSessionNote')} />
+                    note={t('report.tab2.stats.avgPerSessionNote')} />
                 <StatCard label={t('report.tab2.stats.bhytTotal')} value={fmtVND(bhytTotal)}
-                          note={t('report.tab2.stats.bhytNote', { rate: bhytRate })} />
+                    note={t('report.tab2.stats.bhytNote', { rate: bhytRate })} />
                 <StatCard label={t('report.tab2.stats.drugRevenue')} value={fmtVND(drugRevenue)}
-                          note={t('report.tab2.stats.drugNote')} muted />
+                    note={t('report.tab2.stats.drugNote')} muted />
             </div>
 
             {/* Breakdown bars */}
@@ -220,47 +222,47 @@ function Tab2({ data, t }) {
                     <p className="text-sm font-semibold text-gray-800">{t('report.tab2.table.title')}</p>
                     <div className="flex items-center gap-3">
                         <select value={filter} onChange={e => setFilter(e.target.value)}
-                                className="h-8 px-3 text-xs border border-gray-200 rounded-lg outline-none bg-white">
+                            className="h-8 px-3 text-xs border border-gray-200 rounded-lg outline-none bg-white">
                             <option value="">{t('report.tab2.table.filterAll')}</option>
                             {categories.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                         <button onClick={() => setSortDesc(v => !v)}
-                                className="flex items-center gap-1.5 h-8 px-3 text-xs border border-gray-200 rounded-lg text-gray-500 hover:border-gray-400 transition-colors">
+                            className="flex items-center gap-1.5 h-8 px-3 text-xs border border-gray-200 rounded-lg text-gray-500 hover:border-gray-400 transition-colors">
                             {t('report.tab2.table.sort')} {sortDesc ? '↓' : '↑'}
                         </button>
                     </div>
                 </div>
                 <table className="w-full">
                     <thead className="border-b border-gray-100 bg-gray-50">
-                    <tr>
-                        {[
-                            t('report.tab2.table.stt'),
-                            t('report.tab2.table.serviceName'),
-                            t('report.tab2.table.totalOrders'),
-                            t('report.tab2.table.unitPrice'),
-                            t('report.tab2.table.totalRevenue'),
-                            t('report.tab2.table.bhytQty'),
-                            t('report.tab2.table.bhytFund'),
-                        ].map(col => (
-                            <th key={col} className="text-xs font-medium text-gray-400 text-left px-5 py-3">{col}</th>
-                        ))}
-                    </tr>
+                        <tr>
+                            {[
+                                t('report.tab2.table.stt'),
+                                t('report.tab2.table.serviceName'),
+                                t('report.tab2.table.totalOrders'),
+                                t('report.tab2.table.unitPrice'),
+                                t('report.tab2.table.totalRevenue'),
+                                t('report.tab2.table.bhytQty'),
+                                t('report.tab2.table.bhytFund'),
+                            ].map(col => (
+                                <th key={col} className="text-xs font-medium text-gray-400 text-left px-5 py-3">{col}</th>
+                            ))}
+                        </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                    {filtered.map((row, i) => (
-                        <tr key={i} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-5 py-4 text-xs text-gray-400">{String(i + 1).padStart(2, '0')}</td>
-                            <td className="px-5 py-4">
-                                <p className="text-sm font-medium text-gray-900 leading-snug">{row.name}</p>
-                                {row.note && <p className="text-xs text-gray-400 mt-0.5">{row.note}</p>}
-                            </td>
-                            <td className="px-5 py-4 text-sm text-gray-600 tabular-nums">{fmt(row.totalOrders)} đơn ca</td>
-                            <td className="px-5 py-4 text-sm text-gray-600 tabular-nums">{fmt(row.unitPrice)}</td>
-                            <td className="px-5 py-4 text-sm font-bold text-gray-900 tabular-nums">{fmt(row.totalRevenue)}</td>
-                            <td className="px-5 py-4 text-sm text-gray-600 tabular-nums">{fmt(row.bhytQty)}</td>
-                            <td className="px-5 py-4 text-sm text-gray-600 tabular-nums">{fmt(row.bhytFund)}</td>
-                        </tr>
-                    ))}
+                        {filtered.map((row, i) => (
+                            <tr key={i} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-5 py-4 text-xs text-gray-400">{String(i + 1).padStart(2, '0')}</td>
+                                <td className="px-5 py-4">
+                                    <p className="text-sm font-medium text-gray-900 leading-snug">{row.name}</p>
+                                    {row.note && <p className="text-xs text-gray-400 mt-0.5">{row.note}</p>}
+                                </td>
+                                <td className="px-5 py-4 text-sm text-gray-600 tabular-nums">{fmt(row.totalOrders)} đơn ca</td>
+                                <td className="px-5 py-4 text-sm text-gray-600 tabular-nums">{fmt(row.unitPrice)}</td>
+                                <td className="px-5 py-4 text-sm font-bold text-gray-900 tabular-nums">{fmt(row.totalRevenue)}</td>
+                                <td className="px-5 py-4 text-sm text-gray-600 tabular-nums">{fmt(row.bhytQty)}</td>
+                                <td className="px-5 py-4 text-sm text-gray-600 tabular-nums">{fmt(row.bhytFund)}</td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
@@ -274,7 +276,7 @@ export default function ReportPage() {
     const { tab1Data, tab2Data, loading, error, fetchTab1, fetchTab2, exportCSV } = useReport();
 
     const [activeTab, setActiveTab] = useState('tab1');
-    const [period,    setPeriod]    = useState('day');
+    const [period, setPeriod] = useState('day');
 
     useEffect(() => {
         fetchTab1(period);
@@ -300,8 +302,7 @@ export default function ReportPage() {
                     <div className="flex items-center gap-1 border border-gray-200 rounded-xl p-1 bg-white">
                         {PERIODS.map(p => (
                             <button key={p} onClick={() => handlePeriod(p)}
-                                    className={`px-4 h-7 text-sm rounded-lg transition-colors ${
-                                        period === p ? 'bg-gray-900 text-white font-medium' : 'text-gray-500 hover:text-gray-800'
+                                className={`px-4 h-7 text-sm rounded-lg transition-colors ${period === p ? 'bg-gray-900 text-white font-medium' : 'text-gray-500 hover:text-gray-800'
                                     }`}>
                                 {t(`report.periods.${p}`)}
                             </button>
@@ -317,24 +318,23 @@ export default function ReportPage() {
                             { key: 'tab2', label: t('report.tab2.label') },
                         ].map(tab => (
                             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                                    className={`px-5 pb-3 text-sm font-medium border-b-2 transition-colors ${
-                                        activeTab === tab.key
-                                            ? 'border-gray-900 text-gray-900'
-                                            : 'border-transparent text-gray-400 hover:text-gray-700'
+                                className={`px-5 pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.key
+                                        ? 'border-gray-900 text-gray-900'
+                                        : 'border-transparent text-gray-400 hover:text-gray-700'
                                     }`}>
                                 {tab.label}
                             </button>
                         ))}
                     </div>
                     <button onClick={() => exportCSV(period)}
-                            className="mb-3 px-4 h-9 bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium rounded-xl transition-colors whitespace-nowrap">
+                        className="mb-3 px-4 h-9 bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium rounded-xl transition-colors whitespace-nowrap">
                         {t('report.exportBtn')}
                     </button>
                 </div>
 
                 {/* Content */}
                 {loading && <p className="text-sm text-gray-400 text-center py-12">{t('report.loading')}</p>}
-                {error   && <p className="text-sm text-red-500 text-center py-4">{error}</p>}
+                {error && <p className="text-sm text-red-500 text-center py-4">{error}</p>}
 
                 {!loading && activeTab === 'tab1' && <Tab1 data={tab1Data} t={t} />}
                 {!loading && activeTab === 'tab2' && <Tab2 data={tab2Data} t={t} />}

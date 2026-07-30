@@ -14,6 +14,7 @@ const STATUS_CFG = {
 
 const ROOM_TYPES = ['examination', 'surgery', 'lab', 'imaging'];
 const STATUSES   = ['available', 'occupied', 'maintenance'];
+const CONFIG_STATUSES = ['available', 'maintenance'];
 
 /* ── Input style ── */
 const inputCls = 'w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-200 bg-white';
@@ -24,7 +25,7 @@ const textareaCls = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-lg 
 function StatusGroup({ value, onChange }) {
     return (
         <div className="flex gap-4">
-            {STATUSES.map(s => (
+            {CONFIG_STATUSES.map(s => (
                 <label key={s} className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-700">
                     <input
                         type="radio" name="status" value={s}
@@ -275,7 +276,7 @@ function RoomCard({ room, onConfigure, onQuickStatus, t }) {
                         ⚡ {t('roomManagement.card.quickStatus')}
                     </button>
                     <div className="absolute bottom-full left-0 mb-1 hidden group-hover:flex flex-col bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-20 min-w-[130px]">
-                        {STATUSES.map(s => (
+                        {CONFIG_STATUSES.map(s => (
                             <button key={s} onClick={() => onQuickStatus(room.id, s)}
                                     className={`text-left px-3 py-2 text-xs hover:bg-gray-50 transition-colors ${room.status === s ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
                                 {STATUS_CFG[s].label}
@@ -391,9 +392,9 @@ export default function RoomManagementPage() {
                         <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
                                 className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none bg-white">
                             <option value="">Tất cả</option>
-                            <option value="EXAMINATION">Khám bệnh</option>
-                            <option value="LABORATORY">Xét nghiệm</option>
-                            <option value="IMAGING">Chẩn đoán hình ảnh</option>
+                            <option value="examination">Khám bệnh</option>
+                            <option value="lab">Xét nghiệm</option>
+                            <option value="imaging">Chẩn đoán hình ảnh</option>
                         </select>
                     </div>
                     <div className="w-52">

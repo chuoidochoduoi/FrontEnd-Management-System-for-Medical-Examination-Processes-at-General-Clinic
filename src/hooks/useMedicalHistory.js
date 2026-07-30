@@ -56,5 +56,21 @@ export function useVisitDetail(visitId) {
         finally { setLoading(false); }
     }, [visitId]);
 
-    return { visit, loading, error, fetchVisit };
+    const rateVisit = async (ratingScore) => {
+        if (!visitId) return false;
+        try {
+            const res = await fetch(
+                `${import.meta.env.VITE_API_URL}/api/patient/medical-history/${visitId}/rate?ratingScore=${ratingScore}`,
+                { method: 'POST', headers: bearer() }
+            );
+            if (!res.ok) throw new Error(t('visitDetail.errors.rateFailed', 'Đánh giá thất bại'));
+            await fetchVisit(); // refresh data
+            return true;
+        } catch (err) {
+            setError(err.message);
+            return false;
+        }
+    };
+
+    return { visit, loading, error, fetchVisit, rateVisit };
 }

@@ -6,12 +6,7 @@ const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key)
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
 const PAGE_SIZE = 10;
 
-// Department type mapping
-const DEPARTMENT_TYPE_MAP = {
-    'Khám bệnh': 'EXAMINATION',
-    'Xét Nghiệm': 'LABORATORY',
-    'Chẩn đoán Hình Ảnh': 'IMAGING',
-};
+
 
 export function useServiceManagement() {
     const { t } = useTranslation('services');
@@ -45,7 +40,10 @@ export function useServiceManagement() {
             const query = new URLSearchParams();
             if (search) query.append('search', search);
             if (type) query.append('departmentType', type);
-            if (status) query.append('status', status);
+            if (status) {
+                const STATUS_MAP = { active: 'ACTIVE', suspended: 'INACTIVE', draft: 'DRAFT' };
+                query.append('status', STATUS_MAP[status] || status);
+            }
             if (page) query.append('page', page - 1);
             query.append('size', PAGE_SIZE);
 
@@ -72,6 +70,7 @@ export function useServiceManagement() {
 
             setServices(mapped);
             setTotal(totalItems);
+            setPage(page || 1);
             fetchStats();
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
@@ -107,7 +106,7 @@ export function useServiceManagement() {
     };
 
     const createService = async (payload) => {
-        const apiType = DEPARTMENT_TYPE_MAP[payload.type] || payload.type;
+        const apiType = payload.type;
         const body = {
             serviceCode: payload.code,
             name: payload.name,
@@ -130,7 +129,7 @@ export function useServiceManagement() {
             draft: 'DRAFT',
         };
 
-        const apiType = payload.type ? (DEPARTMENT_TYPE_MAP[payload.type] || payload.type) : null;
+        const apiType = payload.type;
 
         const body = {};
 

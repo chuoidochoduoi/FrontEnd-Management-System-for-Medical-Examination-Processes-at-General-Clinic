@@ -20,7 +20,8 @@ export function useReport() {
                 { headers: bearer() }
             );
             if (!res.ok) throw new Error(t('report.errors.loadFailed'));
-            setTab1Data(await res.json());
+            const json = await res.json();
+            setTab1Data(json.data || json);
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
     }, []);
@@ -33,7 +34,8 @@ export function useReport() {
                 { headers: bearer() }
             );
             if (!res.ok) throw new Error(t('report.errors.loadFailed'));
-            setTab2Data(await res.json());
+            const json = await res.json();
+            setTab2Data(json.data || json);
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
     }, []);

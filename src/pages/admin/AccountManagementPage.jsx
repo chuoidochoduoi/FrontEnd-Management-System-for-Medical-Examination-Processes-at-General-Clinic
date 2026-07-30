@@ -170,6 +170,8 @@ function AddStaffModal({ onClose, onSubmit, t }) {
                       className={inputCls}
                     >
                       <option value="">-- Chọn vai trò --</option>
+                      <option value="ADMIN">Quản trị viên</option>
+                      <option value="CLINIC_MANAGER">Quản lý phòng khám</option>
                       <option value="NURSE">Y tá</option>
                       <option value="GENERAL_DOCTOR">Bác sĩ đa khoa</option>
                       <option value="SPECIALIST_DOCTOR">Bác sĩ chuyên khoa</option>
@@ -432,6 +434,8 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
                   className={inputCls}
                 >
                   <option value="">-- Chọn vai trò --</option>
+                  <option value="ADMIN">Quản trị viên</option>
+                  <option value="CLINIC_MANAGER">Quản lý phòng khám</option>
                   <option value="NURSE">Y tá</option>
                   <option value="GENERAL_DOCTOR">Bác sĩ đa khoa</option>
                   <option value="SPECIALIST_DOCTOR">Bác sĩ chuyên khoa</option>

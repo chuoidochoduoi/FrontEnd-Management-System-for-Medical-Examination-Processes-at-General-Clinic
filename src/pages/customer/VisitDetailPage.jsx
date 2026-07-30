@@ -10,8 +10,9 @@ export default function VisitDetailPage() {
     const { id }   = useParams();
     const navigate = useNavigate();
     const { t }    = useTranslation('medicalHistory');
-    const { visit, loading, error, fetchVisit } = useVisitDetail(id);
+    const { visit, loading, error, fetchVisit, rateVisit } = useVisitDetail(id);
     const [activeTest, setActiveTest] = useState(0);
+    const [showRating, setShowRating] = useState(false);
 
     useEffect(() => { fetchVisit(); }, [id]);
 
@@ -27,6 +28,44 @@ export default function VisitDetailPage() {
     /* ── reusable styles ── */
     const sectionLabelCls = 'text-xs font-semibold text-gray-400 tracking-widest mb-3';
     const boxCls          = 'border border-gray-200 rounded-xl p-4 bg-white';
+
+    /* ── Rating Modal ── */
+    const RatingModal = () => {
+        const [score, setScore] = useState(5);
+        const [submitting, setSubmitting] = useState(false);
+        const handleRate = async () => {
+            setSubmitting(true);
+            const success = await rateVisit(score);
+            setSubmitting(false);
+            if (success) setShowRating(false);
+        };
+        return (
+            <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl text-center">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Đánh giá dịch vụ</h3>
+                    <p className="text-sm text-gray-500 mb-6">Bạn cảm thấy hài lòng với lượt khám này chứ?</p>
+                    <div className="flex justify-center gap-2 mb-8">
+                        {[1, 2, 3, 4, 5].map(star => (
+                            <button key={star} onClick={() => setScore(star)}
+                                    className={`text-3xl transition-colors ${score >= star ? 'text-yellow-400' : 'text-gray-200 hover:text-yellow-200'}`}>
+                                ★
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={() => setShowRating(false)}
+                                className="flex-1 h-10 border border-gray-200 text-sm font-medium text-gray-600 rounded-xl hover:bg-gray-50 transition-colors">
+                            Hủy
+                        </button>
+                        <button onClick={handleRate} disabled={submitting}
+                                className="flex-1 h-10 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-60">
+                            {submitting ? 'Đang gửi...' : 'Gửi đánh giá'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <PatientLayout>
@@ -56,12 +95,47 @@ export default function VisitDetailPage() {
                                     </p>
                                 </>
                             )}
+                            {visit?.doctorName && (
+                                <>
+                                    <span className="text-gray-200">•</span>
+                                    <p className="text-xs text-gray-400">
+                                        Bác sĩ khám: <span className="font-medium text-gray-700">{visit.doctorName}</span>
+                                    </p>
+                                </>
+                            )}
+                            {visit?.labDoctors?.length > 0 && (
+                                <>
+                                    <span className="text-gray-200">•</span>
+                                    <p className="text-xs text-gray-400">
+                                        BS xét nghiệm: <span className="font-medium text-gray-700">{visit.labDoctors.join(', ')}</span>
+                                    </p>
+                                </>
+                            )}
+                            {visit?.status && (
+                                <>
+                                    <span className="text-gray-200">•</span>
+                                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                                        visit.status === 'COMPLETED' ? 'bg-green-50 text-green-600 border border-green-200'
+                                        : 'bg-blue-50 text-blue-600 border border-blue-200'
+                                    }`}>
+                                        {visit.status === 'COMPLETED' ? 'Đã hoàn thành' : 'Đang xử lý'}
+                                    </span>
+                                </>
+                            )}
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button className="px-4 h-9 border border-gray-300 text-sm text-gray-600 rounded-xl hover:border-gray-500 transition-colors">
-                            {t('visitDetail.ratingBtn')}
-                        </button>
+                        {visit?.status === 'COMPLETED' && !visit?.ratingScore && (
+                            <button onClick={() => setShowRating(true)} className="px-4 h-9 border border-gray-300 text-sm text-gray-600 rounded-xl hover:border-gray-500 transition-colors">
+                                Đánh giá
+                            </button>
+                        )}
+                        {visit?.ratingScore && (
+                            <div className="px-4 h-9 flex items-center gap-1 border border-yellow-200 bg-yellow-50 rounded-xl">
+                                <span className="text-sm font-semibold text-yellow-600">{visit.ratingScore}</span>
+                                <span className="text-yellow-400 text-sm">★</span>
+                            </div>
+                        )}
                         <button onClick={() => window.print()}
                                 className="px-4 h-9 bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium rounded-xl transition-colors">
                             {t('visitDetail.printBtn')}
@@ -205,6 +279,8 @@ export default function VisitDetailPage() {
 
                 {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
             </div>
+
+            {showRating && <RatingModal />}
 
             <style>{`@media print { aside { display: none; } header { display: none; } }`}</style>
         </PatientLayout>

@@ -2,7 +2,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Search, X, Eye, EyeOff } from "lucide-react";
+import { toast } from "react-toastify";
 import AdminLayout from "@/components/layout/AdminLayout";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useStaffList, usePatientList } from "@/hooks/useAccountManagement";
 import { useSpecializations } from "@/hooks/useSpecializations";
 
@@ -75,6 +77,58 @@ const systemRoleMap = {
   CASHIER: "Thu ngân",
 };
 
+const capitalizeWords = (str) => {
+  if (!str) return "";
+  return str
+    .split(" ")
+    .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ""))
+    .join(" ");
+};
+
+const DateDropdowns = ({ value, onChange, className }) => {
+  const parts = (value || '').split('-');
+  const year = parts[0] || '';
+  const month = parts[1] ? String(parseInt(parts[1], 10)) : ''; 
+  const day = parts[2] ? String(parseInt(parts[2], 10)) : '';
+
+  const handleUpdate = (y, m, d) => {
+      const py = y || '';
+      const pm = m ? m.padStart(2, '0') : '';
+      const pd = d ? d.padStart(2, '0') : '';
+      if (!py && !pm && !pd) onChange('');
+      else onChange(`${py}-${pm}-${pd}`);
+  };
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 120 }, (_, i) => currentYear - i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  
+  let daysInMonth = 31;
+  if (month) {
+      const m = parseInt(month, 10);
+      const y = year ? parseInt(year, 10) : currentYear;
+      daysInMonth = new Date(y, m, 0).getDate();
+  }
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  return (
+      <div className="flex gap-2 w-full">
+          <select value={day} onChange={e => handleUpdate(year, month, e.target.value)} className={className}>
+              <option value="">Ngày</option>
+              {days.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <select value={month} onChange={e => handleUpdate(year, e.target.value, day)} className={className}>
+              <option value="">Tháng</option>
+              {months.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <select value={year} onChange={e => handleUpdate(e.target.value, month, day)} className={className}>
+              <option value="">Năm</option>
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+      </div>
+  );
+};
+
 /* ── Modal: Thêm nhân sự ── */
 function AddStaffModal({ onClose, onSubmit, t }) {
   const { specializations } = useSpecializations();
@@ -88,6 +142,7 @@ function AddStaffModal({ onClose, onSubmit, t }) {
     address: "",
     systemRole: "",
     specializationId: "",
+    dateOfBirth: "",
     highestDegree: "",
     university: "",
   });
@@ -98,6 +153,10 @@ function AddStaffModal({ onClose, onSubmit, t }) {
   const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
   const handleSubmit = async () => {
+    if (!form.username || !form.password || !form.systemRole || !form.fullName || !form.phone || !form.gender || !form.dateOfBirth) {
+      setError("Vui lòng nhập đầy đủ các trường bắt buộc (Tên đăng nhập, Mật khẩu, Vai trò, Họ tên, SĐT, Giới tính, Ngày sinh).");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
@@ -178,6 +237,12 @@ function AddStaffModal({ onClose, onSubmit, t }) {
                       <option value="RECEPTIONIST">Lễ tân</option>
                       <option value="CASHIER">Thu ngân</option>
                     </select>
+                  ) : type === "date" ? (
+                    <DateDropdowns
+                      value={form[key]}
+                      onChange={(val) => set(key, val)}
+                      className={inputCls + " px-2"}
+                    />
                   ) : (
                     <input
                       type={type}
@@ -225,10 +290,8 @@ function AddStaffModal({ onClose, onSubmit, t }) {
                   key: "phone",
                   label: t("accountManagement.addStaffModal.fields.phone"),
                 },
-                {
-                  key: "email",
-                  label: t("accountManagement.addStaffModal.fields.email"),
-                },
+                { key: "email", label: t("accountManagement.addStaffModal.fields.email") },
+                { key: "dateOfBirth", label: "Ngày sinh", type: "date" },
                 {
                   key: "gender",
                   label: t("accountManagement.addStaffModal.fields.gender"),
@@ -247,8 +310,15 @@ function AddStaffModal({ onClose, onSubmit, t }) {
                       <option value="MALE">Nam</option>
                       <option value="FEMALE">Nữ</option>
                     </select>
+                  ) : type === "date" ? (
+                    <DateDropdowns
+                      value={form[key]}
+                      onChange={(val) => set(key, val)}
+                      className={inputCls + " px-2"}
+                    />
                   ) : (
                     <input
+                      type={type}
                       value={form[key]}
                       onChange={(e) => set(key, e.target.value)}
                       className={inputCls}
@@ -337,21 +407,25 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
           fullName: res.profile?.fullName || "",
           phone: res.profile?.phone || "",
           email: res.profile?.email || "",
+          dateOfBirth: res.profile?.dateOfBirth || "",
           gender: res.profile?.gender || "",
           address: res.profile?.address || "",
           systemRole: res.systemRole || "",
           specializationId: res.specialization?.specializationId || "",
-          nationalId: res.nationalId || "",
           highestDegree: res.highestDegree || "",
           university: res.university || "",
         });
       })
-      .catch(err => setError(err.message));
+  .catch(err => setError(err.message));
   }, [account.accountId]);
 
   const set = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
 
   const handleSubmit = async () => {
+    if (!form.systemRole || !form.fullName || !form.phone || !form.gender || !form.dateOfBirth) {
+      setError("Vui lòng nhập đầy đủ các trường bắt buộc (Vai trò, Họ tên, SĐT, Giới tính, Ngày sinh).");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
@@ -359,6 +433,7 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
         await staffHook.resetPassword(account.accountId, password);
       }
       await staffHook.updateStaffFull(form.staffId, form);
+      toast.success('Cập nhật nhân sự thành công!');
       onClose();
     } catch (err) {
       setError(err.message);
@@ -456,8 +531,8 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
                 { key: "fullName", label: t("accountManagement.addStaffModal.fields.fullName") },
                 { key: "phone", label: t("accountManagement.addStaffModal.fields.phone") },
                 { key: "email", label: t("accountManagement.addStaffModal.fields.email") },
+                { key: "dateOfBirth", label: "Ngày sinh", type: "date" },
                 { key: "gender", label: t("accountManagement.addStaffModal.fields.gender"), type: "select" },
-                { key: "nationalId", label: "CCCD/CMND" },
               ].map(({ key, label, type = "text" }) => (
                 <div key={key}>
                   <label className={labelCls}>{label}</label>
@@ -471,8 +546,15 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
                       <option value="MALE">Nam</option>
                       <option value="FEMALE">Nữ</option>
                     </select>
+                  ) : type === "date" ? (
+                    <DateDropdowns
+                      value={form[key]}
+                      onChange={(val) => set(key, val)}
+                      className={inputCls + " px-2"}
+                    />
                   ) : (
                     <input
+                      type={type}
                       value={form[key]}
                       onChange={(e) => set(key, e.target.value)}
                       className={inputCls}
@@ -654,6 +736,28 @@ export default function AccountManagementPage() {
   const [activeTab, setActiveTab] = useState("staff");
   const [showAddStaff, setShowAddStaff] = useState(false);
   const [editAccount, setEditAccount] = useState(null);
+  
+  const [confirmLock, setConfirmLock] = useState(null);
+  const [isLocking, setIsLocking] = useState(false);
+
+  const handleConfirmLock = async () => {
+      if (!confirmLock) return;
+      setIsLocking(true);
+      try {
+          if (confirmLock.type === 'staff') {
+              await staffHook.lockStaff(confirmLock.id);
+          } else {
+              await patientHook.lockPatient(confirmLock.id);
+          }
+          toast.success(confirmLock.isActive ? 'Khóa tài khoản thành công!' : 'Mở khóa tài khoản thành công!');
+      } catch (err) {
+          toast.error('Thao tác thất bại!');
+      } finally {
+          setIsLocking(false);
+          setConfirmLock(null);
+      }
+  };
+
   const [staffSearch, setStaffSearch] = useState("");
   const [patientSearch, setPatientSearch] = useState("");
   const [patientStatus, setPatientStatus] = useState("");
@@ -842,7 +946,7 @@ export default function AccountManagementPage() {
                             Chỉnh sửa
                           </button>
                           <button
-                            onClick={() => staffHook.lockStaff(s.accountId)}
+                            onClick={() => setConfirmLock({ id: s.accountId, type: 'staff', isActive: s.isActive })}
                             className="text-sm text-gray-400 hover:text-red-500 text-left transition-colors"
                           >
                             {s.isActive
@@ -988,7 +1092,7 @@ export default function AccountManagementPage() {
                             Chỉnh sửa
                           </button>
                           <button
-                            onClick={() => patientHook.lockPatient(p.accountId)}
+                            onClick={() => setConfirmLock({ id: p.accountId, type: 'patient', isActive: p.isActive })}
                             className="text-sm text-gray-400 hover:text-red-500 text-left transition-colors"
                           >
                             {p.isActive
@@ -1025,6 +1129,7 @@ export default function AccountManagementPage() {
           onClose={() => setShowAddStaff(false)}
           onSubmit={async (payload) => {
             await staffHook.addStaff(payload);
+            toast.success('Thêm nhân sự thành công!');
             staffHook.fetchStaff();
           }}
         />
@@ -1045,10 +1150,24 @@ export default function AccountManagementPage() {
             resetPassword={patientHook.resetPassword}
             onSubmit={async (id, payload) => {
               await patientHook.updatePatient(id, payload);
+              toast.success('Cập nhật tài khoản thành công!');
             }}
           />
         )
       )}
+      
+      <ConfirmModal 
+          isOpen={!!confirmLock}
+          onClose={() => !isLocking && setConfirmLock(null)}
+          onConfirm={handleConfirmLock}
+          title={confirmLock?.isActive ? "Khóa tài khoản" : "Mở khóa tài khoản"}
+          message={confirmLock?.isActive 
+            ? "Bạn có chắc chắn muốn khóa tài khoản này? Người dùng sẽ không thể đăng nhập vào hệ thống." 
+            : "Bạn có chắc chắn muốn mở khóa tài khoản này? Người dùng sẽ có thể đăng nhập lại."}
+          confirmText={confirmLock?.isActive ? "Khóa" : "Mở khóa"}
+          isDanger={confirmLock?.isActive}
+          isLoading={isLocking}
+      />
     </AdminLayout>
   );
 }

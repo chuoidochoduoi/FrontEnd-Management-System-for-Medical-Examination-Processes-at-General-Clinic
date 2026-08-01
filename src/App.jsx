@@ -11,7 +11,10 @@ import CustomerAppointmentPage from '@/pages/customer/CustomerAppointmentPage';
 import CheckInPage from '@/pages/receptionist/CheckInPage';
 import AppointmentDetailPage from '@/pages/receptionist/AppointmentDetailPage';
 import ProfilePage from '@/pages/customer/ProfilePage';
+import MyAppointmentsPage from '@/pages/customer/MyAppointmentsPage';
+import CustomerAppointmentDetailPage from '@/pages/customer/AppointmentDetailPage';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import LandingPage from '@/pages/public/LandingPage';
 import CreateTicketPage from '@/pages/receptionist/CreateTicketPage';
 import FollowUpListPage from '@/pages/receptionist/FollowUpListPage';
 import InvoiceListPage from '@/pages/cashier/InvoiceListPage';
@@ -25,9 +28,12 @@ import LabDetailPage from '@/pages/lab/LabDetailPage';
 import AccountManagementPage from '@/pages/admin/AccountManagementPage';
 import ServiceManagementPage from '@/pages/admin/ServiceManagementPage';
 import RoomManagementPage from '@/pages/admin/RoomManagementPage';
+import AuditLogManagementPage from '@/pages/admin/AuditLogManagementPage';
 import SchedulePage from '@/pages/owner/SchedulePage';
 import ReportPage from '@/pages/owner/ReportPage';
 import MySchedulePage from '@/pages/staff/MySchedulePage';
+import StaffProfilePage from '@/pages/staff/StaffProfilePage';
+import SettingsPage from '@/pages/staff/SettingsPage';
 import RecordsManagementPage from '@/pages/receptionist/RecordsManagementPage';
 import PaymentHistoryPage from '@/pages/customer/PaymentHistoryPage';
 import ReceiptDetailPage  from '@/pages/customer/ReceiptDetailPage';
@@ -40,6 +46,7 @@ function App() {
   return (
     <>
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<LoginRegister />} />
         <Route path={ROUTES.APPOINTMENT} element={<AppointmentPage />} />
@@ -53,6 +60,16 @@ function App() {
         <Route path={ROUTES.PROFILE} element={
           <ProtectedRoute allowedRoles={['CUSTOMER']}>
             <ProfilePage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.MY_APPOINTMENTS} element={
+          <ProtectedRoute allowedRoles={['CUSTOMER']}>
+            <MyAppointmentsPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.CUSTOMER_APPOINTMENT_DETAIL} element={
+          <ProtectedRoute allowedRoles={['CUSTOMER']}>
+            <CustomerAppointmentDetailPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.CUSTOMER_VISIT_HISTORY} element={
@@ -126,12 +143,12 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path={ROUTES.DOCTOR_DEPARTMENTS} element={
-          <ProtectedRoute allowedRoles={['GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'CLINIC_MANAGER']}>
+          <ProtectedRoute allowedRoles={['NURSE', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'CLINIC_MANAGER']}>
             <DoctorDepartmentPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.DOCTOR_EXAMINATION} element={
-          <ProtectedRoute allowedRoles={['GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}>
+          <ProtectedRoute allowedRoles={['NURSE', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}>
             <ExaminationPage />
           </ProtectedRoute>
         } />
@@ -158,6 +175,11 @@ function App() {
             <RoomManagementPage />
           </ProtectedRoute>
         } />
+        <Route path={ROUTES.ADMIN_AUDIT_LOGS} element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AuditLogManagementPage />
+          </ProtectedRoute>
+        } />
 
         <Route path={ROUTES.ADMIN_SERVICES} element={<ServiceManagementPage />} />
         <Route path={ROUTES.OWNER_SCHEDULE} element={
@@ -173,8 +195,18 @@ function App() {
 
       {/* Staff self schedule - receptionist, cashier, doctor, nurse */}
       <Route path={ROUTES.STAFF_SCHEDULE} element={
-        <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CASHIER', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'NURSE']}>
+        <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CASHIER', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'NURSE', 'CLINIC_MANAGER']}>
           <MySchedulePage />
+        </ProtectedRoute>
+      } />
+      <Route path={ROUTES.STAFF_PROFILE} element={
+        <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CASHIER', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'NURSE', 'CLINIC_MANAGER', 'ADMIN']}>
+          <StaffProfilePage />
+        </ProtectedRoute>
+      } />
+      <Route path={ROUTES.SETTINGS} element={
+        <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CASHIER', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'NURSE', 'CLINIC_MANAGER', 'ADMIN']}>
+          <SettingsPage />
         </ProtectedRoute>
       } />
         <Route path={ROUTES.RECEPTIONIST_RECORDS} element={

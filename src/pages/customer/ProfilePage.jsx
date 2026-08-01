@@ -1,7 +1,7 @@
 // src/pages/customer/ProfilePage.jsx
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pencil, UserCircle, Key } from 'lucide-react';
+import { Pencil, Key, Calendar, User, Users, Phone, Mail, MapPin, Droplets, Shield, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import CustomerLayout from '@/components/layout/CustomerLayout';
 import { useProfile } from '@/hooks/useProfile';
@@ -11,12 +11,63 @@ const STATUS_STYLE = {
     UPCOMING: 'text-primary-500 font-semibold text-xs tracking-wide',
 };
 
+const capitalizeWords = (str) => {
+    if (!str) return '';
+    return str.split(' ').map(word => word ? word.charAt(0).toUpperCase() + word.slice(1) : '').join(' ');
+};
+
+const DateDropdowns = ({ value, onChange, className }) => {
+    const parts = (value || '').split('-');
+    const year = parts[0] || '';
+    const month = parts[1] ? String(parseInt(parts[1], 10)) : ''; 
+    const day = parts[2] ? String(parseInt(parts[2], 10)) : '';
+
+    const handleUpdate = (y, m, d) => {
+        const py = y || '';
+        const pm = m ? m.padStart(2, '0') : '';
+        const pd = d ? d.padStart(2, '0') : '';
+        if (!py && !pm && !pd) onChange('');
+        else onChange(`${py}-${pm}-${pd}`);
+    };
+
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 120 }, (_, i) => currentYear - i);
+    const months = Array.from({ length: 12 }, (_, i) => i + 1);
+    
+    let daysInMonth = 31;
+    if (month) {
+        const m = parseInt(month, 10);
+        const y = year ? parseInt(year, 10) : currentYear;
+        daysInMonth = new Date(y, m, 0).getDate();
+    }
+    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+    return (
+        <div className="flex gap-2 w-full">
+            <select value={day} onChange={e => handleUpdate(year, month, e.target.value)} className={className}>
+                <option value="">Ngày</option>
+                {days.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+            <select value={month} onChange={e => handleUpdate(year, e.target.value, day)} className={className}>
+                <option value="">Tháng</option>
+                {months.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+            <select value={year} onChange={e => handleUpdate(e.target.value, month, day)} className={className}>
+                <option value="">Năm</option>
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+        </div>
+    );
+};
+
 export default function ProfilePage() {
     const { t } = useTranslation('customer');
     const { profile, loading, saving, error, saveProfile } = useProfile();
 
     const [editing, setEditing] = useState(false);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [onboardingSaving, setOnboardingSaving] = useState(false);
+    const [onboardingErrors, setOnboardingErrors] = useState({});
 
     // Editable fields
     const [fullName,   setFullName]   = useState('');
@@ -30,6 +81,56 @@ export default function ProfilePage() {
     const [height,     setHeight]     = useState('');
     const [weight,     setWeight]     = useState('');
     const [allergies,  setAllergies]  = useState([]);
+
+    // BHYT states
+    const [insurancesList, setInsurancesList] = useState([]);
+    const [bhytCode, setBhytCode] = useState('');
+    const [bhytChecked, setBhytChecked] = useState(false);
+    const [bhytName, setBhytName] = useState('');
+    const [loadingBhyt, setLoadingBhyt] = useState(false);
+
+    // Fetch danh sách bảo hiểm
+    useEffect(() => {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        fetch(`${import.meta.env.VITE_API_URL}/api/v1/insurances`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+            .then(r => r.ok ? r.json() : [])
+            .then(data => setInsurancesList(Array.isArray(data) ? data : []))
+            .catch(() => {});
+    }, []);
+
+    const checkBhyt = async (codeOverride, idOverride) => {
+        const code = codeOverride ?? bhytCode;
+        const insId = idOverride ?? insuranceId;
+        if (!insId) { toast.error('Vui lòng chọn Loại bảo hiểm trước'); return; }
+        if (!code || code.length < 5) { toast.error('Vui lòng nhập mã thẻ hợp lệ (tối thiểu 5 ký tự)'); return; }
+        setLoadingBhyt(true);
+        try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/bhyt/check?cardNumber=${code}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const result = await res.json();
+            if (result.isValid) {
+                if (result.insuranceId !== insId) {
+                    toast.error(`Mã thẻ thuộc về ${result.insuranceName}, không khớp với loại bạn chọn!`);
+                    setBhytChecked(false);
+                    return;
+                }
+                setBhytChecked(true);
+                setBhytName(result.fullName || '');
+                toast.success(`Thẻ bảo hiểm hợp lệ – ${result.fullName}`);
+            } else {
+                setBhytChecked(false);
+                toast.error(result.message || 'Mã thẻ không hợp lệ!');
+            }
+        } catch {
+            toast.error('Lỗi kết nối khi tra cứu thẻ bảo hiểm');
+        } finally {
+            setLoadingBhyt(false);
+        }
+    };
 
     const formatDateForInput = (dateStr) => {
         if (!dateStr) return '';
@@ -56,7 +157,15 @@ export default function ProfilePage() {
     }, [profile]);
 
     const handleSave = async () => {
-        const ok = await saveProfile({ fullName, dateOfBirth: dob, gender, phone, email, address, bloodType });
+        const ok = await saveProfile({ 
+            fullName, 
+            dateOfBirth: dob, 
+            gender: gender || null, 
+            phone, 
+            email: email || null, 
+            address: address || null, 
+            bloodType: bloodType || null 
+        });
         if (ok) setEditing(false);
     };
 
@@ -80,20 +189,22 @@ export default function ProfilePage() {
         ? (weight / ((height / 100) ** 2)).toFixed(1)
         : profile?.bmi ?? '—';
 
-    const inputCls = 'w-full h-9 px-3 text-sm border border-gray-300 rounded-lg outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50';
-    const fieldLabel = 'text-xs text-primary-500 mb-1';
-    const fieldValue = 'text-sm font-medium text-gray-900';
+    const inputCls = 'w-full h-10 px-3 text-sm border border-gray-300 rounded-lg outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-colors';
+    const fieldLabel = 'flex items-center gap-2 text-xs font-medium text-gray-500 mb-1.5';
+    const fieldValue = 'text-[15px] font-semibold text-gray-900';
 
     const genderLabel = (val) => {
+        if (!val) return '—';
         const map = {
             MALE:   t('profile.personalInfo.genderOptions.male'),
             FEMALE: t('profile.personalInfo.genderOptions.female'),
             OTHER:  t('profile.personalInfo.genderOptions.other'),
         };
-        return map[val] ?? val ?? '—';
+        return map[val] || val || '—';
     };
 
     const bloodTypeLabel = (val) => {
+        if (!val) return '—';
         const map = {
             A_POSITIVE: t('profile.personalInfo.bloodTypeOptions.A_POSITIVE', 'A+'),
             A_NEGATIVE: t('profile.personalInfo.bloodTypeOptions.A_NEGATIVE', 'A-'),
@@ -104,7 +215,7 @@ export default function ProfilePage() {
             O_POSITIVE: t('profile.personalInfo.bloodTypeOptions.O_POSITIVE', 'O+'),
             O_NEGATIVE: t('profile.personalInfo.bloodTypeOptions.O_NEGATIVE', 'O-'),
         };
-        return map[val] ?? val ?? '—';
+        return map[val] || val || '—';
     };
 
     const formatDob = (dobStr) => {
@@ -115,10 +226,298 @@ export default function ProfilePage() {
         return `${d.getDate()} Tháng ${d.getMonth() + 1}, ${d.getFullYear()} (${age} ${t('profile.personalInfo.age')})`;
     };
 
+    // ── Detect new profile (required fields missing or fullName = ID default from backend) ──
+    const nameIsDefault = profile && (
+        !profile.fullName ||
+        profile.fullName === String(profile.accountId) ||
+        profile.fullName === String(profile.id) ||
+        profile.fullName === profile.customerCode ||
+        /^User\s+[a-f0-9-]+$/i.test(profile.fullName)
+    );
+    const isNewProfile = profile && (nameIsDefault || !profile.dateOfBirth || !profile.gender);
+
+    // Clear fullName if it's just the auto-generated default so the input starts empty
+    useEffect(() => {
+        if (nameIsDefault && fullName) {
+            setFullName('');
+        }
+    }, [nameIsDefault]);
+
     if (loading) {
         return (
             <CustomerLayout>
                 <p className="text-sm text-gray-400 text-center py-20">{t('profile.loading')}</p>
+            </CustomerLayout>
+        );
+    }
+
+    const validateOnboarding = () => {
+        const errs = {};
+        if (!fullName.trim()) errs.fullName = 'Vui lòng nhập họ và tên';
+        if (!dob || dob.length !== 10) errs.dob = 'Vui lòng chọn đầy đủ ngày sinh';
+        if (!gender) errs.gender = 'Vui lòng chọn giới tính';
+        setOnboardingErrors(errs);
+        return Object.keys(errs).length === 0;
+    };
+
+    const handleOnboardingSave = async () => {
+        if (!validateOnboarding()) return;
+        setOnboardingSaving(true);
+        const ok = await saveProfile({ 
+            fullName, 
+            dateOfBirth: dob, 
+            gender: gender || null, 
+            phone, 
+            email: email || null, 
+            address: address || null, 
+            bloodType: bloodType || null, 
+            insuranceId: insuranceId || null 
+        });
+        setOnboardingSaving(false);
+        if (ok) {
+            toast.success('Cập nhật hồ sơ thành công!');
+        }
+    };
+
+    // ── Onboarding Screen ──
+    if (isNewProfile) {
+        const onboardInputCls = (field) =>
+            `w-full h-12 px-4 text-sm border rounded-xl outline-none transition-all duration-200 ${
+                onboardingErrors[field]
+                    ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-50 bg-red-50/30'
+                    : 'border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-50 bg-white'
+            }`;
+
+        return (
+            <CustomerLayout>
+                <div className="max-w-2xl mx-auto py-8">
+                    {/* Header */}
+                    <div className="text-center mb-10">
+                        <h1 className="text-2xl font-bold text-gray-900 mb-2">Hoàn tất hồ sơ cá nhân</h1>
+                        <p className="text-sm text-gray-500 max-w-md mx-auto">
+                            Chào mừng bạn! Vui lòng điền thông tin cá nhân để hoàn tất việc đăng ký và sử dụng dịch vụ.
+                        </p>
+                    </div>
+
+                    {/* Form Card */}
+                    <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
+                        {/* Required Section */}
+                        <div className="mb-8">
+                            <div className="flex items-center gap-2 mb-5">
+                                <AlertCircle className="w-4 h-4 text-red-500" />
+                                <h3 className="text-sm font-bold text-gray-900">Thông tin bắt buộc</h3>
+                                <span className="text-[10px] font-medium text-red-500 bg-red-50 px-2 py-0.5 rounded-full">BẮT BUỘC</span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                {/* Họ và tên */}
+                                <div className="md:col-span-2">
+                                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
+                                        <User className="w-3.5 h-3.5 text-primary-400" />
+                                        Họ và tên <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={fullName}
+                                        onChange={e => { setFullName(capitalizeWords(e.target.value)); setOnboardingErrors(p => ({...p, fullName: ''})); }}
+                                        placeholder="Nhập họ và tên đầy đủ"
+                                        className={onboardInputCls('fullName')}
+                                    />
+                                    {onboardingErrors.fullName && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{onboardingErrors.fullName}</p>}
+                                </div>
+
+                                {/* Ngày sinh */}
+                                <div>
+                                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
+                                        <Calendar className="w-3.5 h-3.5 text-primary-400" />
+                                        Ngày sinh <span className="text-red-500">*</span>
+                                    </label>
+                                    <DateDropdowns
+                                        value={dob}
+                                        onChange={val => { setDob(val); setOnboardingErrors(p => ({...p, dob: ''})); }}
+                                        className={onboardInputCls('dob') + ' bg-white px-2'}
+                                    />
+                                    {onboardingErrors.dob && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{onboardingErrors.dob}</p>}
+                                </div>
+
+                                {/* Giới tính */}
+                                <div>
+                                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
+                                        <Users className="w-3.5 h-3.5 text-primary-400" />
+                                        Giới tính <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        value={gender}
+                                        onChange={e => { setGender(e.target.value); setOnboardingErrors(p => ({...p, gender: ''})); }}
+                                        className={onboardInputCls('gender') + ' bg-white'}
+                                    >
+                                        <option value="">Chọn giới tính</option>
+                                        <option value="MALE">{t('profile.personalInfo.genderOptions.male')}</option>
+                                        <option value="FEMALE">{t('profile.personalInfo.genderOptions.female')}</option>
+                                        <option value="OTHER">{t('profile.personalInfo.genderOptions.other')}</option>
+                                    </select>
+                                    {onboardingErrors.gender && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{onboardingErrors.gender}</p>}
+                                </div>
+
+                                {/* SĐT (có thể đã có từ đăng ký) */}
+                                <div className="md:col-span-2">
+                                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
+                                        <Phone className="w-3.5 h-3.5 text-primary-400" />
+                                        Số điện thoại
+                                        {phone && <span className="text-[10px] font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-0.5"><CheckCircle className="w-2.5 h-2.5" />Đã có từ đăng ký</span>}
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={phone}
+                                        onChange={e => setPhone(e.target.value)}
+                                        placeholder="Nhập số điện thoại"
+                                        className={onboardInputCls('phone')}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="border-t border-dashed border-gray-200 my-6"></div>
+
+                        {/* Optional Section */}
+                        <div>
+                            <div className="flex items-center gap-2 mb-5">
+                                <CheckCircle className="w-4 h-4 text-gray-400" />
+                                <h3 className="text-sm font-bold text-gray-900">Thông tin bổ sung</h3>
+                                <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">TÙY CHỌN</span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                {/* Email */}
+                                <div className="md:col-span-2">
+                                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
+                                        <Mail className="w-3.5 h-3.5 text-gray-400" />
+                                        Email
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={e => setEmail(e.target.value)}
+                                        placeholder="example@email.com"
+                                        className="w-full h-12 px-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 bg-white transition-all duration-200"
+                                    />
+                                </div>
+
+                                {/* Địa chỉ */}
+                                <div className="md:col-span-2">
+                                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
+                                        <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                                        Địa chỉ
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={address}
+                                        onChange={e => setAddress(e.target.value)}
+                                        placeholder="Nhập địa chỉ hiện tại"
+                                        className="w-full h-12 px-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 bg-white transition-all duration-200"
+                                    />
+                                </div>
+
+                                {/* Nhóm máu */}
+                                <div>
+                                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
+                                        <Droplets className="w-3.5 h-3.5 text-gray-400" />
+                                        Nhóm máu
+                                    </label>
+                                    <select
+                                        value={bloodType}
+                                        onChange={e => setBloodType(e.target.value)}
+                                        className="w-full h-12 px-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 bg-white transition-all duration-200"
+                                    >
+                                        <option value="">Chọn nhóm máu</option>
+                                        <option value="A_POSITIVE">A+</option>
+                                        <option value="A_NEGATIVE">A-</option>
+                                        <option value="B_POSITIVE">B+</option>
+                                        <option value="B_NEGATIVE">B-</option>
+                                        <option value="AB_POSITIVE">AB+</option>
+                                        <option value="AB_NEGATIVE">AB-</option>
+                                        <option value="O_POSITIVE">O+</option>
+                                        <option value="O_NEGATIVE">O-</option>
+                                    </select>
+                                </div>
+
+                                {/* Bảo hiểm y tế */}
+                                <div className="md:col-span-2">
+                                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
+                                        <Shield className="w-3.5 h-3.5 text-green-500" />
+                                        Bảo hiểm y tế (BHYT)
+                                    </label>
+                                    <div className="space-y-3">
+                                        {/* Bước 1: Chọn loại */}
+                                        <select
+                                            value={insuranceId}
+                                            onChange={e => { setInsuranceId(e.target.value); setBhytChecked(false); setBhytName(''); }}
+                                            className="w-full h-12 px-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 bg-white transition-all duration-200"
+                                        >
+                                            <option value="">Chọn loại bảo hiểm...</option>
+                                            {insurancesList.map(ins => (
+                                                <option key={ins.insuranceId} value={ins.insuranceId}>{ins.name}</option>
+                                            ))}
+                                        </select>
+                                        {/* Bước 2: Nhập mã + kiểm tra */}
+                                        {insuranceId && (
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={bhytCode}
+                                                    onChange={e => { setBhytCode(e.target.value); setBhytChecked(false); setBhytName(''); }}
+                                                    placeholder="Nhập mã thẻ BHYT..."
+                                                    className="flex-1 h-12 px-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 bg-white transition-all duration-200"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => checkBhyt()}
+                                                    disabled={loadingBhyt || !bhytCode}
+                                                    className="h-12 px-4 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl flex items-center gap-2 shrink-0 transition-all"
+                                                >
+                                                    {loadingBhyt ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+                                                    Kiểm tra
+                                                </button>
+                                            </div>
+                                        )}
+                                        {/* Kết quả */}
+                                        {bhytChecked && bhytName && (
+                                            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                                                <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                                                <p className="text-sm font-medium text-green-800">Hợp lệ – {bhytName}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Submit Button */}
+                        <div className="mt-8 pt-6 border-t border-gray-100">
+                            <button
+                                onClick={handleOnboardingSave}
+                                disabled={onboardingSaving}
+                                className="w-full h-12 bg-gray-900 hover:bg-gray-800 disabled:opacity-60 text-white text-sm font-bold tracking-wide rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-gray-900/10"
+                            >
+                                {onboardingSaving ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                        Đang lưu...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle className="w-4 h-4" />
+                                        Hoàn tất hồ sơ
+                                    </>
+                                )}
+                            </button>
+                            <p className="text-xs text-gray-400 text-center mt-3">
+                                Bạn có thể cập nhật lại thông tin bất cứ lúc nào trong phần Hồ sơ.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </CustomerLayout>
         );
     }
@@ -192,42 +591,23 @@ export default function ProfilePage() {
     return (
         <CustomerLayout>
             <div className="space-y-5">
-                <h1 className="text-lg font-semibold text-gray-900">{t('profile.pageTitle')}</h1>
-
-                {error && <p className="text-red-500 text-sm">{error}</p>}
-
-                {/* ── Identity card ── */}
-                <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-center justify-between">
-                    <div className="flex items-center gap-5">
-                        <div className="w-20 h-20 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-                            <UserCircle size={48} className="text-gray-300" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-semibold text-gray-900">{fullName || '—'}</h2>
-                            <p className="text-sm text-gray-400 mt-1">
-                                {t('profile.customerCode')}: <span className="text-gray-600">{profile?.customerCode ?? '—'}</span>
-                            </p>
-                            <p className="text-sm text-gray-400">
-                                {t('profile.bloodType')}: <span className="text-gray-600">{bloodTypeLabel(bloodType)}</span>
-                                <span className="mx-3 text-gray-200">|</span>
-                                {t('profile.insurance')}: <span className="text-gray-600">{profile?.insuranceId ?? '—'}</span>
-                            </p>
-                        </div>
-                    </div>
-                    
+                <div className="flex items-center justify-between">
+                    <h1 className="text-lg font-semibold text-gray-900">{t('profile.pageTitle')}</h1>
                     <button 
                         onClick={() => setShowPasswordModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-sm font-semibold transition-all shadow-sm"
                     >
                         <Key size={16} />
                         Đổi mật khẩu
                     </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-5 items-start">
+                {error && <p className="text-red-500 text-sm">{error}</p>}
 
-                    {/* ── Left col (2/3) ── */}
-                    <div className="col-span-2 space-y-5">
+                <div className="flex flex-col gap-5 items-start w-full">
+
+                    {/* ── Main content ── */}
+                    <div className="w-full space-y-5">
 
                         {/* Thông tin cá nhân */}
                         <div className="bg-white border border-gray-200 rounded-2xl p-6">
@@ -262,24 +642,33 @@ export default function ProfilePage() {
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-7">
                                 {/* Họ và tên */}
                                 <div>
-                                    <p className={fieldLabel}>{t('profile.personalInfo.fullName')}</p>
+                                    <div className={fieldLabel}>
+                                        <User className="w-3.5 h-3.5 text-primary-400" />
+                                        <span>{t('profile.personalInfo.fullName')}</span>
+                                    </div>
                                     {editing
-                                        ? <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} className={inputCls} />
+                                        ? <input type="text" value={fullName} onChange={e => setFullName(capitalizeWords(e.target.value))} className={inputCls} />
                                         : <p className={fieldValue}>{fullName || '—'}</p>}
                                 </div>
                                 {/* Ngày sinh */}
                                 <div>
-                                    <p className={fieldLabel}>{t('profile.personalInfo.dob')}</p>
+                                    <div className={fieldLabel}>
+                                        <Calendar className="w-3.5 h-3.5 text-primary-400" />
+                                        <span>{t('profile.personalInfo.dob')}</span>
+                                    </div>
                                     {editing
-                                        ? <input type="date" value={dob} onChange={e => setDob(e.target.value)} className={inputCls} />
+                                        ? <DateDropdowns value={dob} onChange={setDob} className={inputCls + ' bg-white px-2'} />
                                         : <p className={fieldValue}>{formatDob(dob)}</p>}
                                 </div>
                                 {/* Giới tính */}
                                 <div>
-                                    <p className={fieldLabel}>{t('profile.personalInfo.gender')}</p>
+                                    <div className={fieldLabel}>
+                                        <Users className="w-3.5 h-3.5 text-primary-400" />
+                                        <span>{t('profile.personalInfo.gender')}</span>
+                                    </div>
                                     {editing
                                         ? (
                                             <select value={gender} onChange={e => setGender(e.target.value)} className={inputCls + ' bg-white'}>
@@ -293,28 +682,40 @@ export default function ProfilePage() {
                                 </div>
                                 {/* SĐT */}
                                 <div>
-                                    <p className={fieldLabel}>{t('profile.personalInfo.phone')}</p>
+                                    <div className={fieldLabel}>
+                                        <Phone className="w-3.5 h-3.5 text-primary-400" />
+                                        <span>{t('profile.personalInfo.phone')}</span>
+                                    </div>
                                     {editing
                                         ? <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className={inputCls} />
                                         : <p className={fieldValue}>{phone || '—'}</p>}
                                 </div>
                                 {/* Email */}
-                                <div>
-                                    <p className={fieldLabel}>{t('profile.personalInfo.email')}</p>
+                                <div className="md:col-span-2">
+                                    <div className={fieldLabel}>
+                                        <Mail className="w-3.5 h-3.5 text-primary-400" />
+                                        <span>{t('profile.personalInfo.email')}</span>
+                                    </div>
                                     {editing
                                         ? <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputCls} />
                                         : <p className={fieldValue}>{email || '—'}</p>}
                                 </div>
                                 {/* Địa chỉ — full width */}
-                                <div className="col-span-2">
-                                    <p className={fieldLabel}>{t('profile.personalInfo.address')}</p>
+                                <div className="md:col-span-2">
+                                    <div className={fieldLabel}>
+                                        <MapPin className="w-3.5 h-3.5 text-primary-400" />
+                                        <span>{t('profile.personalInfo.address')}</span>
+                                    </div>
                                     {editing
                                         ? <input type="text" value={address} onChange={e => setAddress(e.target.value)} className={inputCls} />
                                         : <p className={fieldValue}>{address || '—'}</p>}
                                 </div>
                                 {/* Nhóm máu */}
                                 <div>
-                                    <p className={fieldLabel}>{t('profile.bloodType')}</p>
+                                    <div className={fieldLabel}>
+                                        <Droplets className="w-3.5 h-3.5 text-red-400" />
+                                        <span>{t('profile.bloodType')}</span>
+                                    </div>
                                     {editing
                                         ? (
                                             <select value={bloodType} onChange={e => setBloodType(e.target.value)} className={inputCls + ' bg-white'}>
@@ -329,61 +730,62 @@ export default function ProfilePage() {
                                                 <option value="O_NEGATIVE">O-</option>
                                             </select>
                                         )
-                                        : <p className={fieldValue}>{bloodTypeLabel(bloodType) || '—'}</p>}
+                                        : <p className={fieldValue}>{bloodTypeLabel(bloodType)}</p>}
                                 </div>
                                 {/* Bảo hiểm */}
-                                <div className="col-span-2">
-                                    <p className={fieldLabel}>{t('profile.personalInfo.insuranceId')}</p>
-                                    {editing
-                                        ? <input type="text" value={insuranceId} onChange={e => setInsuranceId(e.target.value)} className={inputCls} />
-                                        : <p className={fieldValue}>{insuranceId || '—'}</p>}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Thông tin y tế cơ bản */}
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6">
-                            <h3 className="text-sm font-semibold text-gray-900 mb-5">
-                                {t('profile.medicalInfo.title')}
-                            </h3>
-
-                            <div className="grid grid-cols-3 gap-4 mb-5">
-                                {[
-                                    { label: t('profile.medicalInfo.height'), value: height, unit: t('profile.medicalInfo.heightUnit'), set: setHeight },
-                                    { label: t('profile.medicalInfo.weight'), value: weight, unit: t('profile.medicalInfo.weightUnit'), set: setWeight },
-                                    { label: t('profile.medicalInfo.bmi'),    value: bmi,   unit: '',                                  set: null },
-                                ].map(({ label, value, unit, set }) => (
-                                    <div key={label} className="border border-gray-100 rounded-xl p-4 text-center">
-                                        <p className="text-xs text-primary-400 mb-2">{label}</p>
-                                        {editing && set ? (
-                                            <input
-                                                type="number"
-                                                value={value}
-                                                onChange={e => set(e.target.value)}
-                                                className="w-full text-center text-lg font-semibold text-gray-900 border border-gray-200 rounded-lg outline-none focus:border-primary-500 py-1"
-                                            />
-                                        ) : (
-                                            <p className="text-lg font-semibold text-gray-900">
-                                                {value || '—'}<span className="text-sm font-normal text-gray-400 ml-1">{unit}</span>
-                                            </p>
-                                        )}
+                                <div className="md:col-span-2">
+                                    <div className={fieldLabel}>
+                                        <Shield className="w-3.5 h-3.5 text-green-500" />
+                                        <span>Bảo hiểm y tế (BHYT)</span>
                                     </div>
-                                ))}
-                            </div>
-
-                            <div>
-                                <p className="text-xs text-gray-500 mb-2">{t('profile.medicalInfo.allergies')}:</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {allergies.length > 0
-                                        ? allergies.map((a, i) => (
-                                            <span key={i} className="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                          {a}
-                        </span>
-                                        ))
-                                        : <span className="text-sm text-gray-400">—</span>}
+                                    {editing ? (
+                                        <div className="space-y-2">
+                                            <select
+                                                value={insuranceId}
+                                                onChange={e => { setInsuranceId(e.target.value); setBhytChecked(false); setBhytName(''); }}
+                                                className={inputCls + ' bg-white'}
+                                            >
+                                                <option value="">Chọn loại bảo hiểm...</option>
+                                                {insurancesList.map(ins => (
+                                                    <option key={ins.insuranceId} value={ins.insuranceId}>{ins.name}</option>
+                                                ))}
+                                            </select>
+                                            {insuranceId && (
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={bhytCode}
+                                                        onChange={e => { setBhytCode(e.target.value); setBhytChecked(false); setBhytName(''); }}
+                                                        placeholder="Nhập mã thẻ BHYT..."
+                                                        className={inputCls}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => checkBhyt()}
+                                                        disabled={loadingBhyt || !bhytCode}
+                                                        className="h-10 px-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shrink-0 transition-all"
+                                                    >
+                                                        {loadingBhyt ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Shield className="w-3.5 h-3.5" />}
+                                                        Kiểm tra
+                                                    </button>
+                                                </div>
+                                            )}
+                                            {bhytChecked && bhytName && (
+                                                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+                                                    <CheckCircle className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                                                    <p className="text-xs font-medium text-green-800">Hợp lệ – {bhytName}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <p className={fieldValue}>
+                                            {insuranceId ? (insurancesList.find(i => i.insuranceId === insuranceId)?.name ?? '—') + (bhytCode ? ` – ${bhytCode}` : '') : '—'}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </div>
+
 
                         {/* Cuộc hẹn gần đây */}
                         <div className="bg-white border border-gray-200 rounded-2xl p-6">
@@ -391,56 +793,41 @@ export default function ProfilePage() {
                                 <h3 className="text-sm font-semibold text-gray-900">
                                     {t('profile.appointments.title')}
                                 </h3>
-                                <button className="text-xs text-primary-500 hover:text-primary-600">
+                                <button className="text-xs text-primary-500 hover:text-primary-600 font-medium">
                                     {t('profile.appointments.viewAll')}
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-4 gap-4 pb-2 border-b border-gray-100 mb-2">
-                                {[
-                                    t('profile.appointments.date'),
-                                    t('profile.appointments.doctor'),
-                                    t('profile.appointments.specialty'),
-                                    t('profile.appointments.status'),
-                                ].map(col => (
-                                    <p key={col} className="text-xs text-gray-400">{col}</p>
-                                ))}
+                            <div className="space-y-3">
+                                {(profile?.appointments ?? []).length === 0 ? (
+                                    <p className="text-sm text-gray-400 py-4 text-center">Chưa có lịch hẹn nào</p>
+                                ) : (
+                                    (profile?.appointments ?? []).map((appt, i) => (
+                                        <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-primary-100 hover:bg-primary-50/50 transition-colors group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:text-primary-500 shadow-sm transition-colors shrink-0">
+                                                    <Calendar className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-900">{appt.date}</p>
+                                                    <p className="text-xs text-gray-500 mt-0.5">{appt.specialty} • {appt.doctor}</p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
+                                                    appt.status === 'UPCOMING' 
+                                                        ? 'bg-blue-50 text-blue-600 border border-blue-100' 
+                                                        : 'bg-green-50 text-green-600 border border-green-100'
+                                                }`}>
+                                                    {appt.status === 'UPCOMING' ? t('profile.appointments.statusUpcoming') : t('profile.appointments.statusDone')}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
-
-                            {(profile?.appointments ?? []).map((appt, i) => (
-                                <div key={i} className="grid grid-cols-4 gap-4 py-3 border-b border-gray-50 last:border-0">
-                                    <p className="text-sm font-medium text-gray-900">{appt.date}</p>
-                                    <p className="text-sm text-gray-600">{appt.doctor}</p>
-                                    <p className="text-sm text-gray-500">{appt.specialty}</p>
-                                    <p className={appt.status === 'UPCOMING' ? STATUS_STYLE.UPCOMING : STATUS_STYLE.DONE}>
-                                        {appt.status === 'UPCOMING'
-                                            ? t('profile.appointments.statusUpcoming')
-                                            : t('profile.appointments.statusDone')}
-                                    </p>
-                                </div>
-                            ))}
                         </div>
 
-                    </div>
-
-                    {/* ── Right col (1/3) ── */}
-                    <div className="bg-white border border-gray-200 rounded-2xl p-6">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-4">
-                            {t('profile.testResults.title')}
-                        </h3>
-
-                        <div className="space-y-4">
-                            {(profile?.testResults ?? []).map((result, i) => (
-                                <div key={i} className="border-b border-gray-50 pb-4 last:border-0 last:pb-0">
-                                    <p className="text-sm font-medium text-gray-900 leading-snug">{result.name}</p>
-                                    <p className="text-xs text-gray-400 mt-1">{result.date}</p>
-                                </div>
-                            ))}
-                        </div>
-
-                        <button className="mt-5 text-xs text-gray-500 hover:text-primary-500 transition-colors w-full text-center">
-                            {t('profile.testResults.viewAll')}
-                        </button>
                     </div>
 
                 </div>

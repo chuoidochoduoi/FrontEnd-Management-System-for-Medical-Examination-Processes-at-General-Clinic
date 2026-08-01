@@ -9,38 +9,50 @@ const bearer = () => ({ Authorization: `Bearer ${get('token')}` });
 
 export function useCreateTicket() {
     const [services, setServices] = useState([]);
+    const [insurances, setInsurances] = useState([]);
     const [loadingSvc, setLoadingSvc] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    // Fetch all available services (single API like appointment booking)
+    // Fetch all available services and insurances
     useEffect(() => {
-        const fetchServices = async () => {
+        const fetchData = async () => {
             setLoadingSvc(true);
             setError('');
             try {
-                const res = await fetch(
-                    `${import.meta.env.VITE_API_URL}/api/v1/medical-services/available`,
+                // Fetch services
+                const resSvc = await fetch(
+                    `${import.meta.env.VITE_API_URL}/api/v1/medical-services/available?size=1000`,
                     { headers: bearer() }
                 );
-                if (!res.ok) throw new Error('Không thể tải danh sách dịch vụ.');
-                const data = await res.json();
-                // Map API response
-                const mappedServices = (data.content || []).map(s => ({
+                if (!resSvc.ok) throw new Error('Không thể tải danh sách dịch vụ.');
+                const dataSvc = await resSvc.json();
+                const mappedServices = (dataSvc.content || []).map(s => ({
                     id: s.serviceId,
                     name: s.name,
                     price: s.price,
                     description: s.description,
+                    departmentType: s.departmentType,
                 }));
                 setServices(mappedServices);
+
+                // Fetch insurances
+                const resIns = await fetch(
+                    `${import.meta.env.VITE_API_URL}/api/v1/insurances`,
+                    { headers: bearer() }
+                );
+                if (resIns.ok) {
+                    const dataIns = await resIns.json();
+                    setInsurances(dataIns);
+                }
             } catch (err) {
                 setError(err.message || 'Có lỗi xảy ra.');
             } finally {
                 setLoadingSvc(false);
             }
         };
-        fetchServices();
+        fetchData();
     }, []);
 
     const submit = async (payload) => {
@@ -66,5 +78,5 @@ export function useCreateTicket() {
         }
     };
 
-    return { services, loadingSvc, submitting, error, submit };
+    return { services, insurances, loadingSvc, submitting, error, submit };
 }

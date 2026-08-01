@@ -16,7 +16,8 @@ export function useMyDepartment() {
             const decoded = decodeToken(token);
             const authorities = decoded?.authorities || [];
             const isDoctor = authorities.includes('ROLE_DOCTOR') || authorities.includes('ROLE_GENERAL_DOCTOR') || authorities.includes('ROLE_SPECIALIST_DOCTOR') || role.includes('DOCTOR') || systemRole.includes('DOCTOR');
-            if (!isDoctor) {
+            const isNurse = authorities.includes('ROLE_NURSE') || role.includes('NURSE') || systemRole.includes('NURSE');
+            if (!isDoctor && !isNurse) {
                 setLoading(false);
                 return;
             }
@@ -37,7 +38,9 @@ export function useMyDepartment() {
                         throw new Error(`HTTP error ${res.status}`);
                     }
                 } else {
-                    const data = await res.json();
+                    const json = await res.json();
+                    // Backend có thể bọc trong { data: ... } hoặc trả thẳng object
+                    const data = json?.data ?? json;
                     setMyDepartment(data);
                 }
             } catch (err) {

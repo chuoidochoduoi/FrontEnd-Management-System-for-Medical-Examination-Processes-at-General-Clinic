@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 6;
 
 export function useAppointments() {
     const { t } = useTranslation('appointments');
@@ -17,15 +17,15 @@ export function useAppointments() {
     const fetchAppointments = useCallback(async ({ code = '', specialty = '', status = '', page = 0 } = {}) => {
         setLoading(true); setError('');
         try {
-            const params = new URLSearchParams({ code, specialty, status, page: String(page), pageSize: String(PAGE_SIZE) });
+            const params = new URLSearchParams({ code, specialty, status, page: String(page), size: String(PAGE_SIZE) });
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/patient/appointments?${params}`,
+                `${import.meta.env.VITE_API_URL}/api/v1/appointments/my?${params}`,
                 { headers: bearer() }
             );
             if (!res.ok) throw new Error(t('myAppointments.errors.loadFailed'));
             const data = await res.json();
-            setAppointments(data.items ?? data);
-            setTotal(data.total ?? data.length);
+            setAppointments(data.content ?? data.items ?? data);
+            setTotal(data.totalElements ?? data.total ?? data.length);
             setPage(page + 1); // Backend 0-based, frontend 1-based
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
@@ -33,7 +33,7 @@ export function useAppointments() {
 
     const cancelAppointment = async (id) => {
         const res = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/patient/appointments/${id}/cancel`,
+            `${import.meta.env.VITE_API_URL}/api/v1/appointments/my/${id}/cancel`,
             { method: 'POST', headers: bearer() }
         );
         if (!res.ok) throw new Error(t('myAppointments.errors.cancelFailed'));
@@ -55,7 +55,7 @@ export function useAppointmentDetail(appointmentId) {
         setLoading(true); setError('');
         try {
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/patient/appointments/${appointmentId}`,
+                `${import.meta.env.VITE_API_URL}/api/v1/appointments/my/${appointmentId}`,
                 { headers: bearer() }
             );
             if (!res.ok) throw new Error(t('appointmentDetail.errors.loadFailed'));
@@ -65,11 +65,10 @@ export function useAppointmentDetail(appointmentId) {
     }, [appointmentId]);
 
     const cancel = async () => {
-        if (!confirm(t('appointmentDetail.cancelConfirm'))) return;
         setCancelling(true);
         try {
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/patient/appointments/${appointmentId}/cancel`,
+                `${import.meta.env.VITE_API_URL}/api/v1/appointments/my/${appointmentId}/cancel`,
                 { method: 'POST', headers: bearer() }
             );
             if (!res.ok) throw new Error(t('appointmentDetail.errors.cancelFailed'));

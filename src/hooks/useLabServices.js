@@ -16,13 +16,13 @@ export function useLabServices() {
             setLoading(true);
             try {
                 const res = await fetch(
-                    `${import.meta.env.VITE_API_URL}/api/v1/medical-services/available?serviceType=LAB_TEST`,
+                    `${import.meta.env.VITE_API_URL}/api/v1/medical-services/available?departmentType=LABORATORY&size=1000`,
                     { headers: authHeader() }
                 );
                 if (!res.ok) throw new Error(t('examination.errors.loadFailed'));
                 const data = await res.json();
-                // Filter only LAB_TEST services (API already filters but double-check)
-                const labServices = (data.content || []).filter(s => s.serviceType === 'LAB_TEST');
+                // Filter only LABORATORY services
+                const labServices = (data.content || []).filter(s => s.departmentType === 'LABORATORY');
                 setServices(labServices);
             } catch (err) {
                 setError(err.message || t('examination.errors.unknown'));

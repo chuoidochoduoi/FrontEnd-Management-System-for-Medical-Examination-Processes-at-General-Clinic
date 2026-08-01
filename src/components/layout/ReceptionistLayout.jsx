@@ -64,6 +64,7 @@ export default function ReceptionistLayout({ children }) {
         { to: ROUTES.RECEPTIONIST_RECORDS,       icon: FolderOpen,    label: t('sidebar.manageRecords') },
         { to: ROUTES.RECEPTIONIST_FOLLOW_UPS,    icon: CalendarClock, label: 'Danh sách tái khám' },
         { to: ROUTES.STAFF_SCHEDULE,             icon: () => <span className="text-gray-500">📅</span>, label: 'Lịch trực của tôi' },
+        { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
     ];
 
     const linkClass = ({ isActive }) =>
@@ -101,13 +102,10 @@ export default function ReceptionistLayout({ children }) {
                 </nav>
 
                 <div className="px-2 py-3 border-t border-gray-100 space-y-0.5">
-                    <NavLink to={ROUTES.RECEPTIONIST_SETTINGS} className={linkClass}>
+                    
+                    <NavLink to={ROUTES.SETTINGS} className={linkClass}>
                         <Settings size={15} className="shrink-0" />
-                        {t('sidebar.settings')}
-                    </NavLink>
-                    <NavLink to={ROUTES.RECEPTIONIST_SUPPORT} className={linkClass}>
-                        <LifeBuoy size={15} className="shrink-0" />
-                        {t('sidebar.support')}
+                        Cài đặt
                     </NavLink>
                     <button
                         onClick={handleLogout}
@@ -127,3 +125,4 @@ export default function ReceptionistLayout({ children }) {
         </div>
     );
 }
+

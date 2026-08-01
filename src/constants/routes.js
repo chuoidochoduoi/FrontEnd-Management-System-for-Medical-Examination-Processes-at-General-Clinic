@@ -46,10 +46,12 @@ export const ROUTES = {
     ADMIN_ACCOUNTS: '/admin/accounts',
     ADMIN_ROOMS:    '/admin/rooms',
     ADMIN_SERVICES: '/admin/services',
+    ADMIN_AUDIT_LOGS: '/admin/audit-logs',
 
     OWNER_SCHEDULE: '/owner/schedule',
     OWNER_REPORT: '/owner/report',
 
     STAFF_SCHEDULE: '/staff/schedule',
+    STAFF_PROFILE: '/staff/profile',
     RECEPTIONIST_RECORD_DETAIL: '/receptionist/records/:id',
 };

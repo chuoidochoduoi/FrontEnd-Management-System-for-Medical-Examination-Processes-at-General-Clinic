@@ -16,7 +16,6 @@ const STATUS_MAP = {
 // Map room types to DepartmentType enum (backend only supports EXAMINATION, LABORATORY, IMAGING)
 const ROOM_TO_DEPT_TYPE = {
     examination: 'EXAMINATION',
-    surgery: 'EXAMINATION',
     lab: 'LABORATORY',
     imaging: 'IMAGING',
     reception: 'EXAMINATION',  // Map to EXAMINATION if backend doesn't support
@@ -35,7 +34,6 @@ const DEPT_TO_ROOM_TYPE = {
 // Map room types to department type for API filter (array of types)
 const ROOM_TYPE_TO_DEPT_TYPES = {
     examination: ['EXAMINATION'],
-    surgery: ['EXAMINATION'],
     lab: ['LABORATORY'],
     imaging: ['IMAGING'],
 };
@@ -94,6 +92,8 @@ export function useRoomManagement() {
                 type: DEPT_TO_ROOM_TYPE[d.departmentType] || d.departmentType?.toLowerCase() || 'examination',
                 status: STATUS_MAP[d.status] || 'available',
                 doctor: d.headDoctor?.fullName || '',
+                headDoctorId: d.headDoctor?.staffId || null,
+                nurses: d.nurses || [],
                 equipment: d.description || '',
             }));
 
@@ -129,6 +129,7 @@ export function useRoomManagement() {
             status: 'AVAILABLE',
             description: payload.description || payload.doctor || '',
             headDoctorId: payload.doctorId || payload.headDoctorId || null,
+            nurseIds: payload.nurseIds || [],
         };
 
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/departments`, {
@@ -164,6 +165,9 @@ export function useRoomManagement() {
         }
         if (payload.headDoctorId !== undefined) {
             body.headDoctorId = payload.headDoctorId;
+        }
+        if (payload.nurseIds !== undefined) {
+            body.nurseIds = payload.nurseIds;
         }
 
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/departments/${id}`, {
@@ -210,5 +214,15 @@ export function useRoomManagement() {
         return Array.isArray(data) ? data : (data.content ?? []);
     }, [t]);
 
-    return { rooms, stats, loading, error, fetchRooms, createRoom, updateRoom, deleteRoom, quickStatus, fetchDoctors };
+    // Fetch nurses for department assignment
+    const fetchNurses = useCallback(async () => {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/departments/nurses`, {
+            headers: bearer(),
+        });
+        if (!res.ok) throw new Error('Failed to fetch nurses');
+        const data = await res.json();
+        return Array.isArray(data) ? data : (data.content ?? []);
+    }, [t]);
+
+    return { rooms, stats, loading, error, fetchRooms, createRoom, updateRoom, deleteRoom, quickStatus, fetchDoctors, fetchNurses };
 }

@@ -2,13 +2,20 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Search } from 'lucide-react';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { useCreateTicket } from '@/hooks/useCreateTicket';
 import { useToast } from '@/hooks/useToast';
 import CreateTicketConfirmModal from '@/components/ui/CreateTicketConfirmModal';
 
 const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
+
+const DEPARTMENT_TYPE_LABELS = {
+    'CLINICAL': 'Khám lâm sàng',
+    'LABORATORY': 'Xét nghiệm',
+    'IMAGING': 'Chẩn đoán hình ảnh',
+    'OTHER': 'Dịch vụ khác'
+};
 
 /* ── nhỏ: một dòng service có checkbox ── */
 function ServiceRow({ item, checked, onToggle }) {
@@ -48,12 +55,14 @@ const toGenderEnum = (g) => {
 
 export default function CreateTicketPage() {
     const { t } = useTranslation(['receptionist', 'createTicketConfirmModal']);
-    const { services, loadingSvc, submitting, error: submitError, submit } = useCreateTicket();
+    const { services, insurances, loadingSvc, submitting, error: submitError, submit } = useCreateTicket();
+    const toast = useToast();
     const [validationError, setValidationError] = useState('');
     const [searchParams] = useSearchParams();
 
     /* ── service selection ── */
     const [selectedServiceIds, setSelectedServiceIds] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
 
     /* ── confirmation modal ── */
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -66,10 +75,45 @@ export default function CreateTicketPage() {
     const [dob,       setDob]      = useState('');
     const [gender,    setGender]   = useState('male');
     const [address,   setAddress]  = useState('');
+    const [insuranceId, setInsuranceId] = useState('');
     const [bhytCode,  setBhytCode] = useState('');
-    const [bhytExpiry, setBhytExpiry] = useState('');
 
     /* ── autofill from URL ── */
+    const checkBhyt = async () => {
+        if (!bhytCode || bhytCode.length < 5) {
+            toast.error('Vui lòng nhập mã thẻ BHYT hợp lệ');
+            return;
+        }
+        if (!insuranceId) {
+            toast.error('Vui lòng chọn Loại bảo hiểm trước khi kiểm tra');
+            return;
+        }
+        try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/bhyt/check?cardNumber=${bhytCode}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const result = await res.json();
+            
+            if (result.isValid) {
+                // Kiểm tra xem thẻ có thuộc hãng bảo hiểm đã chọn không
+                if (result.insuranceId !== insuranceId) {
+                    toast.error(`Mã thẻ này là của ${result.insuranceName}, không thuộc hãng bảo hiểm bạn đang chọn!`);
+                    return;
+                }
+
+                toast.success(`Thẻ BHYT hợp lệ: ${result.fullName}`);
+                // Tùy chọn điền luôn tên và ngày sinh nếu user chưa nhập
+                if (!fullName) setFullName(result.fullName);
+                if (!dob && result.dateOfBirth) setDob(result.dateOfBirth);
+            } else {
+                toast.error(result.message || 'Mã thẻ không hợp lệ!');
+            }
+        } catch (err) {
+            toast.error('Lỗi kết nối khi tra cứu thẻ BHYT');
+        }
+    };
+
     useEffect(() => {
         const queryPhone = searchParams.get('phone');
         if (queryPhone) {
@@ -105,10 +149,38 @@ export default function CreateTicketPage() {
                 : [...prev, svc.id]
         );
 
-    const total = selectedServiceIds
+    const getDiscountRule = (service) => {
+        if (!insuranceId) return null;
+        const ins = insurances?.find(i => i.insuranceId === insuranceId);
+        if (!ins) return null;
+        const rule = ins.rules?.find(r => r.departmentType === service.departmentType);
+        return rule ? rule.discountPercent : 0;
+    };
+
+    const calculateItemPrice = (service) => {
+        const discountPercent = getDiscountRule(service) || 0;
+        const discountAmount = (service.price * discountPercent) / 100;
+        return {
+            original: service.price,
+            discountPercent,
+            discountAmount,
+            final: service.price - discountAmount
+        };
+    };
+
+    const selectedItems = selectedServiceIds
         .map(id => services.find(s => s.id === id))
         .filter(Boolean)
-        .reduce((sum, s) => sum + (s.price ?? 0), 0);
+        .map(s => ({ service: s, ...calculateItemPrice(s) }));
+
+    const totalOriginal = selectedItems.reduce((sum, item) => sum + item.original, 0);
+    const totalDiscount = selectedItems.reduce((sum, item) => sum + item.discountAmount, 0);
+    const totalFinal = selectedItems.reduce((sum, item) => sum + item.final, 0);
+
+    const filteredServices = services.filter(s =>
+        (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const handleReset = () => {
         setSelectedServiceIds([]);
@@ -118,9 +190,9 @@ export default function CreateTicketPage() {
         setDob('');
         setGender('male');
         setAddress('');
+        setInsuranceId('');
         setBhytCode('');
         setCustomerId(null);
-        setBhytExpiry('');
     };
 
     const handleSubmit = () => {
@@ -158,6 +230,7 @@ export default function CreateTicketPage() {
             guestAddress: address,
             guestDateOfBirth: dob || null,
             guestGender: toGenderEnum(gender),
+            insuranceId: insuranceId || null,
         });
         setShowConfirmModal(false);
     };
@@ -167,175 +240,282 @@ export default function CreateTicketPage() {
             <div className="flex flex-col min-h-[calc(100vh-3.5rem)] -m-8">
 
                 {/* ── Scrollable body ── */}
-                <div className="flex-1 overflow-y-auto p-8 pb-28 space-y-5">
+                <div className="flex-1 overflow-y-auto p-8 pb-28">
+                    <div className="max-w-7xl mx-auto space-y-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                            
+                            {/* ────── Cột trái: Thông tin bệnh nhân & BHYT ────── */}
+                            <div className="lg:col-span-6 h-full">
+                                {/* ────── Block 1: Thông tin khách hàng ────── */}
+                                <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 h-full flex flex-col">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-900 text-white text-xs font-bold shrink-0">1</span>
+                                        <h2 className="text-sm font-bold text-gray-900">Thông tin khách hàng</h2>
+                                    </div>
 
-                    {/* ────── Block 1: Chọn dịch vụ ────── */}
-                    <div className="bg-white border border-gray-200 rounded-2xl p-6">
-                        <h2 className="text-sm font-semibold text-gray-900">
-                            {t('createTicket.bundle.title')}
-                        </h2>
-                        <p className="text-xs text-gray-400 mt-0.5 mb-5">
-                            {t('createTicket.bundle.subtitle')}
-                        </p>
+                                    <div className="space-y-4 mb-4">
+                                        {/* Họ và tên (1 hàng riêng) */}
+                                        <div>
+                                            <label className={labelCls}>{t('createTicket.patientInfo.fullName')}</label>
+                                            <input
+                                                type="text"
+                                                value={fullName}
+                                                onChange={e => setFullName(e.target.value)}
+                                                placeholder={t('createTicket.patientInfo.fullNamePlaceholder')}
+                                                className={inputCls}
+                                            />
+                                        </div>
 
-                        {loadingSvc ? (
-                            <p className="text-sm text-gray-400 py-4">{t('createTicket.loading')}</p>
-                        ) : services.length > 0 ? (
-                            <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
-                                {services.map(svc => (
-                                    <ServiceRow
-                                        key={svc.id}
-                                        item={svc}
-                                        checked={selectedServiceIds.includes(svc.id)}
-                                        onToggle={() => toggleService(svc)}
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-gray-400 py-4">Chưa có dịch vụ nào</p>
-                        )}
+                                        {/* SĐT và Ngày sinh (2 cột) */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className={labelCls}>{t('createTicket.patientInfo.phone')}</label>
+                                                <input
+                                                    type="tel"
+                                                    value={phone}
+                                                    onChange={e => setPhone(e.target.value)}
+                                                    placeholder={t('createTicket.patientInfo.phonePlaceholder')}
+                                                    className={inputCls}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className={labelCls}>{t('createTicket.patientInfo.dob')}</label>
+                                                <input
+                                                    type="date"
+                                                    value={dob}
+                                                    onChange={e => setDob(e.target.value)}
+                                                    className={inputCls}
+                                                />
+                                            </div>
+                                        </div>
 
-                        {/* Lý do khám */}
-                        <div className="mt-6">
-                            <p className={labelCls}>{t('createTicket.bundle.reasonLabel')}</p>
-                            <textarea
-                                value={reason}
-                                onChange={e => setReason(e.target.value)}
-                                placeholder={t('createTicket.bundle.reasonPlaceholder')}
-                                rows={3}
-                                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-gray-400 resize-none placeholder:text-gray-300"
-                            />
-                        </div>
-                    </div>
+                                        {/* Giới tính và Địa chỉ (2 cột) */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className={labelCls}>{t('createTicket.patientInfo.gender')}</label>
+                                                <div className="flex gap-2">
+                                                    {[
+                                                        { val: 'male', label: t('createTicket.patientInfo.male') },
+                                                        { val: 'female', label: t('createTicket.patientInfo.female') },
+                                                    ].map(({ val, label }) => (
+                                                        <button
+                                                            key={val}
+                                                            type="button"
+                                                            onClick={() => setGender(val)}
+                                                            className={`flex-1 h-10 text-sm rounded-lg border transition-colors ${
+                                                                gender === val
+                                                                    ? 'border-gray-900 bg-gray-900 text-white'
+                                                                    : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                                                            }`}
+                                                        >
+                                                            {label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className={labelCls}>{t('createTicket.patientInfo.address')}</label>
+                                                <input
+                                                    type="text"
+                                                    value={address}
+                                                    onChange={e => setAddress(e.target.value)}
+                                                    placeholder={t('createTicket.patientInfo.addressPlaceholder')}
+                                                    className={inputCls}
+                                                />
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Loại Bảo hiểm (Chọn trước) */}
+                                        <div>
+                                            <label className={labelCls}>Bảo hiểm y tế (nếu có)</label>
+                                            <select
+                                                value={insuranceId}
+                                                onChange={e => {
+                                                    setInsuranceId(e.target.value);
+                                                    setBhytCode(''); // Xóa mã thẻ khi đổi hãng
+                                                }}
+                                                className={inputCls}
+                                            >
+                                                <option value="">Không áp dụng</option>
+                                                {insurances?.map(ins => (
+                                                    <option key={ins.insuranceId} value={ins.insuranceId}>
+                                                        {ins.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
 
-                    {/* ────── Block 2: Thông tin bệnh nhân ────── */}
-                    <div className="bg-white border border-gray-200 rounded-2xl p-6">
-                        <h2 className="text-xs font-semibold text-gray-700 tracking-wide mb-5">
-                            {t('createTicket.patientInfo.title')}
-                        </h2>
+                                        {/* Mã thẻ BHYT hiện ra nếu có chọn bảo hiểm */}
+                                        {insuranceId && (
+                                            <div>
+                                                <label className={labelCls}>Số thẻ bảo hiểm (để tra cứu & lưu hồ sơ)</label>
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={bhytCode}
+                                                        onChange={e => setBhytCode(e.target.value)}
+                                                        placeholder="Nhập mã thẻ..."
+                                                        className={inputCls}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={checkBhyt}
+                                                        className="px-4 py-0 bg-blue-50 text-blue-600 border border-blue-200 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors shrink-0 h-10"
+                                                    >
+                                                        Kiểm tra
+                                                    </button>
+                                                </div>
+                                                <p className="mt-2 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
+                                                    Đã áp dụng chính sách giảm giá của <b>{insurances?.find(i => i.insuranceId === insuranceId)?.name}</b>. Xem chi tiết mức giảm trên từng dịch vụ.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
 
-                        <div className="grid grid-cols-3 gap-4 mb-4">
-                            <div className="col-span-1">
-                                <label className={labelCls}>{t('createTicket.patientInfo.fullName')}</label>
-                                <input
-                                    type="text"
-                                    value={fullName}
-                                    onChange={e => setFullName(e.target.value)}
-                                    placeholder={t('createTicket.patientInfo.fullNamePlaceholder')}
-                                    className={inputCls}
-                                />
-                            </div>
-                            <div>
-                                <label className={labelCls}>{t('createTicket.patientInfo.phone')}</label>
-                                <input
-                                    type="tel"
-                                    value={phone}
-                                    onChange={e => setPhone(e.target.value)}
-                                    placeholder={t('createTicket.patientInfo.phonePlaceholder')}
-                                    className={inputCls}
-                                />
-                            </div>
-                            <div>
-                                <label className={labelCls}>{t('createTicket.patientInfo.dob')}</label>
-                                <input
-                                    type="date"
-                                    value={dob}
-                                    onChange={e => setDob(e.target.value)}
-                                    className={inputCls}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-4">
-                            {/* Giới tính */}
-                            <div>
-                                <label className={labelCls}>{t('createTicket.patientInfo.gender')}</label>
-                                <div className="flex gap-2">
-                                    {[
-                                        { val: 'male', label: t('createTicket.patientInfo.male') },
-                                        { val: 'female', label: t('createTicket.patientInfo.female') },
-                                        { val: 'other', label: t('createTicket.patientInfo.other') },
-                                    ].map(({ val, label }) => (
+                                    {/* Reset link */}
+                                    <div className="flex justify-end mt-auto pt-5">
                                         <button
-                                            key={val}
-                                            type="button"
-                                            onClick={() => setGender(val)}
-                                            className={`flex-1 h-10 text-sm rounded-lg border transition-colors ${
-                                                gender === val
-                                                    ? 'border-gray-900 bg-gray-900 text-white'
-                                                    : 'border-gray-200 text-gray-600 hover:border-gray-400'
-                                            }`}
+                                            onClick={handleReset}
+                                            className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-900 transition-colors"
                                         >
-                                            {label}
+                                            <RotateCcw size={12} />
+                                            {t('createTicket.resetForm')}
                                         </button>
-                                    ))}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Địa chỉ — chiếm 2 cột */}
-                            <div className="col-span-2">
-                                <label className={labelCls}>{t('createTicket.patientInfo.address')}</label>
-                                <input
-                                    type="text"
-                                    value={address}
-                                    onChange={e => setAddress(e.target.value)}
-                                    placeholder={t('createTicket.patientInfo.addressPlaceholder')}
-                                    className={inputCls}
-                                />
+                            {/* ────── Cột phải: Dịch vụ y tế ────── */}
+                            <div className="lg:col-span-6 h-full">
+                                <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 h-full flex flex-col">
+                                    {/* ────── Block 2: Chọn dịch vụ ────── */}
+                                    <section className="flex-1 flex flex-col min-h-0">
+                                        <div className="flex items-center justify-between gap-4 mb-6 shrink-0">
+                                            <div className="flex items-center gap-3">
+                                                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-900 text-white text-xs font-bold shrink-0">2</span>
+                                                <h2 className="text-sm font-bold text-gray-900">
+                                                    Dịch vụ y tế
+                                                </h2>
+                                            </div>
+                                            <div className="relative max-w-xs w-full">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <Search className="h-4 w-4 text-gray-400" />
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Tìm kiếm dịch vụ..."
+                                                    value={searchTerm}
+                                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                                    className="block w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary-50 focus:border-primary-500 transition-colors outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1 min-h-0">
+                                            {loadingSvc ? (
+                                                <p className="text-sm text-gray-400 text-center py-4">{t('createTicket.loading')}</p>
+                                            ) : filteredServices.length > 0 ? (
+                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
+                                                    {Object.entries(
+                                                        filteredServices.reduce((acc, service) => {
+                                                            const type = service.departmentType || 'OTHER';
+                                                            if (!acc[type]) acc[type] = [];
+                                                            acc[type].push(service);
+                                                            return acc;
+                                                        }, {})
+                                                    ).map(([type, servicesGroup]) => (
+                                                        <div key={type} className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col h-full overflow-hidden">
+                                                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 shrink-0">
+                                                                {DEPARTMENT_TYPE_LABELS[type] || type}
+                                                            </h3>
+                                                            <div className="divide-y divide-gray-200 flex-1 overflow-y-auto overflow-x-hidden pr-1 custom-scrollbar">
+                                                                {servicesGroup.map(svc => {
+                                                                    const checked = selectedServiceIds.includes(svc.id);
+                                                                    const priceInfo = calculateItemPrice(svc);
+                                                                    return (
+                                                                        <label
+                                                                            key={svc.id}
+                                                                            className="flex items-start gap-3 py-2.5 cursor-pointer hover:bg-gray-100/50 rounded-lg px-2 -mx-2 transition-colors w-full"
+                                                                        >
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={checked}
+                                                                                onChange={() => toggleService(svc)}
+                                                                                className="mt-0.5 w-4 h-4 accent-gray-800 shrink-0 rounded border-gray-300"
+                                                                            />
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <p className={`text-sm font-medium break-words ${checked ? 'text-gray-900' : 'text-gray-800'}`}>
+                                                                                        {svc.name}
+                                                                                    </p>
+                                                                                    {priceInfo.discountPercent > 0 && (
+                                                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-green-100 text-green-700 shrink-0">
+                                                                                            -{priceInfo.discountPercent}%
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                {svc.description && (
+                                                                                    <p className="text-xs text-gray-400 mt-0.5 truncate">{svc.description}</p>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="flex flex-col items-end shrink-0 pl-2">
+                                                                                {priceInfo.discountPercent > 0 && (
+                                                                                    <span className="text-xs text-gray-400 line-through mb-0.5">
+                                                                                        {fmt(priceInfo.original)}
+                                                                                    </span>
+                                                                                )}
+                                                                                <span className={`text-sm font-semibold ${priceInfo.discountPercent > 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                                                                                    {fmt(priceInfo.final)}
+                                                                                </span>
+                                                                            </div>
+                                                                        </label>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-gray-400 py-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                                    Không tìm thấy dịch vụ nào phù hợp
+                                                </p>
+                                            )}
+                                        </div>
+                                        
+                                        {/* Lý do khám */}
+                                        <div className="mt-6 pt-5 border-t border-gray-100 shrink-0">
+                                            <p className={labelCls}>{t('createTicket.bundle.reasonLabel')}</p>
+                                            <textarea
+                                                value={reason}
+                                                onChange={e => setReason(e.target.value)}
+                                                placeholder={t('createTicket.bundle.reasonPlaceholder')}
+                                                rows={2}
+                                                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-gray-400 resize-none placeholder:text-gray-300"
+                                            />
+                                        </div>
+                                    </section>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Reset link */}
-                        <div className="flex justify-end mt-4">
-                            <button
-                                onClick={handleReset}
-                                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-                            >
-                                <RotateCcw size={12} />
-                                {t('createTicket.resetForm')}
-                            </button>
-                        </div>
+                        {(validationError || submitError) && <p className="text-red-500 text-sm text-center">{validationError || submitError}</p>}
                     </div>
-
-                    {/* ────── Block 3: BHYT (placeholder) ────── */}
-                    <div className="bg-white border border-gray-200 rounded-2xl p-6">
-                        <h2 className="text-xs font-semibold text-gray-700 tracking-wide mb-5">
-                            {t('createTicket.insurance.title')}
-                        </h2>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className={labelCls}>{t('createTicket.insurance.cardNumber')}</label>
-                                <input
-                                    type="text"
-                                    value={bhytCode}
-                                    onChange={e => setBhytCode(e.target.value)}
-                                    placeholder={t('createTicket.insurance.cardNumberPlaceholder')}
-                                    className={inputCls}
-                                />
-                            </div>
-                            <div>
-                                <label className={labelCls}>{t('createTicket.insurance.expiry')}</label>
-                                <input
-                                    type="text"
-                                    value={bhytExpiry}
-                                    onChange={e => setBhytExpiry(e.target.value)}
-                                    placeholder={t('createTicket.insurance.expiryPlaceholder')}
-                                    className={inputCls}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {(validationError || submitError) && <p className="text-red-500 text-sm">{validationError || submitError}</p>}
                 </div>
 
                 {/* ── Sticky footer ── */}
                 <div className="fixed bottom-0 left-52 right-0 bg-white border-t border-gray-200 px-10 h-16 flex items-center justify-between z-40">
-                    <p className="text-sm text-gray-500">
-                        {t('createTicket.totalCost')}{' '}
-                        <span className="text-xl font-bold text-gray-900">{fmt(total)}</span>
-                    </p>
+                    <div className="flex items-center gap-6">
+                        {totalDiscount > 0 && (
+                            <div className="flex flex-col text-sm">
+                                <span className="text-gray-500">Tiền gốc: <span className="line-through">{fmt(totalOriginal)}</span></span>
+                                <span className="text-green-600 font-medium">Giảm BHYT: -{fmt(totalDiscount)}</span>
+                            </div>
+                        )}
+                        <p className="text-sm text-gray-500 flex items-center gap-2">
+                            {t('createTicket.totalCost')}
+                            <span className="text-xl font-bold text-gray-900">{fmt(totalFinal)}</span>
+                        </p>
+                    </div>
                     <button
                         onClick={handleSubmit}
                         disabled={submitting}
@@ -354,10 +534,8 @@ export default function CreateTicketPage() {
                             age: dob ? new Date().getFullYear() - new Date(dob).getFullYear() : '',
                             gender: gender === 'male' ? t('createTicket.patientInfo.male') : gender === 'female' ? t('createTicket.patientInfo.female') : t('createTicket.patientInfo.other'),
                             address,
-                            total: fmt(total),
-                            services: selectedServiceIds
-                                .map(id => services.find(s => s.id === id))
-                                .filter(Boolean),
+                            total: fmt(totalFinal),
+                            services: selectedItems.map(item => item.service),
                             reason,
                         }}
                         onClose={() => {

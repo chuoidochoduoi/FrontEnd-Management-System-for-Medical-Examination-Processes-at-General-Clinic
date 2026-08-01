@@ -2,8 +2,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
+import { toast } from 'react-toastify';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { useServiceManagement } from '@/hooks/useServiceManagement';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + ' đ' : '—';
 
@@ -97,7 +99,7 @@ function ConfigModal({ service, onClose, onSubmit, t }) {
             <div>
                 <label className={labelCls}>{t('serviceManagement.configModal.status')}</label>
                 <select value={status} onChange={e => setStatus(e.target.value)} className={inputCls}>
-                    {STATUSES.map(s => <option key={s} value={s}>{STATUS_CFG[s].label}</option>)}
+                    {STATUSES.filter(s => service.status === 'draft' || s !== 'draft').map(s => <option key={s} value={s}>{STATUS_CFG[s].label}</option>)}
                 </select>
             </div>
         </Modal>
@@ -166,7 +168,7 @@ function EditModal({ service, onClose, onSubmit, t }) {
             <div>
                 <label className={labelCls}>{t('serviceManagement.editModal.status') || t('serviceManagement.configModal.status')}</label>
                 <select value={form.status} onChange={e => setField('status', e.target.value)} className={inputCls}>
-                    {STATUSES.map(s => <option key={s} value={s}>{STATUS_CFG[s].label}</option>)}
+                    {STATUSES.filter(s => service.status === 'draft' || s !== 'draft').map(s => <option key={s} value={s}>{STATUS_CFG[s].label}</option>)}
                 </select>
             </div>
             {error && <p className="text-red-500 text-xs">{error}</p>}
@@ -262,23 +264,40 @@ export default function ServiceManagementPage() {
     const [showAdd,   setShowAdd]   = useState(false);
     const [configSvc, setConfigSvc] = useState(null);
     const [editSvc,   setEditSvc]   = useState(null);
+    const [deleteId,  setDeleteId]  = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handleSearch = () => fetchServices({ search, type: typeF, specialty: specialtyF, status: statusF, page: 1 });
 
     const handleCreate = async (payload) => {
         await createService(payload);
+        toast.success('Thêm dịch vụ thành công!');
         fetchServices({ search, type: typeF, specialty: specialtyF, status: statusF, page: 1 });
     };
 
     const handleUpdate = async (id, payload) => {
         await updateService(id, payload);
+        toast.success('Cập nhật dịch vụ thành công!');
         fetchServices({ search, type: typeF, specialty: specialtyF, status: statusF, page });
     };
 
-    const handleDelete = async (id) => {
-        if (!confirm(t('serviceManagement.deleteConfirm'))) return;
-        await deleteService(id);
-        fetchServices({ search, type: typeF, specialty: specialtyF, status: statusF, page });
+    const handleDeleteClick = (id) => {
+        setDeleteId(id);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!deleteId) return;
+        setIsDeleting(true);
+        try {
+            await deleteService(deleteId);
+            toast.success('Xóa dịch vụ thành công!');
+            fetchServices({ search, type: typeF, specialty: specialtyF, status: statusF, page });
+        } catch (err) {
+            toast.error(err.message || 'Xóa dịch vụ thất bại!');
+        } finally {
+            setIsDeleting(false);
+            setDeleteId(null);
+        }
     };
 
     const thCls = 'text-xs font-medium text-gray-400 text-left px-4 py-3';
@@ -409,7 +428,7 @@ export default function ServiceManagementPage() {
                                                         className="text-xs text-gray-600 hover:text-primary-500 font-medium transition-colors">
                                                     {t('serviceManagement.actions.edit')}
                                                 </button>
-                                                <button onClick={() => handleDelete(svc.id)}
+                                                <button onClick={() => handleDeleteClick(svc.id)}
                                                         className="text-xs text-red-400 hover:text-red-600 transition-colors">
                                                     {t('serviceManagement.actions.delete')}
                                                 </button>
@@ -442,6 +461,17 @@ export default function ServiceManagementPage() {
             {editSvc && (
                 <EditModal t={t} service={editSvc} onClose={() => setEditSvc(null)} onSubmit={handleUpdate} />
             )}
+            
+            <ConfirmModal 
+                isOpen={!!deleteId}
+                onClose={() => !isDeleting && setDeleteId(null)}
+                onConfirm={handleDeleteConfirm}
+                title="Xóa dịch vụ"
+                message={t('serviceManagement.deleteConfirm') || "Bạn có chắc chắn muốn xóa dịch vụ này? Hành động này không thể hoàn tác."}
+                confirmText="Xóa"
+                isDanger={true}
+                isLoading={isDeleting}
+            />
         </AdminLayout>
     );
 }

@@ -67,7 +67,7 @@ export function useExamination(id) {
                 }
             );
             if (!res.ok) throw new Error(t('examination.errors.completeFailed'));
-            navigate(ROUTES.DOCTOR_DEPARTMENTS);
+            navigate(ROUTES.DOCTOR_ROOMS);
         } catch (err) {
             setError(err.message || t('examination.errors.unknown'));
         } finally { setCompleting(false); }

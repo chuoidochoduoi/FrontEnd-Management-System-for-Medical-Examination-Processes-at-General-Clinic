@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Building2, Tag, Users, LogOut, Settings, LayoutDashboard } from 'lucide-react';
+import { Building2, Tag, Users, LogOut, Settings, LayoutDashboard, Activity } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -54,6 +54,8 @@ export default function AdminLayout({ children }) {
         { to: ROUTES.ADMIN_ROOMS,    icon: Building2, label: t('sidebar.rooms') },
         { to: ROUTES.ADMIN_SERVICES, icon: Tag,       label: t('sidebar.services') },
         { to: ROUTES.ADMIN_ACCOUNTS, icon: Users,     label: t('sidebar.accounts') },
+        { to: ROUTES.ADMIN_AUDIT_LOGS, icon: Activity, label: 'Nhật ký hệ thống' },
+        { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
     ];
 
     const linkClass = ({ isActive }) =>
@@ -91,6 +93,10 @@ export default function AdminLayout({ children }) {
                 </nav>
 
                 <div className="px-2 py-3 border-t border-gray-100 space-y-0.5">
+                    <NavLink to={ROUTES.SETTINGS} className={linkClass}>
+                        <Settings size={15} className="shrink-0" />
+                        Cài đặt
+                    </NavLink>
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
@@ -109,3 +115,4 @@ export default function AdminLayout({ children }) {
         </div>
     );
 }
+

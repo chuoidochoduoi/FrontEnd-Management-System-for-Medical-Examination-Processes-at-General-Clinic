@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Receipt, CreditCard, Banknote, Landmark, Download } from 'lucide-react';
 import PatientLayout from '@/components/layout/CustomerLayout';
 import { usePaymentHistory } from '@/hooks/usePaymentHistory';
 import { ROUTES } from '@/constants/routes';
@@ -82,71 +83,102 @@ export default function PaymentHistoryPage() {
                     </button>
                 </div>
 
-                {/* List */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-xs font-semibold text-gray-600">{t('paymentHistory.listTitle')}</p>
+                {/* List View */}
+                <div className="space-y-4">
+                    <div className="px-1">
+                        <p className="text-sm font-semibold text-gray-600">{t('paymentHistory.listTitle')}</p>
                     </div>
 
-                    <table className="w-full">
-                        <thead className="border-b border-gray-100">
-                        <tr>
-                            <th className={thCls}>{t('paymentHistory.table.invoiceId')}</th>
-                            <th className={thCls}>{t('paymentHistory.table.description')}</th>
-                            <th className={thCls}>{t('paymentHistory.table.settlementDate')}</th>
-                            <th className={thCls}>{t('paymentHistory.table.amount')}</th>
-                            <th className={thCls}>{t('paymentHistory.table.paymentMethod')}</th>
-                            <th className={thCls}>{t('paymentHistory.table.status')}</th>
-                            <th className={thCls}>{t('paymentHistory.table.actions')}</th>
-                        </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                        {loading && (
-                            <tr><td colSpan={7} className="text-center py-12 text-sm text-gray-400">{t('paymentHistory.loading')}</td></tr>
-                        )}
-                        {!loading && error && (
-                            <tr><td colSpan={7} className="text-center py-12 text-sm text-red-500">{error}</td></tr>
-                        )}
-                        {!loading && !error && invoices.length === 0 && (
-                            <tr><td colSpan={7} className="text-center py-12 text-sm text-gray-400">{t('paymentHistory.noData')}</td></tr>
-                        )}
+                    {loading && (
+                        <div className="text-center py-12 text-sm text-gray-400 bg-white rounded-xl border border-gray-200">
+                            {t('paymentHistory.loading')}
+                        </div>
+                    )}
+                    {!loading && error && (
+                        <div className="text-center py-12 text-sm text-red-500 bg-white rounded-xl border border-gray-200">
+                            {error}
+                        </div>
+                    )}
+                    {!loading && !error && invoices.length === 0 && (
+                        <div className="text-center py-12 text-sm text-gray-400 bg-white rounded-xl border border-gray-200">
+                            {t('paymentHistory.noData')}
+                        </div>
+                    )}
+                    
+                    <div className="space-y-3">
                         {!loading && invoices.map((inv, i) => {
                             const isLast = i === invoices.length - 1;
+                            
+                            const PaymentIcon = inv.paymentMethod?.toLowerCase().includes('card') 
+                                ? CreditCard 
+                                : inv.paymentMethod?.toLowerCase().includes('transfer') 
+                                    ? Landmark 
+                                    : Banknote;
+
                             return (
-                                <tr key={inv.id}
-                                    className={`hover:bg-gray-50 transition-colors ${isLast ? 'bg-gray-800 hover:bg-gray-700' : ''}`}>
-                                    <td className={tdCls + (isLast ? ' text-gray-300 font-mono text-xs' : ' text-gray-500 font-mono text-xs')}>{inv.invoiceId}</td>
-                                    <td className={tdCls + (isLast ? ' text-gray-100 font-medium' : ' text-gray-800 font-medium')}>{inv.description}</td>
-                                    <td className={tdCls + (isLast ? ' text-gray-400' : ' text-gray-500')}>
-                                        <p>{inv.settlementDate}</p>
-                                        <p className="text-xs text-gray-400">{inv.settlementTime}</p>
-                                    </td>
-                                    <td className={tdCls + ' font-bold tabular-nums' + (isLast ? ' text-white' : ' text-gray-900')}>{fmt(inv.amount)}</td>
-                                    <td className={tdCls + (isLast ? ' text-gray-300' : ' text-gray-600')}>{inv.paymentMethod}</td>
-                                    <td className={tdCls}>
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-lg border ${
-                          isLast
-                              ? 'border-gray-600 text-gray-400 bg-gray-700'
-                              : 'border-gray-200 text-gray-600 bg-gray-50'
-                      }`}>
-                        {t(`paymentHistory.status.${inv.status}`) || inv.status}
-                      </span>
-                                    </td>
-                                    <td className={tdCls}>
-                                        <button
-                                            onClick={() => navigate(`${ROUTES.CUSTOMER_PAYMENT}/${inv.id}`)}
-                                            className={`text-sm font-semibold transition-colors ${
-                                                isLast ? 'text-gray-300 hover:text-white' : 'text-gray-800 hover:text-primary-500'
-                                            }`}
-                                        >
-                                            {t('paymentHistory.downloadBtn')}
-                                        </button>
-                                    </td>
-                                </tr>
+                                <div 
+                                    key={inv.id}
+                                    className={`group border rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all shadow-sm hover:shadow-md ${
+                                        isLast 
+                                            ? 'bg-slate-900 border-slate-800' 
+                                            : 'bg-white border-gray-100 hover:border-gray-200'
+                                    }`}
+                                >
+                                    {/* Left: Icon & Main Info */}
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                                            isLast ? 'bg-slate-800 text-slate-300' : 'bg-slate-50 text-slate-400 group-hover:bg-primary-50 group-hover:text-primary-500'
+                                        } transition-colors`}>
+                                            <Receipt className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <p className={`font-bold text-lg leading-tight ${isLast ? 'text-white' : 'text-gray-900'}`}>
+                                                {inv.description}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${isLast ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-500'}`}>
+                                                    #{inv.invoiceId}
+                                                </span>
+                                                <span className={`text-sm ${isLast ? 'text-slate-400' : 'text-gray-500'}`}>
+                                                    • {inv.settlementDate} {inv.settlementTime}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Right: Amount & Status */}
+                                    <div className="flex items-center justify-between md:justify-end gap-6 md:min-w-[300px]">
+                                        <div className="text-right">
+                                            <p className={`text-xl font-bold font-mono tracking-tight ${isLast ? 'text-white' : 'text-gray-900'}`}>
+                                                {fmt(inv.amount)}
+                                            </p>
+                                            <div className="flex items-center justify-end gap-1.5 mt-1">
+                                                <PaymentIcon className={`w-3.5 h-3.5 ${isLast ? 'text-slate-400' : 'text-gray-400'}`} />
+                                                <p className={`text-xs ${isLast ? 'text-slate-400' : 'text-gray-500'}`}>
+                                                    {inv.paymentMethod}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-[1px] h-10 bg-gray-200 hidden md:block opacity-50"></div>
+                                            <button
+                                                onClick={() => navigate(`${ROUTES.CUSTOMER_PAYMENT}/${inv.id}`)}
+                                                className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
+                                                    isLast 
+                                                        ? 'bg-slate-800 text-white hover:bg-primary-600' 
+                                                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-gray-100'
+                                                }`}
+                                                title={t('paymentHistory.downloadBtn')}
+                                            >
+                                                <Download className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             );
                         })}
-                        </tbody>
-                    </table>
+                    </div>
 
                     <Pagination page={page} total={total} pageSize={PAGE_SIZE} onChange={handlePage} />
                 </div>

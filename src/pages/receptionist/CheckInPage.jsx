@@ -52,7 +52,7 @@ export default function CheckInPage() {
             try {
                 const token = localStorage.getItem('token') || sessionStorage.getItem('token');
                 const res = await fetch(
-                    `${import.meta.env.VITE_API_URL}/api/v1/follow-ups/pending`,
+                    `${import.meta.env.VITE_API_URL}/api/receptionist/follow-ups`,
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 if (res.ok) {
@@ -155,7 +155,7 @@ export default function CheckInPage() {
                 {/* Table */}
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                     {/* Header */}
-                    <div className="grid grid-cols-[80px_140px_180px_1fr_120px_120px_1fr_140px_140px_160px] px-6 py-3 border-b border-gray-100">
+                    <div className="grid grid-cols-[80px_140px_200px_140px_80px_1fr_140px_160px] px-6 py-3 border-b border-gray-100">
                         {[
                             t('checkIn.table.timeSlot'),
                             t('checkIn.table.code'),
@@ -163,9 +163,7 @@ export default function CheckInPage() {
                             t('checkIn.table.phone'),
                             t('checkIn.table.age'),
                             t('checkIn.table.gender'),
-                            t('checkIn.table.address'),
                             t('checkIn.table.status'),
-                            t('followUp.doctorNote'),
                             t('checkIn.table.actions'),
                         ].map(col => (
                             <span key={col} className="text-xs font-medium text-gray-400">{col}</span>
@@ -198,7 +196,7 @@ export default function CheckInPage() {
                         .map((appt, idx) => (
                         <div
                             key={appt.id ?? idx}
-                            className={`grid grid-cols-[80px_140px_180px_1fr_120px_120px_1fr_140px_140px_160px] px-6 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors items-start ${
+                            className={`grid grid-cols-[80px_140px_200px_140px_80px_1fr_140px_160px] px-6 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors items-start ${
                                 appt.followUp ? 'bg-amber-50/30' : ''
                             }`}
                         >
@@ -227,9 +225,6 @@ export default function CheckInPage() {
                             {/* Gioi tinh */}
                             <span className="text-sm text-gray-700">{appt.gender || '-'}</span>
 
-                            {/* Dia chi */}
-                            <span className="text-sm text-gray-700 truncate">{appt.address || '-'}</span>
-
                             {/* Trạng thái */}
                             <div>
                                 {appt.followUp ? (
@@ -237,24 +232,10 @@ export default function CheckInPage() {
                                         {t('followUp.statusLabel')}
                                     </span>
                                 ) : (
-                                    <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full ${STATUS_STYLE[appt.status] ?? 'bg-gray-100 text-gray-500'}`}>
-                                        {appt.status === 'pending' && <span>✓</span>}
-                                        {STATUS_LABEL[appt.status] ?? appt.status}
+                                    <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full ${STATUS_STYLE[appt.status?.toLowerCase()] ?? 'bg-gray-100 text-gray-500'}`}>
+                                        {appt.status?.toLowerCase() === 'pending' && <span>✓</span>}
+                                        {STATUS_LABEL[appt.status?.toLowerCase()] ?? appt.status}
                                     </span>
-                                )}
-                            </div>
-
-                            {/* Ghi chú BS (follow-up note) */}
-                            <div className="flex items-center">
-                                {appt.followUp?.note ? (
-                                    <span
-                                        className="text-xs text-gray-600 italic truncate max-w-[120px]"
-                                        title={appt.followUp.note}
-                                    >
-                                        {appt.followUp.note}
-                                    </span>
-                                ) : (
-                                    <span className="text-xs text-gray-400">—</span>
                                 )}
                             </div>
 

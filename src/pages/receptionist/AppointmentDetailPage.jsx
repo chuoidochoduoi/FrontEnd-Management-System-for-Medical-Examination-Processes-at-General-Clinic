@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Search } from 'lucide-react';
+import { toast } from 'react-toastify';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { ROUTES } from '@/constants/routes';
 import AppointmentConfirmModal from '@/components/ui/AppointmentConfirmModal';
@@ -12,6 +13,12 @@ const formatVND = (amount) =>
 
 const GENDER_LABELS = { MALE: 'Nam', FEMALE: 'Nữ', OTHER: 'Khác' };
 const GENDER_VALUES = { male: 'MALE', female: 'FEMALE', other: 'OTHER' };
+const DEPARTMENT_TYPE_LABELS = {
+    'CLINICAL': 'Khám lâm sàng',
+    'LABORATORY': 'Xét nghiệm',
+    'IMAGING': 'Chẩn đoán hình ảnh',
+    'OTHER': 'Dịch vụ khác'
+};
 
 export default function AppointmentDetailPage() {
     const { id } = useParams();
@@ -37,9 +44,63 @@ export default function AppointmentDetailPage() {
     const [timeSlot, setTimeSlot] = useState('morning');
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [confirmAction, setConfirmAction] = useState(null); // 'save' | 'checkin'
+    const [searchTerm, setSearchTerm] = useState('');
 
-    // Check if editing patient info allowed (no customerId = guest)
-    const isPatientEditable = !appointment?.customerId;
+    // Insurance & BHYT states
+    const [insurances, setInsurances] = useState([]);
+    const [insuranceId, setInsuranceId] = useState('');
+    const [bhytCode, setBhytCode] = useState('');
+
+    // Fetch insurances
+    useEffect(() => {
+        const fetchInsurances = async () => {
+            try {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/insurances`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setInsurances(data || []);
+                }
+            } catch (err) {
+                console.error('Failed to fetch insurances', err);
+            }
+        };
+        fetchInsurances();
+    }, []);
+
+    // Check BHYT function
+    const checkBhyt = async () => {
+        if (!bhytCode || bhytCode.length < 5) {
+            toast.error('Vui lòng nhập mã thẻ bảo hiểm hợp lệ');
+            return;
+        }
+        if (!insuranceId) {
+            toast.error('Vui lòng chọn Loại bảo hiểm trước khi kiểm tra');
+            return;
+        }
+        try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/bhyt/check?cardNumber=${bhytCode}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const result = await res.json();
+            
+            if (result.isValid) {
+                if (result.insuranceId !== insuranceId) {
+                    toast.error(`Mã thẻ này là của ${result.insuranceName}, không thuộc hãng bảo hiểm bạn đang chọn!`);
+                    return;
+                }
+                toast.success(`Thẻ bảo hiểm hợp lệ: ${result.fullName}`);
+                if (!fullName) setFullName(result.fullName);
+            } else {
+                toast.error(result.message || 'Mã thẻ không hợp lệ!');
+            }
+        } catch (err) {
+            toast.error('Lỗi kết nối khi tra cứu thẻ bảo hiểm');
+        }
+    };
 
     // Fetch appointment detail
     useEffect(() => {
@@ -89,7 +150,7 @@ export default function AppointmentDetailPage() {
         const fetchServices = async () => {
             setLoadingServices(true);
             try {
-                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services/available`);
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services/available?size=1000`);
                 if (!res.ok) throw new Error('Không thể tải dịch vụ.');
                 const data = await res.json();
                 const mappedServices = (data.content || []).map(s => ({
@@ -97,6 +158,7 @@ export default function AppointmentDetailPage() {
                     name: s.name,
                     price: s.price,
                     description: s.description,
+                    departmentType: s.departmentType,
                 }));
                 setAllServices(mappedServices);
             } catch (err) {
@@ -123,26 +185,20 @@ export default function AppointmentDetailPage() {
         setError('');
         try {
             const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-            // Only send patient info if guest, otherwise just services and time
-            const body = isPatientEditable
-                ? {
-                    guestFullName: fullName,
-                    guestPhone: phone,
-                    guestAddress: address,
-                    guestAge: Number(age),
-                    guestGender: GENDER_VALUES[gender],
-                    scheduledAt: date ? `${date}T09:00:00` : null,
-                    timeSlot: timeSlot?.toUpperCase(),
-                    serviceIds: selectedServiceIds,
-                }
-                : {
-                    scheduledAt: date ? `${date}T09:00:00` : null,
-                    timeSlot: timeSlot?.toUpperCase(),
-                    serviceIds: selectedServiceIds,
-                };
+            // Send full patient info regardless of customerId
+            const body = {
+                guestFullName: fullName,
+                guestPhone: phone,
+                guestAddress: address,
+                guestAge: Number(age),
+                guestGender: GENDER_VALUES[gender],
+                scheduledAt: date ? `${date}T09:00:00` : null,
+                timeSlot: timeSlot?.toUpperCase(),
+                serviceIds: selectedServiceIds,
+            };
 
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/receptionist/appointments/${id}`,
+                `${import.meta.env.VITE_API_URL}/api/v1/appointments/${id}`,
                 {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -152,6 +208,7 @@ export default function AppointmentDetailPage() {
             if (!res.ok) throw new Error('Lưu thất bại. Vui lòng thử lại.');
             const data = await res.json();
             setAppointment(data);
+            toast.success('Lưu thông tin thành công!');
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra.');
         } finally {
@@ -172,6 +229,7 @@ export default function AppointmentDetailPage() {
             const body = {
                 appointmentId: id,
                 serviceIds: selectedServiceIds,
+                insuranceId: insuranceId || null
             };
             const res = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/v1/appointments/${id}/check-in`,
@@ -185,6 +243,7 @@ export default function AppointmentDetailPage() {
                 }
             );
             if (!res.ok) throw new Error('Check-in thất bại. Vui lòng thử lại.');
+            toast.success('Nhận bệnh thành công!');
             navigate(ROUTES.RECEPTIONIST_CHECKIN);
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra.');
@@ -267,13 +326,18 @@ export default function AppointmentDetailPage() {
 
     // Use all fetched services, fallback to appointment services
     const servicesToShow = allServices.length > 0 ? allServices : (appointment?.services || []);
+    const filteredServices = servicesToShow.filter(s =>
+        (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
     const totalCost = servicesToShow
         .filter(s => selectedServiceIds.includes(s.id))
         .reduce((sum, s) => sum + (s.price || 0), 0);
 
     return (
         <ReceptionistLayout>
-            <div className="max-w-2xl mx-auto space-y-5">
+            <div className="max-w-6xl mx-auto space-y-6">
 
                 {/* Page header */}
                 <div className="flex items-center justify-between">
@@ -294,195 +358,277 @@ export default function AppointmentDetailPage() {
                     </button>
                 </div>
 
-                {/* Card */}
-                <div className="bg-white border border-gray-200 rounded-2xl p-8 space-y-8">
-
-                    {/* ── Step 1: Thông tin bệnh nhân ── */}
-                    <section>
-                        <div className="flex items-center gap-2.5 mb-5">
-                            <span className="w-6 h-6 rounded-full bg-gray-900 text-white text-xs flex items-center justify-center font-semibold">
-                                1
-                            </span>
-                            <h2 className="text-sm font-semibold text-gray-900">
-                                {t('appointmentDetail.step1.heading')}
-                            </h2>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className={labelCls}>{t('appointmentDetail.step1.fullName')}</label>
-                                <input
-                                    type="text"
-                                    value={fullName}
-                                    onChange={e => setFullName(e.target.value)}
-                                    disabled={!isPatientEditable}
-                                    className={isPatientEditable ? inputCls : disabledInputCls}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className={labelCls}>{t('appointmentDetail.step1.phone')}</label>
-                                    <input
-                                        type="tel"
-                                        value={phone}
-                                        onChange={e => setPhone(e.target.value)}
-                                        disabled={!isPatientEditable}
-                                        className={isPatientEditable ? inputCls : disabledInputCls}
-                                    />
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    
+                    {/* Cột trái: Thông tin bệnh nhân & Lịch hẹn */}
+                    <div className="lg:col-span-5 space-y-6">
+                        <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-8">
+                            {/* ── Step 1: Thông tin bệnh nhân ── */}
+                            <section>
+                                <div className="flex items-center gap-2.5 mb-5">
+                                    <span className="w-6 h-6 rounded-full bg-gray-900 text-white text-xs flex items-center justify-center font-semibold">
+                                        1
+                                    </span>
+                                    <h2 className="text-sm font-semibold text-gray-900">
+                                        {t('appointmentDetail.step1.heading')}
+                                    </h2>
                                 </div>
-                                <div>
-                                    <label className={labelCls}>{t('appointmentDetail.step1.age')}</label>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        max={120}
-                                        value={age}
-                                        onChange={e => setAge(e.target.value)}
-                                        disabled={!isPatientEditable}
-                                        className={isPatientEditable ? inputCls : disabledInputCls}
-                                    />
-                                </div>
-                            </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className={labelCls}>{t('appointmentDetail.step1.gender')}</label>
-                                    <select
-                                        value={gender}
-                                        onChange={e => setGender(e.target.value)}
-                                        disabled={!isPatientEditable}
-                                        className={isPatientEditable ? inputCls : disabledInputCls}
-                                    >
-                                        <option value="" />
-                                        <option value="male">{t('appointmentDetail.step1.genderOptions.male')}</option>
-                                        <option value="female">{t('appointmentDetail.step1.genderOptions.female')}</option>
-                                        <option value="other">{t('appointmentDetail.step1.genderOptions.other')}</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className={labelCls}>{t('appointmentDetail.step1.email')}</label>
-                                    <input
-                                        type="email"
-                                        placeholder={t('appointmentDetail.step1.emailPlaceholder')}
-                                        disabled
-                                        className={disabledInputCls}
-                                    />
-                                </div>
-                            </div>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className={labelCls}>{t('appointmentDetail.step1.fullName')}</label>
+                                        <input
+                                            type="text"
+                                            value={fullName}
+                                            onChange={e => setFullName(e.target.value)}
+                                            className={inputCls}
+                                        />
+                                    </div>
 
-                            <div>
-                                <label className={labelCls}>{t('appointmentDetail.step1.insurance')}</label>
-                                <input type="text" disabled className={disabledInputCls} />
-                            </div>
-                        </div>
-                    </section>
-
-                    <hr className="border-gray-100" />
-
-                    {/* ── Step 2: Dịch vụ y tế ── */}
-                    <section>
-                        <div className="flex items-center gap-2.5 mb-5">
-                            <span className="w-6 h-6 rounded-full bg-gray-900 text-white text-xs flex items-center justify-center font-semibold">
-                                2
-                            </span>
-                            <h2 className="text-sm font-semibold text-gray-900">
-                                {t('appointmentDetail.step2.heading')}
-                            </h2>
-                        </div>
-
-                        {loadingServices ? (
-                            <p className="text-sm text-gray-400 text-center py-4">{t('step2.loading', { ns: 'receptionist' })}</p>
-                        ) : servicesToShow.length > 0 ? (
-                            <div className="divide-y divide-gray-100 max-h-60 overflow-y-auto">
-                                {servicesToShow.map(service => {
-                                    const checked = selectedServiceIds.includes(service.id);
-                                    return (
-                                        <label
-                                            key={service.id}
-                                            className="flex items-start gap-3 py-3.5 cursor-pointer"
-                                        >
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className={labelCls}>{t('appointmentDetail.step1.phone')}</label>
                                             <input
-                                                type="checkbox"
-                                                checked={checked}
-                                                onChange={() => toggleService(service.id)}
-                                                className="mt-0.5 w-4 h-4 accent-primary-500 shrink-0"
+                                                type="tel"
+                                                value={phone}
+                                                onChange={e => setPhone(e.target.value)}
+                                                className={inputCls}
                                             />
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium text-gray-900">
-                                                    {service.name}
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>{t('appointmentDetail.step1.age')}</label>
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={120}
+                                                value={age}
+                                                onChange={e => setAge(e.target.value)}
+                                                className={inputCls}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className={labelCls}>{t('appointmentDetail.step1.gender')}</label>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setGender('male')}
+                                                    className={`flex-1 h-10 px-3 text-sm font-medium border rounded-lg transition-colors ${
+                                                        gender === 'male'
+                                                            ? 'bg-gray-900 text-white border-gray-900'
+                                                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                                                    }`}
+                                                >
+                                                    {t('appointmentDetail.step1.genderOptions.male')}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setGender('female')}
+                                                    className={`flex-1 h-10 px-3 text-sm font-medium border rounded-lg transition-colors ${
+                                                        gender === 'female'
+                                                            ? 'bg-gray-900 text-white border-gray-900'
+                                                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                                                    }`}
+                                                >
+                                                    {t('appointmentDetail.step1.genderOptions.female')}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                        {/* Loại Bảo hiểm (Chọn trước) */}
+                                        <div>
+                                            <label className={labelCls}>Bảo hiểm y tế (nếu có)</label>
+                                            <select
+                                                value={insuranceId}
+                                                onChange={e => {
+                                                    setInsuranceId(e.target.value);
+                                                    setBhytCode('');
+                                                }}
+                                                className={inputCls}
+                                            >
+                                                <option value="">Không áp dụng</option>
+                                                {insurances?.map(ins => (
+                                                    <option key={ins.insuranceId} value={ins.insuranceId}>
+                                                        {ins.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Mã thẻ BHYT hiện ra nếu có chọn bảo hiểm */}
+                                        {insuranceId && (
+                                            <div>
+                                                <label className={labelCls}>Số thẻ bảo hiểm (để tra cứu & lưu hồ sơ)</label>
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={bhytCode}
+                                                        onChange={e => setBhytCode(e.target.value)}
+                                                        placeholder="Nhập mã thẻ..."
+                                                        className={inputCls}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={checkBhyt}
+                                                        className="px-4 py-0 bg-blue-50 text-blue-600 border border-blue-200 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors shrink-0 h-10"
+                                                    >
+                                                        Kiểm tra
+                                                    </button>
+                                                </div>
+                                                <p className="mt-2 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
+                                                    Đã áp dụng chính sách giảm giá của <b>{insurances?.find(i => i.insuranceId === insuranceId)?.name}</b>. Xem chi tiết mức giảm trên từng dịch vụ.
                                                 </p>
                                             </div>
-                                            <span className="text-sm font-semibold text-gray-900 shrink-0">
-                                                {formatVND(service.price)}
-                                            </span>
-                                        </label>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-gray-400 py-4">Chưa có dịch vụ nào được chọn</p>
-                        )}
-
-                        {/* Tổng tiền */}
-                        <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                            <p className="text-xs text-gray-400">
-                                {t('appointmentDetail.step2.total')} ({selectedServiceIds.length} dịch vụ)
-                            </p>
-                            <span className="text-lg font-bold text-gray-900">
-                                {formatVND(totalCost)}
-                            </span>
-                        </div>
-                    </section>
-
-                    <hr className="border-gray-100" />
-
-                    {/* ── Step 3: Thời gian khám ── */}
-                    <section>
-                        <div className="flex items-center gap-2.5 mb-5">
-                            <span className="w-6 h-6 rounded-full bg-gray-900 text-white text-xs flex items-center justify-center font-semibold">
-                                3
-                            </span>
-                            <h2 className="text-sm font-semibold text-gray-900">
-                                {t('appointmentDetail.step3.heading')}
-                            </h2>
-                        </div>
-
-                        <div className="flex gap-4 items-end">
-                            <div className="flex-1">
-                                <label className={labelCls}>{t('appointmentDetail.step3.chooseDate')}</label>
-                                <input
-                                    type="date"
-                                    value={date}
-                                    min={new Date().toISOString().split('T')[0]}
-                                    onChange={e => setDate(e.target.value)}
-                                    className={inputCls}
-                                />
-                            </div>
-
-                            <div className="flex-1">
-                                <label className={labelCls}>{t('appointmentDetail.step3.timeSlot')}</label>
-                                <div className="flex gap-2">
-                                    {timeSlots.map(slot => (
-                                        <button
-                                            key={slot.key}
-                                            type="button"
-                                            onClick={() => setTimeSlot(slot.key)}
-                                            className={`flex-1 py-2.5 px-3 rounded-lg border text-sm transition-colors text-left ${
-                                                timeSlot === slot.key
-                                                    ? 'bg-gray-900 text-white border-gray-900'
-                                                    : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
-                                            }`}
-                                        >
-                                            <p className="font-medium">{slot.label}</p>
-                                            <p className="text-xs mt-0.5 text-gray-400">{slot.subLabel}</p>
-                                        </button>
-                                    ))}
+                                        )}
                                 </div>
-                            </div>
-                        </div>
-                    </section>
+                            </section>
 
+                            <hr className="border-gray-100" />
+
+                            {/* ── Step 3: Thời gian khám ── */}
+                            <section>
+                                <div className="flex items-center gap-2.5 mb-5">
+                                    <span className="w-6 h-6 rounded-full bg-gray-900 text-white text-xs flex items-center justify-center font-semibold">
+                                        2
+                                    </span>
+                                    <h2 className="text-sm font-semibold text-gray-900">
+                                        {t('appointmentDetail.step3.heading')}
+                                    </h2>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className={labelCls}>{t('appointmentDetail.step3.chooseDate')}</label>
+                                        <input
+                                            type="date"
+                                            value={date}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            onChange={e => setDate(e.target.value)}
+                                            className={inputCls}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className={labelCls}>{t('appointmentDetail.step3.timeSlot')}</label>
+                                        <div className="flex gap-2">
+                                            {timeSlots.map(slot => (
+                                                <button
+                                                    key={slot.key}
+                                                    type="button"
+                                                    onClick={() => setTimeSlot(slot.key)}
+                                                    className={`flex-1 py-2.5 px-3 rounded-lg border text-sm transition-colors text-left ${
+                                                        timeSlot === slot.key
+                                                            ? 'bg-gray-900 text-white border-gray-900'
+                                                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                                                    }`}
+                                                >
+                                                    <p className="font-medium">{slot.label}</p>
+                                                    <p className="text-xs mt-0.5 text-gray-400">{slot.subLabel}</p>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+
+                    {/* Cột phải: Dịch vụ y tế */}
+                    <div className="lg:col-span-7 h-full">
+                        <div className="bg-white border border-gray-200 rounded-2xl p-6 h-full flex flex-col">
+                            {/* ── Step 2: Dịch vụ y tế ── */}
+                            <section className="flex-1 flex flex-col min-h-0">
+                                <div className="flex items-center justify-between gap-4 mb-5 shrink-0">
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="w-6 h-6 rounded-full bg-gray-900 text-white text-xs flex items-center justify-center font-semibold shrink-0">
+                                            3
+                                        </span>
+                                        <h2 className="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                                            {t('appointmentDetail.step2.heading')}
+                                        </h2>
+                                    </div>
+                                    <div className="relative max-w-xs w-full">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <Search className="h-4 w-4 text-gray-400" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Tìm kiếm dịch vụ..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="block w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary-50 focus:border-primary-500 transition-colors outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 min-h-0">
+                                    {loadingServices ? (
+                                        <p className="text-sm text-gray-400 text-center py-4">{t('step2.loading', { ns: 'receptionist' })}</p>
+                                    ) : filteredServices.length > 0 ? (
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
+                                            {Object.entries(
+                                                filteredServices.reduce((acc, service) => {
+                                                    const type = service.departmentType || 'OTHER';
+                                                    if (!acc[type]) acc[type] = [];
+                                                    acc[type].push(service);
+                                                    return acc;
+                                                }, {})
+                                            ).map(([type, services]) => (
+                                                <div key={type} className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col h-full overflow-hidden">
+                                                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 shrink-0">
+                                                        {DEPARTMENT_TYPE_LABELS[type] || type}
+                                                    </h3>
+                                                    <div className="divide-y divide-gray-200 flex-1 overflow-y-auto overflow-x-hidden pr-1 custom-scrollbar">
+                                                        {services.map(service => {
+                                                            const checked = selectedServiceIds.includes(service.id);
+                                                            return (
+                                                                <label
+                                                                    key={service.id}
+                                                                    className="flex items-start gap-3 py-2.5 cursor-pointer hover:bg-gray-100/50 rounded-lg px-2 -mx-2 transition-colors w-full"
+                                                                >
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={checked}
+                                                                        onChange={() => toggleService(service.id)}
+                                                                        className="mt-0.5 w-4 h-4 accent-primary-500 shrink-0 rounded border-gray-300"
+                                                                    />
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className={`text-sm font-medium break-words ${checked ? 'text-primary-600' : 'text-gray-900'}`}>
+                                                                            {service.name}
+                                                                        </p>
+                                                                    </div>
+                                                                    <span className="text-sm font-semibold text-gray-900 shrink-0 whitespace-nowrap pl-2">
+                                                                        {formatVND(service.price)}
+                                                                    </span>
+                                                                </label>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-400 py-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                            Không tìm thấy dịch vụ nào phù hợp
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Tổng tiền */}
+                                <div className="mt-6 pt-5 border-t border-gray-100 flex justify-between items-center shrink-0">
+                                    <p className="text-sm text-gray-500 font-medium">
+                                        {t('appointmentDetail.step2.total')} ({selectedServiceIds.length} dịch vụ)
+                                    </p>
+                                    <span className="text-xl font-bold text-gray-900">
+                                        {formatVND(totalCost)}
+                                    </span>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Error */}
@@ -514,11 +660,12 @@ export default function AppointmentDetailPage() {
                     <AppointmentConfirmModal
                         namespace="receptionist"
                         data={{
-                            fullName: isPatientEditable ? fullName : (appointment?.guestFullName || appointment?.fullName || ''),
-                            phone: isPatientEditable ? phone : (appointment?.guestPhone || appointment?.phone || ''),
-                            ageGender: `${isPatientEditable ? age : (appointment?.guestAge || appointment?.age || '')} / ${isPatientEditable ? (gender === 'male' ? 'Nam' : gender === 'female' ? 'Nữ' : 'Khác') : (GENDER_LABELS[appointment?.guestGender] || GENDER_LABELS[appointment?.gender] || '')}`,
+                            fullName: fullName,
+                            phone: phone,
+                            ageGender: `${age} / ${gender === 'male' ? 'Nam' : gender === 'female' ? 'Nữ' : 'Khác'}`,
+                            bhyt: insuranceId ? `${insurances?.find(i => i.insuranceId === insuranceId)?.name} - ${bhytCode}` : '',
                             email: appointment?.email || '',
-                            address: isPatientEditable ? address : (appointment?.guestAddress || appointment?.address || ''),
+                            address: address,
                             date: date ? new Date(date).toLocaleDateString('vi-VN') : '',
                             timeSlot: timeSlot === 'morning' ? t('appointmentDetail.step3.morning') : t('appointmentDetail.step3.afternoon'),
                             method: t('appointmentDetail.step3.morning'),

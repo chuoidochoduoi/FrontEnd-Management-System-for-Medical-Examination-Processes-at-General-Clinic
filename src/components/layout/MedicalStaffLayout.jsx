@@ -1,4 +1,4 @@
-// src/components/layout/MedicalStaffLayout.jsx
+﻿// src/components/layout/MedicalStaffLayout.jsx
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,7 @@ const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 export default function MedicalStaffLayout({ children }) {
     const { t } = useTranslation('doctor');
     const navigate = useNavigate();
-    const username = get('username') || 'Bác sĩ';
+    const username = get('username') || 'BĂ¡c sÄ©';
     const staffId = get('staffId');
     const systemRole = get('systemRole') || '';
     
@@ -23,7 +23,7 @@ export default function MedicalStaffLayout({ children }) {
             })
             .then(res => res.json())
             .then(data => {
-                // Tùy theo cấu trúc RestResponses của backend (thường là data.data)
+                // TĂ¹y theo cáº¥u trĂºc RestResponses cá»§a backend (thÆ°á»ng lĂ  data.data)
                 if (data.data) {
                     setStaffInfo(data.data);
                 } else {
@@ -38,12 +38,12 @@ export default function MedicalStaffLayout({ children }) {
     const getRoleName = () => {
         if (staffInfo) {
             if (staffInfo.specialization) return staffInfo.specialization.name;
-            if (systemRole === 'NURSE') return 'Y tá';
-            if (systemRole === 'RECEPTIONIST') return 'Lễ tân';
-            if (systemRole === 'GENERAL_DOCTOR') return 'Bác sĩ đa khoa';
-            if (systemRole === 'SPECIALIST_DOCTOR') return 'Bác sĩ chuyên khoa';
+            if (systemRole === 'NURSE') return 'Y tĂ¡';
+            if (systemRole === 'RECEPTIONIST') return 'Lá»… tĂ¢n';
+            if (systemRole === 'GENERAL_DOCTOR') return 'BĂ¡c sÄ© Ä‘a khoa';
+            if (systemRole === 'SPECIALIST_DOCTOR') return 'BĂ¡c sÄ© chuyĂªn khoa';
         }
-        return 'Nhân viên y tế';
+        return 'NhĂ¢n viĂªn y táº¿';
     };
 
     const handleLogout = () => {
@@ -55,7 +55,8 @@ export default function MedicalStaffLayout({ children }) {
 
     const mainNav = [
         { to: ROUTES.DOCTOR_ROOMS, icon: LayoutDashboard, label: t('sidebar.departments') },
-        { to: ROUTES.STAFF_SCHEDULE, icon: () => <span className="text-gray-500">📅</span>, label: 'Lịch trực của tôi' },
+        { to: ROUTES.STAFF_SCHEDULE, icon: () => <span className="text-gray-500">đŸ“…</span>, label: 'Lá»‹ch trá»±c cá»§a tĂ´i' },
+        { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Há»“ sÆ¡ cĂ¡ nhĂ¢n' },
     ];
 
     const linkClass = ({ isActive }) =>
@@ -95,7 +96,7 @@ export default function MedicalStaffLayout({ children }) {
                 <div className="px-2 py-3 border-t border-gray-100 space-y-0.5">
                     <NavLink to={ROUTES.SETTINGS} className={linkClass}>
                         <Settings size={15} className="shrink-0" />
-                        {t('sidebar.settings')}
+                        Cài đặt
                     </NavLink>
                     <button
                         onClick={handleLogout}
@@ -113,3 +114,5 @@ export default function MedicalStaffLayout({ children }) {
         </div>
     );
 }
+
+

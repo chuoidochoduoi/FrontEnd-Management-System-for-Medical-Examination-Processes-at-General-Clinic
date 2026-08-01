@@ -1,6 +1,7 @@
 // src/hooks/useRegister.js
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { ROUTES } from '@/constants/routes';
 import { validateRegister } from '@/validators/RegisterValidator.js';
 
@@ -21,11 +22,16 @@ export function useRegister() {
                 body: JSON.stringify({ phone }),
             });
 
-            if (!res.ok) throw new Error('Không thể gửi mã OTP. Vui lòng thử lại.');
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.message || 'Không thể gửi mã OTP. Vui lòng thử lại.');
+            }
 
             setOtpSent(true);
+            toast.success('Đã gửi mã OTP đến số điện thoại của bạn!');
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra');
+            toast.error(err.message || 'Lỗi gửi OTP');
         } finally {
             setLoadingSendOtp(false);
         }
@@ -46,14 +52,19 @@ export function useRegister() {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone, otp, password }),
+                body: JSON.stringify({ phone: phone.trim(), otp, password }),
             });
 
-            if (!res.ok) throw new Error('Đăng ký thất bại. Mã OTP không hợp lệ hoặc đã hết hạn.');
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.message || 'Đăng ký thất bại. Mã OTP không hợp lệ hoặc đã hết hạn.');
+            }
 
+            toast.success('Đăng ký tài khoản thành công! Vui lòng đăng nhập.');
             navigate(ROUTES.LOGIN);
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra');
+            toast.error(err.message || 'Đăng ký thất bại');
         } finally {
             setLoadingRegister(false);
         }

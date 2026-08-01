@@ -1,6 +1,7 @@
 // src/hooks/useAppointment.js
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { ROUTES } from '@/constants/routes';
 import { validateAppointment } from '@/validators/appointmentValidator';
 
@@ -38,11 +39,14 @@ export function useAppointment() {
         const fetchServices = async () => {
             setLoadingServices(true);
             try {
-                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services/available`);
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services/available?size=1000`);
                 if (!res.ok) throw new Error('Không thể tải danh sách dịch vụ.');
                 const data = await res.json();
+                
+                const rawList = Array.isArray(data) ? data : (data.content ?? []);
+                
                 // Map API response để component sử dụng được
-                const mappedServices = (data.content || []).map(s => ({
+                const mappedServices = rawList.map(s => ({
                     id: s.serviceId,
                     name: s.name,
                     description: s.description,
@@ -50,7 +54,7 @@ export function useAppointment() {
                     department: s.departmentName,
                     categoryName: s.categoryName,
                     durationMinutes: s.durationMinutes,
-                    serviceType: s.serviceType,
+                    departmentType: s.departmentType,
                 }));
                 setServices(mappedServices);
             } catch (err) {
@@ -102,16 +106,24 @@ export function useAppointment() {
                       serviceIds: formData.selectedServices.map(s => s.id),
                   };
 
-            // Chọn endpoint dựa trên trạng thái đăng nhập
-            const endpoint = isLoggedIn
-                ? `${import.meta.env.VITE_API_URL}/api/v1/appointments`
-                : `${import.meta.env.VITE_API_URL}/api/v1/appointments/guest`;
+            // Chọn endpoint và method dựa trên trạng thái đăng nhập và hành động
+            let endpoint = '';
+            let method = 'POST';
+            
+            if (formData.rescheduleApptId && isLoggedIn) {
+                endpoint = `${import.meta.env.VITE_API_URL}/api/v1/appointments/my/${formData.rescheduleApptId}`;
+                method = 'PUT';
+            } else if (isLoggedIn) {
+                endpoint = `${import.meta.env.VITE_API_URL}/api/v1/appointments`;
+            } else {
+                endpoint = `${import.meta.env.VITE_API_URL}/api/v1/appointments/guest`;
+            }
 
             // Debug log
-            console.log('Appointment API request:', { endpoint, isLoggedIn, customerId: formData.customerId, body });
+            console.log('Appointment API request:', { endpoint, method, isLoggedIn, customerId: formData.customerId, body });
 
             const res = await fetch(endpoint, {
-                method: 'POST',
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -121,12 +133,22 @@ export function useAppointment() {
 
             if (!res.ok) {
                 const errorText = await res.text().catch(() => '');
-                throw new Error(errorText || 'Đặt lịch thất bại. Vui lòng thử lại.');
+                let parsedMsg = errorText;
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    parsedMsg = errorJson.message || errorJson.error || errorText;
+                } catch (e) {
+                    // Not JSON, ignore
+                }
+                throw new Error(parsedMsg || 'Đặt lịch thất bại. Vui lòng thử lại.');
             }
 
-            navigate(ROUTES.PROFILE);
+            toast.success(formData.rescheduleApptId ? 'Đổi lịch thành công!' : 'Đặt lịch thành công! Chúng tôi sẽ liên hệ sớm nhất.');
+            return true;
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra.');
+            toast.error(err.message || 'Có lỗi xảy ra.');
+            return false;
         } finally {
             setLoading(false);
         }

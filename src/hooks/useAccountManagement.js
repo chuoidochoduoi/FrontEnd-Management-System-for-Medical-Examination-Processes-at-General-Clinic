@@ -39,7 +39,11 @@ export function useStaffList() {
             headers: { 'Content-Type': 'application/json', ...bearer() },
             body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error(t('accountManagement.errors.saveFailed'));
+        if (!res.ok) {
+            let msg = t('accountManagement.errors.saveFailed');
+            try { const errData = await res.json(); msg = errData.message || errData.error || msg; } catch(e){}
+            throw new Error(msg);
+        }
         return await res.json();
     };
 
@@ -54,7 +58,11 @@ export function useStaffList() {
             headers: { 'Content-Type': 'application/json', ...bearer() },
             body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error(t('accountManagement.errors.saveFailed'));
+        if (!res.ok) {
+            let msg = t('accountManagement.errors.saveFailed');
+            try { const errData = await res.json(); msg = errData.message || errData.error || msg; } catch(e){}
+            throw new Error(msg);
+        }
         await fetchStaff({ page });
     };
 
@@ -64,7 +72,11 @@ export function useStaffList() {
             headers: { 'Content-Type': 'application/json', ...bearer() },
             body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error(t('accountManagement.errors.saveFailed'));
+        if (!res.ok) {
+            let msg = t('accountManagement.errors.saveFailed');
+            try { const errData = await res.json(); msg = errData.message || errData.error || msg; } catch(e){}
+            throw new Error(msg);
+        }
         await fetchStaff({ page });
     };
 

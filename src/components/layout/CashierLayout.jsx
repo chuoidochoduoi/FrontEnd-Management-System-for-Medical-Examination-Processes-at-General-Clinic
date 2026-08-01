@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FileText, BarChart2, Printer, HelpCircle, LogOut, Users } from 'lucide-react';
+import { FileText, BarChart2, Printer, HelpCircle, LogOut, Users , Settings } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -54,12 +54,10 @@ export default function CashierLayout({ children }) {
         { to: ROUTES.CASHIER_INVOICES, icon: FileText,  label: t('sidebar.invoiceList') },
         { to: ROUTES.CASHIER_REPORT,   icon: BarChart2, label: t('sidebar.revenueReport') },
         { to: ROUTES.STAFF_SCHEDULE,   icon: () => <span className="text-gray-500">📅</span>, label: 'Lịch trực của tôi' },
+        { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
     ];
 
-    const bottomNav = [
-        { to: ROUTES.CASHIER_PRINTER, icon: Printer,    label: t('sidebar.printerConfig') },
-        { to: ROUTES.CASHIER_HELP,    icon: HelpCircle, label: t('sidebar.quickHelp') },
-    ];
+    
 
     const linkClass = ({ isActive }) =>
         `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
@@ -96,12 +94,11 @@ export default function CashierLayout({ children }) {
                 </nav>
 
                 <div className="px-2 py-3 border-t border-gray-100 space-y-0.5">
-                    {bottomNav.map(({ to, icon: Icon, label }) => (
-                        <NavLink key={to} to={to} className={linkClass}>
-                            <Icon size={15} className="shrink-0" />
-                            {label}
-                        </NavLink>
-                    ))}
+                    
+                    <NavLink to={ROUTES.SETTINGS} className={linkClass}>
+                        <Settings size={15} className="shrink-0" />
+                        Cài đặt
+                    </NavLink>
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
@@ -120,3 +117,5 @@ export default function CashierLayout({ children }) {
         </div>
     );
 }
+
+

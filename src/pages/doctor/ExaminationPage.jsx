@@ -77,12 +77,12 @@ function TagList({ items, labelKey = 'name', onRemove, codeKey }) {
                     key={item.code ?? item.id}
                     className="flex items-center justify-between px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm text-gray-700"
                 >
-          <span>
-            {codeKey && item[codeKey] && (
-                <span className="font-mono text-xs text-gray-400 mr-2">{item[codeKey]}</span>
-            )}
-              {item[labelKey]}
-          </span>
+                    <span>
+                        {codeKey && item[codeKey] && (
+                            <span className="font-mono text-xs text-gray-400 mr-2">{item[codeKey]}</span>
+                        )}
+                        {item[labelKey]}
+                    </span>
                     <button onClick={() => onRemove(item.code ?? item.id)} className="text-gray-300 hover:text-gray-600 ml-3 transition-colors">
                         <X size={13} />
                     </button>
@@ -103,14 +103,14 @@ export default function ExaminationPage() {
     const { ticket: examination, loading, error: loadError, reload } = useInProgressPatient(departmentId);
 
     // Local form state
-    const [symptoms,   setSymptoms]   = useState('');
+    const [symptoms, setSymptoms] = useState('');
     const [examResult, setExamResult] = useState('');
-    const [notes,      setNotes]      = useState('');
-    const [heartRate,   setHeartRate]   = useState('');
+    const [notes, setNotes] = useState('');
+    const [heartRate, setHeartRate] = useState('');
     const [bloodPressure, setBloodPressure] = useState('');
     const [temperature, setTemperature] = useState('');
-    const [height,      setHeight]      = useState('');
-    const [weight,      setWeight]      = useState('');
+    const [height, setHeight] = useState('');
+    const [weight, setWeight] = useState('');
 
     // Load dữ liệu từ medicalRecord khi examination thay đổi (quay lại từ xét nghiệm/...)
     useEffect(() => {
@@ -137,9 +137,9 @@ export default function ExaminationPage() {
         }
     }, [examination]);
 
-    const diagnosis    = useDiagnosis([]);
-    const referrals    = useTagSearch([], '/api/doctor/specialties');
-    const labOrders    = useTagSearch([], '/api/doctor/lab-tests');
+    const diagnosis = useDiagnosis([]);
+    const referrals = useTagSearch([], '/api/doctor/specialties');
+    const labOrders = useTagSearch([], '/api/doctor/lab-tests');
     const { services: labServices, loading: loadingLabServices } = useLabServices();
     const [labSelect, setLabSelect] = useState('');
 
@@ -362,7 +362,7 @@ export default function ExaminationPage() {
             );
             if (!res.ok) throw new Error(tDoctor('examination.errors.completeFailed'));
             toast.success('Hoàn thành khám thành công!');
-            setTimeout(() => navigate(ROUTES.DOCTOR_DEPARTMENTS), 1500);
+            setTimeout(() => navigate(ROUTES.DOCTOR_ROOMS), 1500);
         } catch (err) {
             setError(err.message || tDoctor('examination.errors.unknown'));
             toast.error(err.message || tDoctor('examination.errors.completeFailed'));
@@ -373,17 +373,17 @@ export default function ExaminationPage() {
 
     if (loading) {
         return (
-        <MedicalStaffLayout>
-            <p className="text-sm text-gray-400 text-center py-20">{tDoctor('examination.loading')}</p>
-        </MedicalStaffLayout>
+            <MedicalStaffLayout>
+                <p className="text-sm text-gray-400 text-center py-20">{tDoctor('examination.loading')}</p>
+            </MedicalStaffLayout>
         );
     }
 
     if (!examination) {
         return (
-        <MedicalStaffLayout>
-            <p className="text-sm text-gray-400 text-center py-20">Không có bệnh nhân nào đang khám.</p>
-        </MedicalStaffLayout>
+            <MedicalStaffLayout>
+                <p className="text-sm text-gray-400 text-center py-20">Không có bệnh nhân nào đang khám.</p>
+            </MedicalStaffLayout>
         );
     }
 
@@ -506,18 +506,17 @@ export default function ExaminationPage() {
                                 {testRequests.map((lab, i) => (
                                     <li key={i} className="text-sm text-gray-700 flex items-between gap-1.5">
                                         <span className="flex-1">{lab.serviceName || lab.testRequestId}</span>
-                                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                            lab.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                                        <span className={`text-xs px-2 py-0.5 rounded-full ${lab.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
                                             lab.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
-                                            lab.status === 'WAITING_FOR_RESULT' ? 'bg-purple-100 text-purple-700' :
-                                            lab.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
-                                            'bg-amber-100 text-amber-700'
-                                        }`}>
+                                                lab.status === 'WAITING_FOR_RESULT' ? 'bg-purple-100 text-purple-700' :
+                                                    lab.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                                                        'bg-amber-100 text-amber-700'
+                                            }`}>
                                             {lab.status === 'COMPLETED' ? 'Hoàn thành' :
-                                             lab.status === 'IN_PROGRESS' ? 'Đang xử lý' :
-                                             lab.status === 'WAITING_FOR_RESULT' ? 'Chờ kết quả' :
-                                             lab.status === 'CANCELLED' ? 'Đã hủy' :
-                                             'Chờ xử lý'}
+                                                lab.status === 'IN_PROGRESS' ? 'Đang xử lý' :
+                                                    lab.status === 'WAITING_FOR_RESULT' ? 'Chờ kết quả' :
+                                                        lab.status === 'CANCELLED' ? 'Đã hủy' :
+                                                            'Chờ xử lý'}
                                         </span>
                                         <button
                                             onClick={() => navigate(`${ROUTES.DOCTOR_LAB_DETAIL.replace(':id', lab.testRequestId)}`)}
@@ -621,52 +620,52 @@ export default function ExaminationPage() {
 
                         {showPrescription && (
                             <div className="space-y-2">
-                            {prescriptionItems.map(item => (
-                                <div key={item.id} className="border border-gray-100 rounded-lg p-3 grid grid-cols-[1fr_120px_80px_80px_80px_30px] gap-2 items-center">
-                                    <input
-                                        type="text"
-                                        value={item.name}
-                                        onChange={e => updatePrescription(item.id, 'name', e.target.value)}
-                                        placeholder="Tên thuốc..."
-                                        className="text-sm font-medium text-gray-900 border border-gray-200 rounded-lg px-2 py-1 focus:border-primary-500"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={item.note}
-                                        onChange={e => updatePrescription(item.id, 'note', e.target.value)}
-                                        placeholder="Liều dùng"
-                                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:border-primary-500"
-                                    />
-                                    <input
-                                        type="number"
-                                        value={item.quantity}
-                                        onChange={e => updatePrescription(item.id, 'quantity', e.target.value)}
-                                        placeholder="Số lượng"
-                                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-center focus:border-primary-500"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={item.unit}
-                                        onChange={e => updatePrescription(item.id, 'unit', e.target.value)}
-                                        placeholder="Đơn vị"
-                                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:border-primary-500"
-                                    />
-                                    <input
-                                        type="number"
-                                        value={item.frequencyPerDay}
-                                        onChange={e => updatePrescription(item.id, 'frequencyPerDay', e.target.value)}
-                                        placeholder="Sáng/Ngày"
-                                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-center focus:border-primary-500"
-                                    />
-                                    <button
-                                        onClick={() => removePrescription(item.id)}
-                                        className="text-gray-300 hover:text-red-500 transition-colors"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
+                                {prescriptionItems.map(item => (
+                                    <div key={item.id} className="border border-gray-100 rounded-lg p-3 grid grid-cols-[1fr_120px_80px_80px_80px_30px] gap-2 items-center">
+                                        <input
+                                            type="text"
+                                            value={item.name}
+                                            onChange={e => updatePrescription(item.id, 'name', e.target.value)}
+                                            placeholder="Tên thuốc..."
+                                            className="text-sm font-medium text-gray-900 border border-gray-200 rounded-lg px-2 py-1 focus:border-primary-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={item.note}
+                                            onChange={e => updatePrescription(item.id, 'note', e.target.value)}
+                                            placeholder="Liều dùng"
+                                            className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:border-primary-500"
+                                        />
+                                        <input
+                                            type="number"
+                                            value={item.quantity}
+                                            onChange={e => updatePrescription(item.id, 'quantity', e.target.value)}
+                                            placeholder="Số lượng"
+                                            className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-center focus:border-primary-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={item.unit}
+                                            onChange={e => updatePrescription(item.id, 'unit', e.target.value)}
+                                            placeholder="Đơn vị"
+                                            className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:border-primary-500"
+                                        />
+                                        <input
+                                            type="number"
+                                            value={item.frequencyPerDay}
+                                            onChange={e => updatePrescription(item.id, 'frequencyPerDay', e.target.value)}
+                                            placeholder="Sáng/Ngày"
+                                            className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-center focus:border-primary-500"
+                                        />
+                                        <button
+                                            onClick={() => removePrescription(item.id)}
+                                            className="text-gray-300 hover:text-red-500 transition-colors"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
                         )}
                     </div>
 

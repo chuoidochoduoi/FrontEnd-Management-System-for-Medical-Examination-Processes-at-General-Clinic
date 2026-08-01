@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import PatientLayout from '@/components/layout/CustomerLayout';
+import CancelConfirmModal from '@/components/ui/CancelConfirmModal';
 import { useAppointments } from '@/hooks/useAppointmentsCustomer';
 import { ROUTES } from '@/constants/routes';
 
@@ -43,6 +44,8 @@ export default function MyAppointmentsPage() {
     const { t }    = useTranslation('appointments');
     const navigate = useNavigate();
     const { appointments, loading, error, total, page, PAGE_SIZE, fetchAppointments, cancelAppointment } = useAppointments();
+    const [cancelApptId, setCancelApptId] = useState(null);
+    const [isCancelling, setIsCancelling] = useState(false);
 
     const [code,      setCode]      = useState('');
     const [specialty, setSpecialty] = useState('');
@@ -63,7 +66,7 @@ export default function MyAppointmentsPage() {
                 <div className="flex items-start justify-between">
                     <h1 className="text-sm font-bold text-gray-900 tracking-widest">{t('myAppointments.pageTitle')}</h1>
                     <button
-                        onClick={() => navigate(ROUTES.APPOINTMENT)}
+                        onClick={() => navigate(ROUTES.CUSTOMER_APPOINTMENT)}
                         className="px-5 h-9 bg-gray-900 hover:bg-gray-700 text-white text-xs font-semibold rounded-xl transition-colors tracking-wide">
                         {t('myAppointments.newBtn')}
                     </button>
@@ -76,12 +79,7 @@ export default function MyAppointmentsPage() {
 
                 {/* Filter */}
                 <div className="bg-white border border-gray-200 rounded-xl px-5 py-4 grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
-                    <div>
-                        <label className={labelCls}>{t('myAppointments.filter.code')}</label>
-                        <input value={code} onChange={e => setCode(e.target.value)}
-                               onKeyDown={e => e.key === 'Enter' && handleFilter()}
-                               placeholder={t('myAppointments.filter.codePlaceholder')} className={inputCls} />
-                    </div>
+                    {/* Removed Code Filter */}
                     <div>
                         <label className={labelCls}>{t('myAppointments.filter.specialty')}</label>
                         <select value={specialty} onChange={e => setSpecialty(e.target.value)} className={inputCls}>
@@ -109,40 +107,40 @@ export default function MyAppointmentsPage() {
                     <table className="w-full">
                         <thead className="border-b border-gray-100">
                         <tr>
-                            <th className={thCls}>{t('myAppointments.table.code')}</th>
                             <th className={thCls}>{t('myAppointments.table.dateTime')}</th>
                             <th className={thCls}>{t('myAppointments.table.specialty')}</th>
-                            <th className={thCls}>{t('myAppointments.table.queue')}</th>
                             <th className={thCls}>{t('myAppointments.table.status')}</th>
                             <th className={thCls}>{t('myAppointments.table.actions')}</th>
                         </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                         {loading && <tr><td colSpan={6} className="text-center py-12 text-sm text-gray-400">{t('myAppointments.loading')}</td></tr>}
-                        {!loading && error && <tr><td colSpan={6} className="text-center py-12 text-sm text-red-500">{error}</td></tr>}
+                        {!loading && error && <tr><td colSpan={4} className="text-center py-12 text-sm text-red-500">{error}</td></tr>}
                         {!loading && !error && appointments.length === 0 && (
-                            <tr><td colSpan={6} className="text-center py-12 text-sm text-gray-400">{t('myAppointments.noData')}</td></tr>
+                            <tr><td colSpan={4} className="text-center py-12 text-sm text-gray-400">{t('myAppointments.noData')}</td></tr>
                         )}
                         {!loading && appointments.map(appt => {
                             const stCfg   = STATUS_CFG[appt.status] ?? STATUS_CFG.upcoming;
-                            const isActive = appt.status === 'upcoming';
+                            
+                            let isPast = false;
+                            if (appt.date) {
+                                const [day, month, year] = appt.date.split('/');
+                                const apptDate = new Date(`${year}-${month}-${day}T00:00:00`);
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                if (apptDate <= today) isPast = true;
+                            }
+                            
+                            const isActive = appt.status === 'upcoming' && !isPast;
                             const isDone   = appt.status === 'completed';
                             return (
                                 <tr key={appt.id} className={`hover:bg-gray-50 transition-colors ${isDone ? 'opacity-50' : ''}`}>
-                                    <td className={tdCls}>
-                                        <span className={`font-bold ${isDone ? 'text-gray-400' : 'text-gray-900'}`}>{appt.code}</span>
-                                    </td>
                                     <td className={tdCls}>
                                         <p className={`font-semibold ${isDone ? 'text-gray-400' : 'text-gray-800'}`}>{appt.date}</p>
                                         <p className="text-xs text-gray-400 mt-0.5">{appt.timeWindow}</p>
                                         <p className="text-xs text-gray-400">({appt.shift})</p>
                                     </td>
                                     <td className={tdCls + (isDone ? ' text-gray-400' : ' text-gray-700')}>{appt.specialty}</td>
-                                    <td className={tdCls}>
-                                        {appt.queueNumber
-                                            ? <span className="text-sm font-mono text-gray-800">Queue Number: {appt.queueNumber}</span>
-                                            : <span className="text-xs text-gray-400 italic">{t('myAppointments.queueWaiting')}</span>}
-                                    </td>
                                     <td className={tdCls}>
                                         <span className={stCfg.cls}>{stCfg.label}</span>
                                     </td>
@@ -155,10 +153,7 @@ export default function MyAppointmentsPage() {
                                             </button>
                                             {isActive && (
                                                 <button
-                                                    onClick={async () => {
-                                                        try { await cancelAppointment(appt.id); }
-                                                        catch (e) { alert(e.message); }
-                                                    }}
+                                                    onClick={() => setCancelApptId(appt.id)}
                                                     className="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors text-left">
                                                     {t('myAppointments.cancelBtn')}
                                                 </button>
@@ -175,6 +170,23 @@ export default function MyAppointmentsPage() {
                     </div>
                 </div>
             </div>
+
+            <CancelConfirmModal 
+                isOpen={!!cancelApptId}
+                isLoading={isCancelling}
+                onClose={() => setCancelApptId(null)}
+                onConfirm={async () => {
+                    setIsCancelling(true);
+                    try { 
+                        await cancelAppointment(cancelApptId); 
+                        setCancelApptId(null);
+                    } catch (e) { 
+                        alert(e.message); 
+                    } finally {
+                        setIsCancelling(false);
+                    }
+                }}
+            />
         </PatientLayout>
     );
 }

@@ -34,6 +34,7 @@ export function useCreateTicket() {
                     price: s.price,
                     description: s.description,
                     departmentType: s.departmentType,
+                    capabilityName: s.requiredCapabilityName || '',
                 }));
                 setServices(mappedServices);
 
@@ -67,7 +68,8 @@ export function useCreateTicket() {
                     body: JSON.stringify(payload),
                 }
             );
-            if (!res.ok) throw new Error('Tạo phiếu thất bại. Vui lòng thử lại.');
+            const response = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(response?.message || response?.error || 'Tạo phiếu thất bại. Vui lòng thử lại.');
             toast.success('Tạo phiếu khám thành công!');
             setTimeout(() => navigate(ROUTES.RECEPTIONIST_CHECKIN), 1500);
         } catch (err) {

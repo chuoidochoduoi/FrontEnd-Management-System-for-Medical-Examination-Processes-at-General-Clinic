@@ -2,19 +2,21 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, Users, FolderOpen, Settings, LogOut, FlaskConical } from 'lucide-react';
+import { LayoutDashboard, UserRound, Stethoscope, Settings, LogOut, Users, CalendarDays, MessageSquare, Clock3 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
+import { useMyDepartment } from '@/hooks/useMyDepartment';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
 export default function MedicalStaffLayout({ children }) {
     const { t } = useTranslation('doctor');
     const navigate = useNavigate();
-    const username = get('username') || 'BĂ¡c sÄ©';
+    const username = get('username') || 'Bác sĩ';
     const staffId = get('staffId');
     const systemRole = get('systemRole') || '';
     
     const [staffInfo, setStaffInfo] = useState(null);
+    const { myDepartment } = useMyDepartment();
 
     useEffect(() => {
         if (staffId) {
@@ -38,12 +40,13 @@ export default function MedicalStaffLayout({ children }) {
     const getRoleName = () => {
         if (staffInfo) {
             if (staffInfo.specialization) return staffInfo.specialization.name;
-            if (systemRole === 'NURSE') return 'Y tĂ¡';
-            if (systemRole === 'RECEPTIONIST') return 'Lá»… tĂ¢n';
-            if (systemRole === 'GENERAL_DOCTOR') return 'BĂ¡c sÄ© Ä‘a khoa';
-            if (systemRole === 'SPECIALIST_DOCTOR') return 'BĂ¡c sÄ© chuyĂªn khoa';
+            if (systemRole === 'NURSE') return 'Y tá';
+            if (systemRole === 'RECEPTIONIST') return 'Lễ tân';
+            if (systemRole === 'DOCTOR') return 'Bác sĩ';
+            if (systemRole === 'GENERAL_DOCTOR') return 'Bác sĩ';
+            if (systemRole === 'SPECIALIST_DOCTOR') return 'Bác sĩ';
         }
-        return 'NhĂ¢n viĂªn y táº¿';
+        return 'Nhân viên y tế';
     };
 
     const handleLogout = () => {
@@ -55,8 +58,12 @@ export default function MedicalStaffLayout({ children }) {
 
     const mainNav = [
         { to: ROUTES.DOCTOR_ROOMS, icon: LayoutDashboard, label: t('sidebar.departments') },
-        { to: ROUTES.STAFF_SCHEDULE, icon: () => <span className="text-gray-500">đŸ“…</span>, label: 'Lá»‹ch trá»±c cá»§a tĂ´i' },
-        { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Há»“ sÆ¡ cĂ¡ nhĂ¢n' },
+        { to: ROUTES.STAFF_SCHEDULE, icon: CalendarDays, label: 'Lịch trực của tôi' },
+        { to: ROUTES.STAFF_ATTENDANCE, icon: Clock3, label: 'Điểm danh' },
+        { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
+        ...(['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)
+            ? [{ to: ROUTES.DOCTOR_FEEDBACKS, icon: MessageSquare, label: 'Đánh giá liên quan' }]
+            : []),
     ];
 
     const linkClass = ({ isActive }) =>
@@ -76,12 +83,19 @@ export default function MedicalStaffLayout({ children }) {
                 {/* Avatar */}
                 <div className="px-4 py-4 border-b border-gray-100">
                     <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
-                        <Users className="text-blue-500 w-6 h-6" />
+                        {systemRole === 'NURSE'
+                            ? <UserRound className="text-blue-500 w-6 h-6" />
+                            : <Stethoscope className="text-blue-500 w-6 h-6" />}
                     </div>
                     <p className="text-xs font-semibold text-gray-800 break-words">
                         {staffInfo?.profile?.fullName || username}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">{getRoleName()}</p>
+                    {myDepartment && (
+                        <p className="text-[11px] text-primary-600 mt-1 font-medium">
+                            Phòng {myDepartment.roomCode || '—'} · {myDepartment.name}
+                        </p>
+                    )}
                 </div>
 
                 <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">

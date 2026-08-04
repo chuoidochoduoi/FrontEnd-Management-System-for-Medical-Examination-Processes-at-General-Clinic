@@ -14,9 +14,8 @@ const formatVND = (amount) =>
 const GENDER_LABELS = { MALE: 'Nam', FEMALE: 'Nữ', OTHER: 'Khác' };
 const GENDER_VALUES = { male: 'MALE', female: 'FEMALE', other: 'OTHER' };
 const DEPARTMENT_TYPE_LABELS = {
-    'CLINICAL': 'Khám lâm sàng',
-    'LABORATORY': 'Xét nghiệm',
-    'IMAGING': 'Chẩn đoán hình ảnh',
+    'EXAMINATION': 'Khám bệnh',
+    'PARACLINICAL': 'Cận lâm sàng',
     'OTHER': 'Dịch vụ khác'
 };
 
@@ -116,10 +115,17 @@ export default function AppointmentDetailPage() {
                 );
                 if (!res.ok) throw new Error('Không thể tải thông tin lịch hẹn.');
                 const data = await res.json();
-                setAppointment(data);
+                const normalized = {
+                    ...data,
+                    services: (data.services || []).map(service => ({
+                        ...service,
+                        id: service.id || service.serviceId,
+                    })),
+                };
+                setAppointment(normalized);
 
                 // Set selected service IDs from appointment
-                const serviceIds = (data.services || []).map(s => s.id || s.serviceId);
+                const serviceIds = normalized.services.map(s => s.id).filter(Boolean);
                 setSelectedServiceIds(serviceIds);
 
                 // Populate other form states
@@ -159,6 +165,7 @@ export default function AppointmentDetailPage() {
                     price: s.price,
                     description: s.description,
                     departmentType: s.departmentType,
+                    capabilityName: s.requiredCapabilityName || '',
                 }));
                 setAllServices(mappedServices);
             } catch (err) {
@@ -192,7 +199,7 @@ export default function AppointmentDetailPage() {
                 guestAddress: address,
                 guestAge: Number(age),
                 guestGender: GENDER_VALUES[gender],
-                scheduledAt: date ? `${date}T09:00:00` : null,
+                scheduledAt: date ? `${date}T${timeSlot === 'afternoon' ? '14:00:00' : '09:00:00'}` : null,
                 timeSlot: timeSlot?.toUpperCase(),
                 serviceIds: selectedServiceIds,
             };
@@ -221,7 +228,13 @@ export default function AppointmentDetailPage() {
     const handleCheckIn = async () => {
         if (!appointment) return;
         const status = appointment.status?.toString().toUpperCase() || '';
-        if (status !== 'PENDING') return;
+        if (status !== 'PENDING') {
+            setError(status === 'CHECKED_IN'
+                ? 'Lịch hẹn này đã được check-in.'
+                : 'Chỉ có thể check-in lịch hẹn đang chờ tiếp nhận.');
+            setShowConfirmModal(false);
+            return;
+        }
         setCheckingIn(true);
         setError('');
         try {
@@ -242,11 +255,13 @@ export default function AppointmentDetailPage() {
                     body: JSON.stringify(body),
                 }
             );
-            if (!res.ok) throw new Error('Check-in thất bại. Vui lòng thử lại.');
+            const result = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(result?.message || result?.error || 'Check-in thất bại. Vui lòng thử lại.');
             toast.success('Nhận bệnh thành công!');
             navigate(ROUTES.RECEPTIONIST_CHECKIN);
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra.');
+            toast.error(err.message || 'Không thể check-in bệnh nhân.');
         } finally {
             setCheckingIn(false);
             setShowConfirmModal(false);
@@ -264,6 +279,16 @@ export default function AppointmentDetailPage() {
             }
             if (!phone.trim()) {
                 setError('Vui lòng nhập số điện thoại.');
+                setShowConfirmModal(false);
+                return;
+            }
+            if (!/^(\+84|0)\d{9,10}$/.test(phone.trim())) {
+                setError('Số điện thoại Việt Nam không hợp lệ.');
+                setShowConfirmModal(false);
+                return;
+            }
+            if (date && date < new Date().toISOString().slice(0, 10)) {
+                setError('Ngày hẹn không được nằm trong quá khứ.');
                 setShowConfirmModal(false);
                 return;
             }
@@ -571,12 +596,12 @@ export default function AppointmentDetailPage() {
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
                                             {Object.entries(
                                                 filteredServices.reduce((acc, service) => {
-                                                    const type = service.departmentType || 'OTHER';
+                                                    const type = service.departmentType === 'EXAMINATION' ? 'EXAMINATION' : 'PARACLINICAL';
                                                     if (!acc[type]) acc[type] = [];
                                                     acc[type].push(service);
                                                     return acc;
                                                 }, {})
-                                            ).map(([type, services]) => (
+                                            ).sort(([a], [b]) => a === 'EXAMINATION' ? -1 : b === 'EXAMINATION' ? 1 : 0).map(([type, services]) => (
                                                 <div key={type} className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col h-full overflow-hidden">
                                                     <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 shrink-0">
                                                         {DEPARTMENT_TYPE_LABELS[type] || type}
@@ -599,6 +624,7 @@ export default function AppointmentDetailPage() {
                                                                         <p className={`text-sm font-medium break-words ${checked ? 'text-primary-600' : 'text-gray-900'}`}>
                                                                             {service.name}
                                                                         </p>
+                                                                        {type === 'PARACLINICAL' && service.capabilityName && <p className="text-xs text-gray-500 mt-0.5">{service.capabilityName}</p>}
                                                                     </div>
                                                                     <span className="text-sm font-semibold text-gray-900 shrink-0 whitespace-nowrap pl-2">
                                                                         {formatVND(service.price)}
@@ -677,6 +703,7 @@ export default function AppointmentDetailPage() {
                         }}
                         onClose={() => setShowConfirmModal(false)}
                         onConfirm={handleConfirm}
+                        isLoading={saving || checkingIn}
                     />
                 )}
 

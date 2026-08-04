@@ -74,7 +74,9 @@
       "specialty": "Chuyên khoa",
       "status": "Trạng thái",
       "statusDone": "HOÀN THÀNH",
-      "statusUpcoming": "SẮP DIỄN RA"
+      "statusUpcoming": "SẮP DIỄN RA",
+      "statusCancelled": "ĐÃ HỦY",
+      "statusCheckedIn": "ĐÃ CHECK-IN"
     },
     "loading": "Đang tải hồ sơ...",
     "errors": {

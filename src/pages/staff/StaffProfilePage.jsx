@@ -89,6 +89,8 @@ export default function StaffProfilePage() {
                         gender: staffData.profile?.gender || '',
                         dateOfBirth: staffData.profile?.dateOfBirth || '',
                         address: staffData.profile?.address || '',
+                        highestDegree: staffData.highestDegree || '',
+                        university: staffData.university || '',
                     });
                 } else if (staffRes.status === 404) {
                     // Not found or not a staff, that's fine
@@ -175,6 +177,12 @@ export default function StaffProfilePage() {
     };
 
     const handleSaveProfile = async () => {
+        if (!editForm.fullName?.trim()) return toast.error('Vui lòng nhập họ và tên');
+        if (!/^(\+84|0)\d{9,10}$/.test(editForm.phone?.trim() || '')) return toast.error('Số điện thoại Việt Nam không hợp lệ');
+        if (editForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email.trim())) return toast.error('Email không hợp lệ');
+        if (!editForm.gender) return toast.error('Vui lòng chọn giới tính');
+        if (!editForm.dateOfBirth || new Date(editForm.dateOfBirth) >= new Date()) return toast.error('Ngày sinh phải là ngày hợp lệ trong quá khứ');
+        if (editForm.address?.length > 255) return toast.error('Địa chỉ không được vượt quá 255 ký tự');
         setSaving(true);
         try {
             const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -187,11 +195,25 @@ export default function StaffProfilePage() {
                 body: JSON.stringify(editForm)
             });
             if (!res.ok) throw new Error('Cập nhật hồ sơ thất bại');
-            
-            // Cập nhật state local
             const updatedProfile = await res.json();
+
+            const professionalRes = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/me/professional`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    highestDegree: editForm.highestDegree?.trim() || null,
+                    university: editForm.university?.trim() || null
+                })
+            });
+            if (!professionalRes.ok) throw new Error('Cập nhật học vị và trường đào tạo thất bại');
+            const updatedStaff = await professionalRes.json();
+
             setProfile(prev => ({
                 ...prev,
+                ...updatedStaff,
                 profile: updatedProfile
             }));
             
@@ -358,16 +380,20 @@ export default function StaffProfilePage() {
                                 </div>
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Học Vị</label>
-                                <div className="px-4 py-2.5 bg-gray-100 border border-gray-100 rounded-lg text-gray-600 text-sm opacity-80 cursor-not-allowed">
-                                    {profile?.highestDegree || 'Chưa cập nhật'}
-                                </div>
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Học vị (không bắt buộc)</label>
+                                {editing ? (
+                                    <input value={editForm.highestDegree || ''} onChange={e => setEditForm(p => ({...p, highestDegree: e.target.value}))} className={inputCls} placeholder="Ví dụ: Bác sĩ chuyên khoa I, Thạc sĩ" maxLength={100} />
+                                ) : (
+                                    <div className="px-4 py-2.5 bg-white border border-gray-100 rounded-lg text-gray-800 text-sm">{profile?.highestDegree || 'Chưa cập nhật'}</div>
+                                )}
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Trường Đào Tạo</label>
-                                <div className="px-4 py-2.5 bg-gray-100 border border-gray-100 rounded-lg text-gray-600 text-sm opacity-80 cursor-not-allowed">
-                                    {profile?.university || 'Chưa cập nhật'}
-                                </div>
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Trường đào tạo (không bắt buộc)</label>
+                                {editing ? (
+                                    <input value={editForm.university || ''} onChange={e => setEditForm(p => ({...p, university: e.target.value}))} className={inputCls} placeholder="Tên trường đào tạo" maxLength={200} />
+                                ) : (
+                                    <div className="px-4 py-2.5 bg-white border border-gray-100 rounded-lg text-gray-800 text-sm">{profile?.university || 'Chưa cập nhật'}</div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -384,7 +410,7 @@ export default function StaffProfilePage() {
         Layout = OwnerLayout;
     } else if (systemRole === 'CASHIER') {
         Layout = CashierLayout;
-    } else if (['GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'NURSE'].includes(systemRole)) {
+    } else if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'NURSE'].includes(systemRole)) {
         Layout = MedicalStaffLayout;
     }
 

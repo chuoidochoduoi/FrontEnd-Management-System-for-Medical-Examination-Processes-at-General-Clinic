@@ -6,6 +6,7 @@ import { Receipt, CreditCard, Banknote, Landmark, Download } from 'lucide-react'
 import PatientLayout from '@/components/layout/CustomerLayout';
 import { usePaymentHistory } from '@/hooks/usePaymentHistory';
 import { ROUTES } from '@/constants/routes';
+import { toast } from 'react-toastify';
 
 const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + ' đ' : '—';
 
@@ -48,7 +49,13 @@ export default function PaymentHistoryPage() {
 
     useEffect(() => { fetchInvoices(); }, []);
 
-    const handleSearch = () => fetchInvoices({ fromDate, toDate, method, page: 0 });
+    const handleSearch = () => {
+        if (fromDate && toDate && fromDate > toDate) {
+            toast.error('Ngày bắt đầu không được sau ngày kết thúc');
+            return;
+        }
+        fetchInvoices({ fromDate, toDate, method, page: 0 });
+    };
     const handlePage   = (p) => fetchInvoices({ fromDate, toDate, method, page: p - 1 }); // Frontend 1-based → backend 0-based
 
     const thCls = 'text-xs font-medium text-gray-400 text-left px-4 py-3';

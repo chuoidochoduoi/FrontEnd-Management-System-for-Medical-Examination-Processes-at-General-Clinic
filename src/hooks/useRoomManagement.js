@@ -1,6 +1,7 @@
 // src/hooks/useRoomManagement.js
 import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
@@ -13,11 +14,10 @@ const STATUS_MAP = {
     MAINTENANCE: 'maintenance',
 };
 
-// Map room types to DepartmentType enum (backend only supports EXAMINATION, LABORATORY, IMAGING)
+// Phòng chỉ có 2 nhóm; kỹ thuật cụ thể được cấu hình bằng capability.
 const ROOM_TO_DEPT_TYPE = {
     examination: 'EXAMINATION',
-    lab: 'LABORATORY',
-    imaging: 'IMAGING',
+    paraclinical: 'PARACLINICAL',
     reception: 'EXAMINATION',  // Map to EXAMINATION if backend doesn't support
     cashier: 'EXAMINATION',    // Map to EXAMINATION if backend doesn't support
 };
@@ -25,8 +25,9 @@ const ROOM_TO_DEPT_TYPE = {
 // Map DepartmentType to room type for display
 const DEPT_TO_ROOM_TYPE = {
     EXAMINATION: 'examination',
-    LABORATORY: 'lab',
-    IMAGING: 'imaging',
+    PARACLINICAL: 'paraclinical',
+    LABORATORY: 'paraclinical',
+    IMAGING: 'paraclinical',
     RECEPTION: 'reception',
     CASHIER: 'cashier',
 };
@@ -34,8 +35,7 @@ const DEPT_TO_ROOM_TYPE = {
 // Map room types to department type for API filter (array of types)
 const ROOM_TYPE_TO_DEPT_TYPES = {
     examination: ['EXAMINATION'],
-    lab: ['LABORATORY'],
-    imaging: ['IMAGING'],
+    paraclinical: ['PARACLINICAL', 'LABORATORY', 'IMAGING'],
 };
 
 export function useRoomManagement() {
@@ -93,7 +93,11 @@ export function useRoomManagement() {
                 status: STATUS_MAP[d.status] || 'available',
                 doctor: d.headDoctor?.fullName || '',
                 headDoctorId: d.headDoctor?.staffId || null,
+                specializationId: d.specializationId || null,
+                specializationName: d.specializationName || '',
                 nurses: d.nurses || [],
+                capabilityIds: (d.capabilities || []).map(c => c.capabilityId),
+                capabilities: d.capabilities || [],
                 equipment: d.description || '',
             }));
 
@@ -129,7 +133,9 @@ export function useRoomManagement() {
             status: 'AVAILABLE',
             description: payload.description || payload.doctor || '',
             headDoctorId: payload.doctorId || payload.headDoctorId || null,
+            specializationId: payload.specializationId || null,
             nurseIds: payload.nurseIds || [],
+            capabilityIds: payload.capabilityIds || [],
         };
 
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/departments`, {
@@ -137,7 +143,10 @@ export function useRoomManagement() {
             headers: { 'Content-Type': 'application/json', ...bearer() },
             body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error(t('roomManagement.errors.saveFailed'));
+        if (!res.ok) {
+            const data = await res.json().catch(() => null);
+            throw new Error(data?.message || data?.error || t('roomManagement.errors.saveFailed'));
+        }
         fetchRooms();
     };
 
@@ -169,13 +178,20 @@ export function useRoomManagement() {
         if (payload.nurseIds !== undefined) {
             body.nurseIds = payload.nurseIds;
         }
+        if (payload.specializationId !== undefined) {
+            body.specializationId = payload.specializationId || null;
+        }
+        if (payload.capabilityIds !== undefined) body.capabilityIds = payload.capabilityIds;
 
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/departments/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', ...bearer() },
             body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error(t('roomManagement.errors.saveFailed'));
+        if (!res.ok) {
+            const data = await res.json().catch(() => null);
+            throw new Error(data?.message || data?.error || t('roomManagement.errors.saveFailed'));
+        }
         fetchRooms();
     };
 
@@ -202,6 +218,7 @@ export function useRoomManagement() {
         });
         if (!res.ok) throw new Error(t('roomManagement.errors.saveFailed'));
         fetchRooms();
+        toast.success('Cập nhật trạng thái phòng thành công!');
     };
 
     // Fetch doctors for department head selection

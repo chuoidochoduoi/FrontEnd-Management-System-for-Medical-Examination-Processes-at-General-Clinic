@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
+import { toast } from 'react-toastify';
 
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
@@ -68,11 +69,17 @@ export function useInvoiceDetail(invoiceId) {
                 `${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}/pay`,
                 { method: 'POST', headers: bearer() }
             );
-            if (!res.ok) throw new Error(t('invoiceDetail.errors.payFailed'));
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                if (res.status === 409) setInvoice(prev => prev ? { ...prev, status: 'paid' } : null);
+                throw new Error(body.message || t('invoiceDetail.errors.payFailed'));
+            }
             setInvoice(prev => prev ? { ...prev, status: 'paid' } : null);
+            toast.success('Thanh toán hóa đơn thành công!');
             setTimeout(() => navigate(ROUTES.CASHIER_INVOICES), 1000);
         } catch (err) {
             setError(err.message || t('invoiceDetail.errors.unknown'));
+            toast.error(err.message || t('invoiceDetail.errors.payFailed'));
         } finally {
             setConfirming(false);
         }

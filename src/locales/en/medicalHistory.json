@@ -55,6 +55,24 @@
     "errors": {
       "loadFailed": "Cannot load visit details.",
       "unknown": "An error occurred."
+    },
+    "feedback": {
+      "title": "RATINGS & RESPONSES",
+      "ratingLabel": "Rating",
+      "ratingDate": "Rated on",
+      "commentLabel": "Your feedback",
+      "noComment": "No comments",
+      "responseLabel": "Clinic response",
+      "noResponse": "No response yet",
+      "responseDate": "Responded on",
+      "doctorExplanation": "Doctor's explanation",
+      "contactRequested": "You requested a follow-up contact",
+      "statusNew": "New",
+      "statusInReview": "In review",
+      "statusProcessing": "Processing",
+      "statusResponded": "Responded",
+      "statusWaitingInternal": "Pending internal",
+      "statusClosed": "Closed"
     }
   }
 }

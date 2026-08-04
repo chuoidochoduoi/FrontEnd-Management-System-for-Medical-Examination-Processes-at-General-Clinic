@@ -34,8 +34,9 @@ function useAuth() {
         if (role === 'CUSTOMER') return 'Bệnh nhân';
         if (role === 'STAFF' && systemRole) {
             const roleLabels = {
-                GENERAL_DOCTOR: 'Bác sĩ đa khoa',
-                SPECIALIST_DOCTOR: 'Bác sĩ chuyên khoa',
+                DOCTOR: 'Bác sĩ',
+                GENERAL_DOCTOR: 'Bác sĩ',
+                SPECIALIST_DOCTOR: 'Bác sĩ',
                 NURSE: 'Y tá',
                 RECEPTIONIST: 'Lễ tân',
                 CASHIER: 'Thu ngân',

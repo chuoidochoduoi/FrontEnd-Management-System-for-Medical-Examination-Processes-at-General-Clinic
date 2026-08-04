@@ -77,60 +77,15 @@ export default function ProfilePage() {
     const [email,      setEmail]      = useState('');
     const [address,    setAddress]    = useState('');
     const [bloodType,  setBloodType]  = useState('');
-    const [insuranceId,setInsuranceId]= useState('');
     const [height,     setHeight]     = useState('');
     const [weight,     setWeight]     = useState('');
     const [allergies,  setAllergies]  = useState([]);
 
-    // BHYT states
-    const [insurancesList, setInsurancesList] = useState([]);
+    // BHYT (bảo hiểm y tế) — READ-ONLY cho khách hàng
+    // Chỉ có lễ tân mới được nhập/sửa BHYT qua luồng check-in.
+    // Khách hàng chỉ có thể xem giá trị đã có, không thể tự thêm hoặc sửa.
+    // bhytCode chỉ được load từ profile để gửi lại khi lưu (giữ nguyên giá trị hiện tại).
     const [bhytCode, setBhytCode] = useState('');
-    const [bhytChecked, setBhytChecked] = useState(false);
-    const [bhytName, setBhytName] = useState('');
-    const [loadingBhyt, setLoadingBhyt] = useState(false);
-
-    // Fetch danh sách bảo hiểm
-    useEffect(() => {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        fetch(`${import.meta.env.VITE_API_URL}/api/v1/insurances`, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
-            .then(r => r.ok ? r.json() : [])
-            .then(data => setInsurancesList(Array.isArray(data) ? data : []))
-            .catch(() => {});
-    }, []);
-
-    const checkBhyt = async (codeOverride, idOverride) => {
-        const code = codeOverride ?? bhytCode;
-        const insId = idOverride ?? insuranceId;
-        if (!insId) { toast.error('Vui lòng chọn Loại bảo hiểm trước'); return; }
-        if (!code || code.length < 5) { toast.error('Vui lòng nhập mã thẻ hợp lệ (tối thiểu 5 ký tự)'); return; }
-        setLoadingBhyt(true);
-        try {
-            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/bhyt/check?cardNumber=${code}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const result = await res.json();
-            if (result.isValid) {
-                if (result.insuranceId !== insId) {
-                    toast.error(`Mã thẻ thuộc về ${result.insuranceName}, không khớp với loại bạn chọn!`);
-                    setBhytChecked(false);
-                    return;
-                }
-                setBhytChecked(true);
-                setBhytName(result.fullName || '');
-                toast.success(`Thẻ bảo hiểm hợp lệ – ${result.fullName}`);
-            } else {
-                setBhytChecked(false);
-                toast.error(result.message || 'Mã thẻ không hợp lệ!');
-            }
-        } catch {
-            toast.error('Lỗi kết nối khi tra cứu thẻ bảo hiểm');
-        } finally {
-            setLoadingBhyt(false);
-        }
-    };
 
     const formatDateForInput = (dateStr) => {
         if (!dateStr) return '';
@@ -150,13 +105,18 @@ export default function ProfilePage() {
         setEmail(profile.email           ?? '');
         setAddress(profile.address       ?? '');
         setBloodType((profile.bloodType  ?? '').toUpperCase());
-        setInsuranceId(profile.insuranceId ?? '');
+        setBhytCode(profile.insuranceId ?? '');
         setHeight(profile.height         ?? '');
         setWeight(profile.weight         ?? '');
         setAllergies(profile.allergies   ?? []);
     }, [profile]);
 
     const handleSave = async () => {
+        const validationError = validateProfileFields();
+        if (validationError) {
+            toast.error(validationError);
+            return;
+        }
         const ok = await saveProfile({ 
             fullName, 
             dateOfBirth: dob, 
@@ -164,9 +124,18 @@ export default function ProfilePage() {
             phone, 
             email: email || null, 
             address: address || null, 
-            bloodType: bloodType || null 
+            bloodType: bloodType || null,
+            insuranceId: bhytCode || null,
+            height: height ? Number(height) : null,
+            weight: weight ? Number(weight) : null,
+            allergies
         });
-        if (ok) setEditing(false);
+        if (ok) {
+            toast.success('Cập nhật hồ sơ thành công!');
+            setEditing(false);
+        } else {
+            toast.error('Không thể cập nhật hồ sơ. Vui lòng kiểm tra lại thông tin.');
+        }
     };
 
     const handleCancel = () => {
@@ -178,7 +147,7 @@ export default function ProfilePage() {
         setEmail(profile.email           ?? '');
         setAddress(profile.address       ?? '');
         setBloodType((profile.bloodType  ?? '').toUpperCase());
-        setInsuranceId(profile.insuranceId ?? '');
+        setBhytCode(profile.insuranceId ?? '');
         setHeight(profile.height         ?? '');
         setWeight(profile.weight         ?? '');
         setAllergies(profile.allergies   ?? []);
@@ -256,8 +225,22 @@ export default function ProfilePage() {
         if (!fullName.trim()) errs.fullName = 'Vui lòng nhập họ và tên';
         if (!dob || dob.length !== 10) errs.dob = 'Vui lòng chọn đầy đủ ngày sinh';
         if (!gender) errs.gender = 'Vui lòng chọn giới tính';
+        if (phone && !/^(\+84|0)\d{9,10}$/.test(phone.trim())) errs.phone = 'Số điện thoại Việt Nam không hợp lệ';
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'Email không hợp lệ';
+        if (address && address.length > 255) errs.address = 'Địa chỉ không được vượt quá 255 ký tự';
         setOnboardingErrors(errs);
+        if (Object.keys(errs).length > 0) toast.error(Object.values(errs)[0]);
         return Object.keys(errs).length === 0;
+    };
+
+    const validateProfileFields = () => {
+        if (!fullName.trim() || fullName.trim().length < 2) return 'Họ tên phải có ít nhất 2 ký tự';
+        if (!dob || Number.isNaN(new Date(dob).getTime()) || new Date(dob) >= new Date()) return 'Ngày sinh phải là ngày hợp lệ trong quá khứ';
+        if (!gender) return 'Vui lòng chọn giới tính';
+        if (!/^(\+84|0)\d{9,10}$/.test(phone.trim())) return 'Số điện thoại Việt Nam không hợp lệ';
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Email không hợp lệ';
+        if (address && address.trim().length > 255) return 'Địa chỉ không được vượt quá 255 ký tự';
+        return '';
     };
 
     const handleOnboardingSave = async () => {
@@ -271,7 +254,10 @@ export default function ProfilePage() {
             email: email || null, 
             address: address || null, 
             bloodType: bloodType || null, 
-            insuranceId: insuranceId || null 
+            insuranceId: bhytCode || null,
+            height: height ? Number(height) : null,
+            weight: weight ? Number(weight) : null,
+            allergies
         });
         setOnboardingSaving(false);
         if (ok) {
@@ -354,7 +340,6 @@ export default function ProfilePage() {
                                         <option value="">Chọn giới tính</option>
                                         <option value="MALE">{t('profile.personalInfo.genderOptions.male')}</option>
                                         <option value="FEMALE">{t('profile.personalInfo.genderOptions.female')}</option>
-                                        <option value="OTHER">{t('profile.personalInfo.genderOptions.other')}</option>
                                     </select>
                                     {onboardingErrors.gender && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{onboardingErrors.gender}</p>}
                                 </div>
@@ -442,52 +427,14 @@ export default function ProfilePage() {
                                     </select>
                                 </div>
 
-                                {/* Bảo hiểm y tế */}
+                                {/* Bảo hiểm y tế — chỉ lễ tân được nhập */}
                                 <div className="md:col-span-2">
                                     <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
                                         <Shield className="w-3.5 h-3.5 text-green-500" />
                                         Bảo hiểm y tế (BHYT)
                                     </label>
-                                    <div className="space-y-3">
-                                        {/* Bước 1: Chọn loại */}
-                                        <select
-                                            value={insuranceId}
-                                            onChange={e => { setInsuranceId(e.target.value); setBhytChecked(false); setBhytName(''); }}
-                                            className="w-full h-12 px-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 bg-white transition-all duration-200"
-                                        >
-                                            <option value="">Chọn loại bảo hiểm...</option>
-                                            {insurancesList.map(ins => (
-                                                <option key={ins.insuranceId} value={ins.insuranceId}>{ins.name}</option>
-                                            ))}
-                                        </select>
-                                        {/* Bước 2: Nhập mã + kiểm tra */}
-                                        {insuranceId && (
-                                            <div className="flex gap-2">
-                                                <input
-                                                    type="text"
-                                                    value={bhytCode}
-                                                    onChange={e => { setBhytCode(e.target.value); setBhytChecked(false); setBhytName(''); }}
-                                                    placeholder="Nhập mã thẻ BHYT..."
-                                                    className="flex-1 h-12 px-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 bg-white transition-all duration-200"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => checkBhyt()}
-                                                    disabled={loadingBhyt || !bhytCode}
-                                                    className="h-12 px-4 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl flex items-center gap-2 shrink-0 transition-all"
-                                                >
-                                                    {loadingBhyt ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-                                                    Kiểm tra
-                                                </button>
-                                            </div>
-                                        )}
-                                        {/* Kết quả */}
-                                        {bhytChecked && bhytName && (
-                                            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
-                                                <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
-                                                <p className="text-sm font-medium text-green-800">Hợp lệ – {bhytName}</p>
-                                            </div>
-                                        )}
+                                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-500">
+                                        Chỉ có lễ tân mới được nhập bảo hiểm y tế. Vui lòng liên hệ lễ tân để cập nhật.
                                     </div>
                                 </div>
                             </div>
@@ -675,7 +622,6 @@ export default function ProfilePage() {
                                                 <option value="" />
                                                 <option value="MALE">{t('profile.personalInfo.genderOptions.male')}</option>
                                                 <option value="FEMALE">{t('profile.personalInfo.genderOptions.female')}</option>
-                                                <option value="OTHER">{t('profile.personalInfo.genderOptions.other')}</option>
                                             </select>
                                         )
                                         : <p className={fieldValue}>{genderLabel(gender)}</p>}
@@ -732,56 +678,15 @@ export default function ProfilePage() {
                                         )
                                         : <p className={fieldValue}>{bloodTypeLabel(bloodType)}</p>}
                                 </div>
-                                {/* Bảo hiểm */}
+                                {/* Bảo hiểm y tế — chỉ lễ tân được nhập */}
                                 <div className="md:col-span-2">
                                     <div className={fieldLabel}>
                                         <Shield className="w-3.5 h-3.5 text-green-500" />
                                         <span>Bảo hiểm y tế (BHYT)</span>
                                     </div>
-                                    {editing ? (
-                                        <div className="space-y-2">
-                                            <select
-                                                value={insuranceId}
-                                                onChange={e => { setInsuranceId(e.target.value); setBhytChecked(false); setBhytName(''); }}
-                                                className={inputCls + ' bg-white'}
-                                            >
-                                                <option value="">Chọn loại bảo hiểm...</option>
-                                                {insurancesList.map(ins => (
-                                                    <option key={ins.insuranceId} value={ins.insuranceId}>{ins.name}</option>
-                                                ))}
-                                            </select>
-                                            {insuranceId && (
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={bhytCode}
-                                                        onChange={e => { setBhytCode(e.target.value); setBhytChecked(false); setBhytName(''); }}
-                                                        placeholder="Nhập mã thẻ BHYT..."
-                                                        className={inputCls}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => checkBhyt()}
-                                                        disabled={loadingBhyt || !bhytCode}
-                                                        className="h-10 px-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shrink-0 transition-all"
-                                                    >
-                                                        {loadingBhyt ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Shield className="w-3.5 h-3.5" />}
-                                                        Kiểm tra
-                                                    </button>
-                                                </div>
-                                            )}
-                                            {bhytChecked && bhytName && (
-                                                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
-                                                    <CheckCircle className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                                                    <p className="text-xs font-medium text-green-800">Hợp lệ – {bhytName}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <p className={fieldValue}>
-                                            {insuranceId ? (insurancesList.find(i => i.insuranceId === insuranceId)?.name ?? '—') + (bhytCode ? ` – ${bhytCode}` : '') : '—'}
-                                        </p>
-                                    )}
+                                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-500">
+                                        Chỉ có lễ tân mới được nhập bảo hiểm y tế. Vui lòng liên hệ lễ tân để cập nhật.
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -815,11 +720,17 @@ export default function ProfilePage() {
                                             </div>
                                             <div>
                                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
-                                                    appt.status === 'UPCOMING' 
-                                                        ? 'bg-blue-50 text-blue-600 border border-blue-100' 
-                                                        : 'bg-green-50 text-green-600 border border-green-100'
+                                                    (appt.status || '').toUpperCase() === 'UPCOMING' || (appt.status || '').toUpperCase() === 'CHECKED_IN'
+                                                        ? 'bg-blue-50 text-blue-600 border border-blue-100'
+                                                        : (appt.status || '').toUpperCase() === 'CANCELLED'
+                                                            ? 'bg-red-50 text-red-600 border border-red-100'
+                                                            : 'bg-green-50 text-green-600 border border-green-100'
                                                 }`}>
-                                                    {appt.status === 'UPCOMING' ? t('profile.appointments.statusUpcoming') : t('profile.appointments.statusDone')}
+                                                    {(appt.status || '').toUpperCase() === 'UPCOMING' || (appt.status || '').toUpperCase() === 'CHECKED_IN'
+                                                        ? t('profile.appointments.statusUpcoming')
+                                                        : (appt.status || '').toUpperCase() === 'CANCELLED'
+                                                            ? t('profile.appointments.statusCancelled')
+                                                            : t('profile.appointments.statusDone')}
                                                 </span>
                                             </div>
                                         </div>

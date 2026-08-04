@@ -101,11 +101,11 @@ export default function MedicalHistoryPage() {
                             <div className="flex flex-col md:w-1/4 shrink-0">
                                 <div className="flex items-center gap-1.5 mb-0.5">
                                     <Activity className="w-3.5 h-3.5 text-primary-500" />
-                                    <p className="text-sm font-semibold text-primary-600">{v.specialty}</p>
+                                    <p className="text-sm font-semibold text-primary-600">{{ EXAMINATION: 'Khám bệnh', PARACLINICAL: 'Cận lâm sàng', LABORATORY: 'Cận lâm sàng', IMAGING: 'Cận lâm sàng' }[v.specialty] || v.specialty || '-'}</p>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <Stethoscope className="w-3.5 h-3.5 text-gray-400" />
-                                    <p className="text-xs text-gray-600">{v.doctor}</p>
+                                    <p className="text-xs text-gray-600">{v.doctor || '-'}</p>
                                 </div>
                             </div>
 
@@ -113,7 +113,7 @@ export default function MedicalHistoryPage() {
                             <div className="flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div className="flex-1">
                                     <p className="text-xs text-gray-400 mb-0.5">{t('medicalHistory.table.diagnosis')}</p>
-                                    <p className="text-sm font-semibold text-gray-900 line-clamp-1">{v.diagnosis}</p>
+                                    <p className="text-sm font-semibold text-gray-900 line-clamp-1">{v.diagnosis || '-'}</p>
                                 </div>
                                 <div className="flex items-center gap-4 shrink-0">
                                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-green-50 text-green-600 border border-green-100">
@@ -130,7 +130,7 @@ export default function MedicalHistoryPage() {
                     {total > 0 && (
                         <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
                             <p className="text-xs text-gray-400">
-                                Showing {from}–{to} of {total} appointments
+                                Hiển thị {from}–{to} trong tổng số {total} lượt khám
                             </p>
                             <Pagination page={page} total={total} pageSize={PS ?? PAGE_SIZE} onChange={handlePage} />
                         </div>

@@ -1,6 +1,5 @@
-// src/components/layout/LabLayout.jsx
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Settings, LogOut, FlaskConical } from 'lucide-react';
+import { Settings, LogOut, FlaskConical, UserRound } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -11,32 +10,39 @@ export default function LabLayout({ children, departmentId }) {
 
     const handleLogout = () => {
         ['token', 'refreshToken', 'role', 'username', 'accountId', 'systemRole', 'staffId'].forEach(k => {
-            localStorage.removeItem(k); sessionStorage.removeItem(k);
+            localStorage.removeItem(k);
+            sessionStorage.removeItem(k);
         });
         navigate(ROUTES.LOGIN);
     };
 
     const mainNav = [
-        { to: ROUTES.DOCTOR_LAB.replace(':departmentId', departmentId || ''), icon: FlaskConical, label: 'Xét nghiệm' },
+        {
+            to: ROUTES.DOCTOR_LAB.replace(':departmentId', departmentId || ''),
+            icon: FlaskConical,
+            label: 'Xét nghiệm',
+        },
     ];
 
     const linkClass = ({ isActive }) =>
         `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-            isActive ? 'bg-primary-50 text-primary-600 font-medium' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
+            isActive
+                ? 'bg-primary-50 text-primary-600 font-medium'
+                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
         }`;
 
     return (
         <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden">
-            {/* Sidebar */}
             <aside className="w-44 bg-white border-r border-gray-200 flex flex-col shrink-0">
                 <div className="px-4 py-5 border-b border-gray-100">
                     <p className="text-sm font-bold text-gray-900">Phòng xét nghiệm</p>
                     <p className="text-xs text-gray-400 mt-0.5">Hệ thống quản lý</p>
                 </div>
 
-                {/* Avatar */}
                 <div className="px-4 py-4 border-b border-gray-100">
-                    <div className="w-10 h-10 rounded-lg bg-blue-400 mb-2" />
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
+                        <UserRound className="text-blue-500 w-6 h-6" />
+                    </div>
                     <p className="text-xs font-semibold text-gray-800">{username}</p>
                     <p className="text-xs text-gray-400">Y tá phòng xét nghiệm</p>
                 </div>
@@ -65,9 +71,7 @@ export default function LabLayout({ children, departmentId }) {
                 </div>
             </aside>
 
-            <div className="flex-1 flex flex-col overflow-hidden">
-                {children}
-            </div>
+            <div className="flex-1 flex flex-col overflow-hidden">{children}</div>
         </div>
     );
 }

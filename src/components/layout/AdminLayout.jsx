@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Building2, Tag, Users, LogOut, Settings, LayoutDashboard, Activity } from 'lucide-react';
+import { Building2, Tag, Users, LogOut, Settings, LayoutDashboard, Activity, Stethoscope, Wrench } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -37,8 +37,7 @@ export default function AdminLayout({ children }) {
         if (staffInfo && staffInfo.specialization) return staffInfo.specialization.name;
         if (systemRole === 'NURSE') return 'Y tá';
         if (systemRole === 'RECEPTIONIST') return 'Lễ tân';
-        if (systemRole === 'GENERAL_DOCTOR') return 'Bác sĩ đa khoa';
-        if (systemRole === 'SPECIALIST_DOCTOR') return 'Bác sĩ chuyên khoa';
+        if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)) return 'Bác sĩ';
         if (systemRole === 'ADMIN') return 'Quản trị viên';
         return 'Quản trị viên';
     };
@@ -53,9 +52,10 @@ export default function AdminLayout({ children }) {
     const mainNav = [
         { to: ROUTES.ADMIN_ROOMS,    icon: Building2, label: t('sidebar.rooms') },
         { to: ROUTES.ADMIN_SERVICES, icon: Tag,       label: t('sidebar.services') },
+        { to: ROUTES.ADMIN_SPECIALIZATIONS, icon: Stethoscope, label: 'Chuyên khoa' },
+        { to: ROUTES.ADMIN_CAPABILITIES, icon: Wrench, label: 'Danh mục kỹ thuật' },
         { to: ROUTES.ADMIN_ACCOUNTS, icon: Users,     label: t('sidebar.accounts') },
         { to: ROUTES.ADMIN_AUDIT_LOGS, icon: Activity, label: 'Nhật ký hệ thống' },
-        { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
     ];
 
     const linkClass = ({ isActive }) =>

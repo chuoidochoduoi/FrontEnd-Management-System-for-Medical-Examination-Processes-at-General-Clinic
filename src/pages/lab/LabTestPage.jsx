@@ -2,23 +2,22 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, Bell, UserCircle, RotateCcw, ArrowUpDown } from 'lucide-react';
+import { Search, RotateCcw, ArrowUpDown } from 'lucide-react';
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { useLabQueue } from '@/hooks/useLabQueue.js';
 import { ROUTES } from '@/constants/routes.js';
+import { toast } from 'react-toastify';
 
 /* ── Status config ── */
 const STATUS = {
     // Backend TestRequestStatus enum values
     PENDING:           { label: 'Chờ xử lý',   cls: 'bg-amber-50 text-amber-600', labelKey: 'pending' },
     IN_PROGRESS:       { label: 'Đang xử lý',  cls: 'bg-blue-50 text-blue-500', labelKey: 'inProgress' },
-    WAITING_FOR_RESULT: { label: 'Chờ kết quả', cls: 'bg-purple-50 text-purple-500', labelKey: 'waitingForResult' },
     COMPLETED:         { label: 'Hoàn thành', cls: 'bg-green-50 text-green-600', labelKey: 'completed' },
     CANCELLED:         { label: 'Đã hủy',     cls: 'bg-red-50 text-red-500', labelKey: 'cancelled' },
 };
 const DEFAULT_STATUS = { label: 'Chờ xử lý', cls: 'bg-amber-50 text-amber-600', labelKey: 'pending' };
 
-/* ── Avatar initials ── */
 function Avatar({ name }) {
     const initials = name
         ? name.trim().split(' ').slice(-2).map(w => w[0]).join('').toUpperCase()
@@ -36,7 +35,6 @@ const TABS = [
     { key: '',                 label: 'Tất cả' },
     { key: 'PENDING',          label: 'Chờ xử lý' },
     { key: 'IN_PROGRESS',      label: 'Đang xử lý' },
-    { key: 'WAITING_FOR_RESULT', label: 'Chờ kết quả' },
     { key: 'COMPLETED',        label: 'Hoàn thành' },
     { key: 'CANCELLED',        label: 'Đã hủy' },
 ];
@@ -63,7 +61,29 @@ export default function LabTestPage() {
 
     const handleRefresh = () => fetchOrders({ search, status: activeTab, sort, page, departmentId });
 
+    const handleSort = () => {
+        const nextSort = sort === 'newest' ? 'oldest' : 'newest';
+        setSort(nextSort);
+        fetchOrders({ search, status: activeTab, sort: nextSort, page: 1, departmentId });
+    };
+
     const handlePage = (p) => fetchOrders({ search, status: activeTab, sort, page: p, departmentId });
+
+    const handleQueueAction = async (ticketId, action) => {
+        if (!ticketId) return;
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+        const res = await fetch(`${apiBase}/api/v1/queue-tickets/${ticketId}/${action}`, {
+            method: 'POST', headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+            toast.success(action === 'call' ? 'Đã gọi số bệnh nhân' : action === 'start-exam' ? 'Đã bắt đầu thực hiện' : 'Đã đánh dấu vắng');
+            handleRefresh();
+        } else {
+            const body = await res.json().catch(() => ({}));
+            toast.error(body.message || 'Không thể cập nhật hàng chờ');
+        }
+    };
 
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     const from = (page - 1) * PAGE_SIZE + 1;
@@ -74,6 +94,11 @@ export default function LabTestPage() {
 
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto bg-white px-8 py-6">
+
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                    <div><h1 className="text-xl font-bold text-gray-900">Danh sách yêu cầu xét nghiệm</h1><p className="text-sm text-gray-500">Tiếp nhận, nhập và trả kết quả theo từng yêu cầu</p></div>
+                    <button onClick={() => navigate(ROUTES.DOCTOR_LAB_CALL.replace(':departmentId', departmentId))} className="rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white">Mở màn gọi số</button>
+                </div>
 
                 {/* Search, Tabs + sort */}
                 <div className="flex flex-col gap-4 mb-5">
@@ -110,9 +135,9 @@ export default function LabTestPage() {
 
                     {/* Sort + Refresh */}
                     <div className="flex items-center gap-2">
-                        <button className="flex items-center gap-2 h-9 px-3 text-sm border border-gray-200 rounded-lg text-gray-500 hover:border-gray-400 transition-colors">
+                        <button onClick={handleSort} className="flex items-center gap-2 h-9 px-3 text-sm border border-gray-200 rounded-lg text-gray-500 hover:border-gray-400 transition-colors">
                             <ArrowUpDown size={13} />
-                            {t('labQueue.sort')}
+                            {sort === 'newest' ? 'Mới nhất' : 'Cũ nhất'}
                         </button>
                         <button
                             onClick={handleRefresh}
@@ -163,7 +188,7 @@ export default function LabTestPage() {
                                 className={`grid grid-cols-[140px_140px_1fr_160px_140px_120px_120px] px-5 py-4 border-b border-gray-50 last:border-0 items-center transition-colors hover:bg-gray-50 ${isEven ? 'bg-white' : 'bg-white'}`}
                             >
                                 {/* Mã yêu cầu */}
-                                <span className="text-sm font-medium text-gray-800">{order.testRequestId ?? order.id}</span>
+                                <span className="text-sm font-bold text-primary-600">{order.queueNumber ? `Số ${order.queueNumber}` : '-'}</span>
 
                                 {/* Mã BN */}
                                 <span className="text-sm text-gray-600">{order.patientCode}</span>
@@ -187,9 +212,12 @@ export default function LabTestPage() {
 
                                 {/* Hành động */}
                                 <div className="flex items-center gap-3">
+                                    {order.queueStatus === 'WAITING' && <button onClick={() => handleQueueAction(order.queueTicketId, 'call')} className="text-sm font-semibold text-primary-600 hover:underline">Gọi số</button>}
+                                    {order.queueStatus === 'CALLED' && <button onClick={() => handleQueueAction(order.queueTicketId, 'start-exam')} className="text-sm font-semibold text-primary-600 hover:underline">Bắt đầu</button>}
                                     <button
                                         onClick={() => navigate(`${ROUTES.DOCTOR_LAB_DETAIL.replace(':id', order.testRequestId ?? order.id)}`)}
-                                        className="text-sm font-semibold text-gray-800 hover:text-primary-500 transition-colors"
+                                        disabled={order.queueStatus && order.queueStatus !== 'IN_PROGRESS' && order.queueStatus !== 'DONE'}
+                                        className="text-sm font-semibold text-gray-800 hover:text-primary-500 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
                                     >
                                         {t('labQueue.actions.view')}
                                     </button>

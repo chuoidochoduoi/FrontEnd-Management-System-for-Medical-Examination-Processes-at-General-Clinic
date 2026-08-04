@@ -33,7 +33,7 @@ export function useLogin() {
             storage.setItem('role',           data.account.role);           // CUSTOMER | STAFF
             storage.setItem('username',       data.account.username);
             storage.setItem('accountId',      data.account.accountId);
-            storage.setItem('systemRole',     data.account.systemRole || ''); // GENERAL_DOCTOR | SPECIALIST_DOCTOR | NURSE | RECEPTIONIST | CASHIER | CLINIC_MANAGER | null
+            storage.setItem('systemRole',     data.account.systemRole || ''); // DOCTOR | NURSE | RECEPTIONIST | CASHIER | CLINIC_MANAGER | ADMIN | null
 
             // Decode JWT to extract staffId (sid claim) for staff users
             const decoded = decodeToken(data.accessToken);
@@ -57,7 +57,7 @@ export function useLogin() {
                 // Redirect based on systemRole
                 if (systemRole === 'RECEPTIONIST') {
                     navigate(ROUTES.RECEPTIONIST_CHECKIN);
-                } else if (systemRole === 'NURSE' || systemRole === 'GENERAL_DOCTOR' || systemRole === 'SPECIALIST_DOCTOR') {
+                } else if (systemRole === 'NURSE' || ['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)) {
                     navigate(ROUTES.DOCTOR_ROOMS);
                 } else if (systemRole === 'CASHIER') {
                     navigate(ROUTES.CASHIER_INVOICES);

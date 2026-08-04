@@ -14,15 +14,15 @@ import { Calendar, Bell } from 'lucide-react';
  * @param {string}  props.note            — ghi chú hiện tại
  * @param {function} props.onChange       — callback({ enabled, note })
  */
-export default function FollowUpSection({ enabled, note, onChange }) {
+export default function FollowUpSection({ enabled, note, preferredDate = '', onChange }) {
     const { t } = useTranslation('doctor');
 
     const handleCheckbox = (e) => {
-        onChange({ enabled: e.target.checked, note });
+        onChange({ enabled: e.target.checked, note, preferredDate });
     };
 
     const handleNoteChange = (e) => {
-        onChange({ enabled, note: e.target.value });
+        onChange({ enabled, note: e.target.value, preferredDate });
     };
 
     return (
@@ -53,6 +53,14 @@ export default function FollowUpSection({ enabled, note, onChange }) {
             {enabled && (
                 <div className="mt-4 pl-7 animate-fadeIn">
                     <div className="border-l-2 border-primary-300 pl-4">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">Ngày khám lại dự kiến</label>
+                        <input
+                            type="date"
+                            min={new Date().toISOString().slice(0, 10)}
+                            value={preferredDate}
+                            onChange={e => onChange({ enabled, note, preferredDate: e.target.value })}
+                            className="mb-3 h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none focus:border-primary-500 sm:w-64"
+                        />
                         <label className="block text-xs font-semibold text-gray-600 mb-1.5">
                             {t('examination.followUp.noteLabel')}
                         </label>

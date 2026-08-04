@@ -16,14 +16,14 @@ export function useLabServices() {
             setLoading(true);
             try {
                 const res = await fetch(
-                    `${import.meta.env.VITE_API_URL}/api/v1/medical-services/available?departmentType=LABORATORY&size=1000`,
+                    `${import.meta.env.VITE_API_URL}/api/v1/medical-services/available?departmentType=PARACLINICAL&size=1000`,
                     { headers: authHeader() }
                 );
                 if (!res.ok) throw new Error(t('examination.errors.loadFailed'));
                 const data = await res.json();
-                // Filter only LABORATORY services
-                const labServices = (data.content || []).filter(s => s.departmentType === 'LABORATORY');
-                setServices(labServices);
+                const payload = data.data ?? data.result ?? data;
+                const items = payload.items ?? payload.content ?? [];
+                setServices(items.filter(service => ['PARACLINICAL', 'LABORATORY', 'IMAGING'].includes(service.departmentType)));
             } catch (err) {
                 setError(err.message || t('examination.errors.unknown'));
             } finally {

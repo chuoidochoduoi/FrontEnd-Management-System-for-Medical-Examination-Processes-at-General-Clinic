@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { ROUTES } from '@/constants/routes';
 
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -34,6 +35,18 @@ export function useLabDetail(orderId, departmentId = null) {
                         ? rawData.status.name
                         : (typeof rawData.status === 'string' ? rawData.status : String(rawData.status || 'PENDING')),
                 };
+                if (rawData.testResultId) {
+                    const resultRes = await fetch(
+                        `${import.meta.env.VITE_API_URL}/api/v1/test-requests/${orderId}/result`,
+                        { headers: bearer() }
+                    );
+                    if (resultRes.ok) {
+                        const result = await resultRes.json();
+                        data.notes = result.conclusion || '';
+                        data.specimenId = result.sampleId || '';
+                        data.resultFileUrl = result.imageUrl || '';
+                    }
+                }
                 setOrder(data);
             } catch (err) {
                 setError(err.message || t('labDetail.errors.unknown'));
@@ -50,8 +63,13 @@ export function useLabDetail(orderId, departmentId = null) {
             `${import.meta.env.VITE_API_URL}/api/v1/test-requests/${orderId}/upload`,
             { method: 'POST', headers: bearer(), body: form }
         );
-        if (!res.ok) throw new Error(t('labDetail.errors.saveFailed'));
-        return await res.json(); // { fileUrl, fileName }
+        if (!res.ok) {
+            const data = await res.json().catch(() => null);
+            throw new Error(data?.message || t('labDetail.errors.saveFailed'));
+        }
+        const uploaded = await res.json();
+        toast.success('Tải tệp kết quả thành công!');
+        return uploaded;
     };
 
     const performedById = get('staffId');
@@ -60,10 +78,11 @@ export function useLabDetail(orderId, departmentId = null) {
     const saveDraft = async (payload) => {
         setSaving(true); setError('');
         try {
+            const hasDraft = Boolean(order?.testResultId);
             const res = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/v1/test-requests/${orderId}/result`,
                 {
-                    method: 'PUT',
+                    method: hasDraft ? 'PUT' : 'POST',
                     headers: { 'Content-Type': 'application/json', ...bearer() },
                     body: JSON.stringify({
                         testRequestId: orderId,
@@ -71,13 +90,27 @@ export function useLabDetail(orderId, departmentId = null) {
                         conclusion: payload.notes || '',
                         sampleId: payload.specimenId || '',
                         performedById,
+                        complete: false,
                     }),
                 }
             );
-            if (!res.ok) throw new Error(t('labDetail.errors.saveFailed'));
-            setOrder(await res.json());
+            if (!res.ok) {
+                const data = await res.json().catch(() => null);
+                throw new Error(data?.message || t('labDetail.errors.saveFailed'));
+            }
+            const saved = await res.json();
+            setOrder(previous => ({
+                ...previous,
+                testResultId: saved.resultId,
+                notes: saved.conclusion || '',
+                specimenId: saved.sampleId || '',
+                resultFileUrl: saved.imageUrl || '',
+                status: previous?.status === 'PENDING' ? 'IN_PROGRESS' : previous?.status,
+            }));
+            toast.success('Lưu nháp kết quả thành công!');
         } catch (err) {
             setError(err.message || t('labDetail.errors.unknown'));
+            toast.error(err.message || t('labDetail.errors.saveFailed'));
         } finally { setSaving(false); }
     };
 
@@ -116,17 +149,22 @@ export function useLabDetail(orderId, departmentId = null) {
                 );
             }
 
-            if (!res.ok) throw new Error(t('labDetail.errors.saveFailed'));
-            setOrder(await res.json());
+            if (!res.ok) {
+                const data = await res.json().catch(() => null);
+                throw new Error(data?.message || t('labDetail.errors.saveFailed'));
+            }
+            const saved = await res.json();
+            setOrder(previous => ({ ...previous, ...saved, status: payload.status }));
+            toast.success(payload.status === 'CANCELLED' ? 'Đã hủy yêu cầu xét nghiệm!' : 'Hoàn thành kết quả xét nghiệm!');
 
             // Navigate back to queue page
             if (payload.status === 'CANCELLED') {
                 navigate(ROUTES.DOCTOR_LAB.replace(':departmentId', order?.departmentId || ''));
-            } else {
-                navigate(ROUTES.DOCTOR_ROOMS);
             }
+            return saved;
         } catch (err) {
             setError(err.message || t('labDetail.errors.unknown'));
+            toast.error(err.message || t('labDetail.errors.saveFailed'));
         } finally { setSaving(false); }
     };
 

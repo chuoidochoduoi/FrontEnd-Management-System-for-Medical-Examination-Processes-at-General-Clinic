@@ -12,7 +12,6 @@ const STATUS = {
     // Backend TestRequestStatus enum values
     PENDING:           { label: 'Chờ xử lý',   cls: 'bg-amber-50 text-amber-600', labelKey: 'pending' },
     IN_PROGRESS:       { label: 'Đang xử lý',  cls: 'bg-blue-50 text-blue-500', labelKey: 'inProgress' },
-    WAITING_FOR_RESULT: { label: 'Chờ kết quả', cls: 'bg-purple-50 text-purple-500', labelKey: 'waitingForResult' },
     COMPLETED:         { label: 'Hoàn thành', cls: 'bg-green-50 text-green-600', labelKey: 'completed' },
     CANCELLED:         { label: 'Đã hủy',     cls: 'bg-red-50 text-red-500', labelKey: 'cancelled' },
 };
@@ -36,7 +35,6 @@ const TABS = [
     { key: '',                 label: 'Tất cả' },
     { key: 'PENDING',          label: 'Chờ xử lý' },
     { key: 'IN_PROGRESS',      label: 'Đang xử lý' },
-    { key: 'WAITING_FOR_RESULT', label: 'Chờ kết quả' },
     { key: 'COMPLETED',        label: 'Hoàn thành' },
     { key: 'CANCELLED',        label: 'Đã hủy' },
 ];

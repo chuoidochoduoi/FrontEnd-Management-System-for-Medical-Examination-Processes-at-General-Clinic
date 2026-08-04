@@ -5,6 +5,8 @@ import { X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { useServiceManagement } from '@/hooks/useServiceManagement';
+import { useSpecializations } from '@/hooks/useSpecializations';
+import { useCapabilities } from '@/hooks/useCapabilities';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + ' đ' : '—';
@@ -15,7 +17,8 @@ const STATUS_CFG = {
     draft:     { label: 'Bản nháp',     cls: 'bg-gray-100 text-gray-500 border border-gray-200' },
 };
 
-const SERVICE_TYPES = ['EXAMINATION', 'LABORATORY', 'IMAGING'];
+const SERVICE_TYPES = ['EXAMINATION', 'PARACLINICAL'];
+const SERVICE_TYPE_LABELS = { EXAMINATION: 'Khám bệnh', PARACLINICAL: 'Cận lâm sàng' };
 const STATUSES      = ['active', 'suspended', 'draft'];
 
 const inputCls  = 'w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-gray-500 bg-white';
@@ -82,11 +85,11 @@ function ConfigModal({ service, onClose, onSubmit, t }) {
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className={labelCls}>{t('serviceManagement.configModal.serviceType')}</label>
-                    <p className="text-sm text-gray-900">{service.type || '—'}</p>
+                    <p className="text-sm text-gray-900">{SERVICE_TYPE_LABELS[service.type] || service.type || '—'}</p>
                 </div>
                 <div>
-                    <label className={labelCls}>Chuyên khoa</label>
-                    <p className="text-sm text-gray-900">{service.specialty || '—'}</p>
+                    <label className={labelCls}>Chuyên khoa phục vụ</label>
+                    <p className="text-sm text-gray-900">{service.type === 'EXAMINATION' ? (service.specialty || 'Chưa cấu hình') : 'Không áp dụng'}</p>
                 </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -107,12 +110,22 @@ function ConfigModal({ service, onClose, onSubmit, t }) {
 }
 
 /* ── Edit Draft Modal ── */
-function EditModal({ service, onClose, onSubmit, t }) {
+function EditModal({ service, specializations, capabilities, onClose, onSubmit, t }) {
     const [form, setForm] = useState({
         name:     service.name     ?? '',
         type:     service.type     ?? '',
         price:    service.price    ?? '',
-        specialty: service.specialty ?? '',
+        specialtyId: service.specialtyId ?? '',
+        durationMinutes: service.durationMinutes ?? 15,
+        workflowPriority: service.workflowPriority ?? 1,
+        requiresDoctorOrder: service.requiresDoctorOrder === true,
+        requiresReturnToDoctor: service.requiresReturnToDoctor === true,
+        resultWaitMinutes: service.resultWaitMinutes ?? 0,
+        allowCustomerBooking: service.allowCustomerBooking !== false,
+        minimumAge: service.minimumAge ?? 0,
+        maximumAge: service.maximumAge ?? 120,
+        allowedGender: service.allowedGender ?? '',
+        capabilityId: service.capabilityId ?? '',
 
         status:   service.status   ?? 'draft',
     });
@@ -121,6 +134,13 @@ function EditModal({ service, onClose, onSubmit, t }) {
     const setField = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
     const handleSubmit = async () => {
+        if (!form.name.trim()) return setError('Vui lòng nhập tên dịch vụ');
+        if (!form.type) return setError('Vui lòng chọn loại dịch vụ');
+        if (form.type === 'EXAMINATION' && !form.specialtyId) return setError('Vui lòng chọn chuyên khoa phục vụ');
+        if (form.type !== 'EXAMINATION' && !form.capabilityId) return setError('Vui lòng chọn kỹ thuật yêu cầu');
+        if (!Number.isInteger(Number(form.durationMinutes)) || Number(form.durationMinutes) <= 0) return setError('Thời lượng dự kiến phải là số nguyên lớn hơn 0');
+        if (Number(form.minimumAge) < 0 || Number(form.maximumAge) > 120 || Number(form.minimumAge) > Number(form.maximumAge)) return setError('Khoảng tuổi áp dụng không hợp lệ');
+        if (form.price === '' || Number(form.price) < 0) return setError('Giá dịch vụ phải lớn hơn hoặc bằng 0');
         setSubmitting(true); setError('');
         try { await onSubmit(service.id, form); onClose(); }
         catch (err) { setError(err.message); }
@@ -149,22 +169,45 @@ function EditModal({ service, onClose, onSubmit, t }) {
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className={labelCls}>{t('serviceManagement.editModal.serviceType') || t('serviceManagement.configModal.serviceType')}</label>
-                    <select value={form.type} onChange={e => setField('type', e.target.value)} className={inputCls}>
-                        {SERVICE_TYPES.map(st => <option key={st} value={st}>{st}</option>)}
+                    <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value, specialtyId: '' }))} className={inputCls}>
+                        {SERVICE_TYPES.map(st => <option key={st} value={st}>{SERVICE_TYPE_LABELS[st]}</option>)}
                     </select>
                 </div>
-                <div>
-                    <label className={labelCls}>{t('serviceManagement.editModal.specialty') || 'Chuyên khoa'}</label>
-                    <input value={form.specialty} onChange={e => setField('specialty', e.target.value)}
-                           placeholder="Nhập tên chuyên khoa (bắt buộc với Xét Nghiệm)"
-                           className={inputCls} />
-                </div>
+                {form.type === 'EXAMINATION' && <div>
+                    <label className={labelCls}>Chuyên khoa phục vụ</label>
+                    <select value={form.specialtyId} onChange={e => setField('specialtyId', e.target.value)} className={inputCls}>
+                        <option value="">-- Chọn chuyên khoa --</option>
+                        {specializations.map(s => <option key={s.specializationId} value={s.specializationId}>{s.name}</option>)}
+                    </select>
+                </div>}
+                {form.type !== 'EXAMINATION' && <div><label className={labelCls}>Năng lực thực hiện</label><select value={form.capabilityId} onChange={e => setField('capabilityId', e.target.value)} className={inputCls}><option value="">-- Chọn năng lực --</option>{capabilities.map(c => <option key={c.capabilityId} value={c.capabilityId}>{c.name}</option>)}</select></div>}
             </div>
 
                 <div>
                     <label className={labelCls}>{t('serviceManagement.editModal.price') || t('serviceManagement.configModal.price')}</label>
                     <input type="number" value={form.price} onChange={e => setField('price', e.target.value)} className={inputCls} />
                 </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className={labelCls}>Thời lượng dự kiến (phút)</label>
+                    <input type="number" min="1" step="1" value={form.durationMinutes} onChange={e => setField('durationMinutes', e.target.value)} className={inputCls} />
+                </div>
+                <label className="flex items-center gap-2 pt-7 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" checked={form.allowCustomerBooking} onChange={e => setField('allowCustomerBooking', e.target.checked)} />
+                    Cho phép khách hàng tự đặt
+                </label>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+                <div><label className={labelCls}>Tuổi tối thiểu</label><input type="number" min="0" max="120" value={form.minimumAge} onChange={e => setField('minimumAge', e.target.value)} className={inputCls}/></div>
+                <div><label className={labelCls}>Tuổi tối đa</label><input type="number" min="0" max="120" value={form.maximumAge} onChange={e => setField('maximumAge', e.target.value)} className={inputCls}/></div>
+                <div><label className={labelCls}>Giới tính áp dụng</label><select value={form.allowedGender} onChange={e => setField('allowedGender', e.target.value)} className={inputCls}><option value="">Tất cả</option><option value="MALE">Nam</option><option value="FEMALE">Nữ</option></select></div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div><label className={labelCls}>Mức ưu tiên mặc định</label><select value={form.workflowPriority} onChange={e => setField('workflowPriority', Number(e.target.value))} className={inputCls}><option value={2}>Ưu tiên sớm</option><option value={1}>Bình thường</option><option value={0}>Có thể làm sau</option></select></div>
+                <div><label className={labelCls}>Thời gian trả kết quả (phút)</label><input type="number" min="0" value={form.resultWaitMinutes} onChange={e => setField('resultWaitMinutes', e.target.value)} className={inputCls}/></div>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.requiresDoctorOrder} onChange={e => setField('requiresDoctorOrder', e.target.checked)}/>Cần bác sĩ chỉ định trước</label>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.requiresReturnToDoctor} onChange={e => setField('requiresReturnToDoctor', e.target.checked)}/>Cần quay lại bác sĩ kết luận</label>
+            </div>
             <div>
                 <label className={labelCls}>{t('serviceManagement.editModal.status') || t('serviceManagement.configModal.status')}</label>
                 <select value={form.status} onChange={e => setField('status', e.target.value)} className={inputCls}>
@@ -177,15 +220,23 @@ function EditModal({ service, onClose, onSubmit, t }) {
 }
 
 /* ── Add Modal ── */
-function AddModal({ onClose, onSubmit, t }) {
+function AddModal({ specializations, capabilities, onClose, onSubmit, t }) {
     const [form, setForm] = useState({
-        code: '', name: '', type: '', price: '', status: 'draft',
+        code: '', name: '', type: '', price: '', status: 'draft', specialtyId: '', capabilityId: '', allowCustomerBooking: true, minimumAge: 0, maximumAge: 120, allowedGender: '', workflowPriority: 1, requiresDoctorOrder: false, requiresReturnToDoctor: false, resultWaitMinutes: 0,
     });
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
     const handleSubmit = async () => {
+        if (!form.code.trim()) return setError('Vui lòng nhập mã dịch vụ');
+        if (form.code.trim().length > 20) return setError('Mã dịch vụ không được vượt quá 20 ký tự');
+        if (!form.name.trim()) return setError('Vui lòng nhập tên dịch vụ');
+        if (!form.type) return setError('Vui lòng chọn loại dịch vụ');
+        if (form.type === 'EXAMINATION' && !form.specialtyId) return setError('Vui lòng chọn chuyên khoa phục vụ');
+        if (form.type !== 'EXAMINATION' && !form.capabilityId) return setError('Vui lòng chọn kỹ thuật yêu cầu');
+        if (Number(form.minimumAge) < 0 || Number(form.maximumAge) > 120 || Number(form.minimumAge) > Number(form.maximumAge)) return setError('Khoảng tuổi áp dụng không hợp lệ');
+        if (form.price === '' || Number(form.price) < 0) return setError('Giá dịch vụ phải lớn hơn hoặc bằng 0');
         setSubmitting(true); setError('');
         try { await onSubmit(form); onClose(); }
         catch (err) { setError(err.message); }
@@ -214,9 +265,9 @@ function AddModal({ onClose, onSubmit, t }) {
                 </div>
                 <div>
                     <label className={labelCls}>{t('serviceManagement.addModal.serviceType')}</label>
-                    <select value={form.type} onChange={e => set('type', e.target.value)} className={inputCls}>
+                    <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value, specialtyId: '' }))} className={inputCls}>
                         <option key="empty-type" value="">{t('serviceManagement.addModal.serviceTypeDefault')}</option>
-                        {SERVICE_TYPES.map(st => <option key={st} value={st}>{st}</option>)}
+                        {SERVICE_TYPES.map(st => <option key={st} value={st}>{SERVICE_TYPE_LABELS[st]}</option>)}
                     </select>
                 </div>
             </div>
@@ -230,6 +281,32 @@ function AddModal({ onClose, onSubmit, t }) {
                 <label className={labelCls}>{t('serviceManagement.addModal.price')}</label>
                 <input type="number" value={form.price} onChange={e => set('price', e.target.value)}
                        placeholder={t('serviceManagement.addModal.pricePlaceholder')} className={inputCls} />
+            </div>
+            {form.type === 'EXAMINATION' && <div>
+                <label className={labelCls}>Chuyên khoa phục vụ</label>
+                <select value={form.specialtyId} onChange={e => set('specialtyId', e.target.value)} className={inputCls}>
+                    <option value="">-- Chọn chuyên khoa --</option>
+                    {specializations.map(s => <option key={s.specializationId} value={s.specializationId}>{s.name}</option>)}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">Phòng cụ thể sẽ được hệ thống chọn khi check-in dựa trên tải hàng đợi.</p>
+            </div>}
+            {form.type && form.type !== 'EXAMINATION' && <div><label className={labelCls}>Năng lực thực hiện</label><select value={form.capabilityId} onChange={e => set('capabilityId', e.target.value)} className={inputCls}><option value="">-- Chọn năng lực --</option>{capabilities.map(c => <option key={c.capabilityId} value={c.capabilityId}>{c.name}</option>)}</select><p className="text-xs text-gray-400 mt-1">Hệ thống sẽ tự chọn phòng đang hoạt động có năng lực này.</p></div>}
+            <div>
+                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" checked={form.allowCustomerBooking} onChange={e => set('allowCustomerBooking', e.target.checked)} />
+                    Cho phép khách hàng tự đặt
+                </label>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+                <div><label className={labelCls}>Tuổi tối thiểu</label><input type="number" min="0" max="120" value={form.minimumAge} onChange={e => set('minimumAge', e.target.value)} className={inputCls}/></div>
+                <div><label className={labelCls}>Tuổi tối đa</label><input type="number" min="0" max="120" value={form.maximumAge} onChange={e => set('maximumAge', e.target.value)} className={inputCls}/></div>
+                <div><label className={labelCls}>Giới tính áp dụng</label><select value={form.allowedGender} onChange={e => set('allowedGender', e.target.value)} className={inputCls}><option value="">Tất cả</option><option value="MALE">Nam</option><option value="FEMALE">Nữ</option></select></div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div><label className={labelCls}>Mức ưu tiên mặc định</label><select value={form.workflowPriority} onChange={e => set('workflowPriority', Number(e.target.value))} className={inputCls}><option value={2}>Ưu tiên sớm</option><option value={1}>Bình thường</option><option value={0}>Có thể làm sau</option></select></div>
+                <div><label className={labelCls}>Thời gian trả kết quả (phút)</label><input type="number" min="0" value={form.resultWaitMinutes} onChange={e => set('resultWaitMinutes', e.target.value)} className={inputCls}/></div>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.requiresDoctorOrder} onChange={e => set('requiresDoctorOrder', e.target.checked)}/>Cần bác sĩ chỉ định trước</label>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.requiresReturnToDoctor} onChange={e => set('requiresReturnToDoctor', e.target.checked)}/>Cần quay lại bác sĩ kết luận</label>
             </div>
             {error && <p className="text-red-500 text-xs">{error}</p>}
         </Modal>
@@ -256,29 +333,33 @@ function Pagination({ page, total, pageSize, onChange }) {
 export default function ServiceManagementPage() {
     const { t } = useTranslation('services');
     const { services, stats, loading, error, total, page, PAGE_SIZE, fetchServices, createService, updateService, deleteService } = useServiceManagement();
+    const { specializations } = useSpecializations();
+    const { capabilities } = useCapabilities();
 
     const [search,    setSearch]    = useState('');
     const [typeF,     setTypeF]     = useState('');
     const [specialtyF,setSpecialtyF]= useState('');
     const [statusF,   setStatusF]   = useState('');
+    const [sortF, setSortF] = useState('name,asc');
     const [showAdd,   setShowAdd]   = useState(false);
     const [configSvc, setConfigSvc] = useState(null);
     const [editSvc,   setEditSvc]   = useState(null);
     const [deleteId,  setDeleteId]  = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const handleSearch = () => fetchServices({ search, type: typeF, specialty: specialtyF, status: statusF, page: 1 });
+    const queryParams = (targetPage = page) => ({ search, type: typeF, specialty: specialtyF, status: statusF, sort: sortF, page: targetPage });
+    const handleSearch = () => fetchServices(queryParams(1));
 
     const handleCreate = async (payload) => {
         await createService(payload);
         toast.success('Thêm dịch vụ thành công!');
-        fetchServices({ search, type: typeF, specialty: specialtyF, status: statusF, page: 1 });
+        fetchServices(queryParams(1));
     };
 
     const handleUpdate = async (id, payload) => {
         await updateService(id, payload);
         toast.success('Cập nhật dịch vụ thành công!');
-        fetchServices({ search, type: typeF, specialty: specialtyF, status: statusF, page });
+        fetchServices(queryParams(page));
     };
 
     const handleDeleteClick = (id) => {
@@ -291,7 +372,7 @@ export default function ServiceManagementPage() {
         try {
             await deleteService(deleteId);
             toast.success('Xóa dịch vụ thành công!');
-            fetchServices({ search, type: typeF, specialty: specialtyF, status: statusF, page });
+            fetchServices(queryParams(page));
         } catch (err) {
             toast.error(err.message || 'Xóa dịch vụ thất bại!');
         } finally {
@@ -347,19 +428,29 @@ export default function ServiceManagementPage() {
                         <p className="text-xs text-gray-400 mb-1.5">{t('serviceManagement.filter.serviceType')}</p>
                         <select value={typeF} onChange={e => setTypeF(e.target.value)} className={inputCls}>
                             <option value="">-- Tất cả --</option>
-                            {SERVICE_TYPES.map(st => <option key={st} value={st}>{st}</option>)}
+                            {SERVICE_TYPES.map(st => <option key={st} value={st}>{SERVICE_TYPE_LABELS[st]}</option>)}
                         </select>
                     </div>
                     <div className="w-48">
                         <p className="text-xs text-gray-400 mb-1.5">{t('serviceManagement.filter.specialty')}</p>
-                        <input value={specialtyF} onChange={e => setSpecialtyF(e.target.value)}
-                               placeholder="Khoa: Tiêu Hóa – Gan Mật" className={inputCls + ' placeholder:text-gray-300'} />
+                        <select value={specialtyF} onChange={e => setSpecialtyF(e.target.value)} className={inputCls}>
+                            <option value="">-- Tất cả --</option>
+                            {specializations.map(s => <option key={s.specializationId} value={s.specializationId}>{s.name}</option>)}
+                        </select>
                     </div>
                     <div className="w-44">
                         <p className="text-xs text-gray-400 mb-1.5">{t('serviceManagement.filter.status')}</p>
                         <select value={statusF} onChange={e => setStatusF(e.target.value)} className={inputCls}>
                             <option value="">{t('serviceManagement.filter.statusAll')}</option>
                             {STATUSES.map(s => <option key={s} value={s}>{STATUS_CFG[s].label}</option>)}
+                        </select>
+                    </div>
+                    <div className="w-48">
+                        <p className="text-xs text-gray-400 mb-1.5">Sắp xếp</p>
+                        <select value={sortF} onChange={e => setSortF(e.target.value)} className={inputCls}>
+                            <option value="name,asc">Tên A–Z</option><option value="name,desc">Tên Z–A</option>
+                            <option value="price,asc">Giá thấp đến cao</option><option value="price,desc">Giá cao đến thấp</option>
+                            <option value="durationMinutes,asc">Thời lượng ngắn trước</option><option value="durationMinutes,desc">Thời lượng dài trước</option>
                         </select>
                     </div>
                     <div className="flex flex-col gap-2 shrink-0">
@@ -411,10 +502,10 @@ export default function ServiceManagementPage() {
                                     </td>
                                     <td className={tdCls}>
                       <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
-                        {svc.type}
+                        {SERVICE_TYPE_LABELS[svc.type] || svc.type}
                       </span>
                                     </td>
-                                    <td className={tdCls + ' text-gray-500 text-xs'}>{svc.specialty || 'Dùng chung / Mua tự do'}</td>
+                                    <td className={tdCls + ' text-gray-500 text-xs'}>{svc.type === 'EXAMINATION' ? (svc.specialty || 'Chưa cấu hình') : 'Không áp dụng'}</td>
                                     <td className={tdCls + ' font-medium tabular-nums'}>{fmt(svc.price)}</td>
                                     <td className={tdCls}>
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${stCfg.cls}`}>
@@ -447,19 +538,19 @@ export default function ServiceManagementPage() {
                     </table>
 
                     <Pagination page={page} total={total} pageSize={PAGE_SIZE}
-                                onChange={p => fetchServices({ search, type: typeF, specialty: specialtyF, status: statusF, page: p })} />
+                                onChange={p => fetchServices(queryParams(p))} />
                 </div>
             </div>
 
             {/* Modals */}
             {showAdd && (
-                <AddModal t={t} onClose={() => setShowAdd(false)} onSubmit={handleCreate} />
+                <AddModal t={t} specializations={specializations} capabilities={capabilities} onClose={() => setShowAdd(false)} onSubmit={handleCreate} />
             )}
             {configSvc && (
                 <ConfigModal t={t} service={configSvc} onClose={() => setConfigSvc(null)} onSubmit={handleUpdate} />
             )}
             {editSvc && (
-                <EditModal t={t} service={editSvc} onClose={() => setEditSvc(null)} onSubmit={handleUpdate} />
+                <EditModal t={t} service={editSvc} specializations={specializations} capabilities={capabilities} onClose={() => setEditSvc(null)} onSubmit={handleUpdate} />
             )}
             
             <ConfirmModal 

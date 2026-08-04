@@ -1,6 +1,7 @@
 // src/hooks/useAppointments.js
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
@@ -36,8 +37,12 @@ export function useAppointments() {
             `${import.meta.env.VITE_API_URL}/api/v1/appointments/my/${id}/cancel`,
             { method: 'POST', headers: bearer() }
         );
-        if (!res.ok) throw new Error(t('myAppointments.errors.cancelFailed'));
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.message || t('myAppointments.errors.cancelFailed'));
+        }
         setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'cancelled' } : a));
+        toast.success('Hủy lịch hẹn thành công!');
     };
 
     return { appointments, loading, error, total, page, PAGE_SIZE, fetchAppointments, cancelAppointment };
@@ -71,9 +76,13 @@ export function useAppointmentDetail(appointmentId) {
                 `${import.meta.env.VITE_API_URL}/api/v1/appointments/my/${appointmentId}/cancel`,
                 { method: 'POST', headers: bearer() }
             );
-            if (!res.ok) throw new Error(t('appointmentDetail.errors.cancelFailed'));
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                throw new Error(body.message || t('appointmentDetail.errors.cancelFailed'));
+            }
             setDetail(prev => ({ ...prev, status: 'cancelled' }));
-        } catch (err) { setError(err.message); }
+            toast.success('Hủy lịch hẹn thành công!');
+        } catch (err) { setError(err.message); toast.error(err.message); }
         finally { setCancelling(false); }
     };
 

@@ -61,9 +61,10 @@ export default function FollowUpListPage() {
         try {
             const token = get('token');
             const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+            const scheduledTime = timeSlot === 'AFTERNOON' ? '14:00:00' : '09:00:00';
             const payload = {
                 customerId: selectedItem.customerId,
-                scheduledAt: `${appointmentDate}T00:00:00`,
+                scheduledAt: appointmentDate ? `${appointmentDate}T${scheduledTime}` : null,
                 timeSlot: timeSlot,
                 serviceIds: []
             };

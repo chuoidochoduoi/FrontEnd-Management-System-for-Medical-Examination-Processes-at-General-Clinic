@@ -7,6 +7,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useStaffList, usePatientList } from "@/hooks/useAccountManagement";
 import { useSpecializations } from "@/hooks/useSpecializations";
+import { useCapabilities } from "@/hooks/useCapabilities";
 
 const PAGE_SIZE = 10;
 
@@ -71,8 +72,9 @@ const systemRoleMap = {
   ADMIN: "Quản trị viên",
   CLINIC_MANAGER: "Quản lý phòng khám",
   NURSE: "Y tá",
-  GENERAL_DOCTOR: "Bác sĩ đa khoa",
-  SPECIALIST_DOCTOR: "Bác sĩ chuyên khoa",
+  DOCTOR: "Bác sĩ",
+  GENERAL_DOCTOR: "Bác sĩ",
+  SPECIALIST_DOCTOR: "Bác sĩ",
   RECEPTIONIST: "Lễ tân",
   CASHIER: "Thu ngân",
 };
@@ -86,17 +88,23 @@ const capitalizeWords = (str) => {
 };
 
 const DateDropdowns = ({ value, onChange, className }) => {
-  const parts = (value || '').split('-');
-  const year = parts[0] || '';
-  const month = parts[1] ? String(parseInt(parts[1], 10)) : ''; 
-  const day = parts[2] ? String(parseInt(parts[2], 10)) : '';
+  const initial = /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? value.split('-') : ['', '', ''];
+  const [year, setYear] = useState(initial[0] || '');
+  const [month, setMonth] = useState(initial[1] ? String(parseInt(initial[1], 10)) : '');
+  const [day, setDay] = useState(initial[2] ? String(parseInt(initial[2], 10)) : '');
+
+  useEffect(() => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return;
+    const [nextYear, nextMonth, nextDay] = value.split('-');
+    setYear(nextYear); setMonth(String(parseInt(nextMonth, 10))); setDay(String(parseInt(nextDay, 10)));
+  }, [value]);
 
   const handleUpdate = (y, m, d) => {
       const py = y || '';
       const pm = m ? m.padStart(2, '0') : '';
       const pd = d ? d.padStart(2, '0') : '';
-      if (!py && !pm && !pd) onChange('');
-      else onChange(`${py}-${pm}-${pd}`);
+      setYear(py); setMonth(m || ''); setDay(d || '');
+      onChange(py && pm && pd ? `${py}-${pm}-${pd}` : '');
   };
 
   const currentYear = new Date().getFullYear();
@@ -129,9 +137,18 @@ const DateDropdowns = ({ value, onChange, className }) => {
   );
 };
 
+const isValidPastDate = value => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1
+    && date.getDate() === day && date < new Date();
+};
+
 /* ── Modal: Thêm nhân sự ── */
 function AddStaffModal({ onClose, onSubmit, t }) {
   const { specializations } = useSpecializations();
+  const { capabilities } = useCapabilities();
   const [form, setForm] = useState({
     username: "",
     password: "",
@@ -145,6 +162,9 @@ function AddStaffModal({ onClose, onSubmit, t }) {
     dateOfBirth: "",
     highestDegree: "",
     university: "",
+    licenseNumber: "",
+    nationalId: "",
+    capabilityIds: [],
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -157,10 +177,33 @@ function AddStaffModal({ onClose, onSubmit, t }) {
       setError("Vui lòng nhập đầy đủ các trường bắt buộc (Tên đăng nhập, Mật khẩu, Vai trò, Họ tên, SĐT, Giới tính, Ngày sinh).");
       return;
     }
+    if (!/^[a-zA-Z0-9._-]{4,50}$/.test(form.username)) return setError('Tên đăng nhập phải có 4-50 ký tự và không chứa khoảng trắng.');
+    if (form.password.length < 8) return setError('Mật khẩu phải có ít nhất 8 ký tự.');
+    if (!/^(\+84|0)\d{9,10}$/.test(form.phone)) return setError('Số điện thoại Việt Nam không hợp lệ.');
+    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return setError('Email là bắt buộc và phải đúng định dạng.');
+    if (!isValidPastDate(form.dateOfBirth)) return setError('Vui lòng chọn đầy đủ ngày, tháng, năm sinh hợp lệ trong quá khứ.');
+    const isDoctor = form.systemRole === "DOCTOR";
+    if (isDoctor && !form.specializationId) return setError('Vui lòng chọn chuyên khoa phục vụ của bác sĩ.');
     setSubmitting(true);
     setError("");
     try {
-      await onSubmit(form);
+      const created = await onSubmit({
+        ...form,
+        highestDegree: form.highestDegree?.trim() || null,
+        university: form.university?.trim() || null,
+        licenseNumber: form.licenseNumber?.trim() || null,
+        nationalId: form.nationalId?.trim() || null,
+      });
+      const createdStaffId = created?.staffId || created?.data?.staffId;
+      if (form.systemRole === "DOCTOR" && createdStaffId) {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/${createdStaffId}/capabilities`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify((form.capabilityIds || []).map(capabilityId => ({ capabilityId }))),
+        });
+        if (!response.ok) throw new Error("Tạo nhân sự thành công nhưng không thể cấp danh mục kỹ thuật");
+      }
       onClose();
     } catch (err) {
       setError(err.message);
@@ -232,8 +275,7 @@ function AddStaffModal({ onClose, onSubmit, t }) {
                       <option value="ADMIN">Quản trị viên</option>
                       <option value="CLINIC_MANAGER">Quản lý phòng khám</option>
                       <option value="NURSE">Y tá</option>
-                      <option value="GENERAL_DOCTOR">Bác sĩ đa khoa</option>
-                      <option value="SPECIALIST_DOCTOR">Bác sĩ chuyên khoa</option>
+                      <option value="DOCTOR">Bác sĩ</option>
                       <option value="RECEPTIONIST">Lễ tân</option>
                       <option value="CASHIER">Thu ngân</option>
                     </select>
@@ -256,10 +298,10 @@ function AddStaffModal({ onClose, onSubmit, t }) {
             </div>
           </div>
 
-          {/* Section - Specialization (only for specialist doctors) */}
-          {form.systemRole === "SPECIALIST_DOCTOR" && (
-            <div>
-              <label className={labelCls}>Chuyên khoa</label>
+          {/* Chuyên khoa phục vụ xác định phạm vi khám của bác sĩ. */}
+          {form.systemRole === "DOCTOR" && (
+            <div className="space-y-4">
+              <label className={labelCls}>Chuyên khoa phục vụ *</label>
               <select
                 value={form.specializationId}
                 onChange={(e) => set("specializationId", e.target.value)}
@@ -272,6 +314,8 @@ function AddStaffModal({ onClose, onSubmit, t }) {
                   </option>
                 ))}
               </select>
+              <p className="text-xs text-gray-400 mt-1">Chọn “Khám tổng quát” cho bác sĩ đa khoa hoặc chuyên khoa cụ thể mà bác sĩ phụ trách.</p>
+              <div><label className={labelCls}>Kỹ thuật được cấp phép (không bắt buộc)</label><div className="grid grid-cols-2 gap-2 border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto">{capabilities.map(capability => <label key={capability.capabilityId} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.capabilityIds.includes(capability.capabilityId)} onChange={event => set("capabilityIds", event.target.checked ? [...form.capabilityIds, capability.capabilityId] : form.capabilityIds.filter(id => id !== capability.capabilityId))}/>{capability.name}</label>)}</div></div>
             </div>
           )}
 
@@ -344,12 +388,14 @@ function AddStaffModal({ onClose, onSubmit, t }) {
           {/* Section 4 - Education */}
           <div>
             <p className="text-xs font-semibold text-gray-500 mb-4">
-              {t("accountManagement.addStaffModal.section3")}
+              {t("accountManagement.addStaffModal.section3")} (không bắt buộc)
             </p>
             <div className="grid grid-cols-2 gap-x-8 gap-y-5">
               {[
-                { key: "highestDegree", label: "Học vị" },
-                { key: "university", label: "Trường đào tạo" },
+                { key: "highestDegree", label: "Học vị (không bắt buộc)" },
+                { key: "university", label: "Trường đào tạo (không bắt buộc)" },
+                { key: "licenseNumber", label: "Số giấy phép hành nghề (không bắt buộc)" },
+                { key: "nationalId", label: "CCCD/CMND (không bắt buộc)" },
               ].map(({ key, label }) => (
                 <div key={key}>
                   <label className={labelCls}>{label}</label>
@@ -357,6 +403,7 @@ function AddStaffModal({ onClose, onSubmit, t }) {
                     value={form[key]}
                     onChange={(e) => set(key, e.target.value)}
                     className={inputCls}
+                    required={false}
                   />
                 </div>
               ))}
@@ -392,6 +439,8 @@ function AddStaffModal({ onClose, onSubmit, t }) {
 
 /* ── Modal: Cập nhật nhân sự ── */
 function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
+  const { specializations } = useSpecializations();
+  const { capabilities } = useCapabilities();
   const [form, setForm] = useState(null);
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -414,7 +463,16 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
           specializationId: res.specialization?.specializationId || "",
           highestDegree: res.highestDegree || "",
           university: res.university || "",
+          licenseNumber: res.licenseNumber || "",
+          nationalId: res.nationalId || "",
+          capabilityIds: [],
         });
+        if (res.systemRole === "DOCTOR") {
+          const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+          fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/${res.staffId}/capabilities`, { headers: { Authorization: `Bearer ${token}` } })
+            .then(response => response.ok ? response.json() : [])
+            .then(values => setForm(previous => ({ ...previous, capabilityIds: values.map(value => value.capabilityId) })));
+        }
       })
   .catch(err => setError(err.message));
   }, [account.accountId]);
@@ -426,13 +484,34 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
       setError("Vui lòng nhập đầy đủ các trường bắt buộc (Vai trò, Họ tên, SĐT, Giới tính, Ngày sinh).");
       return;
     }
+    if (!/^(\+84|0)\d{9,10}$/.test(form.phone)) return setError('Số điện thoại Việt Nam không hợp lệ.');
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return setError('Email không hợp lệ.');
+    if (password && password.length < 6) return setError('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    if (!isValidPastDate(form.dateOfBirth)) return setError('Vui lòng chọn đầy đủ ngày, tháng, năm sinh hợp lệ trong quá khứ.');
+    const isDoctor = form.systemRole === "DOCTOR";
+    if (isDoctor && !form.specializationId) return setError('Vui lòng chọn chuyên khoa phục vụ của bác sĩ.');
     setSubmitting(true);
     setError("");
     try {
       if (password) {
         await staffHook.resetPassword(account.accountId, password);
       }
-      await staffHook.updateStaffFull(form.staffId, form);
+      await staffHook.updateStaffFull(form.staffId, {
+        ...form,
+        highestDegree: form.highestDegree?.trim() || null,
+        university: form.university?.trim() || null,
+        licenseNumber: form.licenseNumber?.trim() || null,
+        nationalId: form.nationalId?.trim() || null,
+      });
+      if (form.systemRole === "DOCTOR") {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+        const capabilityResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/${form.staffId}/capabilities`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify((form.capabilityIds || []).map(capabilityId => ({ capabilityId }))),
+        });
+        if (!capabilityResponse.ok) throw new Error("Cập nhật năng lực bác sĩ thất bại");
+      }
       toast.success('Cập nhật nhân sự thành công!');
       onClose();
     } catch (err) {
@@ -512,14 +591,33 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
                   <option value="ADMIN">Quản trị viên</option>
                   <option value="CLINIC_MANAGER">Quản lý phòng khám</option>
                   <option value="NURSE">Y tá</option>
-                  <option value="GENERAL_DOCTOR">Bác sĩ đa khoa</option>
-                  <option value="SPECIALIST_DOCTOR">Bác sĩ chuyên khoa</option>
+                  <option value="DOCTOR">Bác sĩ</option>
                   <option value="RECEPTIONIST">Lễ tân</option>
                   <option value="CASHIER">Thu ngân</option>
                 </select>
               </div>
             </div>
           </div>
+
+          {form.systemRole === "DOCTOR" && (
+            <div>
+              <label className={labelCls}>Chuyên khoa phục vụ *</label>
+              <select value={form.specializationId} onChange={(e) => set("specializationId", e.target.value)} className={inputCls}>
+                <option value="">-- Chọn chuyên khoa --</option>
+                {specializations.map((s) => <option key={s.specializationId} value={s.specializationId}>{s.name}</option>)}
+              </select>
+              <div>
+                <label className={labelCls}>Kỹ thuật được cấp phép (không bắt buộc)</label>
+                <div className="grid grid-cols-2 gap-2 border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto">
+                  {capabilities.map(capability => <label key={capability.capabilityId} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={(form.capabilityIds || []).includes(capability.capabilityId)} onChange={event => set("capabilityIds", event.target.checked ? [...(form.capabilityIds || []), capability.capabilityId] : (form.capabilityIds || []).filter(id => id !== capability.capabilityId))}/>
+                    {capability.name}
+                  </label>)}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Thông tin chứng chỉ, ngày cấp, hết hạn và đơn vị cấp có thể để trống.</p>
+              </div>
+            </div>
+          )}
 
           {/* Section 2 - Personal Info */}
           <div>
@@ -580,12 +678,14 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
           {/* Section 4 - Education */}
           <div>
             <p className="text-xs font-semibold text-gray-500 mb-4">
-              ■ {t("accountManagement.addStaffModal.section3")}
+              ■ {t("accountManagement.addStaffModal.section3")} (không bắt buộc)
             </p>
             <div className="grid grid-cols-2 gap-x-8 gap-y-5">
               {[
-                { key: "highestDegree", label: "Học vị" },
-                { key: "university", label: "Trường đào tạo" },
+                { key: "highestDegree", label: "Học vị (không bắt buộc)" },
+                { key: "university", label: "Trường đào tạo (không bắt buộc)" },
+                { key: "licenseNumber", label: "Số giấy phép hành nghề (không bắt buộc)" },
+                { key: "nationalId", label: "CCCD/CMND (không bắt buộc)" },
               ].map(({ key, label }) => (
                 <div key={key}>
                   <label className={labelCls}>{label}</label>
@@ -593,6 +693,7 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
                     value={form[key]}
                     onChange={(e) => set(key, e.target.value)}
                     className={inputCls}
+                    required={false}
                   />
                 </div>
               ))}
@@ -1128,9 +1229,10 @@ export default function AccountManagementPage() {
           t={t}
           onClose={() => setShowAddStaff(false)}
           onSubmit={async (payload) => {
-            await staffHook.addStaff(payload);
+            const created = await staffHook.addStaff(payload);
             toast.success('Thêm nhân sự thành công!');
             staffHook.fetchStaff();
+            return created;
           }}
         />
       )}

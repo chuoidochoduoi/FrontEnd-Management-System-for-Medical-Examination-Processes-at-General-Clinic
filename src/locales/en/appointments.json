@@ -22,9 +22,10 @@
       "actions": "ACTIONS"
     },
     "status": {
-      "upcoming":  "UPCOMING",
-      "completed": "COMPLETED",
-      "cancelled": "CANCELLED"
+      "upcoming":   "UPCOMING",
+      "completed":  "COMPLETED",
+      "cancelled":  "CANCELLED",
+      "checked_in": "CHECKED IN"
     },
     "queueWaiting": "Waiting for Queue Number Assignment",
     "cancelBtn": "Cancel",

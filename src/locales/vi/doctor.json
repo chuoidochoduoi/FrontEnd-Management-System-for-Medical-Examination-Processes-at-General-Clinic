@@ -45,8 +45,8 @@
       "placeholder": "Nhập triệu chứng..."
     },
     "examResult": {
-      "title": "Kết quả khám",
-      "placeholder": "Nhập kết quả khám lâm sàng"
+      "title": "Khám lâm sàng",
+      "placeholder": "Nhập các dấu hiệu và kết quả khám lâm sàng"
     },
     "diagnosis": {
       "title": "Chẩn đoán (ICD-10)",

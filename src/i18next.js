@@ -36,6 +36,8 @@ i18n
     .use(LanguageDetector)
     .use(initReactI18next)
     .init({
+        // Hệ thống hiện sử dụng tiếng Việt làm ngôn ngữ cố định.
+        lng: 'vi',
         fallbackLng: 'vi',
         debug: false,
         resources: {

@@ -12,7 +12,10 @@ export default function RoomListPage() {
 
     useEffect(() => {
         if (myDepartment?.departmentId) {
-            navigate(ROUTES.DOCTOR_DEPARTMENTS.replace(':departmentId', myDepartment.departmentId));
+            const target = myDepartment.departmentType === 'EXAMINATION'
+                ? ROUTES.DOCTOR_DEPARTMENTS
+                : ROUTES.DOCTOR_LAB;
+            navigate(target.replace(':departmentId', myDepartment.departmentId), { replace: true });
         }
     }, [myDepartment, navigate]);
 

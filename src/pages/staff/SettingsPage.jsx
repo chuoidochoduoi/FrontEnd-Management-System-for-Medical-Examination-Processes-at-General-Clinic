@@ -21,14 +21,22 @@ export default function SettingsPage() {
     let Layout = ReceptionistLayout;
     if (systemRole === 'CLINIC_MANAGER') Layout = OwnerLayout;
     else if (systemRole === 'CASHIER') Layout = CashierLayout;
-    else if (['GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'NURSE'].includes(systemRole)) Layout = MedicalStaffLayout;
+    else if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'NURSE'].includes(systemRole)) Layout = MedicalStaffLayout;
     else if (systemRole === 'ADMIN') Layout = AdminLayout;
 
     // Các state cấu hình
     const [settings, setSettings] = useState({
         theme: localStorage.getItem('app_theme') || 'light',
         language: localStorage.getItem('app_lang') || 'vi',
+        notifications: localStorage.getItem('app_notifications') !== 'false',
+        sound: localStorage.getItem('app_sound') !== 'false',
+        compact: localStorage.getItem('app_compact') === 'true',
     });
+
+    useEffect(() => {
+        document.documentElement.classList.toggle('dark', settings.theme === 'dark');
+        document.documentElement.dataset.density = settings.compact ? 'compact' : 'comfortable';
+    }, []);
 
     // Handle thay đổi settings
     const handleChange = (key, value) => {
@@ -40,6 +48,9 @@ export default function SettingsPage() {
         setTimeout(() => {
             localStorage.setItem('app_theme', settings.theme);
             localStorage.setItem('app_lang', settings.language);
+            localStorage.setItem('app_notifications', String(settings.notifications));
+            localStorage.setItem('app_sound', String(settings.sound));
+            localStorage.setItem('app_compact', String(settings.compact));
             
             // Apply language
             if (i18n && i18n.changeLanguage) {
@@ -52,6 +63,7 @@ export default function SettingsPage() {
             } else {
                 document.documentElement.classList.remove('dark');
             }
+            document.documentElement.dataset.density = settings.compact ? 'compact' : 'comfortable';
 
             toast.success('Đã lưu cấu hình cài đặt thành công!');
             setSaving(false);
@@ -125,6 +137,28 @@ export default function SettingsPage() {
                                         <option value="en">🇬🇧 English</option>
                                     </select>
                                 </div>
+
+                                {[
+                                    ['notifications', Bell, 'Thông báo hệ thống', 'Hiển thị thông báo cập nhật và thao tác'],
+                                    ['sound', Volume2, 'Âm thanh gọi số', 'Phát âm thanh khi gọi bệnh nhân'],
+                                    ['compact', LayoutGrid, 'Hiển thị thu gọn', 'Giảm khoảng cách trong danh sách và bảng'],
+                                ].map(([key, Icon, title, description]) => (
+                                    <label key={key} className="flex items-center justify-between pt-3 border-t border-gray-50 cursor-pointer">
+                                        <div className="flex items-center gap-3">
+                                            <Icon className="w-4 h-4 text-gray-400" />
+                                            <div>
+                                                <p className="font-medium text-gray-800 text-sm">{title}</p>
+                                                <p className="text-xs text-gray-500">{description}</p>
+                                            </div>
+                                        </div>
+                                        <input
+                                            type="checkbox"
+                                            checked={settings[key]}
+                                            onChange={e => handleChange(key, e.target.checked)}
+                                            className="w-4 h-4 accent-primary-600"
+                                        />
+                                    </label>
+                                ))}
                             </div>
                         </div>
 

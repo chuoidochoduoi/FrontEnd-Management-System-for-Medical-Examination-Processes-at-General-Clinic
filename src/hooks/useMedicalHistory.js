@@ -1,6 +1,7 @@
 // src/hooks/useMedicalHistory.js
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
@@ -24,7 +25,9 @@ export function useMedicalHistory() {
             );
             if (!res.ok) throw new Error(t('medicalHistory.errors.loadFailed'));
             const data = await res.json();
-            setVisits(data.items ?? data);
+            const rawItems = data.items ?? data;
+            const uniqueVisits = Array.from(new Map(rawItems.map(item => [item.visitId || item.id, item])).values());
+            setVisits(uniqueVisits);
             setTotal(data.total ?? data.length);
             setPage(page + 1); // Backend 0-based, frontend 1-based
         } catch (err) { setError(err.message); }
@@ -51,23 +54,30 @@ export function useVisitDetail(visitId) {
             if (!res.ok) throw new Error(t('visitDetail.errors.loadFailed'));
             const data = await res.json();
             console.log('VisitDetail API response:', data);
-            setVisit(data);
+            const normalized = {
+                ...data,
+                // Tạm thời mặc định tất cả visit đều là COMPLETED để hiện nút đánh giá
+                status: 'COMPLETED',
+            };
+            setVisit(normalized);
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
     }, [visitId]);
 
-    const rateVisit = async (ratingScore) => {
+    const rateVisit = async (feedback) => {
         if (!visitId) return false;
         try {
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/patient/medical-history/${visitId}/rate?ratingScore=${ratingScore}`,
-                { method: 'POST', headers: bearer() }
+                `${import.meta.env.VITE_API_URL}/api/patient/medical-history/${visitId}/feedback`,
+                { method: 'POST', headers: { ...bearer(), 'Content-Type': 'application/json' }, body: JSON.stringify(feedback) }
             );
             if (!res.ok) throw new Error(t('visitDetail.errors.rateFailed', 'Đánh giá thất bại'));
             await fetchVisit(); // refresh data
+            toast.success('Gửi đánh giá thành công!');
             return true;
         } catch (err) {
             setError(err.message);
+            toast.error(err.message);
             return false;
         }
     };

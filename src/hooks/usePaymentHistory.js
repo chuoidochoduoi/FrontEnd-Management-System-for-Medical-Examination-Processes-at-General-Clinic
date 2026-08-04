@@ -48,7 +48,7 @@ export function useReceiptDetail(invoiceId) {
                 `${import.meta.env.VITE_API_URL}/api/patient/payments/${invoiceId}`,
                 { headers: bearer() }
             );
-            if (!res.ok) throw new Error(t('receiptDetail.errors?.loadFailed') || 'Cannot load receipt.');
+            if (!res.ok) throw new Error(t('receiptDetail.errors.loadFailed', 'Không thể tải phiếu thu.'));
             setReceipt(await res.json());
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }

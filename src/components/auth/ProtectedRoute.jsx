@@ -14,6 +14,7 @@ const roleToRoute = {
 
 const systemRoleToRoute = {
     RECEPTIONIST: ROUTES.RECEPTIONIST_CHECKIN,
+    DOCTOR: ROUTES.DOCTOR_ROOMS,
     GENERAL_DOCTOR: ROUTES.DOCTOR_ROOMS,
     SPECIALIST_DOCTOR: ROUTES.DOCTOR_ROOMS,
     NURSE: ROUTES.DOCTOR_ROOMS,
@@ -56,7 +57,7 @@ const isRoleAllowed = (allowedRoles) => {
         return allowedRoles.some(allowed => {
             // Cho phép role cũ (backward compatibility) hoặc systemRole mới
             const roleMapping = {
-                'DOCTOR': ['GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'],
+                'DOCTOR': ['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'],
                 'NURSE': ['NURSE'],
                 'RECEPTIONIST': ['RECEPTIONIST'],
                 'CASHIER': ['CASHIER'],

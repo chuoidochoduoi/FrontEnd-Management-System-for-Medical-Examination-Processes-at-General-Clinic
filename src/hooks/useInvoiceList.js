@@ -24,7 +24,7 @@ export function useInvoiceList() {
         try {
             const params = new URLSearchParams();
             if (search)   params.set('search',   search);
-            if (status)   params.set('status',   status);
+            if (status)   params.set('status',   status.toUpperCase());
             if (category) params.set('category', category);
             // Backend thường dùng 0-indexed (Spring Data), frontend dùng 1-indexed
             params.set('page', page);  // Giữ 0-indexed để tương thích backend
@@ -78,6 +78,8 @@ export function useInvoiceList() {
                     balance: inv.balance,
                     status: statusValue,
                     issueDate: inv.issueDate,
+                    createdAt: inv.createdAt,
+                    checkInTime: inv.checkInTime,
                     dueDate: inv.dueDate,
                 };
             });
@@ -85,7 +87,7 @@ export function useInvoiceList() {
             logger.info(`Mapped ${mapped.length} invoices from ${data.content?.length || 0} items, totalElements: ${data.totalElements}`);
             setInvoices(mapped);
             setTotal(data.totalElements ?? 0);
-            setPage(page);
+            setPage(page + 1);
         } catch (err) {
             logger.error('Fetch invoices failed:', err);
             setError(err.message || t('invoiceList.errors.unknown'));

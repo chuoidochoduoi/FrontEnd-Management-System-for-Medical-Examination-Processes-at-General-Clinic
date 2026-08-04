@@ -1,6 +1,7 @@
 // src/hooks/useSchedule.js
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
@@ -36,11 +37,12 @@ export function useSchedule() {
     // Gán / bỏ nhân sự vào 1 ô (shiftId + dayKey)
     const assignStaff = async (shiftId, dayKey, staffId, add) => {
         try {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/v1/clinic-manager/schedules/assign`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/clinic-manager/schedules/assign`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...bearer() },
                 body: JSON.stringify({ week: weekStart, shiftId, dayKey, staffId, action: add ? 'add' : 'remove' }),
             });
+            if (!res.ok) throw new Error(t('scheduleManagement.errors.saveFailed'));
             const cellKey = `${shiftId}_${dayKey}`;
             setSchedule(prev => {
                 const cell = prev[cellKey] ?? [];
@@ -51,7 +53,8 @@ export function useSchedule() {
                         : cell.filter(s => s.id !== staffId),
                 };
             });
-        } catch { setError(t('scheduleManagement.errors.saveFailed')); }
+            toast.success(add ? 'Phân công nhân sự thành công!' : 'Gỡ nhân sự khỏi ca thành công!');
+        } catch { setError(t('scheduleManagement.errors.saveFailed')); toast.error(t('scheduleManagement.errors.saveFailed')); }
     };
 
     // Sao chép tuần trước
@@ -65,7 +68,8 @@ export function useSchedule() {
             if (!res.ok) throw new Error(t('scheduleManagement.errors.saveFailed'));
             const data = await res.json();
             setSchedule(data.schedule ?? {});
-        } catch (err) { setError(err.message); }
+            toast.success('Sao chép lịch tuần trước thành công!');
+        } catch (err) { setError(err.message); toast.error(err.message); }
     };
 
     // Lấy danh sách nhân sự cho lịch
@@ -83,7 +87,7 @@ export function useSchedule() {
             setStaff(data.map(s => ({
                 id: s.staffId,
                 name: s.fullName,
-                role: s.systemRole === 'GENERAL_DOCTOR' || s.systemRole === 'SPECIALIST_DOCTOR' ? 'BS' :
+                role: ['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(s.systemRole) ? 'BS' :
                       s.systemRole === 'NURSE' ? 'YT' : s.systemRole,
             })));
         } catch (err) {
@@ -92,10 +96,21 @@ export function useSchedule() {
         }
     }, []);
 
-    // Lưu cấu hình ca - không cho sửa
-    const saveShifts = async () => {
-        // Placeholder - not implemented
-        console.log('saveShifts - not implemented');
+    const saveShifts = async (nextShifts = shifts) => {
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/clinic-manager/schedules/shifts`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', ...bearer() },
+                body: JSON.stringify({ shifts: nextShifts }),
+            });
+            if (!res.ok) throw new Error(t('scheduleManagement.errors.saveFailed'));
+            toast.success('Lưu cấu hình ca trực thành công!');
+            return true;
+        } catch (err) {
+            setError(err.message);
+            toast.error(err.message);
+            return false;
+        }
     };
 
     return { schedule, shifts, staff, weekStart, loading, error, fetchSchedule, assignStaff, copyLastWeek, saveShifts, fetchStaffList };

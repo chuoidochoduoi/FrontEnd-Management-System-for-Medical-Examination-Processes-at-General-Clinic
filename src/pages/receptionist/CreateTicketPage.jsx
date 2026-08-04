@@ -11,9 +11,8 @@ import CreateTicketConfirmModal from '@/components/ui/CreateTicketConfirmModal';
 const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
 
 const DEPARTMENT_TYPE_LABELS = {
-    'CLINICAL': 'Khám lâm sàng',
-    'LABORATORY': 'Xét nghiệm',
-    'IMAGING': 'Chẩn đoán hình ảnh',
+    'EXAMINATION': 'Khám bệnh',
+    'PARACLINICAL': 'Cận lâm sàng',
     'OTHER': 'Dịch vụ khác'
 };
 
@@ -203,6 +202,22 @@ export default function CreateTicketPage() {
         }
         if (!phone.trim()) {
             setValidationError(t('validation.phoneRequired'));
+            return;
+        }
+        if (!/^(\+84|0)\d{9,10}$/.test(phone.trim())) {
+            setValidationError('Số điện thoại Việt Nam không hợp lệ');
+            return;
+        }
+        if (dob && new Date(dob) >= new Date()) {
+            setValidationError('Ngày sinh phải là ngày trong quá khứ');
+            return;
+        }
+        if (address.length > 255) {
+            setValidationError('Địa chỉ không được vượt quá 255 ký tự');
+            return;
+        }
+        if (insuranceId && (!bhytCode || !bhytChecked)) {
+            setValidationError('Vui lòng kiểm tra mã bảo hiểm trước khi tạo phiếu');
             return;
         }
         if (selectedServiceIds.length === 0) {
@@ -418,12 +433,12 @@ export default function CreateTicketPage() {
                                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
                                                     {Object.entries(
                                                         filteredServices.reduce((acc, service) => {
-                                                            const type = service.departmentType || 'OTHER';
+                                                            const type = service.departmentType === 'EXAMINATION' ? 'EXAMINATION' : 'PARACLINICAL';
                                                             if (!acc[type]) acc[type] = [];
                                                             acc[type].push(service);
                                                             return acc;
                                                         }, {})
-                                                    ).map(([type, servicesGroup]) => (
+                                                    ).sort(([a], [b]) => a === 'EXAMINATION' ? -1 : b === 'EXAMINATION' ? 1 : 0).map(([type, servicesGroup]) => (
                                                         <div key={type} className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col h-full overflow-hidden">
                                                             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 shrink-0">
                                                                 {DEPARTMENT_TYPE_LABELS[type] || type}
@@ -457,6 +472,7 @@ export default function CreateTicketPage() {
                                                                                 {svc.description && (
                                                                                     <p className="text-xs text-gray-400 mt-0.5 truncate">{svc.description}</p>
                                                                                 )}
+                                                                                {type === 'PARACLINICAL' && svc.capabilityName && <p className="text-xs text-gray-500 mt-0.5">{svc.capabilityName}</p>}
                                                                             </div>
                                                                             <div className="flex flex-col items-end shrink-0 pl-2">
                                                                                 {priceInfo.discountPercent > 0 && (

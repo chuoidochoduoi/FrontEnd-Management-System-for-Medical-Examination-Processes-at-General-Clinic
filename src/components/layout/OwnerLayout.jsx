@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BarChart2, CalendarDays, LogOut, Users , Settings } from 'lucide-react';
+import { BarChart2, CalendarDays, LogOut, Users, Settings, MessageSquare, MapPinned, Clock3, QrCode } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -36,8 +36,7 @@ export default function OwnerLayout({ children }) {
         if (staffInfo && staffInfo.specialization) return staffInfo.specialization.name;
         if (systemRole === 'NURSE') return 'Y tá';
         if (systemRole === 'RECEPTIONIST') return 'Lễ tân';
-        if (systemRole === 'GENERAL_DOCTOR') return 'Bác sĩ đa khoa';
-        if (systemRole === 'SPECIALIST_DOCTOR') return 'Bác sĩ chuyên khoa';
+        if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)) return 'Bác sĩ';
         if (systemRole === 'ADMIN') return 'Quản trị viên';
         if (systemRole === 'CASHIER') return 'Thu ngân';
         return 'Chủ phòng khám';
@@ -53,7 +52,11 @@ export default function OwnerLayout({ children }) {
     const mainNav = [
         { to: ROUTES.OWNER_REPORT,   icon: BarChart2,    label: 'Thống kê' },
         { to: ROUTES.OWNER_SCHEDULE, icon: CalendarDays, label: 'Lịch trình' },
-        { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
+        { to: ROUTES.OWNER_FEEDBACKS, icon: MessageSquare, label: 'Đánh giá' },
+        { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: 'Điều phối bệnh nhân' },
+        { to: ROUTES.OWNER_ATTENDANCE, icon: Clock3, label: 'Chấm công' },
+        { to: ROUTES.STAFF_ATTENDANCE, icon: Clock3, label: 'Điểm danh của tôi' },
+        { to: ROUTES.OWNER_ATTENDANCE_KIOSK, icon: QrCode, label: 'Màn hình QR' },
     ];
 
     const linkClass = ({ isActive }) =>

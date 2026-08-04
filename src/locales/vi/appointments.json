@@ -26,7 +26,8 @@
     "status": {
       "upcoming": "Sắp tới",
       "completed": "Hoàn thành",
-      "cancelled": "Đã hủy"
+      "cancelled": "Đã hủy",
+      "checked_in": "Đã check-in"
     },
     "viewBtn": "Xem chi tiết",
     "cancelBtn": "Hủy lịch",

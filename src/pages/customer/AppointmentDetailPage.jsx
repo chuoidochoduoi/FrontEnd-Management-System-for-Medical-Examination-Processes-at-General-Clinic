@@ -9,11 +9,7 @@ import CancelConfirmModal from '@/components/ui/CancelConfirmModal';
 
 const fmtVND = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + ' đ' : '—';
 
-const STATUS_DISPLAY = {
-    upcoming:  'UPCOMING (WAITING FOR QUEUE NUMBER)',
-    completed: 'COMPLETED',
-    cancelled: 'CANCELLED',
-};
+/* Status display is translated via i18n in the label below */
 
 export default function AppointmentDetailPage() {
     const { id }   = useParams();
@@ -36,7 +32,9 @@ export default function AppointmentDetailPage() {
         if (apptDate <= today) isPast = true;
     }
     
-    const isActive = detail?.status === 'upcoming' && !isPast;
+    /** Normalize raw API status (may be UPPERCASE) to lowercase for consistent comparisons */
+    const normStatus = (detail?.status || '').toString().toLowerCase().trim();
+    const isActive = normStatus === 'upcoming' && !isPast;
 
     const boxCls   = 'bg-white border border-gray-200 rounded-xl p-5';
     const labelCls = 'text-xs text-gray-400 mb-1';
@@ -115,6 +113,21 @@ export default function AppointmentDetailPage() {
                         <div className={boxCls}>
                             <p className={labelCls}>{t('appointmentDetail.fields.timeSlot')}</p>
                             <p className="text-sm font-bold text-gray-900">{detail?.timeSlot}</p>
+                        </div>
+
+                        <div className={boxCls}>
+                            <p className={labelCls}>{t('appointmentDetail.statusLabel')}</p>
+                            <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold ${
+                                normStatus === 'upcoming' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                                normStatus === 'completed' ? 'bg-green-50 text-green-700 border border-green-100' :
+                                normStatus === 'cancelled' ? 'bg-red-50 text-red-700 border border-red-100' :
+                                normStatus === 'checked_in' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                                'bg-gray-50 text-gray-700 border border-gray-200'
+                            }`}>
+                                {normStatus
+                                    ? t(`myAppointments.status.${normStatus}`, { defaultValue: detail.status })
+                                    : '—'}
+                            </span>
                         </div>
 
                         {/* Removed Queue Ticket */}

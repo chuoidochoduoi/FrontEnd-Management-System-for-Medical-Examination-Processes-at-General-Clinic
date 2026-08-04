@@ -12,8 +12,6 @@ const fmt = (n) =>
     n != null ? new Intl.NumberFormat('vi-VN').format(n) : '—';
 
 const STATUS_STYLE = {
-    draft:     'bg-blue-50   text-blue-600   border border-blue-200',
-    issued:    'bg-indigo-50 text-indigo-600 border border-indigo-200',
     pending:   'bg-orange-50 text-orange-600 border border-orange-200',
     paid:      'bg-green-50  text-green-700  border border-green-200',
     cancelled: 'bg-gray-100  text-gray-500   border border-gray-200',
@@ -87,7 +85,7 @@ function DebugLog({ invoices, loading, error, total }) {
 /* ── Main page ── */
 export default function InvoiceListPage() {
     const { t } = useTranslation('cashier');
-    const { invoices, loading, error, page, total, fetchInvoices, pay, printInvoice } = useInvoiceList();
+    const { invoices, loading, error, page, total, fetchInvoices } = useInvoiceList();
 
     const [search,   setSearch]   = useState('');
     const [status,   setStatus]   = useState('');
@@ -102,7 +100,7 @@ export default function InvoiceListPage() {
     }, []);
 
     const handleSearch = () => fetchInvoices({ search, status, category, page: 0, size: PAGE_SIZE });
-    const handlePage   = (p) => fetchInvoices({ search, status, category, page: 0, size: PAGE_SIZE }); // page luôn bắt đầu từ 0
+    const handlePage   = (p) => fetchInvoices({ search, status, category, page: p - 1, size: PAGE_SIZE });
 
     return (
         <CashierLayout>
@@ -137,8 +135,7 @@ export default function InvoiceListPage() {
                             className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500 bg-white"
                         >
                             <option value="">— Tất cả —</option>
-                            <option value="draft">{t('invoiceList.status.draft')}</option>
-                            <option value="issued">{t('invoiceList.status.issued')}</option>
+                            <option value="pending">{t('invoiceList.status.pending')}</option>
                             <option value="paid">{t('invoiceList.status.paid')}</option>
                             <option value="cancelled">{t('invoiceList.status.cancelled')}</option>
                         </select>
@@ -169,9 +166,10 @@ export default function InvoiceListPage() {
                 {/* ── Table ── */}
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                     {/* Header */}
-                    <div className="grid grid-cols-[140px_180px_1fr_140px_140px_160px] px-6 py-3 border-b border-gray-100 bg-gray-50">
+                    <div className="grid grid-cols-[130px_150px_170px_1fr_120px_120px_130px] px-6 py-3 border-b border-gray-100 bg-gray-50">
                         {[
                             t('invoiceList.table.invoiceCode'),
+                            'Thời gian khám/check-in',
                             t('invoiceList.table.patient'),
                             t('invoiceList.table.services'),
                             t('invoiceList.table.total'),
@@ -200,11 +198,17 @@ export default function InvoiceListPage() {
                     {!loading && invoices.map((inv) => (
                         <div
                             key={inv.id}
-                            className="grid grid-cols-[140px_180px_1fr_140px_140px_160px] px-6 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors items-start"
+                            className="grid grid-cols-[130px_150px_170px_1fr_120px_120px_130px] px-6 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors items-start"
                         >
                             {/* Mã hóa đơn */}
                             <div>
                                 <p className="text-sm font-semibold text-gray-800">{inv.code}</p>
+                            </div>
+
+                            <div className="text-xs text-gray-600 tabular-nums">
+                                {inv.checkInTime || inv.createdAt ? new Intl.DateTimeFormat('vi-VN', {
+                                    dateStyle: 'short', timeStyle: 'short'
+                                }).format(new Date(inv.checkInTime || inv.createdAt)) : inv.issueDate || '—'}
                             </div>
 
                             {/* Bệnh nhân */}
@@ -238,22 +242,6 @@ export default function InvoiceListPage() {
                                     👁️ Xem chi tiết
                                 </Link>
 
-                                {inv.status === 'pending' && (
-                                    <button
-                                        onClick={() => pay(inv.id)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors"
-                                    >
-                                        💳 {t('invoiceList.actions.pay')}
-                                    </button>
-                                )}
-                                {inv.status === 'paid' && (
-                                    <button
-                                        onClick={() => printInvoice(inv.id)}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 hover:border-gray-500 text-gray-600 text-xs font-medium rounded-lg transition-colors"
-                                    >
-                                        🖨️ {t('invoiceList.actions.print')}
-                                    </button>
-                                )}
                             </div>
                         </div>
                     ))}

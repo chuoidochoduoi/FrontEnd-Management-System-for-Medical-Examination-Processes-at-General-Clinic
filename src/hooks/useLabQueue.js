@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 100;
 
 export function useLabQueue(departmentId = null) {
     const { t } = useTranslation('lab');
@@ -15,7 +15,7 @@ export function useLabQueue(departmentId = null) {
     const [total,   setTotal]   = useState(0);
     const [page,    setPage]    = useState(1);
 
-    const fetchOrders = useCallback(async ({ search = '', status = '', sort = 'newest', page = 0, departmentId: deptId } = {}) => {
+    const fetchOrders = useCallback(async ({ search = '', status = '', sort = 'newest', page = 1, departmentId: deptId } = {}) => {
         setLoading(true); setError('');
         // Debug: log token existence
         const token = get('token');
@@ -26,9 +26,9 @@ export function useLabQueue(departmentId = null) {
             if (search) params.set('search', search);
             if (status) params.set('status', status);
             if (deptId) params.set('departmentId', deptId);
-            params.set('page', page);
+            params.set('page', Math.max(0, page - 1));
             params.set('size', PAGE_SIZE);
-            params.set('sort', 'createdAt,desc');
+            params.set('sort', sort === 'oldest' ? 'createdAt,asc' : 'createdAt,desc');
 
             const res = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/v1/test-requests?${params}`,
@@ -48,11 +48,14 @@ export function useLabQueue(departmentId = null) {
                 status: typeof order.status === 'object' && order.status?.name
                     ? order.status.name
                     : (typeof order.status === 'string' ? order.status : String(order.status || 'PENDING')),
+                queueStatus: typeof order.queueStatus === 'object' && order.queueStatus?.name
+                    ? order.queueStatus.name
+                    : (typeof order.queueStatus === 'string' ? order.queueStatus : null),
             }));
 
             setOrders(mappedOrders);
             setTotal(data.totalElements ?? data.total ?? data.length);
-            setPage(page + 1);
+            setPage(page);
         } catch (err) {
             setError(err.message || t('labQueue.errors.unknown'));
         } finally { setLoading(false); }
@@ -60,7 +63,7 @@ export function useLabQueue(departmentId = null) {
 
     // Fetch on mount or departmentId change
     useEffect(() => {
-        fetchOrders({ departmentId });
+        fetchOrders({ departmentId, page: 1 });
     }, [departmentId, fetchOrders]);
 
     return { orders, loading, error, total, page, PAGE_SIZE, fetchOrders };

@@ -23,10 +23,10 @@ export const ROUTES = {
     RECEPTIONIST_SETTINGS:      '/receptionist/settings',
     RECEPTIONIST_SUPPORT:      '/receptionist/support',
     RECEPTIONIST_FOLLOW_UPS:   '/receptionist/follow-ups',
+    PATIENT_JOURNEYS: '/staff/patient-journeys',
 
 
     CASHIER_INVOICES: '/cashier/invoices',
-    CASHIER_REPORT:   '/cashier/report',
     CASHIER_PRINTER:  '/cashier/printer',
     CASHIER_HELP:     '/cashier/help',
     CASHIER_INVOICE_DETAIL: '/cashier/invoices/:id',
@@ -39,17 +39,30 @@ export const ROUTES = {
     DOCTOR_PATIENTS:    '/doctor/patients',
     DOCTOR_RECORDS:     '/doctor/records',
     DOCTOR_EXAMINATION: '/doctor/examinations/department/:departmentId',
+    DOCTOR_PRESCRIPTION_PREVIEW: '/doctor/prescriptions/:recordId/preview',
+    DOCTOR_EXAM_COMPLETED: '/doctor/examinations/:recordId/completed',
+    DOCTOR_MEDICAL_RECORD_PRINT: '/doctor/medical-records/:recordId/print',
     DOCTOR_LAB: '/doctor/lab/:departmentId',
+    DOCTOR_LAB_CALL: '/doctor/lab/:departmentId/call',
+    ROOM_QUEUE_DISPLAY: '/display/room/:departmentId',
+    ALL_QUEUE_DISPLAY: '/display/queues',
 
     DOCTOR_LAB_DETAIL: '/lab/:id',
+    DOCTOR_FEEDBACKS: '/doctor/feedbacks',
 
     ADMIN_ACCOUNTS: '/admin/accounts',
     ADMIN_ROOMS:    '/admin/rooms',
     ADMIN_SERVICES: '/admin/services',
+    ADMIN_SPECIALIZATIONS: '/admin/specializations',
+    ADMIN_CAPABILITIES: '/admin/capabilities',
     ADMIN_AUDIT_LOGS: '/admin/audit-logs',
 
     OWNER_SCHEDULE: '/owner/schedule',
     OWNER_REPORT: '/owner/report',
+    OWNER_FEEDBACKS: '/owner/feedbacks',
+    OWNER_ATTENDANCE: '/owner/attendance',
+    OWNER_ATTENDANCE_KIOSK: '/owner/attendance-kiosk',
+    STAFF_ATTENDANCE: '/staff/attendance',
 
     STAFF_SCHEDULE: '/staff/schedule',
     STAFF_PROFILE: '/staff/profile',

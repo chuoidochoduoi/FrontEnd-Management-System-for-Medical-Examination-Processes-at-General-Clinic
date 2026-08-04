@@ -11,6 +11,8 @@ import {
     LogOut,
     Users,
     CalendarClock,
+    CalendarDays, Clock3,
+    MapPinned,
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 
@@ -46,8 +48,7 @@ export default function ReceptionistLayout({ children }) {
         if (staffInfo && staffInfo.specialization) return staffInfo.specialization.name;
         if (systemRole === 'NURSE') return 'Y tá';
         if (systemRole === 'RECEPTIONIST') return 'Lễ tân';
-        if (systemRole === 'GENERAL_DOCTOR') return 'Bác sĩ đa khoa';
-        if (systemRole === 'SPECIALIST_DOCTOR') return 'Bác sĩ chuyên khoa';
+        if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)) return 'Bác sĩ';
         return 'Lễ tân';
     };
 
@@ -62,8 +63,9 @@ export default function ReceptionistLayout({ children }) {
         { to: ROUTES.RECEPTIONIST_CHECKIN,       icon: ClipboardList, label: t('sidebar.checkIn') },
         { to: ROUTES.RECEPTIONIST_CREATE_TICKET, icon: FilePlus,      label: t('sidebar.createTicket') },
         { to: ROUTES.RECEPTIONIST_RECORDS,       icon: FolderOpen,    label: t('sidebar.manageRecords') },
-        { to: ROUTES.RECEPTIONIST_FOLLOW_UPS,    icon: CalendarClock, label: 'Danh sách tái khám' },
-        { to: ROUTES.STAFF_SCHEDULE,             icon: () => <span className="text-gray-500">📅</span>, label: 'Lịch trực của tôi' },
+        { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: 'Điều phối bệnh nhân' },
+        { to: ROUTES.STAFF_SCHEDULE,             icon: CalendarDays, label: 'Lịch trực của tôi' },
+        { to: ROUTES.STAFF_ATTENDANCE,           icon: Clock3, label: 'Điểm danh' },
         { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
     ];
 

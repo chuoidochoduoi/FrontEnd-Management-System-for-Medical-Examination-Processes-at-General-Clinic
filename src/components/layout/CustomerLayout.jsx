@@ -15,6 +15,7 @@ import {
     ChevronDown,
     User,
     CalendarCheck,
+    MapPinned,
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { useProfile } from '@/hooks/useProfile';
@@ -39,6 +40,7 @@ export default function CustomerLayout({ children }) {
 
     const mainNav = [
         { to: ROUTES.MY_APPOINTMENTS, icon: CalendarCheck, label: 'Lịch hẹn của tôi' },
+        { to: ROUTES.WAITING_ROOM, icon: MapPinned, label: 'Hành trình của tôi' },
         { to: ROUTES.CUSTOMER_VISIT_HISTORY, icon: ClipboardList, label: t('sidebar.visitHistory') },
         { to: ROUTES.CUSTOMER_PAYMENT, icon: CreditCard, label: t('sidebar.paymentHistory') },
         { to: ROUTES.PROFILE, icon: UserCircle, label: t('sidebar.profile') },

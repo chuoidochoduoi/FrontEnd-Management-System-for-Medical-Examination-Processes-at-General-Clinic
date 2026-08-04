@@ -5,6 +5,8 @@ import { Search, X, Check, Settings } from 'lucide-react';
 import { toast } from 'react-toastify';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { useRoomManagement } from '@/hooks/useRoomManagement';
+import { useSpecializations } from '@/hooks/useSpecializations';
+import { useCapabilities } from '@/hooks/useCapabilities';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
 /* ── Status config ── */
@@ -14,7 +16,11 @@ const STATUS_CFG = {
     maintenance: { label: 'Bảo trì',    cls: 'bg-gray-100 text-gray-500  border border-gray-200' },
 };
 
-const ROOM_TYPES = ['examination', 'lab', 'imaging'];
+const ROOM_TYPES = ['examination', 'paraclinical'];
+const ROOM_TYPE_LABELS = {
+    examination: 'Phòng khám',
+    paraclinical: 'Phòng cận lâm sàng',
+};
 const STATUSES   = ['available', 'occupied', 'maintenance'];
 const CONFIG_STATUSES = ['available', 'maintenance'];
 
@@ -56,8 +62,8 @@ function Modal({ title, subtitle, onClose, children, footer }) {
             ref={ref}
             className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4"
         >
-            <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
-                <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100">
+            <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] shadow-xl flex flex-col">
+                <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100 shrink-0">
                     <div>
                         <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
                         {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
@@ -66,16 +72,16 @@ function Modal({ title, subtitle, onClose, children, footer }) {
                         <X size={18} />
                     </button>
                 </div>
-                <div className="px-6 py-5 space-y-4">{children}</div>
-                <div className="px-6 py-4 border-t border-gray-100">{footer}</div>
+                <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-2 gap-5 overflow-y-auto">{children}</div>
+                <div className="px-6 py-4 border-t border-gray-100 shrink-0">{footer}</div>
             </div>
         </div>
     );
 }
 
 /* ── Add Room Modal ── */
-function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, loadingDoctors }) {
-    const [form, setForm] = useState({ roomCode: '', type: '', name: '', doctorId: '', nurseIds: [], description: '', status: 'available' });
+function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, specializations, capabilities }) {
+    const [form, setForm] = useState({ roomCode: '', type: '', name: '', specializationId: '', capabilityIds: [], doctorId: '', nurseIds: [], description: '', status: 'available' });
     const [docSearch, setDocSearch] = useState('');
     const [nurseSearch, setNurseSearch] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -92,6 +98,13 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, loadingDoctors })
     };
 
     const handleSubmit = async () => {
+        if (!form.roomCode.trim()) return setError('Vui lòng nhập mã phòng');
+        if (form.roomCode.trim().length > 20) return setError('Mã phòng không được vượt quá 20 ký tự');
+        if (!form.type) return setError('Vui lòng chọn loại khoa/phòng');
+        if (form.type === 'examination' && !form.specializationId) return setError('Vui lòng chọn chuyên khoa');
+        if (!form.name.trim()) return setError('Vui lòng nhập tên khoa/phòng');
+        if (form.name.trim().length > 150) return setError('Tên khoa/phòng không được vượt quá 150 ký tự');
+        if (form.description?.length > 500) return setError('Mô tả không được vượt quá 500 ký tự');
         setSubmitting(true); setError('');
         try { await onSubmit(form); onClose(); }
         catch (err) { setError(err.message); }
@@ -110,19 +123,17 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, loadingDoctors })
                 </button>
             </div>
         }>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className={labelCls}>{t('roomManagement.addModal.roomCode')}</label>
                     <input value={form.roomCode} onChange={e => set('roomCode', e.target.value)}
                            placeholder={t('roomManagement.addModal.roomCodePlaceholder')} className={inputCls} />
                 </div>
                 <div>
-                    <label className={labelCls}>Loại khoa</label>
-                    <select value={form.type} onChange={e => set('type', e.target.value)} className={inputCls}>
-                        <option value="">-- Chọn loại --</option>
-                        <option value="examination">Khám bệnh</option>
-                        <option value="lab">Xét nghiệm</option>
-                        <option value="imaging">Chẩn đoán hình ảnh</option>
+                    <label className={labelCls}>Nhóm chức năng</label>
+                    <select value={form.type} onChange={e => setForm(prev => ({ ...prev, type: e.target.value, specializationId: '' }))} className={inputCls}>
+                        <option value="">-- Chọn nhóm chức năng --</option>
+                        {ROOM_TYPES.map(type => <option key={type} value={type}>{ROOM_TYPE_LABELS[type]}</option>)}
                     </select>
                 </div>
             </div>
@@ -131,7 +142,18 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, loadingDoctors })
                 <input value={form.name} onChange={e => set('name', e.target.value)}
                        placeholder={t('roomManagement.addModal.roomNamePlaceholder')} className={inputCls} />
             </div>
-            <div>
+            {form.type === 'examination' && (
+                <div>
+                    <label className={labelCls}>Chuyên khoa phục vụ</label>
+                    <select value={form.specializationId} onChange={e => set('specializationId', e.target.value)} className={inputCls}>
+                        <option value="">-- Chọn chuyên khoa --</option>
+                        {specializations.map(item => <option key={item.specializationId} value={item.specializationId}>{item.name}</option>)}
+                    </select>
+                    <p className="mt-1 text-xs text-gray-400">Chuyên khoa xác định nhóm bệnh nhân và dịch vụ được điều phối vào phòng. Nhiều phòng có thể cùng phục vụ một chuyên khoa.</p>
+                </div>
+            )}
+            {form.type !== 'examination' && <div><label className={labelCls}>Năng lực thực hiện (có thể chọn nhiều)</label><select multiple value={form.capabilityIds} onChange={e => set('capabilityIds', Array.from(e.target.selectedOptions, option => option.value))} className={inputCls + ' h-28'}>{capabilities.map(c => <option key={c.capabilityId} value={c.capabilityId}>{c.name}</option>)}</select><p className="mt-1 text-xs text-gray-400">Giữ Ctrl để chọn nhiều năng lực.</p></div>}
+            <div className="order-last md:col-start-1">
                 <label className={labelCls}>Bác sĩ phụ trách</label>
                 <div className="w-full max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col">
                     <input 
@@ -161,7 +183,7 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, loadingDoctors })
                     </div>
                 </div>
             </div>
-            <div>
+            <div className="order-last md:col-start-2">
                 <label className={labelCls}>Y tá trực (có thể chọn nhiều)</label>
                 <div className="w-full max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col">
                     <input 
@@ -199,16 +221,18 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, loadingDoctors })
                 <label className={labelCls}>{t('roomManagement.addModal.initialStatus')}</label>
                 <StatusGroup value={form.status} onChange={v => set('status', v)} />
             </div>
-            {error && <p className="text-red-500 text-xs">{error}</p>}
+            {error && <p className="text-red-500 text-xs md:col-span-2">{error}</p>}
         </Modal>
     );
 }
 
 /* ── Edit Room Modal ── */
-function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, loadingDoctors }) {
+function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, specializations, capabilities }) {
     const [form, setForm] = useState({
         type: room.type ?? '',
         name: room.name ?? '',
+        specializationId: room.specializationId ?? '',
+        capabilityIds: room.capabilityIds ?? [],
         description: room.equipment ?? room.description ?? '',
         doctorId: room.headDoctorId ?? room.doctorId ?? '',
         nurseIds: room.nurses?.map(n => n.staffId) || [],
@@ -231,6 +255,11 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
     }));
 
     const handleSubmit = async () => {
+        if (!form.type) return setError('Vui lòng chọn loại khoa/phòng');
+        if (form.type === 'examination' && !form.specializationId) return setError('Vui lòng chọn chuyên khoa');
+        if (!form.name.trim()) return setError('Vui lòng nhập tên khoa/phòng');
+        if (form.name.trim().length > 150) return setError('Tên khoa/phòng không được vượt quá 150 ký tự');
+        if (form.description?.length > 500) return setError('Mô tả không được vượt quá 500 ký tự');
         setSubmitting(true); setError('');
         try { await onSubmit(room.id, form); onClose(); }
         catch (err) { setError(err.message); }
@@ -267,15 +296,15 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
                 </div>
             }
         >
-            <div className="grid grid-cols-2 gap-4">
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className={labelCls}>{t('roomManagement.editModal.roomCode')}</label>
                     <input value={room.roomCode} disabled className={inputCls + ' bg-gray-50 text-gray-400'} />
                 </div>
                 <div>
-                    <label className={labelCls}>{t('roomManagement.editModal.roomType')}</label>
-                    <select value={form.type} onChange={e => set('type', e.target.value)} className={inputCls}>
-                        {ROOM_TYPES.map(rt => <option key={rt} value={rt}>{t(`roomManagement.roomTypes.${rt}`)}</option>)}
+                    <label className={labelCls}>Nhóm chức năng</label>
+                    <select value={form.type} onChange={e => setForm(prev => ({ ...prev, type: e.target.value, specializationId: '' }))} className={inputCls}>
+                        {ROOM_TYPES.map(type => <option key={type} value={type}>{ROOM_TYPE_LABELS[type]}</option>)}
                     </select>
                 </div>
             </div>
@@ -283,7 +312,17 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
                 <label className={labelCls}>{t('roomManagement.editModal.roomName')}</label>
                 <input value={form.name} onChange={e => set('name', e.target.value)} className={inputCls} />
             </div>
-            <div>
+            {form.type === 'examination' && (
+                <div>
+                    <label className={labelCls}>Chuyên khoa phục vụ</label>
+                    <select value={form.specializationId} onChange={e => set('specializationId', e.target.value)} className={inputCls}>
+                        <option value="">-- Chọn chuyên khoa --</option>
+                        {specializations.map(item => <option key={item.specializationId} value={item.specializationId}>{item.name}</option>)}
+                    </select>
+                </div>
+            )}
+            {form.type !== 'examination' && <div><label className={labelCls}>Năng lực thực hiện (có thể chọn nhiều)</label><select multiple value={form.capabilityIds} onChange={e => set('capabilityIds', Array.from(e.target.selectedOptions, option => option.value))} className={inputCls + ' h-28'}>{capabilities.map(c => <option key={c.capabilityId} value={c.capabilityId}>{c.name}</option>)}</select><p className="mt-1 text-xs text-gray-400">Giữ Ctrl để chọn nhiều năng lực.</p></div>}
+            <div className="order-last md:col-start-1">
                 <label className={labelCls}>Bác sĩ phụ trách</label>
                 <div className="w-full max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col">
                     <input 
@@ -313,7 +352,7 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
                     </div>
                 </div>
             </div>
-            <div>
+            <div className="order-last md:col-start-2">
                 <label className={labelCls}>Y tá trực (có thể chọn nhiều)</label>
                 <div className="w-full max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col">
                     <input 
@@ -351,7 +390,7 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
                 <label className={labelCls}>{t('roomManagement.editModal.currentStatus')}</label>
                 <StatusGroup value={form.status} onChange={v => set('status', v)} />
             </div>
-            {error && <p className="text-red-500 text-xs">{error}</p>}
+            {error && <p className="text-red-500 text-xs md:col-span-2">{error}</p>}
             
             <ConfirmModal 
                 isOpen={showConfirmDelete}
@@ -377,7 +416,7 @@ function RoomCard({ room, onConfigure, onQuickStatus, t }) {
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-gray-400">{room.roomCode}</span>
                     <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
-                        {t(`roomManagement.roomTypes.${room.type}`) || room.type}
+                        {ROOM_TYPE_LABELS[room.type] || room.type}
                     </span>
                 </div>
                 <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${cfg.cls}`}>
@@ -387,10 +426,11 @@ function RoomCard({ room, onConfigure, onQuickStatus, t }) {
 
             <h3 className="text-sm font-bold text-gray-900 leading-snug mb-1">{room.name}</h3>
             <p className="text-xs text-gray-500 mb-1">
-                <span className="font-medium">{t('roomManagement.card.doctor')}</span> {room.doctor || '---'}
+                <span className="font-medium">Chuyên khoa phục vụ:</span>{' '}
+                {room.type === 'examination' ? (room.specializationName || 'Chưa phân loại') : 'Không áp dụng'}
             </p>
             <p className="text-xs text-gray-500 mb-1">
-                <span className="font-medium">Y tá:</span> {room.nurses && room.nurses.length > 0 ? room.nurses.map(n => n.fullName).join(', ') : '---'}
+                <span className="font-medium">{t('roomManagement.card.doctor')}</span> {room.doctor || '---'}
             </p>
             {room.equipment && (
                 <p className="text-xs text-gray-400 leading-relaxed">
@@ -405,7 +445,7 @@ function RoomCard({ room, onConfigure, onQuickStatus, t }) {
                     </button>
                     <div className="absolute bottom-full left-0 mb-1 hidden group-hover:flex flex-col bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-20 min-w-[130px]">
                         {CONFIG_STATUSES.map(s => (
-                            <button key={s} onClick={() => onQuickStatus(room.id, s)}
+                            <button key={s} onClick={() => onQuickStatus(room.id, s).catch(err => toast.error(err.message || 'Cập nhật trạng thái thất bại!'))}
                                     className={`text-left px-3 py-2 text-xs hover:bg-gray-50 transition-colors ${room.status === s ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
                                 {STATUS_CFG[s].label}
                             </button>
@@ -428,6 +468,8 @@ function RoomCard({ room, onConfigure, onQuickStatus, t }) {
 export default function RoomManagementPage() {
     const { t } = useTranslation('rooms');
     const { rooms, stats, loading, error, fetchRooms, createRoom, updateRoom, deleteRoom, quickStatus, fetchDoctors, fetchNurses } = useRoomManagement();
+    const { specializations } = useSpecializations();
+    const { capabilities } = useCapabilities();
 
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
@@ -493,7 +535,10 @@ export default function RoomManagementPage() {
         <AdminLayout>
             <div className="px-10 py-8 space-y-6">
                 <div className="flex items-start justify-between">
-                    <h1 className="text-base font-semibold text-gray-900">{t('roomManagement.pageTitle')}</h1>
+                    <div>
+                        <h1 className="text-base font-semibold text-gray-900">Quản lý phòng — Phòng khám đa khoa</h1>
+                        <p className="text-xs text-gray-400 mt-1">Mỗi phòng có một nhóm chức năng. Riêng phòng khám được gắn thêm chuyên khoa phục vụ.</p>
+                    </div>
                     <div className="text-right">
                         <p className="text-xs text-gray-400">{t('roomManagement.statusLabel')}</p>
                         <span className="inline-block mt-1 text-xs font-medium bg-green-50 text-green-600 border border-green-200 px-3 py-1 rounded-full">
@@ -525,13 +570,11 @@ export default function RoomManagementPage() {
                                className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-gray-500 placeholder:text-gray-300" />
                     </div>
                     <div className="w-44">
-                        <p className="text-xs text-gray-400 mb-1.5">Loại khoa</p>
+                        <p className="text-xs text-gray-400 mb-1.5">Nhóm chức năng</p>
                         <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
                                 className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none bg-white">
                             <option value="">Tất cả</option>
-                            <option value="examination">Khám bệnh</option>
-                            <option value="lab">Xét nghiệm</option>
-                            <option value="imaging">Chẩn đoán hình ảnh</option>
+                            {ROOM_TYPES.map(type => <option key={type} value={type}>{ROOM_TYPE_LABELS[type]}</option>)}
                         </select>
                     </div>
                     <div className="w-52">
@@ -580,7 +623,8 @@ export default function RoomManagementPage() {
                     onSubmit={handleCreate}
                     doctors={doctors}
                     nurses={nurses}
-                    loadingDoctors={loadingDoctors}
+                    specializations={specializations}
+                    capabilities={capabilities}
                 />
             )}
             {editRoom && (
@@ -592,7 +636,8 @@ export default function RoomManagementPage() {
                     onDelete={handleDelete}
                     doctors={doctors}
                     nurses={nurses}
-                    loadingDoctors={loadingDoctors}
+                    specializations={specializations}
+                    capabilities={capabilities}
                 />
             )}
         </AdminLayout>

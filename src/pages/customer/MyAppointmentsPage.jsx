@@ -9,14 +9,19 @@ import { ROUTES } from '@/constants/routes';
 
 const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + ' đ' : '—';
 
-const STATUS_CFG = {
-    upcoming:  { label: 'UPCOMING',  cls: 'border border-gray-800 text-gray-800 bg-white text-xs font-semibold px-2.5 py-1 rounded' },
-    completed: { label: 'COMPLETED', cls: 'border border-gray-300 text-gray-400 bg-white text-xs px-2.5 py-1 rounded' },
-    cancelled: { label: 'CANCELLED', cls: 'border border-red-200 text-red-400 bg-white text-xs px-2.5 py-1 rounded' },
+/** Normalize a raw API status string to the lowercase key used by i18n / STATUS_CFG */
+const normalizeStatus = (status) => (status || '').toString().toLowerCase().trim();
+
+/* ── Class-only config (labels are translated via t() inside component) ── */
+const STATUS_CLS = {
+    upcoming:   { cls: 'border border-gray-800 text-gray-800 bg-white text-xs font-semibold px-2.5 py-1 rounded' },
+    completed:  { cls: 'border border-gray-300 text-gray-400 bg-white text-xs px-2.5 py-1 rounded' },
+    cancelled:  { cls: 'border border-red-200 text-red-400 bg-white text-xs px-2.5 py-1 rounded' },
+    checked_in: { cls: 'border border-blue-200 text-blue-600 bg-blue-50 text-xs px-2.5 py-1 rounded' },
 };
 
 const SPECIALTIES = ['', 'Cardiology', 'Endocrinology', 'General Physician', 'Ophthalmology', 'Dermatology'];
-const STATUSES    = ['', 'upcoming', 'completed', 'cancelled'];
+const STATUSES    = ['', 'upcoming', 'checked_in', 'completed', 'cancelled'];
 
 const inputCls  = 'w-full h-9 px-3 text-xs border border-gray-200 rounded-lg outline-none focus:border-primary-500 bg-white';
 const labelCls  = 'block text-xs font-semibold text-gray-400 tracking-wide mb-1.5';
@@ -46,6 +51,14 @@ export default function MyAppointmentsPage() {
     const { appointments, loading, error, total, page, PAGE_SIZE, fetchAppointments, cancelAppointment } = useAppointments();
     const [cancelApptId, setCancelApptId] = useState(null);
     const [isCancelling, setIsCancelling] = useState(false);
+
+    // Build status config with Vietnamese labels via i18n
+    const STATUS_CFG = {
+        upcoming:   { label: t('myAppointments.status.upcoming'),   cls: STATUS_CLS.upcoming.cls },
+        completed:  { label: t('myAppointments.status.completed'),  cls: STATUS_CLS.completed.cls },
+        cancelled:  { label: t('myAppointments.status.cancelled'),  cls: STATUS_CLS.cancelled.cls },
+        checked_in: { label: t('myAppointments.status.checked_in'),  cls: STATUS_CLS.checked_in.cls },
+    };
 
     const [code,      setCode]      = useState('');
     const [specialty, setSpecialty] = useState('');
@@ -120,8 +133,9 @@ export default function MyAppointmentsPage() {
                             <tr><td colSpan={4} className="text-center py-12 text-sm text-gray-400">{t('myAppointments.noData')}</td></tr>
                         )}
                         {!loading && appointments.map(appt => {
-                            const stCfg   = STATUS_CFG[appt.status] ?? STATUS_CFG.upcoming;
-                            
+                            const normStatus = normalizeStatus(appt.status);
+                            const stCfg   = STATUS_CFG[normStatus] ?? STATUS_CFG.upcoming;
+
                             let isPast = false;
                             if (appt.date) {
                                 const [day, month, year] = appt.date.split('/');
@@ -130,9 +144,9 @@ export default function MyAppointmentsPage() {
                                 today.setHours(0, 0, 0, 0);
                                 if (apptDate <= today) isPast = true;
                             }
-                            
-                            const isActive = appt.status === 'upcoming' && !isPast;
-                            const isDone   = appt.status === 'completed';
+
+                            const isActive = normStatus === 'upcoming' && !isPast;
+                            const isDone   = normStatus === 'completed';
                             return (
                                 <tr key={appt.id} className={`hover:bg-gray-50 transition-colors ${isDone ? 'opacity-50' : ''}`}>
                                     <td className={tdCls}>

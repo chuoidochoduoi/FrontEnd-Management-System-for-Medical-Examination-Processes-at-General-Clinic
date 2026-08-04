@@ -41,7 +41,7 @@ export default function ReceiptDetailPage() {
                 </button>
             </div>
 
-            <button onClick={() => navigate(ROUTES.PATIENT_PAYMENT)}
+            <button onClick={() => navigate(ROUTES.CUSTOMER_PAYMENT)}
                     className="text-xs text-gray-400 hover:text-primary-500 transition-colors mb-5 block">
                 {t('receiptDetail.backBtn')}
             </button>

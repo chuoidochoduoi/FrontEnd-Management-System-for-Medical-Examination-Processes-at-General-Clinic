@@ -5,6 +5,7 @@ import { useAppointment } from '@/hooks/useAppointment';
 import { useProfile } from '@/hooks/useProfile';
 import AppointmentConfirmModal from '@/components/ui/AppointmentConfirmModal';
 import { ChevronLeft, User, Stethoscope, Clock } from 'lucide-react';
+import { ROUTES } from '@/constants/routes';
 
 const formatVND = (amount) =>
     new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
@@ -26,7 +27,7 @@ export default function AppointmentPage() {
     const { t: tCommon } = useTranslation('common');
     const navigate = useNavigate();
 
-    const { services, loadingServices, book, loading: booking, error } = useAppointment();
+    const { services, loadingServices, book, loading: booking, error, shiftHours } = useAppointment();
     const { profile } = useProfile();
 
     // Step 1 — Thông tin khách hàng (chỉ dùng khi chưa đăng nhập)
@@ -136,11 +137,11 @@ export default function AppointmentPage() {
                         </div>
                     </div>
                     <button 
-                        onClick={() => navigate(profile ? '/customer/profile' : '/')} 
+                        onClick={() => navigate(profile ? ROUTES.MY_APPOINTMENTS : '/')}
                         className="flex items-center gap-2 text-xs font-semibold tracking-[0.1em] uppercase text-white hover:text-primary-400 transition-colors"
                     >
                         <ChevronLeft className="w-4 h-4" />
-                        {profile ? 'Hồ sơ' : 'Trang chủ'}
+                        {profile ? 'Lịch hẹn của tôi' : 'Trang chủ'}
                     </button>
                 </div>
             </header>
@@ -286,7 +287,6 @@ export default function AppointmentPage() {
                                                 <option value="" disabled>Chọn giới tính</option>
                                                 <option value="male">{t('step1.genderOptions.male')}</option>
                                                 <option value="female">{t('step1.genderOptions.female')}</option>
-                                                <option value="other">{t('step1.genderOptions.other')}</option>
                                             </select>
                                             {step1Errors.gender && <p className="text-red-500 text-xs mt-1.5 font-medium">{step1Errors.gender}</p>}
                                         </div>
@@ -452,12 +452,19 @@ export default function AppointmentPage() {
                                                     key={slot}
                                                     type="button"
                                                     onClick={() => setTimeSlot(slot)}
-                                                    className={`flex-1 h-10 text-sm rounded-md border transition-colors ${timeSlot === slot
+                                                    className={`flex-1 h-12 text-sm rounded-md border transition-colors ${timeSlot === slot
                                                             ? 'bg-primary-500 text-white border-primary-500'
                                                             : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'
                                                         }`}
                                                 >
-                                                    {t(`step3.${slot}`)}
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="font-medium">{t(`step3.${slot}`)}</span>
+                                                        {shiftHours[slot] && (
+                                                            <span className="text-xs font-normal opacity-80 mt-0.5">
+                                                                {shiftHours[slot].start} – {shiftHours[slot].end}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </button>
                                             ))}
                                         </div>

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FileText, BarChart2, Printer, HelpCircle, LogOut, Users , Settings } from 'lucide-react';
+import { FileText, LogOut, Users, Settings, CalendarDays, Clock3 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -37,8 +37,7 @@ export default function CashierLayout({ children }) {
         if (staffInfo && staffInfo.specialization) return staffInfo.specialization.name;
         if (systemRole === 'NURSE') return 'Y tá';
         if (systemRole === 'RECEPTIONIST') return 'Lễ tân';
-        if (systemRole === 'GENERAL_DOCTOR') return 'Bác sĩ đa khoa';
-        if (systemRole === 'SPECIALIST_DOCTOR') return 'Bác sĩ chuyên khoa';
+        if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)) return 'Bác sĩ';
         if (systemRole === 'CASHIER') return 'Thu ngân';
         return 'Thu ngân';
     };
@@ -52,8 +51,8 @@ export default function CashierLayout({ children }) {
 
     const mainNav = [
         { to: ROUTES.CASHIER_INVOICES, icon: FileText,  label: t('sidebar.invoiceList') },
-        { to: ROUTES.CASHIER_REPORT,   icon: BarChart2, label: t('sidebar.revenueReport') },
-        { to: ROUTES.STAFF_SCHEDULE,   icon: () => <span className="text-gray-500">📅</span>, label: 'Lịch trực của tôi' },
+        { to: ROUTES.STAFF_SCHEDULE,   icon: CalendarDays, label: 'Lịch trực của tôi' },
+        { to: ROUTES.STAFF_ATTENDANCE, icon: Clock3, label: 'Điểm danh' },
         { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
     ];
 

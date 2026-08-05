@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Upload, FileText, X, AlertTriangle, ArrowLeft, CheckCircle2, Circle, Clock3 } from 'lucide-react';
-import LabLayout from '@/components/layout/LabLayout';
+import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { useLabDetail } from '@/hooks/useLabDetail';
 import { ROUTES } from '@/constants/routes';
 import { toast } from 'react-toastify';
@@ -212,9 +212,9 @@ export default function LabDetailPage() {
 
     if (loading) {
         return (
-            <LabLayout>
+            <MedicalStaffLayout>
                 <p className="text-sm text-gray-400 text-center py-20">{t('labDetail.errors.loadFailed')}</p>
-            </LabLayout>
+            </MedicalStaffLayout>
         );
     }
 
@@ -242,7 +242,7 @@ export default function LabDetailPage() {
     };
 
     return (
-        <LabLayout>
+        <MedicalStaffLayout>
             {/* Top bar — simplified (no search needed on detail page) */}
             <div className="h-13 bg-white border-b border-gray-100 px-4 flex items-center shrink-0">
                 <div className="ml-52 flex-1">
@@ -380,8 +380,8 @@ export default function LabDetailPage() {
                         </div>
                     )}
 
-                    {/* Upload file kết quả (ẩn khi mẫu hỏng) */}
-                    {!isCancelled && (
+                    {/* Upload file kết quả (ẩn khi mẫu hỏng hoặc đã hoàn tất) */}
+                    {!isCancelled && order?.status !== 'COMPLETED' && (
                         <div className="mb-6">
                             <FileUpload
                                 file={file}
@@ -395,13 +395,26 @@ export default function LabDetailPage() {
                         </div>
                     )}
 
-                    {!isCancelled && pdfUrl && (
-                        <div className="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3">
-                                <div><p className="text-sm font-semibold text-gray-900">Xem trước phiếu kết quả PDF</p><p className="text-xs text-gray-500">Kiểm tra nội dung trước khi in hoặc hoàn thành kết quả</p></div>
-                                <div className="flex gap-2"><button type="button" onClick={() => window.open(pdfUrl, '_blank')} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700">Mở toàn màn hình</button><button type="button" onClick={handlePrintPdf} className="rounded-lg bg-gray-900 px-5 py-2 text-sm font-semibold text-white">In phiếu PDF</button></div>
+                    {/* Xem và in kết quả (chỉ hiện khi đã hoàn thành) */}
+                    {order?.status === 'COMPLETED' && pdfUrl && (
+                        <div className="mb-6 overflow-hidden rounded-xl border border-green-200 bg-green-50 p-5 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                    <FileText className="text-green-500" size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-base font-semibold text-green-900">Phiếu kết quả xét nghiệm</p>
+                                    <p className="text-sm text-green-700 mt-0.5">Đã tải lên và xác nhận hoàn tất</p>
+                                </div>
                             </div>
-                            <iframe title="Xem trước phiếu kết quả xét nghiệm" src={pdfUrl} className="h-[680px] w-full bg-white"/>
+                            <div className="flex gap-3">
+                                <button type="button" onClick={() => window.open(pdfUrl, '_blank')} className="rounded-xl border border-green-300 bg-white px-5 py-2.5 text-sm font-semibold text-green-700 hover:bg-green-100 transition-colors">
+                                    Mở trang xem
+                                </button>
+                                <button type="button" onClick={handlePrintPdf} className="rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-700 shadow-sm transition-colors shadow-green-600/20">
+                                    In phiếu
+                                </button>
+                            </div>
                         </div>
                     )}
 
@@ -447,6 +460,6 @@ export default function LabDetailPage() {
                     </main>
                 </div>
             </div>
-        </LabLayout>
+        </MedicalStaffLayout>
     );
 }

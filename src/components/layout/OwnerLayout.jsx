@@ -54,9 +54,9 @@ export default function OwnerLayout({ children }) {
         { to: ROUTES.OWNER_SCHEDULE, icon: CalendarDays, label: 'Lịch trình' },
         { to: ROUTES.OWNER_FEEDBACKS, icon: MessageSquare, label: 'Đánh giá' },
         { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: 'Điều phối bệnh nhân' },
-        { to: ROUTES.OWNER_ATTENDANCE, icon: Clock3, label: 'Chấm công' },
-        { to: ROUTES.STAFF_ATTENDANCE, icon: Clock3, label: 'Điểm danh của tôi' },
-        { to: ROUTES.OWNER_ATTENDANCE_KIOSK, icon: QrCode, label: 'Màn hình QR' },
+//        { to: ROUTES.OWNER_ATTENDANCE, icon: Clock3, label: 'Chấm công' },
+//        { to: ROUTES.STAFF_ATTENDANCE, icon: Clock3, label: 'Điểm danh của tôi' },
+//        { to: ROUTES.OWNER_ATTENDANCE_KIOSK, icon: QrCode, label: 'Màn hình QR' },
     ];
 
     const linkClass = ({ isActive }) =>

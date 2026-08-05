@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search, Bell, User, RotateCcw, ArrowUpDown } from 'lucide-react';
-import LabLayout from '@/components/layout/LabLayout';
+import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { useLabQueue } from '@/hooks/useLabQueue';
 import { ROUTES } from '@/constants/routes';
 
@@ -68,7 +68,7 @@ export default function LabRequestListPage() {
     const to   = Math.min(page * PAGE_SIZE, total);
 
     return (
-        <LabLayout departmentId={departmentId}>
+        <MedicalStaffLayout>
             {/* Top bar */}
             <div className="h-13 bg-white border-b border-gray-100 px-6 flex items-center gap-3 shrink-0">
                 <div className="relative flex-1">
@@ -247,6 +247,6 @@ export default function LabRequestListPage() {
                     </div>
                 )}
             </div>
-        </LabLayout>
+        </MedicalStaffLayout>
     );
 }

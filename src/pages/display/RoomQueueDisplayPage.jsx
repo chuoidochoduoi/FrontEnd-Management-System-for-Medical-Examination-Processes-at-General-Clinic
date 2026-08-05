@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Maximize, RefreshCw } from 'lucide-react';
 import { useParams } from 'react-router-dom';
+import { useWebSocket } from '@/hooks/useWebSocket.js';
 
 const token = () => localStorage.getItem('token') || sessionStorage.getItem('token');
 
@@ -23,9 +24,11 @@ export default function RoomQueueDisplayPage() {
 
     useEffect(() => {
         load();
-        const timer = window.setInterval(load, 5000);
-        return () => window.clearInterval(timer);
     }, [load]);
+
+    useWebSocket(departmentId ? `/topic/department-${departmentId}-queue` : null, null, () => {
+        load();
+    });
 
     const current = useMemo(() => tickets.find(ticket => ['CALLED', 'IN_PROGRESS'].includes(ticket.status)), [tickets]);
     const waiting = useMemo(() => tickets.filter(ticket => ticket.status === 'WAITING').slice(0, 8), [tickets]);

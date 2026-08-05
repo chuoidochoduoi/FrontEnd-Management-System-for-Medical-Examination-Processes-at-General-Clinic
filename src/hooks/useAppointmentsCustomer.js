@@ -1,90 +1,108 @@
-// src/hooks/useAppointments.js
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/axios';
 
-const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
-const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
 const PAGE_SIZE = 6;
 
 export function useAppointments() {
     const { t } = useTranslation('appointments');
-    const [appointments, setAppointments] = useState([]);
-    const [loading,      setLoading]      = useState(false);
-    const [error,        setError]        = useState('');
-    const [total,        setTotal]        = useState(0);
-    const [page,         setPage]         = useState(1);
+    const queryClient = useQueryClient();
+    
+    const [params, setParams] = useState({
+        code: '',
+        specialty: '',
+        status: '',
+        page: 0
+    });
 
-    const fetchAppointments = useCallback(async ({ code = '', specialty = '', status = '', page = 0 } = {}) => {
-        setLoading(true); setError('');
-        try {
-            const params = new URLSearchParams({ code, specialty, status, page: String(page), size: String(PAGE_SIZE) });
-            const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/v1/appointments/my?${params}`,
-                { headers: bearer() }
-            );
-            if (!res.ok) throw new Error(t('myAppointments.errors.loadFailed'));
-            const data = await res.json();
-            setAppointments(data.content ?? data.items ?? data);
-            setTotal(data.totalElements ?? data.total ?? data.length);
-            setPage(page + 1); // Backend 0-based, frontend 1-based
-        } catch (err) { setError(err.message); }
-        finally { setLoading(false); }
+    const queryInfo = useQuery({
+        queryKey: ['myAppointments', params],
+        queryFn: async () => {
+            const queryParams = new URLSearchParams({
+                code: params.code,
+                specialty: params.specialty,
+                status: params.status,
+                page: String(params.page),
+                size: String(PAGE_SIZE)
+            });
+            const res = await api.get(`/api/v1/appointments/my?${queryParams}`);
+            const data = res.data;
+            return {
+                appointments: data.content ?? data.items ?? data,
+                total: data.totalElements ?? data.total ?? data.length
+            };
+        }
+    });
+
+    const fetchAppointments = useCallback((newParams = {}) => {
+        setParams(prev => ({ ...prev, ...newParams }));
     }, []);
 
-    const cancelAppointment = async (id) => {
-        const res = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/v1/appointments/my/${id}/cancel`,
-            { method: 'POST', headers: bearer() }
-        );
-        if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            throw new Error(body.message || t('myAppointments.errors.cancelFailed'));
+    const cancelMutation = useMutation({
+        mutationFn: async (id) => {
+            const res = await api.post(`/api/v1/appointments/my/${id}/cancel`);
+            return res.data;
+        },
+        onSuccess: () => {
+            toast.success('Hủy lịch hẹn thành công!');
+            queryClient.invalidateQueries({ queryKey: ['myAppointments'] });
+        },
+        onError: (err) => {
+            const message = err.response?.data?.message || err.message || t('myAppointments.errors.cancelFailed');
+            toast.error(message);
         }
-        setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'cancelled' } : a));
-        toast.success('Hủy lịch hẹn thành công!');
-    };
+    });
 
-    return { appointments, loading, error, total, page, PAGE_SIZE, fetchAppointments, cancelAppointment };
+    return { 
+        appointments: queryInfo.data?.appointments || [], 
+        loading: queryInfo.isFetching, 
+        error: queryInfo.error?.message || (queryInfo.isError ? t('myAppointments.errors.loadFailed') : ''), 
+        total: queryInfo.data?.total || 0, 
+        page: params.page + 1, // Frontend 1-based page
+        PAGE_SIZE, 
+        fetchAppointments, 
+        cancelAppointment: cancelMutation.mutateAsync 
+    };
 }
 
 export function useAppointmentDetail(appointmentId) {
     const { t } = useTranslation('appointments');
-    const [detail,     setDetail]     = useState(null);
-    const [loading,    setLoading]    = useState(false);
-    const [cancelling, setCancelling] = useState(false);
-    const [error,      setError]      = useState('');
+    const queryClient = useQueryClient();
 
-    const fetchDetail = useCallback(async () => {
-        if (!appointmentId) return;
-        setLoading(true); setError('');
-        try {
-            const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/v1/appointments/my/${appointmentId}`,
-                { headers: bearer() }
-            );
-            if (!res.ok) throw new Error(t('appointmentDetail.errors.loadFailed'));
-            setDetail(await res.json());
-        } catch (err) { setError(err.message); }
-        finally { setLoading(false); }
-    }, [appointmentId]);
+    const queryInfo = useQuery({
+        queryKey: ['myAppointmentDetail', appointmentId],
+        queryFn: async () => {
+            if (!appointmentId) return null;
+            const res = await api.get(`/api/v1/appointments/my/${appointmentId}`);
+            return res.data;
+        },
+        enabled: !!appointmentId
+    });
 
-    const cancel = async () => {
-        setCancelling(true);
-        try {
-            const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/v1/appointments/my/${appointmentId}/cancel`,
-                { method: 'POST', headers: bearer() }
-            );
-            if (!res.ok) {
-                const body = await res.json().catch(() => ({}));
-                throw new Error(body.message || t('appointmentDetail.errors.cancelFailed'));
-            }
-            setDetail(prev => ({ ...prev, status: 'cancelled' }));
+    const cancelMutation = useMutation({
+        mutationFn: async () => {
+            const res = await api.post(`/api/v1/appointments/my/${appointmentId}/cancel`);
+            return res.data;
+        },
+        onSuccess: () => {
             toast.success('Hủy lịch hẹn thành công!');
-        } catch (err) { setError(err.message); toast.error(err.message); }
-        finally { setCancelling(false); }
-    };
+            queryClient.invalidateQueries({ queryKey: ['myAppointmentDetail', appointmentId] });
+            queryClient.invalidateQueries({ queryKey: ['myAppointments'] });
+        },
+        onError: (err) => {
+            const message = err.response?.data?.message || err.message || t('appointmentDetail.errors.cancelFailed');
+            toast.error(message);
+        }
+    });
 
-    return { detail, loading, cancelling, error, fetchDetail, cancel };
+    return { 
+        detail: queryInfo.data, 
+        loading: queryInfo.isFetching, 
+        cancelling: cancelMutation.isPending, 
+        error: queryInfo.error?.message || (queryInfo.isError ? t('appointmentDetail.errors.loadFailed') : ''), 
+        fetchDetail: queryInfo.refetch, 
+        cancel: cancelMutation.mutateAsync 
+    };
 }

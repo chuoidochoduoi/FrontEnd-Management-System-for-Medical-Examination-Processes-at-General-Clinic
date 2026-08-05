@@ -52,7 +52,7 @@ export default function CashierLayout({ children }) {
     const mainNav = [
         { to: ROUTES.CASHIER_INVOICES, icon: FileText,  label: t('sidebar.invoiceList') },
         { to: ROUTES.STAFF_SCHEDULE,   icon: CalendarDays, label: 'Lịch trực của tôi' },
-        { to: ROUTES.STAFF_ATTENDANCE, icon: Clock3, label: 'Điểm danh' },
+//        { to: ROUTES.STAFF_ATTENDANCE, icon: Clock3, label: 'Điểm danh' },
         { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
     ];
 

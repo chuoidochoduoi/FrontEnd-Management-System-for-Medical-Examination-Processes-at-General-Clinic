@@ -227,9 +227,9 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path={ROUTES.OWNER_FEEDBACKS} element={<ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><FeedbackPage /></ProtectedRoute>} />
-        <Route path={ROUTES.OWNER_ATTENDANCE} element={<ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><AttendanceManagementPage /></ProtectedRoute>} />
-        <Route path={ROUTES.OWNER_ATTENDANCE_KIOSK} element={<ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><AttendanceKioskPage /></ProtectedRoute>} />
-        <Route path={ROUTES.STAFF_ATTENDANCE} element={<ProtectedRoute allowedRoles={['RECEPTIONIST','CASHIER','DOCTOR','GENERAL_DOCTOR','SPECIALIST_DOCTOR','NURSE','CLINIC_MANAGER']}><AttendancePage /></ProtectedRoute>} />
+//        <Route path={ROUTES.OWNER_ATTENDANCE} element={<ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><AttendanceManagementPage /></ProtectedRoute>} />
+//        <Route path={ROUTES.OWNER_ATTENDANCE_KIOSK} element={<ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><AttendanceKioskPage /></ProtectedRoute>} />
+//        <Route path={ROUTES.STAFF_ATTENDANCE} element={<ProtectedRoute allowedRoles={['RECEPTIONIST','CASHIER','DOCTOR','GENERAL_DOCTOR','SPECIALIST_DOCTOR','NURSE','CLINIC_MANAGER']}><AttendancePage /></ProtectedRoute>} />
 
       {/* Staff self schedule - receptionist, cashier, doctor, nurse */}
       <Route path={ROUTES.STAFF_SCHEDULE} element={

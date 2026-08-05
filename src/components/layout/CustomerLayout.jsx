@@ -1,7 +1,8 @@
 // src/components/layout/CustomerLayout.jsx
 import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 import {
     Home,
     CalendarPlus,
@@ -25,6 +26,7 @@ const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 export default function CustomerLayout({ children }) {
     const { t } = useTranslation('customer');
     const navigate = useNavigate();
+    const location = useLocation();
     const { profile } = useProfile();
 
     const displayName = profile?.fullName || get('username') || 'Khách hàng';
@@ -110,8 +112,16 @@ export default function CustomerLayout({ children }) {
             {/* ── Main ── */}
             <div className="flex-1 flex flex-col overflow-hidden relative z-10">
                 {/* Page content */}
-                <main className="flex-1 overflow-y-auto p-8 lg:p-10">
-                    {children}
+                <main className="flex-1 overflow-hidden flex flex-col p-8 lg:p-10">
+                    <motion.div
+                        key={location.pathname}
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="flex-1 overflow-y-auto"
+                    >
+                        {children}
+                    </motion.div>
                 </main>
             </div>
         </div>

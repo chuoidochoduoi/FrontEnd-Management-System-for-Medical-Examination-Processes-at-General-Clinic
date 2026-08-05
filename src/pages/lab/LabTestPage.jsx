@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Search, RotateCcw, ArrowUpDown } from 'lucide-react';
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { useLabQueue } from '@/hooks/useLabQueue.js';
+import { useWebSocket } from '@/hooks/useWebSocket.js';
 import { ROUTES } from '@/constants/routes.js';
 import { toast } from 'react-toastify';
 
@@ -44,6 +45,9 @@ export default function LabTestPage() {
     const navigate = useNavigate();
     const { t } = useTranslation('lab');
     const { orders, loading, error, total, page, PAGE_SIZE, fetchOrders } = useLabQueue(departmentId);
+
+    // Listen to real-time lab queue updates
+    useWebSocket(departmentId ? `/topic/department-${departmentId}-lab-queue` : null, ['labOrders']);
 
     const [search,     setSearch]     = useState('');
     const [activeTab,  setActiveTab]  = useState('');

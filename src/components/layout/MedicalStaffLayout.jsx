@@ -1,16 +1,18 @@
-﻿// src/components/layout/MedicalStaffLayout.jsx
+// src/components/layout/MedicalStaffLayout.jsx
 import { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LayoutDashboard, UserRound, Stethoscope, Settings, LogOut, Users, CalendarDays, MessageSquare, Clock3 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { useMyDepartment } from '@/hooks/useMyDepartment';
+import { motion } from 'framer-motion';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
 export default function MedicalStaffLayout({ children }) {
     const { t } = useTranslation('doctor');
     const navigate = useNavigate();
+    const location = useLocation();
     const username = get('username') || 'Bác sĩ';
     const staffId = get('staffId');
     const systemRole = get('systemRole') || '';
@@ -122,9 +124,18 @@ export default function MedicalStaffLayout({ children }) {
                 </div>
             </aside>
 
-            <div className="flex-1 flex flex-col overflow-hidden">
-                {children}
-            </div>
+            {/* Main content */}
+            <main className="flex-1 flex flex-col min-w-0 bg-slate-50 relative overflow-hidden">
+                <motion.div
+                    key={location.pathname}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex-1 overflow-auto flex flex-col"
+                >
+                    {children}
+                </motion.div>
+            </main>
         </div>
     );
 }

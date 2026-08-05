@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Eye, EyeOff, ArrowRight, ShieldCheck, HeartPulse, Phone, Lock, Hash } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ShieldCheck, HeartPulse, Phone, Mail, Lock, Hash } from 'lucide-react';
 import { useRegister } from '@/hooks/useRegister';
 import { ROUTES } from '@/constants/routes';
 
@@ -16,6 +16,7 @@ export default function RegisterPage() {
     const [confirm, setConfirm]         = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [countdown, setCountdown]     = useState(0);
+    const [registerMethod, setRegisterMethod] = useState('phone');
 
     const intervalRef = useRef(null);
 
@@ -130,19 +131,43 @@ export default function RegisterPage() {
                         </div>
 
                         <div className="space-y-5">
+                            {/* Method Switcher */}
+                            <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+                                <button
+                                    type="button"
+                                    onClick={() => { setRegisterMethod('phone'); setIdentifier(''); }}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-lg transition-all ${registerMethod === 'phone' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    <Phone className="w-4 h-4" />
+                                    Số điện thoại
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setRegisterMethod('email'); setIdentifier(''); }}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-lg transition-all ${registerMethod === 'email' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    <Mail className="w-4 h-4" />
+                                    Email
+                                </button>
+                            </div>
+
                             {/* Identifier Input */}
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                                    Email / Số điện thoại
+                                    {registerMethod === 'phone' ? 'Số điện thoại' : 'Email'}
                                 </label>
                                 <div className="flex gap-3">
                                     <div className="relative flex-1">
-                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        {registerMethod === 'email' ? (
+                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        ) : (
+                                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        )}
                                         <input
-                                            type="text"
+                                            type={registerMethod === 'email' ? "email" : "text"}
                                             value={identifier}
                                             onChange={e => setIdentifier(e.target.value)}
-                                            placeholder="Nhập email hoặc SĐT..."
+                                            placeholder={registerMethod === 'phone' ? "Nhập số điện thoại..." : "Nhập email..."}
                                             className="w-full h-14 pl-11 pr-4 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-50 transition-all text-slate-900"
                                         />
                                     </div>

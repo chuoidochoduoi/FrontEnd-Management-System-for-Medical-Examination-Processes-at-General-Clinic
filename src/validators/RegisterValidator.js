@@ -1,4 +1,4 @@
-const PHONE_REGEX = /^(0[3|5|7|8|9])[0-9]{8}$/;
+const PHONE_REGEX = /^(\+84|0)\d{9,10}$/;
 const EMAIL_REGEX = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
 
 export function validateRegister({ identifier, otp, password, confirmPassword }) {

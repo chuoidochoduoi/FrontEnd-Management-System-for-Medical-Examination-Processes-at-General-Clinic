@@ -4,6 +4,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LayoutDashboard, UserRound, Stethoscope, Settings, LogOut, Users, CalendarDays, MessageSquare, Clock3 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
+import NotificationBell from '@/components/ui/NotificationBell';
 import { useMyDepartment } from '@/hooks/useMyDepartment';
 import { motion } from 'framer-motion';
 

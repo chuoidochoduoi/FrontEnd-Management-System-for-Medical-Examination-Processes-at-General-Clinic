@@ -89,7 +89,7 @@ export default function CreateTicketPage() {
         }
         try {
             const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/bhyt/check?cardNumber=${bhytCode}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/bhxh/check?cardNumber=${bhytCode}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const result = await res.json();

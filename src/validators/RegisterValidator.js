@@ -1,9 +1,9 @@
-
 const PHONE_REGEX = /^(0[3|5|7|8|9])[0-9]{8}$/;
+const EMAIL_REGEX = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
 
-export function validateRegister({ phone, otp, password, confirmPassword }) {
-    if (!phone) return 'Vui lòng nhập số điện thoại.';
-    if (!PHONE_REGEX.test(phone)) return 'Số điện thoại không hợp lệ.';
+export function validateRegister({ identifier, otp, password, confirmPassword }) {
+    if (!identifier) return 'Vui lòng nhập Email hoặc Số điện thoại.';
+    if (!PHONE_REGEX.test(identifier) && !EMAIL_REGEX.test(identifier)) return 'Email hoặc Số điện thoại không hợp lệ.';
 
     if (!otp || otp.length < 4) return 'Vui lòng nhập mã OTP.';
 

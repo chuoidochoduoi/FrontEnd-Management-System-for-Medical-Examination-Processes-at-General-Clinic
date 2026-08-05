@@ -27,22 +27,22 @@ export default function LoginPage() {
 	// ── Forgot Password Modal ──
 	const ForgotPasswordModal = () => {
 		const [step, setStep] = useState(1);
-		const [phone, setPhone] = useState('');
+		const [identifier, setIdentifier] = useState('');
 		const [otp, setOtp] = useState('');
 		const [newPass, setNewPass] = useState('');
 		const [isSubmitting, setIsSubmitting] = useState(false);
 
 		const handleSendOtp = async () => {
-			if (!phone) return toast.error('Vui lòng nhập số điện thoại');
+			if (!identifier) return toast.error('Vui lòng nhập Email hoặc số điện thoại');
 			setIsSubmitting(true);
 			try {
 				const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/send-otp`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ phone })
+					body: JSON.stringify({ identifier })
 				});
 				if (!res.ok) throw new Error('Không thể gửi mã OTP');
-				toast.success('Mã OTP đã được gửi (Check console/log backend)');
+				toast.success('Mã OTP đã được gửi (Check email hoặc console/log backend)');
 				setStep(2);
 			} catch (err) {
 				toast.error(err.message);
@@ -58,7 +58,7 @@ export default function LoginPage() {
 				const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/reset-password`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ phone, otp, newPassword: newPass })
+					body: JSON.stringify({ identifier, otp, newPassword: newPass })
 				});
 				if (!res.ok) {
 					const data = await res.json().catch(() => ({}));
@@ -83,7 +83,7 @@ export default function LoginPage() {
                         <div>
                             <h3 className="text-xl font-bold text-slate-900">Khôi phục mật khẩu</h3>
                             <p className="text-sm text-slate-500 mt-1">
-                                {step === 1 ? 'Xác thực qua số điện thoại.' : 'Tạo mật khẩu mới của bạn.'}
+                                {step === 1 ? 'Xác thực qua Email hoặc số điện thoại.' : 'Tạo mật khẩu mới của bạn.'}
                             </p>
                         </div>
                     </div>
@@ -91,10 +91,10 @@ export default function LoginPage() {
 					{step === 1 ? (
 						<div className="space-y-5">
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Số điện thoại</label>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Email / Số điện thoại</label>
                                 <div className="relative">
                                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                    <input type="text" placeholder="Nhập số điện thoại đã đăng ký..." value={phone} onChange={e => setPhone(e.target.value)}
+                                    <input type="text" placeholder="Nhập email hoặc số điện thoại..." value={identifier} onChange={e => setIdentifier(e.target.value)}
                                         className="w-full h-12 pl-11 pr-4 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-50 transition-all" />
                                 </div>
                             </div>

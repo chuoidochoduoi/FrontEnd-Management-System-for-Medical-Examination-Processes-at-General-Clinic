@@ -12,14 +12,14 @@ export function useRegister() {
     const [otpSent, setOtpSent] = useState(false);
     const navigate = useNavigate();
 
-    const sendOtp = async (phone) => {
+    const sendOtp = async (identifier) => {
         setError('');
         setLoadingSendOtp(true);
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/send-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone }),
+                body: JSON.stringify({ identifier }),
             });
 
             if (!res.ok) {
@@ -28,7 +28,7 @@ export function useRegister() {
             }
 
             setOtpSent(true);
-            toast.success('Đã gửi mã OTP đến số điện thoại của bạn!');
+            toast.success('Đã gửi mã OTP đến email/số điện thoại của bạn!');
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra');
             toast.error(err.message || 'Lỗi gửi OTP');
@@ -37,11 +37,11 @@ export function useRegister() {
         }
     };
 
-    const register = async (phone, otp, password, confirmPassword) => {
+    const register = async (identifier, otp, password, confirmPassword) => {
         setError('');
 
         // Validate phía client
-        const validationError = validateRegister({ phone, otp, password, confirmPassword });
+        const validationError = validateRegister({ identifier, otp, password, confirmPassword });
         if (validationError) {
             setError(validationError);
             return;
@@ -52,7 +52,7 @@ export function useRegister() {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone: phone.trim(), otp, password }),
+                body: JSON.stringify({ identifier: identifier.trim(), otp, password }),
             });
 
             if (!res.ok) {

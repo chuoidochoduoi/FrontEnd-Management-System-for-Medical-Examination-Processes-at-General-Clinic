@@ -4,6 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BarChart2, CalendarDays, LogOut, Users, Settings, MessageSquare, MapPinned, Clock3, QrCode } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
+import NotificationBell from '@/components/ui/NotificationBell';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -108,8 +109,11 @@ export default function OwnerLayout({ children }) {
                 </div>
             </aside>
 
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <main className="flex-1 overflow-y-auto p-8">
+            <div className="flex-1 flex flex-col overflow-hidden relative">
+                <header className="absolute top-4 right-8 z-10 bg-white shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100">
+                    <NotificationBell />
+                </header>
+                <main className="flex-1 overflow-y-auto p-8 pt-16">
                     {children}
                 </main>
             </div>

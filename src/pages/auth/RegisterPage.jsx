@@ -10,7 +10,7 @@ export default function RegisterPage() {
     const { t } = useTranslation('auth');
     const { t: tCommon } = useTranslation('common');
 
-    const [phone, setPhone]             = useState('');
+    const [identifier, setIdentifier]   = useState('');
     const [otp, setOtp]                 = useState('');
     const [password, setPassword]       = useState('');
     const [confirm, setConfirm]         = useState('');
@@ -51,17 +51,17 @@ export default function RegisterPage() {
     }, [countdown]);
 
     const handleSendOtp = () => {
-        sendOtp(phone);
+        sendOtp(identifier);
     };
 
     const handleResendOtp = () => {
         if (countdown > 0) return;
-        sendOtp(phone);
+        sendOtp(identifier);
         setCountdown(60);
     };
 
     const handleRegister = () => {
-        register(phone, otp, password, confirm);
+        register(identifier, otp, password, confirm);
     };
 
     return (
@@ -125,30 +125,30 @@ export default function RegisterPage() {
                                 Đăng Ký
                             </h2>
                             <p className="text-slate-500 font-light text-sm">
-                                Tạo tài khoản mới bằng số điện thoại của bạn.
+                                Tạo tài khoản mới bằng Email hoặc số điện thoại của bạn.
                             </p>
                         </div>
 
                         <div className="space-y-5">
-                            {/* Phone Input */}
+                            {/* Identifier Input */}
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                                    {t('register.phone')}
+                                    Email / Số điện thoại
                                 </label>
                                 <div className="flex gap-3">
                                     <div className="relative flex-1">
                                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                         <input
-                                            type="tel"
-                                            value={phone}
-                                            onChange={e => setPhone(e.target.value)}
-                                            placeholder="VD: 0987654321"
+                                            type="text"
+                                            value={identifier}
+                                            onChange={e => setIdentifier(e.target.value)}
+                                            placeholder="Nhập email hoặc SĐT..."
                                             className="w-full h-14 pl-11 pr-4 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-50 transition-all text-slate-900"
                                         />
                                     </div>
                                     <button
                                         onClick={handleSendOtp}
-                                        disabled={loadingSendOtp || !phone || otpSent}
+                                        disabled={loadingSendOtp || !identifier || otpSent}
                                         className={`h-14 px-6 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${otpSent ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400'}`}
                                     >
                                         {loadingSendOtp ? 'Đang gửi...' : (otpSent ? 'Đã gửi' : 'Gửi mã')}

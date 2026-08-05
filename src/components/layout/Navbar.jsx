@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { User, Calendar, FileText, Settings, LogOut } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { ROUTES } from '@/constants/routes';
+import NotificationBell from '@/components/ui/NotificationBell';
 
 function useAuth() {
     const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -120,50 +121,54 @@ export default function Navbar() {
                 </div>
 
                 {isLoggedIn ? (
-                    /* ── Avatar + Dropdown ── */
-                    <div className="relative" ref={dropdownRef}>
-                        <button
-                            onClick={() => setOpen(v => !v)}
-                            className="w-9 h-9 rounded-full bg-primary-500 hover:bg-primary-600 transition-colors flex items-center justify-center text-white focus:outline-none focus:ring-2 focus:ring-primary-300"
-                        >
-                            <User size={18} />
-                        </button>
+                    <div className="flex items-center gap-3">
+                        <NotificationBell />
+                        
+                        {/* ── Avatar + Dropdown ── */}
+                        <div className="relative" ref={dropdownRef}>
+                            <button
+                                onClick={() => setOpen(v => !v)}
+                                className="w-9 h-9 rounded-full bg-primary-500 hover:bg-primary-600 transition-colors flex items-center justify-center text-white focus:outline-none focus:ring-2 focus:ring-primary-300"
+                            >
+                                <User size={18} />
+                            </button>
 
-                        {open && (
-                            <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                            {open && (
+                                <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-top-1 duration-150">
 
-                                {/* Role badge */}
-                                {role && (
-                                    <div className="px-4 py-2.5 border-b border-gray-100">
-                                        <p className="text-xs text-gray-400">{t('nav.loggedInAs')}</p>
-                                        <p className="text-sm font-medium text-gray-700">{username}</p>
-                                        <p className="text-xs text-gray-400">{displayRole}</p>
+                                    {/* Role badge */}
+                                    {role && (
+                                        <div className="px-4 py-2.5 border-b border-gray-100">
+                                            <p className="text-xs text-gray-400">{t('nav.loggedInAs')}</p>
+                                            <p className="text-sm font-medium text-gray-700">{username}</p>
+                                            <p className="text-xs text-gray-400">{displayRole}</p>
+                                        </div>
+                                    )}
+
+                                    {menuItems.map(({ icon: Icon, label, to }) => (
+                                        <Link
+                                            key={to}
+                                            to={to}
+                                            onClick={() => setOpen(false)}
+                                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary-500 transition-colors"
+                                        >
+                                            <Icon size={15} className="shrink-0" />
+                                            {label}
+                                        </Link>
+                                    ))}
+
+                                    <div className="border-t border-gray-100 mt-1">
+                                        <button
+                                            onClick={handleLogout}
+                                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                                        >
+                                            <LogOut size={15} className="shrink-0" />
+                                            {t('nav.logout')}
+                                        </button>
                                     </div>
-                                )}
-
-                                {menuItems.map(({ icon: Icon, label, to }) => (
-                                    <Link
-                                        key={to}
-                                        to={to}
-                                        onClick={() => setOpen(false)}
-                                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-primary-500 transition-colors"
-                                    >
-                                        <Icon size={15} className="shrink-0" />
-                                        {label}
-                                    </Link>
-                                ))}
-
-                                <div className="border-t border-gray-100 mt-1">
-                                    <button
-                                        onClick={handleLogout}
-                                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
-                                    >
-                                        <LogOut size={15} className="shrink-0" />
-                                        {t('nav.logout')}
-                                    </button>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 ) : (
                     /* ── Login / Register ── */

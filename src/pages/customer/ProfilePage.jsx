@@ -344,21 +344,40 @@ export default function ProfilePage() {
                                     {onboardingErrors.gender && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{onboardingErrors.gender}</p>}
                                 </div>
 
-                                {/* SĐT (có thể đã có từ đăng ký) */}
-                                <div className="md:col-span-2">
-                                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
-                                        <Phone className="w-3.5 h-3.5 text-primary-400" />
-                                        Số điện thoại
-                                        {phone && <span className="text-[10px] font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-0.5"><CheckCircle className="w-2.5 h-2.5" />Đã có từ đăng ký</span>}
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        value={phone}
-                                        onChange={e => setPhone(e.target.value)}
-                                        placeholder="Nhập số điện thoại"
-                                        className={onboardInputCls('phone')}
-                                    />
-                                </div>
+                                {/* HIỂN THỊ PHƯƠNG THỨC LIÊN HỆ ĐÃ ĐĂNG KÝ (SĐT hoặc Email) */}
+                                {profile?.phone ? (
+                                    <div className="md:col-span-2">
+                                        <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
+                                            <Phone className="w-3.5 h-3.5 text-primary-400" />
+                                            Số điện thoại
+                                            <span className="text-[10px] font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                                                <CheckCircle className="w-2.5 h-2.5" />Đã có từ đăng ký
+                                            </span>
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            value={phone}
+                                            disabled
+                                            className="w-full h-12 px-4 text-sm border border-gray-200 bg-gray-50 text-gray-500 rounded-xl outline-none cursor-not-allowed"
+                                        />
+                                    </div>
+                                ) : profile?.email ? (
+                                    <div className="md:col-span-2">
+                                        <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
+                                            <Mail className="w-3.5 h-3.5 text-primary-400" />
+                                            Email
+                                            <span className="text-[10px] font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                                                <CheckCircle className="w-2.5 h-2.5" />Đã có từ đăng ký
+                                            </span>
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={email}
+                                            disabled
+                                            className="w-full h-12 px-4 text-sm border border-gray-200 bg-gray-50 text-gray-500 rounded-xl outline-none cursor-not-allowed"
+                                        />
+                                    </div>
+                                ) : null}
                             </div>
                         </div>
 
@@ -374,20 +393,38 @@ export default function ProfilePage() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                {/* Email */}
-                                <div className="md:col-span-2">
-                                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
-                                        <Mail className="w-3.5 h-3.5 text-gray-400" />
-                                        Email
-                                    </label>
-                                    <input
-                                        type="email"
-                                        value={email}
-                                        onChange={e => setEmail(e.target.value)}
-                                        placeholder="example@email.com"
-                                        className="w-full h-12 px-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 bg-white transition-all duration-200"
-                                    />
-                                </div>
+                                {/* HIỂN THỊ PHƯƠNG THỨC LIÊN HỆ CÒN LẠI */}
+                                {!profile?.email ? (
+                                    <div className="md:col-span-2">
+                                        <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
+                                            <Mail className="w-3.5 h-3.5 text-gray-400" />
+                                            Email
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={email}
+                                            onChange={e => { setEmail(e.target.value); setOnboardingErrors(p => ({...p, email: ''})); }}
+                                            placeholder="example@email.com"
+                                            className={onboardInputCls('email')}
+                                        />
+                                        {onboardingErrors.email && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{onboardingErrors.email}</p>}
+                                    </div>
+                                ) : !profile?.phone ? (
+                                    <div className="md:col-span-2">
+                                        <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
+                                            <Phone className="w-3.5 h-3.5 text-gray-400" />
+                                            Số điện thoại
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            value={phone}
+                                            onChange={e => { setPhone(e.target.value); setOnboardingErrors(p => ({...p, phone: ''})); }}
+                                            placeholder="Nhập số điện thoại"
+                                            className={onboardInputCls('phone')}
+                                        />
+                                        {onboardingErrors.phone && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{onboardingErrors.phone}</p>}
+                                    </div>
+                                ) : null}
 
                                 {/* Địa chỉ */}
                                 <div className="md:col-span-2">
@@ -398,10 +435,11 @@ export default function ProfilePage() {
                                     <input
                                         type="text"
                                         value={address}
-                                        onChange={e => setAddress(e.target.value)}
+                                        onChange={e => { setAddress(e.target.value); setOnboardingErrors(p => ({...p, address: ''})); }}
                                         placeholder="Nhập địa chỉ hiện tại"
-                                        className="w-full h-12 px-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 bg-white transition-all duration-200"
+                                        className={onboardInputCls('address')}
                                     />
+                                    {onboardingErrors.address && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{onboardingErrors.address}</p>}
                                 </div>
 
                                 {/* Nhóm máu */}

@@ -2,7 +2,7 @@
   "myAppointments": {
     "pageTitle": "Lịch hẹn của tôi",
     "newBtn": "Tạo lịch hẹn mới",
-    "notice": "Bạn có thể hủy lịch hẹn khi trạng thái là UPCOMING",
+    "notice": "Bạn có thể hủy lịch hẹn khi trạng thái là Sắp tới",
     "noticeQueue": "Số thứ tự sẽ được cập nhật vào ngày hẹn",
     "filter": {
       "code": "Mã lịch hẹn",
@@ -28,6 +28,13 @@
       "completed": "Hoàn thành",
       "cancelled": "Đã hủy",
       "checked_in": "Đã check-in"
+    },
+    "specialties": {
+      "Cardiology": "Tim mạch",
+      "Endocrinology": "Nội tiết",
+      "General Physician": "Đa khoa",
+      "Ophthalmology": "Mắt",
+      "Dermatology": "Da liễu"
     },
     "viewBtn": "Xem chi tiết",
     "cancelBtn": "Hủy lịch",

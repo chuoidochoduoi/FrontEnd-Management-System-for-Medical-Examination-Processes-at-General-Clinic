@@ -97,7 +97,7 @@ export default function MyAppointmentsPage() {
                         <label className={labelCls}>{t('myAppointments.filter.specialty')}</label>
                         <select value={specialty} onChange={e => setSpecialty(e.target.value)} className={inputCls}>
                             <option value="">{t('myAppointments.filter.specialtyAll')}</option>
-                            {SPECIALTIES.filter(Boolean).map(s => <option key={s} value={s}>{s}</option>)}
+                            {SPECIALTIES.filter(Boolean).map(s => <option key={s} value={s}>{t(`myAppointments.specialties.${s}`, { defaultValue: s })}</option>)}
                         </select>
                     </div>
                     <div>
@@ -154,7 +154,7 @@ export default function MyAppointmentsPage() {
                                         <p className="text-xs text-gray-400 mt-0.5">{appt.timeWindow}</p>
                                         <p className="text-xs text-gray-400">({appt.shift})</p>
                                     </td>
-                                    <td className={tdCls + (isDone ? ' text-gray-400' : ' text-gray-700')}>{appt.specialty}</td>
+                                    <td className={tdCls + (isDone ? ' text-gray-400' : ' text-gray-700')}>{t(`myAppointments.specialties.${appt.specialty}`, { defaultValue: appt.specialty })}</td>
                                     <td className={tdCls}>
                                         <span className={stCfg.cls}>{stCfg.label}</span>
                                     </td>

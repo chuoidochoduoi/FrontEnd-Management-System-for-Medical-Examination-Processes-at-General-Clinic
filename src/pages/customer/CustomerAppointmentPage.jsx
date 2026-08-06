@@ -28,7 +28,7 @@ export default function CustomerAppointmentPage() {
     const { t: tCommon } = useTranslation('common');
     const navigate = useNavigate();
 
-    const { services, loadingServices, book, loading: booking, error, shiftHours } = useAppointment();
+    const { services, loadingServices, book, loading: booking, error, shifts, shiftLoading } = useAppointment();
     const { profile } = useProfile();
     const location = useLocation();
     
@@ -48,7 +48,7 @@ export default function CustomerAppointmentPage() {
 
     // Step 3 â€” Thá» i gian
     const [date, setDate]         = useState(initialState.initialDate || '');
-    const [timeSlot, setTimeSlot] = useState(initialState.initialTimeSlot || '');
+    const [shiftId, setShiftId] = useState(initialState.initialShiftId || '');
     const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     const toggleService = (service) => {
@@ -102,13 +102,16 @@ export default function CustomerAppointmentPage() {
               }
             : null;
             
-        const success = await book({ ...patientInfo, selectedServices, date, timeSlot, rescheduleApptId: initialState.rescheduleApptId });
+        const success = await book({ ...patientInfo, selectedServices, date, shiftId, rescheduleApptId: initialState.rescheduleApptId });
         if (success) {
             setShowConfirmModal(false);
             // Có thể reset form ở đây nếu cần, nhưng toast đã hiện thành công
             setSelectedServices([]);
             setDate('');
-            setTimeSlot('');
+            setShiftId('');
+            
+            // Chuyển hướng về trang Lịch hẹn của tôi
+            navigate(ROUTES.MY_APPOINTMENTS);
         }
     };
 
@@ -239,32 +242,31 @@ export default function CustomerAppointmentPage() {
                                     <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">
                                         {t('step3.timeSlot')}
                                     </label>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {['morning', 'afternoon'].map(slot => {
-                                            const hours = shiftHours[slot];
-                                            return (
+                                    {shiftLoading ? (
+                                        <p className="text-sm text-gray-500">Đang tải...</p>
+                                    ) : (
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {shifts.map(shift => (
                                                 <button
-                                                    key={slot}
+                                                    key={shift.id}
                                                     type="button"
-                                                    onClick={() => setTimeSlot(slot)}
+                                                    onClick={() => setShiftId(shift.id)}
                                                     className={`h-14 text-sm font-bold rounded-xl border transition-all ${
-                                                        timeSlot === slot
+                                                        shiftId === shift.id
                                                             ? 'bg-black text-white border-black'
                                                             : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
                                                     }`}
                                                 >
                                                     <div className="flex flex-col items-center">
-                                                        <span>{t(`step3.${slot}`)}</span>
-                                                        {hours && (
-                                                            <span className="text-xs font-normal opacity-80 mt-0.5">
-                                                                {hours.start} – {hours.end}
-                                                            </span>
-                                                        )}
+                                                        <span>{shift.name}</span>
+                                                        <span className="text-xs font-normal opacity-80 mt-0.5">
+                                                            {shift.startTime} – {shift.endTime}
+                                                        </span>
                                                     </div>
                                                 </button>
-                                            );
-                                        })}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </section>
@@ -282,7 +284,7 @@ export default function CustomerAppointmentPage() {
 
                             <button
                                 onClick={handleSubmit}
-                                disabled={booking || selectedServices.length === 0 || !date || !timeSlot}
+                                disabled={booking || selectedServices.length === 0 || !date || !shiftId}
                                 className="w-full h-14 bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-black text-sm font-bold uppercase tracking-widest rounded-xl transition-colors"
                             >
                                 {booking ? tCommon('loading') : (isReschedule ? 'Xác nhận Đổi Lịch' : 'Xác nhận Đặt Lịch')}
@@ -303,7 +305,7 @@ export default function CustomerAppointmentPage() {
                                 email: profile?.email,
                                 address: profile?.address || '',
                                 date,
-                                timeSlot: timeSlot === 'morning' ? t('step3.morning') : t('step3.afternoon'),
+                                timeSlot: shifts.find(s => s.id === shiftId)?.name || '',
                                 method: 'Khám trực tiếp tại phòng khám',
                                 total: formatVND(totalCost),
                                 services: selectedServices,

@@ -333,11 +333,11 @@ export default function ExaminationPage() {
         if (required && !symptoms.trim()) return 'Vui lòng nhập triệu chứng/lý do khám';
         if (required && !examResult.trim()) return 'Vui lòng nhập kết quả khám lâm sàng';
         if (required && diagnosis.selected.length === 0) return 'Vui lòng chọn ít nhất một chẩn đoán ICD-10';
-        if (heartRate && (Number(heartRate) < 20 || Number(heartRate) > 250)) return 'Nhịp tim phải nằm trong khoảng 20-250 lần/phút';
-        if (temperature && (Number(temperature) < 30 || Number(temperature) > 45)) return 'Nhiệt độ phải nằm trong khoảng 30-45°C';
-        if (height && (Number(height) < 30 || Number(height) > 250)) return 'Chiều cao phải nằm trong khoảng 30-250 cm';
-        if (weight && (Number(weight) < 2 || Number(weight) > 500)) return 'Cân nặng phải nằm trong khoảng 2-500 kg';
-        if (bloodPressure && !/^\d{2,3}\/\d{2,3}$/.test(bloodPressure)) return 'Huyết áp phải có định dạng tâm thu/tâm trương, ví dụ 120/80';
+        if (heartRate && isNaN(Number(heartRate))) return 'Nhịp tim phải là số hợp lệ';
+        if (temperature && isNaN(Number(temperature))) return 'Nhiệt độ phải là số hợp lệ';
+        if (height && isNaN(Number(height))) return 'Chiều cao phải là số hợp lệ';
+        if (weight && isNaN(Number(weight))) return 'Cân nặng phải là số hợp lệ';
+
         const invalidMedicine = prescriptionItems.some(med =>
             !med.name?.trim() || !med.quantity || Number(med.quantity) <= 0 || !med.unit?.trim());
         if (invalidMedicine) return 'Mỗi thuốc phải có tên, số lượng dương và đơn vị';

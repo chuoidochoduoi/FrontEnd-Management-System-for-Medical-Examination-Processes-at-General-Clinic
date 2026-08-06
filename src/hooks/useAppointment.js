@@ -7,32 +7,14 @@ import { validateAppointment } from '@/validators/appointmentValidator';
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
 
-// Helper: chuyển đổi date + timeSlot thành scheduledAt (LocalDateTime format)
-// Sử dụng giờ bắt đầu ca từ cấu hình shifts (admin cấu hình) thay vì hard-coded
-const buildScheduledAt = (date, timeSlot, shifts) => {
-    if (!date || !timeSlot) return null;
+const buildScheduledAt = (date, shiftId, shifts) => {
+    if (!date || !shiftId) return null;
     const [year, month, day] = date.split('-');
 
-    // Tìm giờ bắt đầu của ca tương ứng từ danh sách shifts được cấu hình
-    const shift = shifts.find(s => {
-        const name = (s.name || '').toLowerCase();
-        return (timeSlot === 'morning' && (name.includes('sáng') || name.includes('morning'))) ||
-               (timeSlot === 'afternoon' && (name.includes('chiều') || name.includes('afternoon')));
-    });
-
-    // Nếu tìm thấy ca cấu hình, dùng startTime của ca đó; nếu không có, dùng giờ mặc định theo timeSlot
-    const hour = shift?.startTime || null;
-    if (!hour) {
-        const defaultHour = timeSlot === 'morning' || timeSlot === 'MORNING' ? '09:00:00' : '14:00:00';
-        return `${year}-${month}-${day}T${defaultHour}`;
-    }
-    return `${year}-${month}-${day}T${hour}`;
-};
-
-// Helper: chuyển đổi timeSlot sang format Enum backend (MORNING, AFTERNOON)
-const toTimeSlotEnum = (timeSlot) => {
-    if (!timeSlot) return null;
-    return timeSlot.toUpperCase();
+    const shift = shifts.find(s => s.id === shiftId || s.shiftId === shiftId);
+    if (!shift) return null;
+    
+    return `${year}-${month}-${day}T${shift.startTime}:00`;
 };
 
 // Helper: chuyển đổi gender sang format Enum backend (MALE, FEMALE, OTHER)
@@ -51,17 +33,6 @@ export function useAppointment() {
     // Shift configuration (admin-configured hours, not hardcoded)
     const [shifts, setShifts] = useState([]);
     const [shiftLoading, setShiftLoading] = useState(false);
-
-    // Map shifts to morning/afternoon hours for display
-    const shiftHours = shifts.reduce((acc, shift) => {
-        const name = (shift.name || '').toLowerCase();
-        if (name.includes('sáng') || name.includes('morning')) {
-            acc.morning = { start: shift.startTime, end: shift.endTime };
-        } else if (name.includes('chiều') || name.includes('afternoon')) {
-            acc.afternoon = { start: shift.startTime, end: shift.endTime };
-        }
-        return acc;
-    }, {});
 
     // Fetch danh sách dịch vụ và cấu hình ca (shifts) khi mount
     useEffect(() => {
@@ -104,12 +75,12 @@ export function useAppointment() {
     const fetchShifts = async () => {
         setShiftLoading(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/shifts`, { headers: bearer() });
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/shifts/active`);
             if (res.ok) {
                 const data = await res.json();
-                const rawShifts = Array.isArray(data) ? data : (data.shifts ?? data.content ?? []);
+                const rawShifts = Array.isArray(data) ? data : (data.data ?? data.shifts ?? data.content ?? []);
                 setShifts(rawShifts.map(s => ({
-                    id: s.id,
+                    id: s.shiftId || s.id,
                     name: s.name,
                     startTime: s.startTime,
                     endTime: s.endTime,
@@ -129,7 +100,7 @@ export function useAppointment() {
 
         // Validate date/timeSlot để tính scheduledAt
         if (!formData.date) return setError('Vui lòng chọn ngày khám.');
-        if (!formData.timeSlot) return setError('Vui lòng chọn khung giờ.');
+        if (!formData.shiftId) return setError('Vui lòng chọn khung giờ.');
 
         const validationError = validateAppointment(formData);
         if (validationError) {
@@ -141,8 +112,7 @@ export function useAppointment() {
         try {
             const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             const isLoggedIn = !!token;
-            const scheduledAt = buildScheduledAt(formData.date, formData.timeSlot, shifts);
-            const timeSlotEnum = toTimeSlotEnum(formData.timeSlot);
+            const scheduledAt = buildScheduledAt(formData.date, formData.shiftId, shifts);
 
             // Xây dựng body request dựa trên trạng thái đăng nhập
             const body = isLoggedIn
@@ -150,7 +120,7 @@ export function useAppointment() {
                       customerId: formData.customerId,
                       scheduledAt,
                       cancelReason: formData.cancelReason || null,
-                      timeSlot: timeSlotEnum,
+                      shiftId: formData.shiftId,
                       serviceIds: formData.selectedServices.map(s => s.id),
                   }
                 : {
@@ -160,7 +130,7 @@ export function useAppointment() {
                       guestAge: Number(formData.age),
                       guestGender: toGenderEnum(formData.gender),
                       scheduledAt,
-                      timeSlot: timeSlotEnum,
+                      shiftId: formData.shiftId,
                       serviceIds: formData.selectedServices.map(s => s.id),
                   };
 
@@ -212,5 +182,5 @@ export function useAppointment() {
         }
     };
 
-    return { services, loadingServices, book, loading, error, shifts, shiftHours, shiftLoading, fetchShifts };
+    return { services, loadingServices, book, loading, error, shifts, shiftLoading, fetchShifts };
 }

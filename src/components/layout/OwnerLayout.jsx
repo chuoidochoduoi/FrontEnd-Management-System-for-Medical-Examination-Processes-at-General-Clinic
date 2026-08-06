@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { BarChart2, CalendarDays, LogOut, Users, Settings, MessageSquare, MapPinned, Clock3, QrCode } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
+import logoUrl from '@/assets/logo.jpg';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -53,6 +54,7 @@ export default function OwnerLayout({ children }) {
     const mainNav = [
         { to: ROUTES.OWNER_REPORT,   icon: BarChart2,    label: 'Thống kê' },
         { to: ROUTES.OWNER_SCHEDULE, icon: CalendarDays, label: 'Lịch trình' },
+        { to: ROUTES.ADMIN_SHIFTS, icon: Clock3, label: 'Cấu hình ca' },
         { to: ROUTES.OWNER_FEEDBACKS, icon: MessageSquare, label: 'Đánh giá' },
         { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: 'Điều phối bệnh nhân' },
 //        { to: ROUTES.OWNER_ATTENDANCE, icon: Clock3, label: 'Chấm công' },
@@ -69,9 +71,12 @@ export default function OwnerLayout({ children }) {
         <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden">
             {/* Sidebar */}
             <aside className="w-44 bg-white border-r border-gray-200 flex flex-col shrink-0">
-                <div className="px-4 py-5 border-b border-gray-100">
-                    <p className="text-sm font-bold text-gray-900">MediFlow</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Clinic Management</p>
+                <div className="px-4 py-5 border-b border-gray-100 flex items-center gap-3">
+                    <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded-md object-contain" />
+                    <div>
+                        <p className="text-sm font-bold text-gray-900">CareS</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Clinic Management</p>
+                    </div>
                 </div>
 
                 {/* Avatar */}

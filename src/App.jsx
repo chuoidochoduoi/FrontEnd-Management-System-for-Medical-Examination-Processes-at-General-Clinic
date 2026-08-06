@@ -35,6 +35,7 @@ import RoomManagementPage from '@/pages/admin/RoomManagementPage';
 import SpecializationManagementPage from '@/pages/admin/SpecializationManagementPage';
 import CapabilityManagementPage from '@/pages/admin/CapabilityManagementPage';
 import AuditLogManagementPage from '@/pages/admin/AuditLogManagementPage';
+import ShiftManagementPage from '@/pages/admin/ShiftManagementPage';
 import SchedulePage from '@/pages/owner/SchedulePage';
 import ReportPage from '@/pages/owner/ReportPage';
 import MySchedulePage from '@/pages/staff/MySchedulePage';
@@ -195,6 +196,11 @@ function App() {
         <Route path={ROUTES.ADMIN_AUDIT_LOGS} element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <AuditLogManagementPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.ADMIN_SHIFTS} element={
+          <ProtectedRoute allowedRoles={['CLINIC_MANAGER']}>
+            <ShiftManagementPage />
           </ProtectedRoute>
         } />
 

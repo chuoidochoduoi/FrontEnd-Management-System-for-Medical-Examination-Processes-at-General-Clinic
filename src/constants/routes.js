@@ -56,6 +56,7 @@ export const ROUTES = {
     ADMIN_SPECIALIZATIONS: '/admin/specializations',
     ADMIN_CAPABILITIES: '/admin/capabilities',
     ADMIN_AUDIT_LOGS: '/admin/audit-logs',
+    ADMIN_SHIFTS: '/admin/shifts',
 
     OWNER_SCHEDULE: '/owner/schedule',
     OWNER_REPORT: '/owner/report',

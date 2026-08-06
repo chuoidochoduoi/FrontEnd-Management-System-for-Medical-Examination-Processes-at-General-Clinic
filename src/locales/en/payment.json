@@ -30,9 +30,9 @@
     "pageTitle": "PAYMENT HISTORY",
     "backBtn": "Back to History",
     "savePDF": "Save PDF",
-    "clinicName": "MediFlow Clinic System",
-    "clinicAddress": "Address: Số Lô A1, A2 MN1",
-    "clinicHotline": "Hotline: 1900-4567 • Website: mediflow.vn",
+    "clinicName": "CareS Clinic System",
+    "clinicAddress": "123 Health Ave, Medical District, Ho Chi Minh City",
+    "clinicHotline": "Hotline: 1900-4567 • Website: cares.vn",
     "receiptTitle": "Hospital Payment Receipt",
     "issuedLabel": "Issue Date:",
     "patientLabel": "Patient:",
@@ -56,6 +56,6 @@
     "bhytCover": "BHYT Coverage:",
     "patientPayment": "Patient Payment:",
     "inWords": "In words:",
-    "thankYou": "Thank you for choosing MediFlow. This receipt serves as an official electronic proof of payment."
+    "thankYou": "Thank you for choosing CareS. This receipt serves as an official electronic proof of payment."
   }
 }

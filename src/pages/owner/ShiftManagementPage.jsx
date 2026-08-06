@@ -1,10 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Pencil, Plus, Trash2, X, Clock, Calendar, Check, Search, CalendarClock } from 'lucide-react';
 import { toast } from 'react-toastify';
-import AdminLayout from '@/components/layout/AdminLayout';
+import OwnerLayout from '@/components/layout/OwnerLayout';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const get = key => localStorage.getItem(key) || sessionStorage.getItem(key);
+
+const generateTimeOptions = () => {
+    const options = [];
+    for (let h = 0; h < 24; h++) {
+        for (let m = 0; m < 60; m += 30) {
+            const hour = h.toString().padStart(2, '0');
+            const minute = m.toString().padStart(2, '0');
+            options.push(`${hour}:${minute}`);
+        }
+    }
+    return options;
+};
+const timeOptions = generateTimeOptions();
+
 const headers = () => ({ Authorization: `Bearer ${get('token')}` });
 
 export default function ShiftManagementPage() {
@@ -23,8 +37,7 @@ export default function ShiftManagementPage() {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/shifts`, { headers: headers() });
             if (!res.ok) throw new Error('Không thể tải danh sách ca làm việc');
             const data = await res.json();
-            // The API might return the array directly in data.data or data based on ShiftConfigController 
-            setItems(data.data ?? []);
+            setItems(Array.isArray(data) ? data : (data.data || []));
         } catch (error) { toast.error(error.message); }
         finally { setLoading(false); }
     };
@@ -101,7 +114,7 @@ export default function ShiftManagementPage() {
         });
 
     return (
-        <AdminLayout>
+        <OwnerLayout>
             <div className="px-10 py-8 space-y-8 max-w-7xl mx-auto">
                 {/* Page Header */}
                 <div className="flex justify-between items-start bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
@@ -255,21 +268,29 @@ export default function ShiftManagementPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Giờ bắt đầu <span className="text-red-500">*</span></label>
-                                        <input 
-                                            type="time"
+                                        <select 
                                             value={form.startTime} 
                                             onChange={e => setForm(p => ({...p, startTime: e.target.value}))} 
-                                            className="w-full h-11 px-4 border border-gray-200 focus:border-primary-500 rounded-xl text-sm outline-none transition-colors" 
-                                        />
+                                            className="w-full h-11 px-4 border border-gray-200 focus:border-primary-500 rounded-xl text-sm outline-none transition-colors bg-white" 
+                                        >
+                                            <option value="">-- Chọn giờ --</option>
+                                            {timeOptions.map(time => (
+                                                <option key={`start-${time}`} value={time}>{time}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Giờ kết thúc <span className="text-red-500">*</span></label>
-                                        <input 
-                                            type="time"
+                                        <select 
                                             value={form.endTime} 
                                             onChange={e => setForm(p => ({...p, endTime: e.target.value}))} 
-                                            className="w-full h-11 px-4 border border-gray-200 focus:border-primary-500 rounded-xl text-sm outline-none transition-colors" 
-                                        />
+                                            className="w-full h-11 px-4 border border-gray-200 focus:border-primary-500 rounded-xl text-sm outline-none transition-colors bg-white" 
+                                        >
+                                            <option value="">-- Chọn giờ --</option>
+                                            {timeOptions.map(time => (
+                                                <option key={`end-${time}`} value={time}>{time}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
                                 
@@ -325,6 +346,6 @@ export default function ShiftManagementPage() {
                     isDanger
                 />
             </div>
-        </AdminLayout>
+        </OwnerLayout>
     );
 }

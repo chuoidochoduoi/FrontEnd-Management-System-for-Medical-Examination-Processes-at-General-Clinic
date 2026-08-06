@@ -35,7 +35,7 @@ import RoomManagementPage from '@/pages/admin/RoomManagementPage';
 import SpecializationManagementPage from '@/pages/admin/SpecializationManagementPage';
 import CapabilityManagementPage from '@/pages/admin/CapabilityManagementPage';
 import AuditLogManagementPage from '@/pages/admin/AuditLogManagementPage';
-import ShiftManagementPage from '@/pages/admin/ShiftManagementPage';
+import ShiftManagementPage from '@/pages/owner/ShiftManagementPage';
 import SchedulePage from '@/pages/owner/SchedulePage';
 import ReportPage from '@/pages/owner/ReportPage';
 import MySchedulePage from '@/pages/staff/MySchedulePage';

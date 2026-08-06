@@ -27,7 +27,7 @@ export default function AppointmentPage() {
     const { t: tCommon } = useTranslation('common');
     const navigate = useNavigate();
 
-    const { services, loadingServices, book, loading: booking, error, shiftHours } = useAppointment();
+    const { services, loadingServices, book, loading: booking, error, shifts, shiftLoading } = useAppointment();
     const { profile } = useProfile();
 
     // Step 1 — Thông tin khách hàng (chỉ dùng khi chưa đăng nhập)
@@ -108,7 +108,7 @@ export default function AppointmentPage() {
                 address: profile.address
             }
             : { fullName, phone, age, gender, address };
-        book({ ...patientInfo, selectedServices, date, timeSlot });
+        book({ ...patientInfo, selectedServices, date, shiftId: timeSlot });
         setShowConfirmModal(false);
     };
 
@@ -446,27 +446,30 @@ export default function AppointmentPage() {
                                         <label className="block text-xs font-semibold tracking-[0.1em] uppercase text-slate-900 mb-2">
                                             {t('step3.timeSlot')}
                                         </label>
-                                        <div className="flex gap-4">
-                                            {['morning', 'afternoon'].map(slot => (
-                                                <button
-                                                    key={slot}
-                                                    type="button"
-                                                    onClick={() => setTimeSlot(slot)}
-                                                    className={`flex-1 h-12 text-sm rounded-md border transition-colors ${timeSlot === slot
-                                                            ? 'bg-primary-500 text-white border-primary-500'
-                                                            : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                            {shiftLoading ? (
+                                                <p className="text-sm text-gray-500 col-span-full">Đang tải ca khám...</p>
+                                            ) : shifts?.length > 0 ? (
+                                                shifts.map(shift => (
+                                                    <button
+                                                        key={shift.id}
+                                                        type="button"
+                                                        onClick={() => setTimeSlot(shift.id)}
+                                                        className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 ${
+                                                            timeSlot === shift.id
+                                                                ? 'bg-slate-900 border-slate-900 text-white shadow-md shadow-slate-900/20'
+                                                                : 'bg-white border-gray-200 text-gray-700 hover:border-slate-400 hover:bg-slate-50'
                                                         }`}
-                                                >
-                                                    <div className="flex flex-col items-center">
-                                                        <span className="font-medium">{t(`step3.${slot}`)}</span>
-                                                        {shiftHours[slot] && (
-                                                            <span className="text-xs font-normal opacity-80 mt-0.5">
-                                                                {shiftHours[slot].start} – {shiftHours[slot].end}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </button>
-                                            ))}
+                                                    >
+                                                        <span className="font-semibold text-sm mb-0.5">{shift.name}</span>
+                                                        <span className="text-xs opacity-80">
+                                                            {shift.startTime} – {shift.endTime}
+                                                        </span>
+                                                    </button>
+                                                ))
+                                            ) : (
+                                                <p className="text-sm text-gray-500 col-span-full">Chưa có cấu hình ca khám.</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -513,7 +516,7 @@ export default function AppointmentPage() {
                         email: profile?.email,
                         address: profile ? profile.address : address,
                         date,
-                        timeSlot: timeSlot === 'morning' ? t('step3.morning') : t('step3.afternoon'),
+                        timeSlot: shifts?.find(s => s.id === timeSlot)?.name || '',
                         method: 'Khám trực tiếp tại phòng khám',
                         total: formatVND(totalCost),
                         services: selectedServices,

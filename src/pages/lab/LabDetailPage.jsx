@@ -196,9 +196,10 @@ export default function LabDetailPage() {
         if (next) {
             toast.info('Đã hoàn thành kỹ thuật này. Chuyển sang kỹ thuật tiếp theo.');
             navigate(ROUTES.DOCTOR_LAB_DETAIL.replace(':id', next.testRequestId));
-        } else if (departmentId) {
-            toast.success('Đã hoàn thành toàn bộ xét nghiệm trong số gọi.');
-            navigate(ROUTES.DOCTOR_LAB.replace(':departmentId', departmentId));
+        } else {
+            toast.success('Đã hoàn thành yêu cầu xét nghiệm.');
+            if (departmentId) navigate(ROUTES.DOCTOR_LAB.replace(':departmentId', departmentId));
+            else navigate(-1);
         }
     };
 
@@ -435,8 +436,8 @@ export default function LabDetailPage() {
                     {/* Error */}
                     {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
-                    {/* Actions - hidden when COMPLETED or CANCELLED */}
-                    {!(order?.status === 'COMPLETED' || order?.status === 'CANCELLED') && (
+                    {/* Actions */}
+                    {!(order?.status === 'COMPLETED' || order?.status === 'CANCELLED') ? (
                         <div className="flex justify-end gap-3">
                             <button
                                 onClick={handleSaveDraft}
@@ -454,6 +455,15 @@ export default function LabDetailPage() {
                                     {saving ? t('labDetail.actions.saving') : 'Ký xác nhận & hoàn thành'}
                                 </button>
                             )}
+                        </div>
+                    ) : (
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={handleBack}
+                                className="px-8 h-11 border border-gray-300 hover:border-gray-500 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+                            >
+                                Quay lại
+                            </button>
                         </div>
                     )}
 

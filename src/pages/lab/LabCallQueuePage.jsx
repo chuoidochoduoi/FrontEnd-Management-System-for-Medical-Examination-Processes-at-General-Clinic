@@ -14,7 +14,7 @@ const statusText = {
 export default function LabCallQueuePage() {
     const { departmentId } = useParams();
     const navigate = useNavigate();
-    const { orders, loading, fetchOrders } = useLabQueue(departmentId);
+    const { orders, loading, fetchOrders, refetch } = useLabQueue(departmentId);
     const [search, setSearch] = useState('');
 
     const groups = useMemo(() => Object.values(orders.reduce((result, request) => {
@@ -38,7 +38,7 @@ export default function LabCallQueuePage() {
             return toast.error(body.message || 'Không thể cập nhật số gọi');
         }
         toast.success(action === 'call' ? 'Đã gọi bệnh nhân' : action === 'start-exam' ? 'Đã xác nhận bệnh nhân vào phòng' : 'Đã đánh dấu vắng');
-        fetchOrders({ departmentId, search, page: 1 });
+        refetch();
     };
 
     return <MedicalStaffLayout>
@@ -49,7 +49,7 @@ export default function LabCallQueuePage() {
                         <button onClick={() => navigate(ROUTES.DOCTOR_LAB.replace(':departmentId', departmentId))} className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white"><ArrowLeft size={17}/></button>
                         <div><h1 className="text-xl font-bold text-gray-900">Gọi số cận lâm sàng</h1><p className="text-sm text-gray-500">Chỉ dùng để gọi và xác nhận bệnh nhân đã vào phòng</p></div>
                     </div>
-                    <div className="flex gap-2"><button onClick={() => window.open(ROUTES.ALL_QUEUE_DISPLAY, '_blank')} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Mở màn hình TV chung</button><div className="relative"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input value={search} onChange={event => { setSearch(event.target.value); fetchOrders({ departmentId, search: event.target.value, page: 1 }); }} placeholder="Tìm bệnh nhân..." className="h-10 w-64 rounded-xl border border-gray-200 bg-white pl-9 pr-3 text-sm"/></div><button onClick={() => fetchOrders({ departmentId, search, page: 1 })} className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white"><RotateCcw size={16}/></button></div>
+                    <div className="flex gap-2"><button onClick={() => window.open(ROUTES.ALL_QUEUE_DISPLAY, '_blank')} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Mở màn hình TV chung</button><div className="relative"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/><input value={search} onChange={event => { setSearch(event.target.value); fetchOrders({ departmentId, search: event.target.value, page: 1 }); }} placeholder="Tìm bệnh nhân..." className="h-10 w-64 rounded-xl border border-gray-200 bg-white pl-9 pr-3 text-sm"/></div><button onClick={() => refetch()} className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white"><RotateCcw size={16}/></button></div>
                 </header>
 
                 <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white">

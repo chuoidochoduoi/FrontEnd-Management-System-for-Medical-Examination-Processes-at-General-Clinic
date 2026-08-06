@@ -338,7 +338,11 @@ export default function VisitDetailPage() {
                                         <div><p className="text-xs text-gray-400">Bác sĩ thực hiện</p><p>{selectedTest.performedBy || '-'}</p></div>
                                         <div><p className="text-xs text-gray-400">Thời gian</p><p>{selectedTest.performedAt ? new Date(selectedTest.performedAt).toLocaleString('vi-VN') : '-'}</p></div>
                                     </div>
-                                    <button onClick={() => setPreviewPdf(`${import.meta.env.VITE_API_URL}${selectedTest.pdfUrl}`)} className="inline-flex h-10 items-center px-4 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">Xem trước phiếu kết quả PDF</button>
+                                    <button onClick={() => {
+                                        const url = selectedTest.pdfUrl;
+                                        const fullUrl = url.startsWith('http') ? url : `${import.meta.env.VITE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+                                        setPreviewPdf(fullUrl);
+                                    }} className="inline-flex h-10 items-center px-4 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">Xem trước phiếu kết quả PDF</button>
                                 </div>}
                                 {!selectedTest.pdfUrl && <table className="w-full">
                                     <thead className="bg-gray-50 border-b border-gray-100">

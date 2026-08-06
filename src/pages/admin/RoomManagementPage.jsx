@@ -152,7 +152,27 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, specializations, 
                     <p className="mt-1 text-xs text-gray-400">Chuyên khoa xác định nhóm bệnh nhân và dịch vụ được điều phối vào phòng. Nhiều phòng có thể cùng phục vụ một chuyên khoa.</p>
                 </div>
             )}
-            {form.type !== 'examination' && <div><label className={labelCls}>Năng lực thực hiện (có thể chọn nhiều)</label><select multiple value={form.capabilityIds} onChange={e => set('capabilityIds', Array.from(e.target.selectedOptions, option => option.value))} className={inputCls + ' h-28'}>{capabilities.map(c => <option key={c.capabilityId} value={c.capabilityId}>{c.name}</option>)}</select><p className="mt-1 text-xs text-gray-400">Giữ Ctrl để chọn nhiều năng lực.</p></div>}
+            {form.type !== 'examination' && (
+                <div>
+                    <label className={labelCls}>Năng lực thực hiện (có thể chọn nhiều)</label>
+                    <div className="w-full h-28 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col space-y-1">
+                        {capabilities.map(c => {
+                            const isChecked = (form.capabilityIds || []).includes(c.capabilityId);
+                            return (
+                                <label key={c.capabilityId} className="flex items-center gap-2 text-sm p-1.5 rounded cursor-pointer hover:bg-gray-50 text-gray-700 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => set('capabilityIds', isChecked ? (form.capabilityIds || []).filter(id => id !== c.capabilityId) : [...(form.capabilityIds || []), c.capabilityId])}
+                                        className="accent-gray-900 rounded border-gray-300"
+                                    />
+                                    <span>{c.name}</span>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
             <div className="order-last md:col-start-1">
                 <label className={labelCls}>Bác sĩ phụ trách</label>
                 <div className="w-full max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col">
@@ -321,7 +341,27 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
                     </select>
                 </div>
             )}
-            {form.type !== 'examination' && <div><label className={labelCls}>Năng lực thực hiện (có thể chọn nhiều)</label><select multiple value={form.capabilityIds} onChange={e => set('capabilityIds', Array.from(e.target.selectedOptions, option => option.value))} className={inputCls + ' h-28'}>{capabilities.map(c => <option key={c.capabilityId} value={c.capabilityId}>{c.name}</option>)}</select><p className="mt-1 text-xs text-gray-400">Giữ Ctrl để chọn nhiều năng lực.</p></div>}
+            {form.type !== 'examination' && (
+                <div>
+                    <label className={labelCls}>Năng lực thực hiện (có thể chọn nhiều)</label>
+                    <div className="w-full h-28 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col space-y-1">
+                        {capabilities.map(c => {
+                            const isChecked = (form.capabilityIds || []).includes(c.capabilityId);
+                            return (
+                                <label key={c.capabilityId} className="flex items-center gap-2 text-sm p-1.5 rounded cursor-pointer hover:bg-gray-50 text-gray-700 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => set('capabilityIds', isChecked ? (form.capabilityIds || []).filter(id => id !== c.capabilityId) : [...(form.capabilityIds || []), c.capabilityId])}
+                                        className="accent-gray-900 rounded border-gray-300"
+                                    />
+                                    <span>{c.name}</span>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
             <div className="order-last md:col-start-1">
                 <label className={labelCls}>Bác sĩ phụ trách</label>
                 <div className="w-full max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col">

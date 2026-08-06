@@ -43,7 +43,7 @@ export default function LabQueuePage() {
     const { departmentId } = useParams(); // departmentId từ URL (/doctor/lab/:departmentId)
     const navigate = useNavigate();
     const { t } = useTranslation('lab');
-    const { orders, loading, error, total, page, PAGE_SIZE, fetchOrders } = useLabQueue(departmentId);
+    const { orders, loading, error, total, page, PAGE_SIZE, fetchOrders, refetch } = useLabQueue(departmentId);
 
     const [search,     setSearch]     = useState('');
     const [activeTab,  setActiveTab]  = useState('');
@@ -59,7 +59,7 @@ export default function LabQueuePage() {
         fetchOrders({ search: val, status: activeTab, sort, page: 1, departmentId });
     };
 
-    const handleRefresh = () => fetchOrders({ search, status: activeTab, sort, page, departmentId });
+    const handleRefresh = () => refetch();
 
     const handlePage = (p) => fetchOrders({ search, status: activeTab, sort, page: p, departmentId });
 

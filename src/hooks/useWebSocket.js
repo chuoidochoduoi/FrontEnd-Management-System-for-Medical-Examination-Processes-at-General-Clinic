@@ -6,6 +6,11 @@ import { useQueryClient } from '@tanstack/react-query';
 export function useWebSocket(topic, queryKeyToInvalidate, onMessage = null) {
     const queryClient = useQueryClient();
     const clientRef = useRef(null);
+    const onMessageRef = useRef(onMessage);
+
+    useEffect(() => {
+        onMessageRef.current = onMessage;
+    }, [onMessage]);
 
     useEffect(() => {
         if (!topic) return;
@@ -26,8 +31,8 @@ export function useWebSocket(topic, queryKeyToInvalidate, onMessage = null) {
                 if (queryKeyToInvalidate) {
                     queryClient.invalidateQueries({ queryKey: queryKeyToInvalidate });
                 }
-                if (onMessage) {
-                    onMessage(message.body);
+                if (onMessageRef.current) {
+                    onMessageRef.current(message.body);
                 }
             });
         };

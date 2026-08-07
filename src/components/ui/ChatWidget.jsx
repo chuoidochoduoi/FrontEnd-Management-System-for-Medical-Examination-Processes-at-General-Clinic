@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { MessageCircle, X, Send, User, Bot, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 
 export default function ChatWidget() {
     const { t } = useTranslation('customer');
@@ -60,9 +61,12 @@ export default function ChatWidget() {
                 setSessionId(data.sessionId);
                 setStatus(data.status);
                 fetchMessages(data.sessionId);
+            } else {
+                toast.error('Không thể kết nối đến máy chủ hỗ trợ.');
             }
         } catch (error) {
             console.error('Failed to start chat session', error);
+            toast.error('Có lỗi xảy ra khi bắt đầu chat.');
         } finally {
             setLoading(false);
         }
@@ -91,9 +95,18 @@ export default function ChatWidget() {
                 sessionStorage.setItem('guestProfileId', data.guestProfileId);
                 
                 fetchMessages(data.sessionId);
+            } else {
+                const errText = await res.text();
+                try {
+                    const errJson = JSON.parse(errText);
+                    toast.error(errJson.message || errJson.error || 'Lỗi xử lý từ máy chủ.');
+                } catch {
+                    toast.error(errText || 'Thông tin không hợp lệ, vui lòng kiểm tra lại định dạng Số điện thoại.');
+                }
             }
         } catch (error) {
             console.error('Failed to start guest session', error);
+            toast.error('Có lỗi kết nối, vui lòng thử lại sau.');
         } finally {
             setLoading(false);
         }

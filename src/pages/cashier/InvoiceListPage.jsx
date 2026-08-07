@@ -5,6 +5,7 @@ import { Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CashierLayout from '@/components/layout/CashierLayout';
 import { useInvoiceList } from '@/hooks/useInvoiceList';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import { ROUTES } from '@/constants/routes';
 
 /* ── helpers ── */
@@ -101,6 +102,14 @@ export default function InvoiceListPage() {
 
     const handleSearch = () => fetchInvoices({ search, status, category, page: 0, size: PAGE_SIZE });
     const handlePage   = (p) => fetchInvoices({ search, status, category, page: p - 1, size: PAGE_SIZE });
+
+    // Lắng nghe sự kiện qua WebSocket
+    useWebSocket('/topic/cashier-invoices', null, (message) => {
+        if (message === 'INVOICE_UPDATED') {
+            // Re-fetch the current page when an invoice is created/updated
+            fetchInvoices({ search, status, category, page: page - 1 < 0 ? 0 : page - 1, size: PAGE_SIZE });
+        }
+    });
 
     return (
         <CashierLayout>

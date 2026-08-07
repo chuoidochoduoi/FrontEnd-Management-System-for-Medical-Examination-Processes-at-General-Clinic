@@ -43,6 +43,7 @@ export default function NotificationBell() {
             if (res.ok) {
                 const data = await res.json();
                 setNotifications(data.content || []);
+                fetchUnreadCount();
             }
         } catch (err) {
             console.error('Failed to fetch notifications', err);
@@ -70,7 +71,7 @@ export default function NotificationBell() {
 
     useEffect(() => {
         fetchUnreadCount();
-        const interval = setInterval(fetchUnreadCount, 60000); // Poll every minute
+        const interval = setInterval(fetchUnreadCount, 10000); // Poll every 10 seconds
         return () => clearInterval(interval);
     }, []);
 

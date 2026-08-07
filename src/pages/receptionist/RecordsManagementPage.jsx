@@ -179,7 +179,7 @@ export default function RecordsManagementPage() {
                             {/* Actions */}
                             <div className="flex flex-col gap-1.5 items-start">
                                 <button
-                                    onClick={() => navigate(`${ROUTES.RECEPTIONIST_RECORD_DETAIL}/${rec.id}`)}
+                                    onClick={() => navigate(ROUTES.RECEPTIONIST_RECORD_DETAIL.replace(':id', rec.id))}
                                     className="text-xs text-gray-500 hover:text-primary-500 transition-colors font-medium"
                                 >
                                     Xem chi tiết

@@ -65,6 +65,7 @@ export default function ReceptionistLayout({ children }) {
         { to: ROUTES.RECEPTIONIST_CREATE_TICKET, icon: FilePlus,      label: t('sidebar.createTicket') },
         { to: ROUTES.RECEPTIONIST_RECORDS,       icon: FolderOpen,    label: t('sidebar.manageRecords') },
         { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: 'Điều phối bệnh nhân' },
+        { to: ROUTES.RECEPTIONIST_SUPPORT,       icon: LifeBuoy,      label: 'Hỗ trợ trực tuyến' },
         { to: ROUTES.STAFF_SCHEDULE,             icon: CalendarDays, label: 'Lịch trực của tôi' },
 //        { to: ROUTES.STAFF_ATTENDANCE,           icon: Clock3, label: 'Điểm danh' },
         { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },

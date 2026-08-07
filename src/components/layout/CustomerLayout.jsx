@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { useProfile } from '@/hooks/useProfile';
+import ChatWidget from '@/components/ui/ChatWidget';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -124,6 +125,7 @@ export default function CustomerLayout({ children }) {
                     </motion.div>
                 </main>
             </div>
+            <ChatWidget />
         </div>
     );
 }

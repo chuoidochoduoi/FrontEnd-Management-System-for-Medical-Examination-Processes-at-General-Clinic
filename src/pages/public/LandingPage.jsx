@@ -17,6 +17,7 @@ import {
   MapPin,
   UserCircle
 } from 'lucide-react';
+import ChatWidget from '@/components/ui/ChatWidget';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -543,6 +544,9 @@ const LandingPage = () => {
           </div>
         </div>
       </footer>
+      
+      {/* Guest Chat Widget */}
+      <ChatWidget />
     </div>
   );
 };

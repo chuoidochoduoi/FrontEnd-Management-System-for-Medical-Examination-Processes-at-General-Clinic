@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { useTranslation } from 'react-i18next';
-import { Send, User, CheckCircle2 } from 'lucide-react';
+import { Send, User, CheckCircle2, MessageCircle } from 'lucide-react';
 
 export default function ReceptionistSupportPage() {
     const { t } = useTranslation('receptionist');

@@ -13,16 +13,33 @@ export default function ChatWidget() {
     const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [guestProfileId, setGuestProfileId] = useState(null);
+    const [guestName, setGuestName] = useState('');
+    const [guestPhone, setGuestPhone] = useState('');
+    const [showGuestForm, setShowGuestForm] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         setIsLoggedIn(!!token);
+        
+        if (!token) {
+            const savedSessionId = sessionStorage.getItem('guestSessionId');
+            const savedProfileId = sessionStorage.getItem('guestProfileId');
+            if (savedSessionId && savedProfileId) {
+                setSessionId(savedSessionId);
+                setGuestProfileId(savedProfileId);
+                // Cannot fetch status without an endpoint, but fetchMessages will work
+            }
+        }
     }, []);
 
     const fetchMessages = async (id) => {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const headers = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/${id}/messages`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers
         });
         if (res.ok) {
             const data = await res.json();
@@ -51,9 +68,47 @@ export default function ChatWidget() {
         }
     };
 
+    const startGuestSession = async (e) => {
+        e.preventDefault();
+        if (!guestName.trim() || !guestPhone.trim()) return;
+        
+        try {
+            setLoading(true);
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/guest/session`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fullName: guestName, phone: guestPhone })
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                setSessionId(data.sessionId);
+                setStatus(data.status);
+                setGuestProfileId(data.guestProfileId);
+                setShowGuestForm(false);
+                
+                sessionStorage.setItem('guestSessionId', data.sessionId);
+                sessionStorage.setItem('guestProfileId', data.guestProfileId);
+                
+                fetchMessages(data.sessionId);
+            }
+        } catch (error) {
+            console.error('Failed to start guest session', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        if (isOpen && !sessionId && isLoggedIn) {
-            startSession();
+        if (isOpen && !sessionId) {
+            if (isLoggedIn) {
+                startSession();
+            } else {
+                setShowGuestForm(true);
+            }
+        } else if (isOpen && sessionId) {
+            // Lấy messages mỗi khi mở lại chat
+            fetchMessages(sessionId);
         }
     }, [isOpen, sessionId, isLoggedIn]);
 
@@ -85,23 +140,28 @@ export default function ChatWidget() {
         setInput('');
 
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/${sessionId}/messages/customer`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}` 
-            },
-            body: JSON.stringify({ content: msgToSend })
-        });
+        
+        if (isLoggedIn) {
+            await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/${sessionId}/messages/customer`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}` 
+                },
+                body: JSON.stringify({ content: msgToSend })
+            });
+        } else {
+            await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/guest/${sessionId}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: msgToSend, guestProfileId })
+            });
+        }
     };
 
     const handleQuickReply = (text) => {
         setInput(text);
     };
-
-    if (!isLoggedIn) {
-        return null; // Ẩn widget nếu chưa đăng nhập
-    }
 
     return (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
@@ -131,17 +191,18 @@ export default function ChatWidget() {
                     </div>
 
                     {/* Messages Body */}
-                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50/50 space-y-4">
-                        {loading && <div className="text-center text-xs text-gray-400 mt-4">Đang kết nối...</div>}
-                        
-                        {messages.length === 0 && !loading && (
-                            <div className="text-center text-xs text-gray-500 my-8">
-                                <Bot size={32} className="mx-auto text-gray-300 mb-2" />
-                                Xin chào! Mình có thể giúp gì cho bạn?
-                            </div>
-                        )}
+                    {!showGuestForm ? (<>
+                        <div className="flex-1 overflow-y-auto p-4 bg-gray-50/50 space-y-4">
+                            {loading && <div className="text-center text-xs text-gray-400 mt-4">Đang kết nối...</div>}
+                            
+                            {messages.length === 0 && !loading && (
+                                <div className="text-center text-xs text-gray-500 my-8">
+                                    <Bot size={32} className="mx-auto text-gray-300 mb-2" />
+                                    Xin chào! Mình có thể giúp gì cho bạn?
+                                </div>
+                            )}
 
-                        {messages.map((msg, idx) => {
+                            {messages.map((msg, idx) => {
                             const isCustomer = msg.senderType === 'CUSTOMER';
                             return (
                                 <div key={msg.messageId || idx} className={`flex ${isCustomer ? 'justify-end' : 'justify-start'}`}>
@@ -158,48 +219,89 @@ export default function ChatWidget() {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Quick Replies for Bot */}
-                    {status === 'BOT_HANDLING' && (
-                        <div className="px-4 pb-2 pt-1 flex gap-2 overflow-x-auto no-scrollbar bg-gray-50/50">
-                            {['Giờ làm việc', 'Địa chỉ', 'Bảng giá', 'Gặp lễ tân'].map(text => (
-                                <button 
-                                    key={text} 
-                                    onClick={() => handleQuickReply(text)}
-                                    className="whitespace-nowrap bg-white border border-primary-200 text-primary-700 hover:bg-primary-50 text-xs px-3 py-1.5 rounded-full transition-colors shadow-sm font-medium"
-                                >
-                                    {text}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Input Area */}
-                    <div className="p-3 bg-white border-t border-gray-100 relative">
-                        {status === 'CLOSED' ? (
-                            <div className="text-center text-xs text-gray-500 py-2 flex items-center justify-center gap-1.5 bg-gray-50 rounded-lg">
-                                <AlertCircle size={14} /> Phiên chat đã kết thúc
-                                <button onClick={startSession} className="text-primary-600 font-semibold ml-1 hover:underline">Tạo phiên mới</button>
+                        {/* Quick Replies for Bot */}
+                        {status === 'BOT_HANDLING' && (
+                            <div className="px-4 pb-2 pt-1 flex gap-2 overflow-x-auto no-scrollbar bg-gray-50/50">
+                                {['Giờ làm việc', 'Địa chỉ', 'Bảng giá', 'Gặp lễ tân'].map(text => (
+                                    <button 
+                                        key={text} 
+                                        onClick={() => handleQuickReply(text)}
+                                        className="whitespace-nowrap bg-white border border-primary-200 text-primary-700 hover:bg-primary-50 text-xs px-3 py-1.5 rounded-full transition-colors shadow-sm font-medium"
+                                    >
+                                        {text}
+                                    </button>
+                                ))}
                             </div>
-                        ) : (
-                            <form onSubmit={sendMessage} className="flex gap-2">
-                                <input 
-                                    type="text" 
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    placeholder={status === 'WAITING_FOR_AGENT' ? 'Đang chờ lễ tân...' : 'Nhập tin nhắn...'} 
-                                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all placeholder:text-gray-400"
-                                    disabled={status === 'WAITING_FOR_AGENT' || status === 'CLOSED'}
-                                />
+                        )}
+
+                        {/* Input Area */}
+                        <div className="p-3 bg-white border-t border-gray-100 relative">
+                            {status === 'CLOSED' ? (
+                                <div className="text-center text-xs text-gray-500 py-2 flex items-center justify-center gap-1.5 bg-gray-50 rounded-lg">
+                                    <AlertCircle size={14} /> Phiên chat đã kết thúc
+                                    <button onClick={() => {
+                                        setSessionId(null);
+                                        if (!isLoggedIn) sessionStorage.removeItem('guestSessionId');
+                                    }} className="text-primary-600 font-semibold ml-1 hover:underline">Tạo phiên mới</button>
+                                </div>
+                            ) : (
+                                <form onSubmit={sendMessage} className="flex gap-2">
+                                    <input 
+                                        type="text" 
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        placeholder={status === 'WAITING_FOR_AGENT' ? 'Đang chờ lễ tân...' : 'Nhập tin nhắn...'} 
+                                        className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all placeholder:text-gray-400"
+                                        disabled={status === 'WAITING_FOR_AGENT' || status === 'CLOSED'}
+                                    />
+                                    <button 
+                                        type="submit" 
+                                        disabled={!input.trim() || status === 'WAITING_FOR_AGENT'}
+                                        className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl px-4 py-2 flex items-center justify-center shadow-md transition-all active:scale-95"
+                                    >
+                                        <Send size={18} className="ml-1" />
+                                    </button>
+                                </form>
+                            )}
+                        </div>
+                    </>) : (
+                        <div className="flex-1 p-5 flex flex-col bg-white">
+                            <h3 className="font-semibold text-gray-800 text-center mb-1">Bắt đầu trò chuyện</h3>
+                            <p className="text-xs text-gray-500 text-center mb-6">Vui lòng để lại thông tin để chúng tôi có thể hỗ trợ bạn tốt nhất</p>
+                            
+                            <form onSubmit={startGuestSession} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Họ và Tên</label>
+                                    <input 
+                                        type="text" 
+                                        required
+                                        value={guestName}
+                                        onChange={e => setGuestName(e.target.value)}
+                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all"
+                                        placeholder="VD: Nguyễn Văn A"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Số điện thoại</label>
+                                    <input 
+                                        type="tel" 
+                                        required
+                                        value={guestPhone}
+                                        onChange={e => setGuestPhone(e.target.value)}
+                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all"
+                                        placeholder="VD: 0912345678"
+                                    />
+                                </div>
                                 <button 
                                     type="submit" 
-                                    disabled={!input.trim() || status === 'WAITING_FOR_AGENT'}
-                                    className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl px-4 py-2 flex items-center justify-center shadow-md transition-all active:scale-95"
+                                    disabled={loading || !guestName.trim() || !guestPhone.trim()}
+                                    className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-primary-300 text-white font-medium rounded-lg px-4 py-2.5 shadow-md transition-all active:scale-95 mt-4"
                                 >
-                                    <Send size={18} className="ml-1" />
+                                    {loading ? 'Đang kết nối...' : 'Bắt đầu Chat'}
                                 </button>
                             </form>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             )}
 

@@ -7,7 +7,7 @@ import { useReport } from '@/hooks/useReport';
 /* ── helpers ── */
 const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) : '—';
 const fmtVND = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
-const PERIODS = ['day', 'month', 'quarter', 'year'];
+const PERIODS = ['day', 'month', 'quarter', 'year', 'custom'];
 
 /* ── Simple bar chart (SVG, no lib) ── */
 function BarChart({ data }) {
@@ -377,14 +377,31 @@ export default function ReportPage() {
 
     const [activeTab, setActiveTab] = useState('tab1');
     const [period, setPeriod] = useState('day');
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
 
     useEffect(() => {
-        fetchTab1(period);
-        fetchTab2(period);
+        if (period !== 'custom') {
+            fetchTab1(period);
+            fetchTab2(period);
+        }
     }, [period]);
 
     const handlePeriod = (p) => {
         setPeriod(p);
+    };
+
+    const handleApplyCustom = () => {
+        if (!fromDate || !toDate) {
+            alert('Vui lòng chọn đầy đủ từ ngày và đến ngày');
+            return;
+        }
+        if (new Date(fromDate) > new Date(toDate)) {
+            alert('Từ ngày không được lớn hơn đến ngày');
+            return;
+        }
+        fetchTab1('custom', fromDate, toDate);
+        fetchTab2('custom', fromDate, toDate);
     };
 
     return (
@@ -399,14 +416,24 @@ export default function ReportPage() {
                         </p>
                     </div>
                     {/* Period switcher */}
-                    <div className="flex items-center gap-1 border border-gray-200 rounded-xl p-1 bg-white print:hidden">
-                        {PERIODS.map(p => (
-                            <button key={p} onClick={() => handlePeriod(p)}
-                                className={`px-4 h-7 text-sm rounded-lg transition-colors ${period === p ? 'bg-gray-900 text-white font-medium' : 'text-gray-500 hover:text-gray-800'
-                                    }`}>
-                                {t(`report.periods.${p}`)}
-                            </button>
-                        ))}
+                    <div className="flex items-center gap-2 print:hidden">
+                        {period === 'custom' && (
+                            <div className="flex items-center gap-2 border border-gray-200 rounded-xl p-1 bg-white">
+                                <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="px-2 h-7 text-xs border border-gray-200 rounded-md outline-none" />
+                                <span className="text-gray-400 text-xs">-</span>
+                                <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="px-2 h-7 text-xs border border-gray-200 rounded-md outline-none" />
+                                <button onClick={handleApplyCustom} className="px-3 h-7 bg-blue-500 text-white text-xs font-medium rounded-lg ml-1 hover:bg-blue-600 transition-colors">Áp dụng</button>
+                            </div>
+                        )}
+                        <div className="flex items-center gap-1 border border-gray-200 rounded-xl p-1 bg-white">
+                            {PERIODS.map(p => (
+                                <button key={p} onClick={() => handlePeriod(p)}
+                                    className={`px-4 h-7 text-sm rounded-lg transition-colors ${period === p ? 'bg-gray-900 text-white font-medium' : 'text-gray-500 hover:text-gray-800'
+                                        }`}>
+                                    {p === 'custom' ? 'Tùy chỉnh' : t(`report.periods.${p}`)}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 

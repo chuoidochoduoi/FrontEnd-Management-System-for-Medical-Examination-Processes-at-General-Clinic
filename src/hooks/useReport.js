@@ -12,13 +12,14 @@ export function useReport() {
     const [loading,  setLoading]  = useState(false);
     const [error,    setError]    = useState('');
 
-    const fetchTab1 = useCallback(async (period = 'day') => {
+    const fetchTab1 = useCallback(async (period = 'day', fromDate, toDate) => {
         setLoading(true); setError('');
         try {
-            const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/v1/reports/dashboard?period=${period}`,
-                { headers: bearer() }
-            );
+            let url = `${import.meta.env.VITE_API_URL}/api/v1/reports/dashboard?period=${period}`;
+            if (fromDate && toDate) {
+                url += `&fromDate=${fromDate}&toDate=${toDate}`;
+            }
+            const res = await fetch(url, { headers: bearer() });
             if (!res.ok) throw new Error(t('report.errors.loadFailed'));
             const json = await res.json();
             setTab1Data(json.data || json);
@@ -26,13 +27,14 @@ export function useReport() {
         finally { setLoading(false); }
     }, []);
 
-    const fetchTab2 = useCallback(async (period = 'day') => {
+    const fetchTab2 = useCallback(async (period = 'day', fromDate, toDate) => {
         setLoading(true); setError('');
         try {
-            const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/v1/reports/services?period=${period}`,
-                { headers: bearer() }
-            );
+            let url = `${import.meta.env.VITE_API_URL}/api/v1/reports/services?period=${period}`;
+            if (fromDate && toDate) {
+                url += `&fromDate=${fromDate}&toDate=${toDate}`;
+            }
+            const res = await fetch(url, { headers: bearer() });
             if (!res.ok) throw new Error(t('report.errors.loadFailed'));
             const json = await res.json();
             setTab2Data(json.data || json);

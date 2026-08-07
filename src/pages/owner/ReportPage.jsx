@@ -7,20 +7,20 @@ import { useReport } from '@/hooks/useReport';
 /* ── helpers ── */
 const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) : '—';
 const fmtVND = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
-const PERIODS = ['day', 'month', 'year'];
+const PERIODS = ['day', 'month', 'quarter', 'year'];
 
 /* ── Simple bar chart (SVG, no lib) ── */
 function BarChart({ data }) {
     if (!data?.length) return <div className="h-48 flex items-center justify-center text-xs text-gray-300">Chưa có dữ liệu</div>;
     const max = Math.max(...data.map(d => d.value), 1);
     return (
-        <div className="flex items-end gap-6 h-52 px-2">
+        <div className="flex gap-6 h-52 px-2">
             {data.map((d, i) => {
                 const pct = (d.value / max) * 100;
                 return (
-                    <div key={i} className="flex flex-col items-center flex-1 gap-1">
+                    <div key={i} className="flex flex-col items-center justify-end flex-1 gap-1 h-full">
                         <span className="text-xs text-gray-500 font-medium">{fmt(d.value)}</span>
-                        <div className="w-full rounded-t-sm" style={{ height: `${Math.max(pct, 4)}%`, backgroundColor: i === 0 ? '#1a1a2e' : '#b0b8c9' }} />
+                        <div className="w-full rounded-t-sm" style={{ height: `${Math.max(pct, 4)}%`, backgroundColor: '#1a1a2e' }} />
                         <span className="text-xs text-gray-400 text-center leading-tight">{d.label}</span>
                     </div>
                 );
@@ -270,6 +270,106 @@ function Tab2({ data, t }) {
     );
 }
 
+/* ── Print Layout ── */
+function PrintLayout({ activeTab, period, tab1Data, tab2Data, t }) {
+    const periodText = period === 'day' ? 'Hôm nay' : period === 'month' ? 'Tháng này' : period === 'quarter' ? 'Quý này' : 'Năm nay';
+    const isTab1 = activeTab === 'tab1';
+
+    return (
+        <div className="hidden print:block w-full text-black font-serif bg-white p-8">
+            <div className="flex justify-between items-start mb-8">
+                <div>
+                    <h2 className="font-bold text-lg">PHÒNG KHÁM CARES</h2>
+                    <p className="text-sm">Địa chỉ: 123 Đường Y Tế, TP. HCM</p>
+                </div>
+                <div className="text-right">
+                    <p className="text-sm italic">Mẫu biểu: BCH/2026</p>
+                </div>
+            </div>
+
+            <div className="text-center mb-8">
+                <h1 className="text-xl font-bold uppercase mb-2">
+                    BÁO CÁO THỐNG KÊ {isTab1 ? 'TỔNG QUAN & CÔNG SUẤT' : 'DOANH THU THEO DỊCH VỤ'}
+                </h1>
+                <p className="text-sm italic">Kỳ báo cáo: {periodText}</p>
+                <p className="text-sm italic">Đơn vị tính: VNĐ / Lượt</p>
+            </div>
+
+            {isTab1 && tab1Data?.table && (
+                <table className="w-full border-collapse border border-black mb-8 text-sm">
+                    <thead>
+                        <tr className="bg-gray-100">
+                            <th className="border border-black p-2">Mã phòng</th>
+                            <th className="border border-black p-2">Tên phòng ban</th>
+                            <th className="border border-black p-2">Doanh thu lũy kế</th>
+                            <th className="border border-black p-2">Tổng số ca</th>
+                            <th className="border border-black p-2">Công suất</th>
+                            <th className="border border-black p-2">CSAT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {tab1Data.table.map((row, i) => (
+                            <tr key={i}>
+                                <td className="border border-black p-2 text-center">{row.code}</td>
+                                <td className="border border-black p-2">{row.dept}</td>
+                                <td className="border border-black p-2 text-right">{fmtVND(row.revenue)}</td>
+                                <td className="border border-black p-2 text-center">{row.sessions}</td>
+                                <td className="border border-black p-2 text-center">{row.occupancy}%</td>
+                                <td className="border border-black p-2 text-center">{row.csat}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+
+            {!isTab1 && tab2Data?.table && (
+                <table className="w-full border-collapse border border-black mb-8 text-sm">
+                    <thead>
+                        <tr className="bg-gray-100">
+                            <th className="border border-black p-2">STT</th>
+                            <th className="border border-black p-2">Tên dịch vụ</th>
+                            <th className="border border-black p-2">Số ca</th>
+                            <th className="border border-black p-2">Đơn giá</th>
+                            <th className="border border-black p-2">Tổng doanh thu</th>
+                            <th className="border border-black p-2">Lượt BHYT</th>
+                            <th className="border border-black p-2">Quỹ BHYT trả</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {tab2Data.table.map((row, i) => (
+                            <tr key={i}>
+                                <td className="border border-black p-2 text-center">{i + 1}</td>
+                                <td className="border border-black p-2">{row.name}</td>
+                                <td className="border border-black p-2 text-center">{row.totalOrders}</td>
+                                <td className="border border-black p-2 text-right">{fmtVND(row.unitPrice)}</td>
+                                <td className="border border-black p-2 text-right font-bold">{fmtVND(row.totalRevenue)}</td>
+                                <td className="border border-black p-2 text-center">{row.bhytQty}</td>
+                                <td className="border border-black p-2 text-right">{fmtVND(row.bhytFund)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+
+            <div className="flex justify-between mt-12">
+                <div className="text-center w-1/3">
+                    <p className="font-bold">Người lập bảng</p>
+                    <p className="italic text-xs">(Ký, ghi rõ họ tên)</p>
+                </div>
+                <div className="text-center w-1/3">
+                    <p className="font-bold">Kế toán trưởng</p>
+                    <p className="italic text-xs">(Ký, ghi rõ họ tên)</p>
+                </div>
+                <div className="text-center w-1/3">
+                    <p className="italic mb-1">Ngày ..... tháng ..... năm 20.....</p>
+                    <p className="font-bold">Giám đốc</p>
+                    <p className="italic text-xs">(Ký, họ tên, đóng dấu)</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 /* ── Main Page ── */
 export default function ReportPage() {
     const { t } = useTranslation('report');
@@ -289,7 +389,7 @@ export default function ReportPage() {
 
     return (
         <OwnerLayout>
-            <div className="px-10 py-8 min-h-screen flex flex-col space-y-5">
+            <div className="px-10 py-8 min-h-screen flex flex-col space-y-5 print:hidden">
                 {/* Header */}
                 <div className="flex items-start justify-between">
                     <div>
@@ -299,7 +399,7 @@ export default function ReportPage() {
                         </p>
                     </div>
                     {/* Period switcher */}
-                    <div className="flex items-center gap-1 border border-gray-200 rounded-xl p-1 bg-white">
+                    <div className="flex items-center gap-1 border border-gray-200 rounded-xl p-1 bg-white print:hidden">
                         {PERIODS.map(p => (
                             <button key={p} onClick={() => handlePeriod(p)}
                                 className={`px-4 h-7 text-sm rounded-lg transition-colors ${period === p ? 'bg-gray-900 text-white font-medium' : 'text-gray-500 hover:text-gray-800'
@@ -311,7 +411,7 @@ export default function ReportPage() {
                 </div>
 
                 {/* Tabs + Export */}
-                <div className="flex items-end justify-between border-b border-gray-200">
+                <div className="flex items-end justify-between border-b border-gray-200 print:hidden">
                     <div className="flex">
                         {[
                             { key: 'tab1', label: t('report.tab1.label') },
@@ -326,9 +426,10 @@ export default function ReportPage() {
                             </button>
                         ))}
                     </div>
-                    <button onClick={() => exportCSV(period)}
-                        className="mb-3 px-4 h-9 bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium rounded-xl transition-colors whitespace-nowrap">
-                        {t('report.exportBtn')}
+                    <button onClick={() => window.print()}
+                        className="mb-3 px-4 h-9 bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium rounded-xl transition-colors whitespace-nowrap flex items-center gap-1.5">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                        In bản thống kê (Xem trước)
                     </button>
                 </div>
 
@@ -348,6 +449,8 @@ export default function ReportPage() {
                     </div>
                 </div>
             </div>
+
+            <PrintLayout activeTab={activeTab} period={period} tab1Data={tab1Data} tab2Data={tab2Data} t={t} />
         </OwnerLayout>
     );
 }

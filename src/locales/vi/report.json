@@ -3,7 +3,7 @@
     "pageTitle": "Hệ Thống Báo Cáo Tích Hợp Toàn Viện",
     "subtitle1": "Dữ liệu phân tích chuyên sâu (Deep Metrics) hỗ trợ ra quyết định lâm sàng và vận hành.",
     "subtitle2": "Hoạch toán doanh thu trực tiếp theo danh mục và loại hình dịch vụ y tế phát sinh.",
-    "periods": { "day": "Ngày", "month": "Tháng", "year": "Năm" },
+    "periods": { "day": "Ngày", "month": "Tháng", "quarter": "Quý", "year": "Năm" },
     "exportBtn": "🗂 Export Examination Statistics (.CSV)",
     "footer1": "Cập nhật hệ thống: 2026 — Phiên bản tích hợp Deep Metrics",
     "footer2": "Kết nối trực tuyến cơ sở dữ liệu thời gian thực",

@@ -21,6 +21,7 @@ import {
 import { ROUTES } from '@/constants/routes';
 import { useProfile } from '@/hooks/useProfile';
 import ChatWidget from '@/components/ui/ChatWidget';
+import NotificationBell from '@/components/ui/NotificationBell';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -112,8 +113,11 @@ export default function CustomerLayout({ children }) {
 
             {/* ── Main ── */}
             <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+                <header className="absolute top-4 right-8 z-20 bg-white/80 backdrop-blur shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100">
+                    <NotificationBell />
+                </header>
                 {/* Page content */}
-                <main className="flex-1 overflow-hidden flex flex-col p-8 lg:p-10">
+                <main className="flex-1 overflow-hidden flex flex-col p-8 pt-16 lg:p-10 lg:pt-16">
                     <motion.div
                         key={location.pathname}
                         initial={{ opacity: 0, y: 15 }}

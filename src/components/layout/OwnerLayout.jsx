@@ -70,7 +70,7 @@ export default function OwnerLayout({ children }) {
     return (
         <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden">
             {/* Sidebar */}
-            <aside className="w-44 bg-white border-r border-gray-200 flex flex-col shrink-0">
+            <aside className="w-44 bg-white border-r border-gray-200 flex flex-col shrink-0 print:hidden">
                 <div className="px-4 py-5 border-b border-gray-100 flex items-center gap-3">
                     <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded-md object-contain" />
                     <div>
@@ -115,10 +115,10 @@ export default function OwnerLayout({ children }) {
             </aside>
 
             <div className="flex-1 flex flex-col overflow-hidden relative">
-                <header className="absolute top-4 right-8 z-10 bg-white shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100">
+                <header className="absolute top-4 right-8 z-10 bg-white shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100 print:hidden">
                     <NotificationBell />
                 </header>
-                <main className="flex-1 overflow-y-auto p-8 pt-16">
+                <main className="flex-1 overflow-y-auto p-8 pt-16 print:p-0 print:overflow-visible">
                     {children}
                 </main>
             </div>

@@ -127,12 +127,15 @@ export default function MedicalStaffLayout({ children }) {
 
             {/* Main content */}
             <main className="flex-1 flex flex-col min-w-0 bg-slate-50 relative overflow-hidden">
+                <header className="absolute top-4 right-8 z-10 bg-white shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100">
+                    <NotificationBell />
+                </header>
                 <motion.div
                     key={location.pathname}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="flex-1 overflow-auto flex flex-col"
+                    className="flex-1 overflow-auto flex flex-col pt-16"
                 >
                     {children}
                 </motion.div>

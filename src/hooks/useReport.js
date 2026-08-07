@@ -40,17 +40,31 @@ export function useReport() {
         finally { setLoading(false); }
     }, []);
 
-    const exportCSV = async (period) => {
-        const res = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/v1/reports/export?period=${period}`,
-            { headers: bearer() }
-        );
-        if (!res.ok) return;
-        const blob = await res.blob();
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href = url; a.download = `report_${period}_${Date.now()}.csv`;
-        a.click(); URL.revokeObjectURL(url);
+    const exportCSV = (activeTab, period) => {
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+        let filename = `report_${activeTab}_${period}_${Date.now()}.csv`;
+
+        if (activeTab === 'tab1' && tab1Data?.table) {
+            csvContent += "Ma phong,Ten phong,Doanh thu,So ca,Cong suat,CSAT\n";
+            tab1Data.table.forEach(row => {
+                csvContent += `"${row.code}","${row.dept}",${row.revenue},${row.sessions},"${row.occupancy}%","${row.csat}%"\n`;
+            });
+        } else if (activeTab === 'tab2' && tab2Data?.table) {
+            csvContent += "STT,Ten dich vu,Tong so ca,Don gia,Tong doanh thu,So luong BHYT,Quy BHYT tra\n";
+            tab2Data.table.forEach((row, i) => {
+                csvContent += `${i + 1},"${row.name}",${row.totalOrders},${row.unitPrice},${row.totalRevenue},${row.bhytQty},${row.bhytFund}\n`;
+            });
+        } else {
+            return;
+        }
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return { tab1Data, tab2Data, loading, error, fetchTab1, fetchTab2, exportCSV };

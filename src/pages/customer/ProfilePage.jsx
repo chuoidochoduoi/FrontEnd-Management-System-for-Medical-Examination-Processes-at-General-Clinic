@@ -225,8 +225,17 @@ export default function ProfilePage() {
         if (!fullName.trim()) errs.fullName = 'Vui lòng nhập họ và tên';
         if (!dob || dob.length !== 10) errs.dob = 'Vui lòng chọn đầy đủ ngày sinh';
         if (!gender) errs.gender = 'Vui lòng chọn giới tính';
-        if (phone && !/^(\+84|0)\d{9,10}$/.test(phone.trim())) errs.phone = 'Số điện thoại Việt Nam không hợp lệ';
-        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'Email không hợp lệ';
+        
+        const hasPhone = phone && phone.trim() !== '';
+        const hasEmail = email && email.trim() !== '';
+        
+        if (!hasPhone && !hasEmail) {
+            errs.contact = 'Vui lòng cung cấp số điện thoại hoặc email';
+        }
+        
+        if (hasPhone && !/^(\+84|0)\d{9,10}$/.test(phone.trim())) errs.phone = 'Số điện thoại Việt Nam không hợp lệ';
+        if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'Email không hợp lệ';
+        
         if (address && address.length > 255) errs.address = 'Địa chỉ không được vượt quá 255 ký tự';
         setOnboardingErrors(errs);
         if (Object.keys(errs).length > 0) toast.error(Object.values(errs)[0]);
@@ -237,8 +246,14 @@ export default function ProfilePage() {
         if (!fullName.trim() || fullName.trim().length < 2) return 'Họ tên phải có ít nhất 2 ký tự';
         if (!dob || Number.isNaN(new Date(dob).getTime()) || new Date(dob) >= new Date()) return 'Ngày sinh phải là ngày hợp lệ trong quá khứ';
         if (!gender) return 'Vui lòng chọn giới tính';
-        if (!/^(\+84|0)\d{9,10}$/.test(phone.trim())) return 'Số điện thoại Việt Nam không hợp lệ';
-        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Email không hợp lệ';
+        
+        const hasPhone = phone && phone.trim() !== '';
+        const hasEmail = email && email.trim() !== '';
+        
+        if (!hasPhone && !hasEmail) return 'Vui lòng cung cấp số điện thoại hoặc email';
+        if (hasPhone && !/^(\+84|0)\d{9,10}$/.test(phone.trim())) return 'Số điện thoại Việt Nam không hợp lệ';
+        if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Email không hợp lệ';
+        
         if (address && address.trim().length > 255) return 'Địa chỉ không được vượt quá 255 ký tự';
         return '';
     };

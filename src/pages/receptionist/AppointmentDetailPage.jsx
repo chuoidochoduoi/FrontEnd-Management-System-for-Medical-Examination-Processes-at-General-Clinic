@@ -35,6 +35,7 @@ export default function AppointmentDetailPage() {
     // Form states
     const [fullName, setFullName] = useState('');
     const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
     const [age, setAge] = useState('');
     const [gender, setGender] = useState('');
     const [address, setAddress] = useState('');
@@ -131,6 +132,7 @@ export default function AppointmentDetailPage() {
                 // Populate other form states
                 setFullName(data.guestFullName || data.fullName || '');
                 setPhone(data.guestPhone || data.phone || '');
+                setEmail(data.guestEmail || data.email || '');
                 setAge(data.guestAge || data.age || '');
                 const genderMap = { MALE: 'male', FEMALE: 'female', OTHER: 'other' };
                 setGender(genderMap[data.guestGender] || '');
@@ -196,6 +198,7 @@ export default function AppointmentDetailPage() {
             const body = {
                 guestFullName: fullName,
                 guestPhone: phone,
+                guestEmail: email,
                 guestAddress: address,
                 guestAge: Number(age),
                 guestGender: GENDER_VALUES[gender],
@@ -277,13 +280,21 @@ export default function AppointmentDetailPage() {
                 setShowConfirmModal(false);
                 return;
             }
-            if (!phone.trim()) {
-                setError('Vui lòng nhập số điện thoại.');
+            const hasPhone = phone && phone.trim() !== '';
+            const hasEmail = email && email.trim() !== '';
+
+            if (!hasPhone && !hasEmail) {
+                setError('Vui lòng nhập số điện thoại hoặc email.');
                 setShowConfirmModal(false);
                 return;
             }
-            if (!/^(\+84|0)\d{9,10}$/.test(phone.trim())) {
+            if (hasPhone && !/^(\+84|0)\d{9,10}$/.test(phone.trim())) {
                 setError('Số điện thoại Việt Nam không hợp lệ.');
+                setShowConfirmModal(false);
+                return;
+            }
+            if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+                setError('Email không hợp lệ.');
                 setShowConfirmModal(false);
                 return;
             }
@@ -418,8 +429,22 @@ export default function AppointmentDetailPage() {
                                                 value={phone}
                                                 onChange={e => setPhone(e.target.value)}
                                                 className={inputCls}
+                                                disabled={!isPatientEditable}
                                             />
                                         </div>
+                                        <div>
+                                            <label className={labelCls}>Email</label>
+                                            <input
+                                                type="email"
+                                                value={email}
+                                                onChange={e => setEmail(e.target.value)}
+                                                className={inputCls}
+                                                disabled={!isPatientEditable}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className={labelCls}>{t('appointmentDetail.step1.age')}</label>
                                             <input
@@ -431,9 +456,6 @@ export default function AppointmentDetailPage() {
                                                 className={inputCls}
                                             />
                                         </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className={labelCls}>{t('appointmentDetail.step1.gender')}</label>
                                             <div className="flex gap-2">

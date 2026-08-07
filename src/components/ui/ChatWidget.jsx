@@ -37,15 +37,25 @@ export default function ChatWidget() {
 
     const fetchMessages = async (id) => {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const headers = {};
+        const headers = { 'Cache-Control': 'no-cache' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
         
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/${id}/messages`, {
-            headers
-        });
-        if (res.ok) {
-            const data = await res.json();
-            setMessages(data);
+        try {
+            const [msgRes, statusRes] = await Promise.all([
+                fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/${id}/messages`, { headers }),
+                fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/${id}/status`, { headers })
+            ]);
+
+            if (msgRes.ok) {
+                const data = await msgRes.json();
+                setMessages(data);
+            }
+            if (statusRes.ok) {
+                const statusData = await statusRes.json();
+                setStatus(statusData.status);
+            }
+        } catch (error) {
+            console.error('Failed to fetch chat data:', error);
         }
     };
 
@@ -162,8 +172,9 @@ export default function ChatWidget() {
 
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         
+        let res;
         if (isLoggedIn) {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/${sessionId}/messages/customer`, {
+            res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/${sessionId}/messages/customer`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -172,11 +183,15 @@ export default function ChatWidget() {
                 body: JSON.stringify({ content: msgToSend })
             });
         } else {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/guest/${sessionId}/messages`, {
+            res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/guest/${sessionId}/messages`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content: msgToSend, guestProfileId })
             });
+        }
+        
+        if (res && res.ok) {
+            fetchMessages(sessionId);
         }
     };
 

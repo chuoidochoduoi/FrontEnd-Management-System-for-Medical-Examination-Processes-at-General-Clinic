@@ -17,7 +17,10 @@ export default function ReceptionistSupportPage() {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         const endpoint = tab === 'active' ? '/api/v1/chat/sessions/active' : '/api/v1/chat/sessions/history';
         const res = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { 
+                Authorization: `Bearer ${token}`,
+                'Cache-Control': 'no-cache'
+            }
         });
         if (res.ok) {
             const data = await res.json();
@@ -33,7 +36,10 @@ export default function ReceptionistSupportPage() {
     const fetchMessages = async (sessionId) => {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/${sessionId}/messages`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { 
+                Authorization: `Bearer ${token}`,
+                'Cache-Control': 'no-cache'
+            }
         });
         if (res.ok) {
             const data = await res.json();

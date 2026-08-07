@@ -12,21 +12,41 @@ import {
     Users,
     CalendarClock,
     CalendarDays, Clock3,
-    MapPinned,
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import { toast } from 'react-toastify';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
 export default function ReceptionistLayout({ children }) {
     const { t } = useTranslation('receptionist');
     const navigate = useNavigate();
+    const location = useLocation();
     const username = get('username') || 'Lễ tân';
     const staffId = get('staffId');
     const systemRole = get('systemRole') || '';
     
     const [staffInfo, setStaffInfo] = useState(null);
+    const [hasNewChat, setHasNewChat] = useState(false);
+
+    useWebSocket('/topic/receptionist-chat', null, (msg) => {
+        if (msg === 'NEW_CHAT_REQUEST' || msg === 'NEW_MESSAGE') {
+            if (location.pathname !== ROUTES.RECEPTIONIST_SUPPORT) {
+                setHasNewChat(true);
+                if (msg === 'NEW_CHAT_REQUEST') {
+                    toast.info('Có yêu cầu hỗ trợ mới từ khách hàng!', { position: 'top-right', autoClose: 4000 });
+                }
+            }
+        }
+    });
+
+    useEffect(() => {
+        if (location.pathname === ROUTES.RECEPTIONIST_SUPPORT) {
+            setHasNewChat(false);
+        }
+    }, [location.pathname]);
 
     useEffect(() => {
         if (staffId) {
@@ -99,7 +119,15 @@ export default function ReceptionistLayout({ children }) {
                 <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
                     {mainNav.map(({ to, icon: Icon, label }) => (
                         <NavLink key={to} to={to} className={linkClass}>
-                            <Icon size={15} className="shrink-0" />
+                            <div className="relative">
+                                <Icon size={15} className="shrink-0" />
+                                {to === ROUTES.RECEPTIONIST_SUPPORT && hasNewChat && (
+                                    <>
+                                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
+                                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                                    </>
+                                )}
+                            </div>
                             {label}
                         </NavLink>
                     ))}

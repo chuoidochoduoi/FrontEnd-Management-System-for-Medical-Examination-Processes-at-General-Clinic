@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import { toast } from 'react-toastify';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -71,9 +73,24 @@ export default function NotificationBell() {
 
     useEffect(() => {
         fetchUnreadCount();
-        const interval = setInterval(fetchUnreadCount, 10000); // Poll every 10 seconds
-        return () => clearInterval(interval);
+        // Removed 10-second polling as we now use real-time WebSockets
     }, []);
+
+    const accountId = localStorage.getItem('accountId') || sessionStorage.getItem('accountId');
+
+    useWebSocket(accountId ? `/topic/notifications-${accountId}` : null, null, (msgStr) => {
+        try {
+            const notif = JSON.parse(msgStr);
+            setUnreadCount(prev => prev + 1);
+            setNotifications(prev => [notif, ...prev]);
+            toast.info(`🔔 ${notif.title}: ${notif.content}`, {
+                position: "top-right",
+                autoClose: 5000,
+            });
+        } catch (err) {
+            console.error("Lỗi parse notification", err);
+        }
+    });
 
     useEffect(() => {
         if (open) {

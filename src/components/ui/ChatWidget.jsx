@@ -17,6 +17,7 @@ export default function ChatWidget() {
     const [guestProfileId, setGuestProfileId] = useState(null);
     const [guestName, setGuestName] = useState('');
     const [guestPhone, setGuestPhone] = useState('');
+    const [phoneError, setPhoneError] = useState('');
     const [showGuestForm, setShowGuestForm] = useState(false);
 
     useEffect(() => {
@@ -75,6 +76,13 @@ export default function ChatWidget() {
     const startGuestSession = async (e) => {
         e.preventDefault();
         if (!guestName.trim() || !guestPhone.trim()) return;
+
+        const phoneRegex = /^(\+84|0)\d{9,10}$/;
+        if (!phoneRegex.test(guestPhone)) {
+            setPhoneError('Số điện thoại không hợp lệ. Ví dụ: 0912345678');
+            return;
+        }
+        setPhoneError('');
         
         try {
             setLoading(true);
@@ -300,10 +308,18 @@ export default function ChatWidget() {
                                         type="tel" 
                                         required
                                         value={guestPhone}
-                                        onChange={e => setGuestPhone(e.target.value)}
-                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all"
+                                        onChange={e => {
+                                            setGuestPhone(e.target.value);
+                                            if (phoneError) setPhoneError('');
+                                        }}
+                                        className={`w-full border rounded-lg px-3 py-2.5 text-sm outline-none transition-all ${
+                                            phoneError 
+                                            ? 'border-red-500 focus:ring-1 focus:ring-red-500' 
+                                            : 'border-gray-200 focus:border-primary-500 focus:ring-1 focus:ring-primary-500'
+                                        }`}
                                         placeholder="VD: 0912345678"
                                     />
+                                    {phoneError && <p className="text-red-500 text-xs mt-1">{phoneError}</p>}
                                 </div>
                                 <button 
                                     type="submit" 

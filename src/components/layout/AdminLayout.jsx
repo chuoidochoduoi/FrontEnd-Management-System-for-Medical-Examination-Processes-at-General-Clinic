@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Building2, Tag, Users, LogOut, Settings, LayoutDashboard, Activity, Stethoscope, Wrench, Clock } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
-import logoUrl from '@/assets/logo.jpg';
+import SidebarBrand from './SidebarBrand';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -69,19 +69,10 @@ export default function AdminLayout({ children }) {
         <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden">
             {/* Sidebar */}
             <aside className="w-44 bg-white border-r border-gray-200 flex flex-col shrink-0">
-                <div className="px-4 py-5 border-b border-gray-100 flex items-center gap-3">
-                    <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded-md object-contain" />
-                    <div>
-                        <p className="text-sm font-bold text-gray-900">{t('sidebar.logo')}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{t('sidebar.subtitle')}</p>
-                    </div>
-                </div>
+                <SidebarBrand />
 
-                {/* Avatar */}
+                {/* User info */}
                 <div className="px-4 py-4 border-b border-gray-100">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
-                        <Users className="text-blue-500 w-6 h-6" />
-                    </div>
                     <p className="text-xs font-semibold text-gray-800 break-words">
                         {staffInfo?.profile?.fullName || username}
                     </p>

@@ -271,8 +271,28 @@ function Tab2({ data, t }) {
 }
 
 /* ── Print Layout ── */
-function PrintLayout({ activeTab, period, tab1Data, tab2Data, t }) {
-    const periodText = period === 'day' ? 'Hôm nay' : period === 'month' ? 'Tháng này' : period === 'quarter' ? 'Quý này' : 'Năm nay';
+function PrintLayout({ activeTab, period, fromDate, toDate, tab1Data, tab2Data, t }) {
+    // Build period text
+    let periodText;
+    if (period === 'custom' && fromDate && toDate) {
+        const fmt = (d) => {
+            const [y, m, day] = d.split('-');
+            return `${day}/${m}/${y}`;
+        };
+        periodText = `Từ ngày ${fmt(fromDate)} đến ngày ${fmt(toDate)}`;
+    } else if (period === 'day') {
+        const today = new Date();
+        periodText = `Ngày ${today.getDate().toString().padStart(2,'0')}/${(today.getMonth()+1).toString().padStart(2,'0')}/${today.getFullYear()}`;
+    } else if (period === 'month') {
+        const today = new Date();
+        periodText = `Tháng ${today.getMonth()+1}/${today.getFullYear()}`;
+    } else if (period === 'quarter') {
+        const today = new Date();
+        const q = Math.floor(today.getMonth() / 3) + 1;
+        periodText = `Quý ${q} năm ${today.getFullYear()}`;
+    } else {
+        periodText = `Năm ${new Date().getFullYear()}`;
+    }
     const isTab1 = activeTab === 'tab1';
 
     return (
@@ -477,7 +497,7 @@ export default function ReportPage() {
                 </div>
             </div>
 
-            <PrintLayout activeTab={activeTab} period={period} tab1Data={tab1Data} tab2Data={tab2Data} t={t} />
+            <PrintLayout activeTab={activeTab} period={period} fromDate={fromDate} toDate={toDate} tab1Data={tab1Data} tab2Data={tab2Data} t={t} />
         </OwnerLayout>
     );
 }

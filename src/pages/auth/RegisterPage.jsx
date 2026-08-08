@@ -94,7 +94,7 @@ export default function RegisterPage() {
                             <span className="font-bold">Chăm sóc sức khỏe</span>
                         </h1>
                         <p className="text-slate-300 font-light text-lg max-w-md leading-relaxed mb-12">
-                            Tạo tài khoản để dễ dàng đặt lịch hẹn, lưu trữ bệnh án điện tử và trải nghiệm dịch vụ y tế đẳng cấp tại Kinh Bắc Medical.
+                            Tạo tài khoản để dễ dàng đặt lịch hẹn, lưu trữ bệnh án điện tử và trải nghiệm dịch vụ y tế đẳng cấp tại CareS.
                         </p>
                         
                         <div className="grid grid-cols-2 gap-8 border-t border-slate-700/50 pt-8 max-w-lg">

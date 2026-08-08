@@ -160,7 +160,7 @@ export default function LoginPage() {
                         <div className="w-16 h-1 h-1 bg-primary-500 mb-8"></div>
                         <h1 className="text-4xl md:text-5xl font-light text-white leading-tight mb-6">
                             Chào mừng trở lại <br />
-                            <span className="font-bold">Kinh Bắc Medical</span>
+                            <span className="font-bold">CareS Medical</span>
                         </h1>
                         <p className="text-slate-300 font-light text-lg max-w-md leading-relaxed mb-12">
                             Hệ thống quản lý y tế toàn diện, bảo mật tối đa. Đăng nhập để truy cập hồ sơ bệnh án và quản lý lịch hẹn của bạn.

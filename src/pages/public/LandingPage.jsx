@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppointment } from '@/hooks/useAppointment';
+import logoUrl from '@/assets/logo.jpg';
 import { 
   ArrowRight,
   Stethoscope,
@@ -84,12 +85,10 @@ const LandingPage = () => {
           <div className="flex justify-between items-center">
             {/* Logo */}
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
-              <div className="w-10 h-10 bg-slate-900 flex items-center justify-center rounded-none">
-                <div className="w-4 h-4 border-2 border-white rounded-full"></div>
-              </div>
+              <img src={logoUrl} alt="CareS" className="w-10 h-10 rounded-md object-contain" />
               <div className="flex flex-col">
-                <span className="text-xl font-bold text-slate-900 tracking-widest uppercase leading-none">Kinh Bắc</span>
-                <span className="text-[10px] text-slate-500 tracking-[0.3em] uppercase mt-1">Medical Center</span>
+                <span className="text-xl font-bold text-slate-900 tracking-widest uppercase leading-none">CareS</span>
+                <span className="text-[10px] text-slate-500 tracking-[0.3em] uppercase mt-1">Phòng khám đa khoa</span>
               </div>
             </div>
 
@@ -258,7 +257,7 @@ const LandingPage = () => {
               </h2>
             </div>
             <p className="text-slate-500 font-light max-w-md">
-              Mỗi dịch vụ tại Kinh Bắc đều được đầu tư bài bản về nhân lực và hệ thống công nghệ xét nghiệm, mang đến sự an tâm tuyệt đối cho khách hàng.
+              Mỗi dịch vụ tại CareS đều được đầu tư bài bản về nhân lực và hệ thống công nghệ xét nghiệm, mang đến sự an tâm tuyệt đối cho khách hàng.
             </p>
           </div>
 
@@ -310,7 +309,7 @@ const LandingPage = () => {
                 Sự Tinh Tế Trong <br /> <span className="font-bold">Từng Trải Nghiệm</span>
               </h2>
               <p className="text-slate-500 font-light text-lg mb-12 leading-relaxed">
-                Chúng tôi hiểu rằng thời gian và sự thoải mái của bạn là vô giá. Tại Kinh Bắc, sự lộn xộn và chờ đợi mệt mỏi được thay thế bằng quy trình số hóa toàn diện, chuyên nghiệp và tĩnh lặng.
+                Chúng tôi hiểu rằng thời gian và sự thoải mái của bạn là vô giá. Tại CareS, sự lộn xộn và chờ đợi mệt mỏi được thay thế bằng quy trình số hóa toàn diện, chuyên nghiệp và tĩnh lặng.
               </p>
 
               <div className="space-y-10">
@@ -484,10 +483,8 @@ const LandingPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-16 mb-20">
             <div className="md:col-span-5">
               <div className="flex items-center gap-3 mb-8">
-                <div className="w-8 h-8 bg-slate-900 flex items-center justify-center">
-                  <div className="w-3 h-3 border border-white rounded-full"></div>
-                </div>
-                <span className="text-lg font-bold text-slate-900 tracking-widest uppercase">Kinh Bắc</span>
+                <img src={logoUrl} alt="CareS" className="w-8 h-8 rounded-md object-contain" />
+                <span className="text-lg font-bold text-slate-900 tracking-widest uppercase">CareS</span>
               </div>
               <p className="text-slate-500 font-light leading-relaxed max-w-sm mb-10">
                 Biểu tượng của dịch vụ chăm sóc sức khỏe hoàn mỹ, nơi công nghệ tiên tiến và chuyên môn y học hàng đầu hội tụ.
@@ -536,7 +533,7 @@ const LandingPage = () => {
           </div>
           
           <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-slate-200 text-xs text-slate-400 tracking-wider">
-            <p>&copy; {new Date().getFullYear()} Kinh Bắc Medical Center. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} CareS - Phòng khám đa khoa. All rights reserved.</p>
             <div className="flex gap-6 mt-4 md:mt-0">
               <a href="#" className="hover:text-slate-900 transition-colors">Điều Khoản</a>
               <a href="#" className="hover:text-slate-900 transition-colors">Bảo Mật</a>

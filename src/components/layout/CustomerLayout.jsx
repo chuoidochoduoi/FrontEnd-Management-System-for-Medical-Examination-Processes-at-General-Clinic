@@ -22,6 +22,7 @@ import { ROUTES } from '@/constants/routes';
 import { useProfile } from '@/hooks/useProfile';
 import ChatWidget from '@/components/ui/ChatWidget';
 import NotificationBell from '@/components/ui/NotificationBell';
+import logoUrl from '@/assets/logo.jpg';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -67,12 +68,10 @@ export default function CustomerLayout({ children }) {
                 {/* Logo */}
                 <div className="px-6 py-6 border-b border-gray-100">
                     <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-                        <div className="w-10 h-10 bg-black flex items-center justify-center shrink-0">
-                            <div className="w-4 h-4 border-2 border-white rounded-full"></div>
-                        </div>
+                        <img src={logoUrl} alt="CareS" className="w-10 h-10 rounded-lg object-contain" />
                         <div className="flex flex-col">
-                            <span className="text-xl font-bold text-black tracking-widest uppercase leading-none">Kinh Bắc</span>
-                            <span className="text-[10px] text-gray-500 tracking-[0.3em] uppercase mt-1">Medical</span>
+                            <span className="text-xl font-bold text-black tracking-widest uppercase leading-none">CareS</span>
+                            <span className="text-[10px] text-gray-500 tracking-[0.3em] uppercase mt-1">Phòng khám đa khoa</span>
                         </div>
                     </div>
                 </div>

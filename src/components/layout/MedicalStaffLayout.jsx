@@ -2,11 +2,12 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, UserRound, Stethoscope, Settings, LogOut, Users, CalendarDays, MessageSquare, Clock3 } from 'lucide-react';
+import { LayoutDashboard, UserRound, Stethoscope, Settings, LogOut, Users, CalendarDays } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
 import { useMyDepartment } from '@/hooks/useMyDepartment';
 import { motion } from 'framer-motion';
+import SidebarBrand from './SidebarBrand';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -62,11 +63,7 @@ export default function MedicalStaffLayout({ children }) {
     const mainNav = [
         { to: ROUTES.DOCTOR_ROOMS, icon: LayoutDashboard, label: t('sidebar.departments') },
         { to: ROUTES.STAFF_SCHEDULE, icon: CalendarDays, label: 'Lịch trực của tôi' },
-        { to: ROUTES.STAFF_ATTENDANCE, icon: Clock3, label: 'Điểm danh' },
         { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
-        ...(['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)
-            ? [{ to: ROUTES.DOCTOR_FEEDBACKS, icon: MessageSquare, label: 'Đánh giá liên quan' }]
-            : []),
     ];
 
     const linkClass = ({ isActive }) =>
@@ -78,18 +75,10 @@ export default function MedicalStaffLayout({ children }) {
         <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden">
             {/* Sidebar */}
             <aside className="w-44 bg-white border-r border-gray-200 flex flex-col shrink-0">
-                <div className="px-4 py-5 border-b border-gray-100">
-                    <p className="text-sm font-bold text-gray-900">{t('sidebar.logo')}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{t('sidebar.subtitle')}</p>
-                </div>
+                <SidebarBrand />
 
-                {/* Avatar */}
+                {/* User info */}
                 <div className="px-4 py-4 border-b border-gray-100">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
-                        {systemRole === 'NURSE'
-                            ? <UserRound className="text-blue-500 w-6 h-6" />
-                            : <Stethoscope className="text-blue-500 w-6 h-6" />}
-                    </div>
                     <p className="text-xs font-semibold text-gray-800 break-words">
                         {staffInfo?.profile?.fullName || username}
                     </p>

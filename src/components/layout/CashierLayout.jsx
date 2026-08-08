@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { FileText, LogOut, Users, Settings, CalendarDays, Clock3 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
+import SidebarBrand from './SidebarBrand';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -53,7 +54,6 @@ export default function CashierLayout({ children }) {
     const mainNav = [
         { to: ROUTES.CASHIER_INVOICES, icon: FileText,  label: t('sidebar.invoiceList') },
         { to: ROUTES.STAFF_SCHEDULE,   icon: CalendarDays, label: 'Lịch trực của tôi' },
-//        { to: ROUTES.STAFF_ATTENDANCE, icon: Clock3, label: 'Điểm danh' },
         { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
     ];
 
@@ -68,16 +68,10 @@ export default function CashierLayout({ children }) {
         <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden">
             {/* Sidebar */}
             <aside className="w-44 bg-white border-r border-gray-200 flex flex-col shrink-0 print:hidden">
-                <div className="px-4 py-5 border-b border-gray-100">
-                    <p className="text-sm font-bold text-gray-900">{t('sidebar.logo')}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{t('sidebar.subtitle')}</p>
-                </div>
+                <SidebarBrand />
 
-                {/* Avatar */}
+                {/* User info */}
                 <div className="px-4 py-4 border-b border-gray-100">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
-                        <Users className="text-blue-500 w-6 h-6" />
-                    </div>
                     <p className="text-xs font-semibold text-gray-800 break-words">
                         {staffInfo?.profile?.fullName || username}
                     </p>

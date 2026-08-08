@@ -48,13 +48,13 @@ function Avatar({ name }) {
 function StaffCard({ item }) {
     const systemRole  = item.systemRole || '';
     const roleBadge   = ROLE_BADGE[systemRole] || { label: systemRole, cls: 'bg-gray-100 text-gray-500 border-gray-200' };
-    const status      = item.status || 'ACTIVE';
+    const status      = item.status || 'ACTIVE'; // Not provided by /api/v1/staff, default to ACTIVE
     const statusBadge = STATUS_BADGE[status] || STATUS_BADGE.ACTIVE;
-    const name     = item.fullName || '—';
-    const phone    = item.phone || '—';
-    const email    = item.email || '—';
+    const name     = item.profile?.fullName || '—';
+    const phone    = item.profile?.phone || '—';
+    const email    = item.profile?.email || '—';
     const spec     = item.specialization?.name || '';
-    const username = item.username || '';
+    const username = item.profile?.username || '';
 
     return (
         <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col gap-3 hover:shadow-md transition-shadow duration-200">
@@ -108,7 +108,7 @@ export default function ManagerStaffPage() {
             const params = new URLSearchParams({ search: s, page: p, size: PAGE_SIZE });
             if (r) params.set('systemRole', r);
             params.set('sort', `profile.fullName,${sd}`);
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/staff?${params}`, { headers: bearer() });
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff?${params}`, { headers: bearer() });
             if (!res.ok) throw new Error();
             const data = await res.json();
             setStaff(Array.isArray(data.content) ? data.content : []);

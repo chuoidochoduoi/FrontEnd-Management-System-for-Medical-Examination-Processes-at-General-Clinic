@@ -1,4 +1,4 @@
-﻿// src/pages/manager/ManagerStaffPage.jsx
+// src/pages/manager/ManagerStaffPage.jsx
 import { useState, useEffect, useCallback } from 'react';
 import { Search, ChevronLeft, ChevronRight, User, Shield, Stethoscope, Phone, Mail, ChevronsUpDown } from 'lucide-react';
 import OwnerLayout from '@/components/layout/OwnerLayout';
@@ -107,7 +107,7 @@ export default function ManagerStaffPage() {
         try {
             const params = new URLSearchParams({ search: s, page: p, size: PAGE_SIZE });
             if (r) params.set('systemRole', r);
-            params.set('sort', `fullName,${sd}`);
+            params.set('sort', `profile.fullName,${sd}`);
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/staff?${params}`, { headers: bearer() });
             if (!res.ok) throw new Error();
             const data = await res.json();

@@ -400,12 +400,35 @@ export default function ReportPage() {
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
 
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedQuarter, setSelectedQuarter] = useState(Math.floor(new Date().getMonth() / 3) + 1);
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+
     useEffect(() => {
-        if (period !== 'custom') {
-            fetchTab1(period);
-            fetchTab2(period);
+        if (period === 'day') {
+            fetchTab1('day');
+            fetchTab2('day');
+        } else if (period === 'year') {
+            const f = `${selectedYear}-01-01`;
+            const t = `${selectedYear}-12-31`;
+            fetchTab1('custom', f, t);
+            fetchTab2('custom', f, t);
+        } else if (period === 'quarter') {
+            const startMonth = (selectedQuarter - 1) * 3 + 1;
+            const endMonth = startMonth + 2;
+            const f = `${selectedYear}-${String(startMonth).padStart(2, '0')}-01`;
+            const daysInEndMonth = new Date(selectedYear, endMonth, 0).getDate();
+            const t = `${selectedYear}-${String(endMonth).padStart(2, '0')}-${daysInEndMonth}`;
+            fetchTab1('custom', f, t);
+            fetchTab2('custom', f, t);
+        } else if (period === 'month') {
+            const f = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+            const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+            const t = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${daysInMonth}`;
+            fetchTab1('custom', f, t);
+            fetchTab2('custom', f, t);
         }
-    }, [period]);
+    }, [period, selectedYear, selectedQuarter, selectedMonth]);
 
     const handlePeriod = (p) => {
         setPeriod(p);
@@ -443,6 +466,29 @@ export default function ReportPage() {
                                 <span className="text-gray-400 text-xs">-</span>
                                 <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="px-2 h-7 text-xs border border-gray-200 rounded-md outline-none" />
                                 <button onClick={handleApplyCustom} className="px-3 h-7 bg-blue-500 text-white text-xs font-medium rounded-lg ml-1 hover:bg-blue-600 transition-colors">Áp dụng</button>
+                            </div>
+                        )}
+                        {(period === 'year' || period === 'quarter' || period === 'month') && (
+                            <div className="flex items-center gap-2 border border-gray-200 rounded-xl p-1 bg-white">
+                                {period === 'month' && (
+                                    <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="px-2 h-7 text-xs border-r border-gray-200 outline-none bg-transparent">
+                                        {Array.from({length: 12}, (_, i) => i + 1).map(m => (
+                                            <option key={m} value={m}>Tháng {m}</option>
+                                        ))}
+                                    </select>
+                                )}
+                                {period === 'quarter' && (
+                                    <select value={selectedQuarter} onChange={e => setSelectedQuarter(Number(e.target.value))} className="px-2 h-7 text-xs border-r border-gray-200 outline-none bg-transparent">
+                                        {[1, 2, 3, 4].map(q => (
+                                            <option key={q} value={q}>Quý {q}</option>
+                                        ))}
+                                    </select>
+                                )}
+                                <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="px-2 h-7 text-xs outline-none bg-transparent">
+                                    {Array.from({length: 10}, (_, i) => new Date().getFullYear() - i).map(y => (
+                                        <option key={y} value={y}>Năm {y}</option>
+                                    ))}
+                                </select>
                             </div>
                         )}
                         <div className="flex items-center gap-1 border border-gray-200 rounded-xl p-1 bg-white">

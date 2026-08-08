@@ -53,7 +53,7 @@ import AttendanceKioskPage from '@/pages/owner/AttendanceKioskPage';
 import AttendanceManagementPage from '@/pages/owner/AttendanceManagementPage';
 import PatientJourneyPage from '@/pages/staff/PatientJourneyPage';
 import WaitingRoomPage from '@/pages/customer/WaitingRoomPage';
-import ManagerStaffPage from '@/pages/manager/ManagerStaffPage';
+import ManagerStaffPage from '@/pages/owner/ManagerStaffPage';
 import {ROUTES} from "@/constants/routes.js";
 
 

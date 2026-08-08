@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff, ArrowRight, ShieldCheck, HeartPulse, Phone, Mail, Lock, Hash } from 'lucide-react';
 import { useRegister } from '@/hooks/useRegister';
 import { ROUTES } from '@/constants/routes';
+import logoUrl from '@/assets/logo.jpg';
 
 export default function RegisterPage() {
     const { t } = useTranslation('auth');
@@ -88,7 +89,7 @@ export default function RegisterPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-slate-900/30"></div>
                     
                     <div className="relative z-10 p-16 flex flex-col justify-end h-full w-full animate-fade-in-smooth" style={{ animationDelay: '400ms' }}>
-                        <div className="w-16 h-1 h-1 bg-primary-500 mb-8"></div>
+                        <img src={logoUrl} alt="CareS" className="w-16 h-16 rounded-xl object-contain mb-8 shadow-lg shadow-black/20" />
                         <h1 className="text-4xl md:text-5xl font-light text-white leading-tight mb-6">
                             Khởi đầu hành trình <br />
                             <span className="font-bold">Chăm sóc sức khỏe</span>

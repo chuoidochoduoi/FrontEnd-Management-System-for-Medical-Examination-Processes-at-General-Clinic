@@ -6,6 +6,7 @@ import { useProfile } from '@/hooks/useProfile';
 import AppointmentConfirmModal from '@/components/ui/AppointmentConfirmModal';
 import { ChevronLeft, User, Stethoscope, Clock } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
+import logoUrl from '@/assets/logo.jpg';
 
 const formatVND = (amount) =>
     new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
@@ -128,12 +129,10 @@ export default function AppointmentPage() {
             <header className="relative z-10 w-full border-b border-white/10 py-6">
                 <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
                     <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-                        <div className="w-10 h-10 bg-white flex items-center justify-center">
-                            <div className="w-4 h-4 border-2 border-slate-900 rounded-full"></div>
-                        </div>
+                        <img src={logoUrl} alt="CareS" className="w-10 h-10 rounded-md object-contain" />
                         <div className="flex flex-col">
-                            <span className="text-xl font-bold text-white tracking-widest uppercase leading-none">Kinh Bắc</span>
-                            <span className="text-[10px] text-slate-400 tracking-[0.3em] uppercase mt-1">Medical Center</span>
+                            <span className="text-xl font-bold text-white tracking-widest uppercase leading-none">CareS</span>
+                            <span className="text-[10px] text-slate-400 tracking-[0.3em] uppercase mt-1">Phòng khám đa khoa</span>
                         </div>
                     </div>
                     <button 

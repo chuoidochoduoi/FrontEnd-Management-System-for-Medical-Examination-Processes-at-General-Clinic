@@ -64,6 +64,7 @@ export const ROUTES = {
     OWNER_ATTENDANCE: '/owner/attendance',
     OWNER_ATTENDANCE_KIOSK: '/owner/attendance-kiosk',
     STAFF_ATTENDANCE: '/staff/attendance',
+    MANAGER_STAFF: '/manager/staff',
 
     STAFF_SCHEDULE: '/staff/schedule',
     STAFF_PROFILE: '/staff/profile',

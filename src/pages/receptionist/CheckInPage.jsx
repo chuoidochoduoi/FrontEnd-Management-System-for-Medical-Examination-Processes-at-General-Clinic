@@ -40,8 +40,9 @@ export default function CheckInPage() {
     const { appointments, loading, error, fetchAppointments } = useCheckIn();
 
     const [search,   setSearch]   = useState('');
-    const [date,     setDate]     = useState('');
-    const [timeSlot, setTimeSlot] = useState('MORNING');
+    const [date,     setDate]     = useState(new Date().toISOString().split('T')[0]);
+    const [timeSlot, setTimeSlot] = useState('');
+    const [status,   setStatus]   = useState('');
 
     // Follow-up alerts — danh sách bệnh nhân cần khám lại
     const [followUpAlerts, setFollowUpAlerts] = useState([]);
@@ -66,14 +67,10 @@ export default function CheckInPage() {
         fetchFollowUps();
     }, []);
 
-    // Load lần đầu
+    // Tự động fetch khi date hoặc status thay đổi
     useEffect(() => {
-        fetchAppointments();
-    }, []);
-
-    const handleFilter = () => {
-        fetchAppointments({ date });
-    };
+        fetchAppointments({ date, status });
+    }, [date, status]);
 
     return (
         <ReceptionistLayout>
@@ -113,8 +110,8 @@ export default function CheckInPage() {
                         />
                     </div>
 
-                    {/* Time slot filter - sẽ filter ở frontend vì backend chưa hỗ trợ */}
-                    <div className="w-36">
+                    {/* Time slot filter */}
+                    <div className="w-32">
                         <p className="text-xs text-gray-400 mb-1.5">{t('checkIn.timeSlot')}</p>
                         <select
                             value={timeSlot}
@@ -127,19 +124,28 @@ export default function CheckInPage() {
                         </select>
                     </div>
 
+                    {/* Status filter */}
+                    <div className="w-36">
+                        <p className="text-xs text-gray-400 mb-1.5">Trạng thái</p>
+                        <select
+                            value={status}
+                            onChange={e => setStatus(e.target.value)}
+                            className="w-full h-10 px-3 text-sm border border-gray-300 rounded-md outline-none focus:border-primary-500 bg-white"
+                        >
+                            <option value="">Tất cả</option>
+                            <option value="PENDING">Chờ Check-in</option>
+                            <option value="CONFIRMED">Đã xác nhận</option>
+                            <option value="CANCELLED">Đã hủy</option>
+                            <option value="COMPLETED">Hoàn thành</option>
+                        </select>
+                    </div>
+
                     {/* Buttons */}
                     <button
                         onClick={() => navigate(ROUTES.RECEPTIONIST_CREATE_TICKET)}
                         className="h-10 px-5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors whitespace-nowrap"
                     >
                         {t('checkIn.createTicket')}
-                    </button>
-                    <button
-                        onClick={handleFilter}
-                        className="h-10 px-5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2 whitespace-nowrap"
-                    >
-                        <Filter size={14} />
-                        {t('checkIn.filter')}
                     </button>
                 </div>
 

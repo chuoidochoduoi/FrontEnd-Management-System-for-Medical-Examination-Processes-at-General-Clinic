@@ -62,6 +62,7 @@ export default function CreateTicketPage() {
     /* ── service selection ── */
     const [selectedServiceIds, setSelectedServiceIds] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [departmentType, setDepartmentType] = useState('');
 
     /* ── confirmation modal ── */
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -176,10 +177,12 @@ export default function CreateTicketPage() {
     const totalDiscount = selectedItems.reduce((sum, item) => sum + item.discountAmount, 0);
     const totalFinal = selectedItems.reduce((sum, item) => sum + item.final, 0);
 
-    const filteredServices = services.filter(s =>
-        (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (s.description || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredServices = services.filter(s => {
+        const matchSearch = (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (s.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchDept = departmentType ? s.departmentType === departmentType : true;
+        return matchSearch && matchDept;
+    });
 
     const handleReset = () => {
         setSelectedServiceIds([]);

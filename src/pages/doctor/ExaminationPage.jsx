@@ -205,7 +205,7 @@ export default function ExaminationPage() {
     const [testRequests, setTestRequests] = useState([]);
 
     // Follow-up (khám lại) state
-
+    const [followUpNote, setFollowUpNote] = useState('');
     // Fetch test requests from medical record
     useEffect(() => {
         if (!examination?.recordId) return;
@@ -225,6 +225,7 @@ export default function ExaminationPage() {
                     setExamResult(record.clinicalFindings ?? '');
                     setNotes(record.conclusion ?? '');
                     setPrescriptionAdvice(record.patientInstruction || record.prescriptionNote || 'Sử dụng thuốc đúng theo đơn. Liên hệ bác sĩ nếu có dấu hiệu bất thường.');
+                    setFollowUpNote(record.followUpNote ?? '');
 
                     const vitalSigns = record.vitalSigns;
                     setHeartRate(vitalSigns?.heartRate?.toString() ?? '');
@@ -392,7 +393,7 @@ export default function ExaminationPage() {
                             code: item.code
                         })),
                         // Gửi thông tin khám lại (follow-up)
-                        followUp: null,
+                        followUp: followUpNote.trim() ? { note: followUpNote.trim(), preferredDate: null } : null,
                         version: examination.medicalRecord?.version ?? null,
                     }),
                 }
@@ -474,7 +475,7 @@ export default function ExaminationPage() {
                         })),
 
                         // Thông tin khám lại (follow-up)
-                        followUp: null,
+                        followUp: followUpNote.trim() ? { note: followUpNote.trim(), preferredDate: null } : null,
                         version: examination.medicalRecord?.version ?? null,
                     }),
                 }
@@ -869,8 +870,17 @@ export default function ExaminationPage() {
                         )}
                     </div>
 
-                    {/* Ghi chú */}
                     {/* Yêu cầu khám lại (Follow-up) */}
+                    <div className="bg-white border border-gray-200 rounded-2xl p-5 xl:col-span-2">
+                        <p className={sectionTitle}>Yêu cầu tái khám</p>
+                        <textarea
+                            value={followUpNote}
+                            onChange={e => setFollowUpNote(e.target.value)}
+                            placeholder="Nhập yêu cầu tái khám để Lễ tân xếp lịch (VD: Tái khám sau 1 tuần, Tái khám sau khi hết thuốc...)"
+                            rows={2}
+                            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 resize-none"
+                        />
+                    </div>
                     </div>
 
                     {error && <p className="text-red-500 text-sm text-center">{error}</p>}

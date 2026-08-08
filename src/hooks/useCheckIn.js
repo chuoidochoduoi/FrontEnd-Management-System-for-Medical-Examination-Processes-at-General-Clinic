@@ -56,6 +56,7 @@ export function useCheckIn() {
                 params.set('from', from);
                 params.set('to', to);
             }
+            params.set('sort', 'createdAt,desc'); // Sắp xếp mới nhất đến cũ nhất
 
             const res = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/v1/appointments?${params}`,

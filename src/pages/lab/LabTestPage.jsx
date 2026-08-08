@@ -51,27 +51,33 @@ export default function LabTestPage() {
 
     const [search,     setSearch]     = useState('');
     const [activeTab,  setActiveTab]  = useState('');
+    const [workDate,   setWorkDate]   = useState(new Date().toLocaleDateString('en-CA'));
     const [sort,       setSort]       = useState('newest');
 
     const handleTab = (key) => {
         setActiveTab(key);
-        fetchOrders({ search, status: key, sort, page: 1, departmentId });
+        fetchOrders({ search, status: key, workDate, sort, page: 1, departmentId });
     };
 
     const handleSearch = (val) => {
         setSearch(val);
-        fetchOrders({ search: val, status: activeTab, sort, page: 1, departmentId });
+        fetchOrders({ search: val, status: activeTab, workDate, sort, page: 1, departmentId });
     };
 
-    const handleRefresh = () => fetchOrders({ search, status: activeTab, sort, page, departmentId });
+    const handleDate = (val) => {
+        setWorkDate(val);
+        fetchOrders({ search, status: activeTab, workDate: val, sort, page: 1, departmentId });
+    };
+
+    const handleRefresh = () => fetchOrders({ search, status: activeTab, workDate, sort, page, departmentId });
 
     const handleSort = () => {
         const nextSort = sort === 'newest' ? 'oldest' : 'newest';
         setSort(nextSort);
-        fetchOrders({ search, status: activeTab, sort: nextSort, page: 1, departmentId });
+        fetchOrders({ search, status: activeTab, workDate, sort: nextSort, page: 1, departmentId });
     };
 
-    const handlePage = (p) => fetchOrders({ search, status: activeTab, sort, page: p, departmentId });
+    const handlePage = (p) => fetchOrders({ search, status: activeTab, workDate, sort, page: p, departmentId });
 
     const handleQueueAction = async (ticketId, action) => {
         if (!ticketId) return;
@@ -107,14 +113,22 @@ export default function LabTestPage() {
                 {/* Search, Tabs + sort */}
                 <div className="flex flex-col gap-4 mb-5">
                     {/* Search row */}
-                    <div className="relative max-w-md">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
+                    <div className="flex flex-wrap items-center gap-3 max-w-2xl">
+                        <div className="relative flex-1 min-w-[200px]">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={e => handleSearch(e.target.value)}
+                                placeholder={t('labQueue.searchPlaceholder')}
+                                className="w-full h-10 pl-9 pr-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-100 bg-white"
+                            />
+                        </div>
                         <input
-                            type="text"
-                            value={search}
-                            onChange={e => handleSearch(e.target.value)}
-                            placeholder={t('labQueue.searchPlaceholder')}
-                            className="w-full h-10 pl-9 pr-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-100 bg-white"
+                            type="date"
+                            value={workDate}
+                            onChange={(e) => handleDate(e.target.value)}
+                            className="h-10 px-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-100 bg-white"
                         />
                     </div>
                     

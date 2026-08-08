@@ -12,6 +12,7 @@ export function useLabQueue(initialDepartmentId = null) {
     const [params, setParams] = useState({
         search: '',
         status: '',
+        workDate: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD
         sort: 'newest',
         page: 1,
         departmentId: initialDepartmentId
@@ -23,6 +24,7 @@ export function useLabQueue(initialDepartmentId = null) {
             const queryParams = new URLSearchParams();
             if (params.search) queryParams.set('search', params.search);
             if (params.status) queryParams.set('status', params.status);
+            if (params.workDate) queryParams.set('workDate', params.workDate);
             if (params.departmentId) queryParams.set('departmentId', params.departmentId);
             queryParams.set('page', Math.max(0, params.page - 1));
             queryParams.set('size', PAGE_SIZE);

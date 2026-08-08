@@ -57,6 +57,7 @@ export default function OwnerLayout({ children }) {
         { to: ROUTES.ADMIN_SHIFTS, icon: Clock3, label: 'Cấu hình ca' },
         { to: ROUTES.OWNER_FEEDBACKS, icon: MessageSquare, label: 'Đánh giá' },
         { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: 'Điều phối bệnh nhân' },
+        { to: ROUTES.MANAGER_STAFF, icon: Users, label: 'Nhân sự' },
     ];
 
     const linkClass = ({ isActive }) =>

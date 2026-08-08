@@ -91,6 +91,8 @@ export default function InvoiceListPage() {
     const [search,   setSearch]   = useState('');
     const [status,   setStatus]   = useState('');
     const [category, setCategory] = useState('');
+    const [fromDate, setFromDate] = useState('');
+    const [toDate,   setToDate]   = useState('');
 
     const PAGE_SIZE = 100; // Tăng để lấy đủ dữ liệu, hoặc để backend trả về > 10
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -100,14 +102,14 @@ export default function InvoiceListPage() {
         fetchInvoices({ page: 0, size: PAGE_SIZE });
     }, []);
 
-    const handleSearch = () => fetchInvoices({ search, status, category, page: 0, size: PAGE_SIZE });
-    const handlePage   = (p) => fetchInvoices({ search, status, category, page: p - 1, size: PAGE_SIZE });
+    const handleSearch = () => fetchInvoices({ search, status, category, fromDate, toDate, page: 0, size: PAGE_SIZE });
+    const handlePage   = (p) => fetchInvoices({ search, status, category, fromDate, toDate, page: p - 1, size: PAGE_SIZE });
 
     // Lắng nghe sự kiện qua WebSocket
     useWebSocket('/topic/cashier-invoices', null, (message) => {
         if (message === 'INVOICE_UPDATED') {
             // Re-fetch the current page when an invoice is created/updated
-            fetchInvoices({ search, status, category, page: page - 1 < 0 ? 0 : page - 1, size: PAGE_SIZE });
+            fetchInvoices({ search, status, category, fromDate, toDate, page: page - 1 < 0 ? 0 : page - 1, size: PAGE_SIZE });
         }
     });
 
@@ -119,7 +121,7 @@ export default function InvoiceListPage() {
                 </h1>
 
                 {/* ── Filter bar ── */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 grid grid-cols-[1fr_180px_180px_auto] gap-3 items-end">
+                <div className="bg-white border border-gray-200 rounded-xl p-4 grid grid-cols-1 md:grid-cols-[1fr_120px_150px_130px_130px_auto] gap-3 items-end">
                     {/* Search */}
                     <div>
                         <p className="text-xs text-gray-400 mb-1.5">{t('invoiceList.filter.search')}</p>
@@ -158,7 +160,29 @@ export default function InvoiceListPage() {
                             value={category}
                             onChange={e => setCategory(e.target.value)}
                             className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500 placeholder:text-gray-300"
-                            placeholder="Phí khám chuyên khoa"
+                            placeholder="Tên dịch vụ..."
+                        />
+                    </div>
+
+                    {/* From Date */}
+                    <div>
+                        <p className="text-xs text-gray-400 mb-1.5">{t('Từ ngày')}</p>
+                        <input
+                            type="date"
+                            value={fromDate}
+                            onChange={e => setFromDate(e.target.value)}
+                            className="w-full h-10 px-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500"
+                        />
+                    </div>
+
+                    {/* To Date */}
+                    <div>
+                        <p className="text-xs text-gray-400 mb-1.5">{t('Đến ngày')}</p>
+                        <input
+                            type="date"
+                            value={toDate}
+                            onChange={e => setToDate(e.target.value)}
+                            className="w-full h-10 px-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500"
                         />
                     </div>
 

@@ -14,18 +14,27 @@ export default function FollowUpListPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
+    const [search, setSearch] = useState('');
 
     const [selectedItem, setSelectedItem] = useState(null);
     const [appointmentDate, setAppointmentDate] = useState('');
     const [timeSlot, setTimeSlot] = useState('MORNING');
     const [submitting, setSubmitting] = useState(false);
 
-    const fetchFollowUps = async (page = 1) => {
+    const fetchFollowUps = async (page = 1, searchQuery = search) => {
         setLoading(true);
         try {
             const token = get('token');
             const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-            const res = await fetch(`${apiBase}/api/receptionist/follow-ups?page=${page - 1}&size=10&sort=followUpDate,asc`, {
+            const params = new URLSearchParams({
+                page: page - 1,
+                size: 10,
+                sort: 'followUpDate,asc'
+            });
+            if (searchQuery) {
+                params.append('search', searchQuery);
+            }
+            const res = await fetch(`${apiBase}/api/receptionist/follow-ups?${params}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -44,8 +53,11 @@ export default function FollowUpListPage() {
     };
 
     useEffect(() => {
-        fetchFollowUps(page);
-    }, [page]);
+        const timeoutId = setTimeout(() => {
+            fetchFollowUps(page, search);
+        }, 500); // debounce search
+        return () => clearTimeout(timeoutId);
+    }, [page, search]);
 
     // Handle create appointment
     const handleCreateAppointment = (item) => {
@@ -98,6 +110,22 @@ export default function FollowUpListPage() {
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Danh sách tái khám</h1>
                         <p className="text-sm text-gray-500 mt-1">Các bệnh nhân được bác sĩ yêu cầu tái khám</p>
+                    </div>
+                </div>
+
+                <div className="mb-4 bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center">
+                    <div className="relative w-80">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => {
+                                setSearch(e.target.value);
+                                setPage(1);
+                            }}
+                            placeholder="Tìm theo Mã bệnh án, Tên, Số ĐT..."
+                            className="w-full h-9 pl-9 pr-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500"
+                        />
                     </div>
                 </div>
 

@@ -16,16 +16,18 @@ export function useInvoiceList() {
     const [page,     setPage]     = useState(1);
     const [total,    setTotal]    = useState(0);
 
-    const fetchInvoices = useCallback(async ({ search = '', status = '', category = '', page = 0, size = 100 } = {}) => {
+    const fetchInvoices = useCallback(async ({ search = '', status = '', category = '', fromDate = '', toDate = '', page = 0, size = 100 } = {}) => {
         setLoading(true);
         setError('');
-        logger.info('Fetching invoices with params:', { search, status, category, page, size });
+        logger.info('Fetching invoices with params:', { search, status, category, fromDate, toDate, page, size });
 
         try {
             const params = new URLSearchParams();
             if (search)   params.set('search',   search);
             if (status)   params.set('status',   status.toUpperCase());
             if (category) params.set('category', category);
+            if (fromDate) params.set('from',     fromDate);
+            if (toDate)   params.set('to',       toDate);
             // Backend thường dùng 0-indexed (Spring Data), frontend dùng 1-indexed
             params.set('page', page);  // Giữ 0-indexed để tương thích backend
             params.set('size', size);

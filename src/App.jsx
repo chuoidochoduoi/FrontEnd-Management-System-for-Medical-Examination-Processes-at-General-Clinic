@@ -45,6 +45,8 @@ import MySchedulePage from '@/pages/staff/MySchedulePage';
 import StaffProfilePage from '@/pages/staff/StaffProfilePage';
 import SettingsPage from '@/pages/staff/SettingsPage';
 import RecordsManagementPage from '@/pages/receptionist/RecordsManagementPage';
+import PatientDetailPage from '@/pages/receptionist/PatientDetailPage';
+import PatientVisitDetailPage from '@/pages/receptionist/PatientVisitDetailPage';
 import RecordDetailPage from '@/pages/receptionist/RecordDetailPage';
 import PaymentHistoryPage from '@/pages/customer/PaymentHistoryPage';
 import ReceiptDetailPage  from '@/pages/customer/ReceiptDetailPage';
@@ -278,6 +280,16 @@ function App() {
         <Route path={ROUTES.RECEPTIONIST_RECORDS} element={
           <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
             <RecordsManagementPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.RECEPTIONIST_PATIENT_DETAIL} element={
+          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+            <PatientDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.RECEPTIONIST_PATIENT_VISIT_DETAIL} element={
+          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+            <PatientVisitDetailPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_RECORD_DETAIL} element={

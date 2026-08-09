@@ -24,14 +24,24 @@ export function useRecordsManagement() {
             params.append('size', PAGE_SIZE);
 
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/receptionist/records?${params}`,
+                `${import.meta.env.VITE_API_URL}/api/receptionist/records/customers?${params}`,
                 { headers: bearer() }
             );
             if (!res.ok) throw new Error('Không thể tải danh sách hồ sơ.');
             const data = await res.json();
-            const items = Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : [];
-            setRecords(items);
-            setTotal(data.total ?? items.length);
+            const items = data.items ?? data.content ?? (Array.isArray(data) ? data : []);
+            setRecords(items.map(item => ({
+                id: item.customerId,
+                code: item.patientCode,
+                fullName: item.fullName,
+                phone: item.phone,
+                email: item.email,
+                gender: item.gender,
+                dateOfBirth: item.dateOfBirth,
+                bloodType: item.bloodType,
+                address: item.address,
+            })));
+            setTotal(data.total ?? data.totalElements ?? items.length);
             setPage(page);
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }

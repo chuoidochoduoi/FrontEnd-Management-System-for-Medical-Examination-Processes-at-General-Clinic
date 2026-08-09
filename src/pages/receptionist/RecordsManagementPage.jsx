@@ -83,7 +83,7 @@ export default function RecordsManagementPage() {
     return (
         <ReceptionistLayout>
             <div className="space-y-5">
-                <h1 className="text-lg font-semibold text-gray-900">Quản lý Hồ Sơ</h1>
+                <div><h1 className="text-lg font-semibold text-gray-900">Danh sách bệnh nhân</h1><p className="mt-1 text-sm text-gray-400">Thông tin cá nhân cơ bản của bệnh nhân tại phòng khám.</p></div>
 
                 {/* Filter bar */}
                 <div className="bg-white border border-gray-200 rounded-xl px-5 py-4 grid grid-cols-[1fr_140px_160px_160px_auto] gap-3 items-end">
@@ -95,7 +95,7 @@ export default function RecordsManagementPage() {
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleFilter()}
-                                placeholder="Nhập Mã hồ sơ, Tên bệnh nhân, Số điện thoại..."
+                                placeholder="Nhập tên bệnh nhân hoặc số điện thoại..."
                                 className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500 placeholder:text-gray-300"
                             />
                         </div>
@@ -137,8 +137,8 @@ export default function RecordsManagementPage() {
                 {/* Table */}
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                     {/* Table header */}
-                    <div className="grid grid-cols-[160px_1fr_100px_220px_200px] px-5 py-3 border-b border-gray-100 bg-gray-50">
-                        {['Mã bệnh án','Họ và tên bệnh nhân','Nhóm máu','Lần khám gần nhất','Action'].map(col => (
+                    <div className="grid grid-cols-[150px_1fr_160px_150px_170px] px-5 py-3 border-b border-gray-100 bg-gray-50">
+                        {['Mã bệnh nhân','Họ và tên','Số điện thoại','Ngày sinh / Giới tính','Thao tác'].map(col => (
                             <span key={col} className="text-xs font-medium text-gray-400">{col}</span>
                         ))}
                     </div>
@@ -154,32 +154,22 @@ export default function RecordsManagementPage() {
                     {!loading && records.map(rec => (
                         <div
                             key={rec.id}
-                            className="grid grid-cols-[160px_1fr_100px_220px_200px] px-5 py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors items-center"
+                            className="grid grid-cols-[150px_1fr_160px_150px_170px] px-5 py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors items-center"
                         >
                             {/* Mã bệnh án */}
                             <span className="text-sm font-bold text-gray-900">{rec.code || '—'}</span>
 
-                            {/* Họ tên + SDT + tuổi + giới */}
                             <div>
                                 <p className="text-sm font-semibold text-gray-900">{rec.fullName}</p>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                    SDT: {rec.phone} • Tuổi: {rec.age} • {rec.gender}
-                                </p>
+                                <p className="text-xs text-gray-400 mt-0.5">{rec.email || '-'}</p>
                             </div>
-
-                            {/* Nhóm máu */}
-                            <BloodTypeBadge value={rec.bloodType} />
-
-                            {/* Lần khám gần nhất */}
-                            <div>
-                                <p className="text-sm font-medium text-gray-800">{rec.lastVisitDate}</p>
-                                <p className="text-xs text-gray-400 mt-0.5">Nội dung: {rec.lastVisitContent}</p>
-                            </div>
+                            <span className="text-sm text-gray-700">{rec.phone || '-'}</span>
+                            <div><p className="text-sm text-gray-700">{rec.dateOfBirth ? new Date(rec.dateOfBirth).toLocaleDateString('vi-VN') : '-'}</p><p className="mt-0.5 text-xs text-gray-400">{rec.gender === 'MALE' ? 'Nam' : rec.gender === 'FEMALE' ? 'Nữ' : '-'}</p></div>
 
                             {/* Actions */}
                             <div className="flex flex-col gap-1.5 items-start">
                                 <button
-                                    onClick={() => navigate(ROUTES.RECEPTIONIST_RECORD_DETAIL.replace(':id', rec.id))}
+                                    onClick={() => navigate(ROUTES.RECEPTIONIST_PATIENT_DETAIL.replace(':id', rec.id))}
                                     className="text-xs text-gray-500 hover:text-primary-500 transition-colors font-medium"
                                 >
                                     Xem chi tiết

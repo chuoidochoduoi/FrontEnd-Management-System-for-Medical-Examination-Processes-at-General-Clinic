@@ -11,6 +11,16 @@ import AppointmentConfirmModal from '@/components/ui/AppointmentConfirmModal';
 const formatVND = (amount) =>
     new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
 
+const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return '';
+    const birth = new Date(dateOfBirth);
+    const today = new Date();
+    let result = today.getFullYear() - birth.getFullYear();
+    const month = today.getMonth() - birth.getMonth();
+    if (month < 0 || (month === 0 && today.getDate() < birth.getDate())) result--;
+    return result >= 0 ? result : '';
+};
+
 const GENDER_LABELS = { MALE: 'Nam', FEMALE: 'Nữ', OTHER: 'Khác' };
 const GENDER_VALUES = { male: 'MALE', female: 'FEMALE', other: 'OTHER' };
 const DEPARTMENT_TYPE_LABELS = {
@@ -37,11 +47,13 @@ export default function AppointmentDetailPage() {
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [age, setAge] = useState('');
+    const [dob, setDob] = useState('');
     const [gender, setGender] = useState('');
     const [address, setAddress] = useState('');
     const [selectedServiceIds, setSelectedServiceIds] = useState([]);
     const [date, setDate] = useState('');
-    const [timeSlot, setTimeSlot] = useState('morning');
+    const [timeSlot, setTimeSlot] = useState('');
+    const [shifts, setShifts] = useState([]);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [confirmAction, setConfirmAction] = useState(null); // 'save' | 'checkin'
     const [searchTerm, setSearchTerm] = useState('');
@@ -49,6 +61,26 @@ export default function AppointmentDetailPage() {
     // Lễ tân chỉ sửa thông tin liên hệ nhập tại quầy của khách vãng lai.
     // Hồ sơ của khách có tài khoản phải được cập nhật từ trang hồ sơ khách hàng.
     const isPatientEditable = appointment?.isGuest === true;
+
+    useEffect(() => {
+        const fetchShifts = async () => {
+            try {
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/shifts/active`);
+                if (!res.ok) return;
+                const body = await res.json();
+                const items = Array.isArray(body) ? body : (body.content || body.data || []);
+                setShifts(items.map(item => ({
+                    id: item.shiftId || item.id,
+                    name: item.name,
+                    startTime: item.startTime,
+                    endTime: item.endTime,
+                })));
+            } catch {
+                setShifts([]);
+            }
+        };
+        fetchShifts();
+    }, []);
 
     // Insurance & BHYT states
     const [insurances, setInsurances] = useState([]);
@@ -137,7 +169,9 @@ export default function AppointmentDetailPage() {
                 setFullName(data.guestFullName || data.fullName || '');
                 setPhone(data.guestPhone || data.phone || '');
                 setEmail(data.guestEmail || data.email || '');
-                setAge(data.guestAge || data.age || '');
+                const patientDob = data.guestDateOfBirth || data.dateOfBirth || '';
+                setDob(patientDob ? patientDob.split('T')[0] : '');
+                setAge(patientDob ? calculateAge(patientDob) : (data.guestAge || data.age || ''));
                 const genderMap = { MALE: 'male', FEMALE: 'female', OTHER: 'other' };
                 setGender(genderMap[data.guestGender] || '');
                 setAddress(data.guestAddress || data.address || '');
@@ -147,7 +181,6 @@ export default function AppointmentDetailPage() {
                     const d = new Date(data.scheduledAt);
                     setDate(d.toISOString().split('T')[0]);
                 }
-                setTimeSlot(data.timeSlot?.toLowerCase() || 'morning');
             } catch (err) {
                 setError(err.message || 'Có lỗi xảy ra.');
             } finally {
@@ -156,6 +189,15 @@ export default function AppointmentDetailPage() {
         };
         fetchDetail();
     }, [id]);
+
+    useEffect(() => {
+        if (!appointment || shifts.length === 0 || timeSlot) return;
+        const scheduledTime = appointment.scheduledAt?.split('T')[1]?.slice(0, 5);
+        const matched = shifts.find(shift =>
+            shift.name === appointment.shiftName || shift.startTime === scheduledTime
+        );
+        if (matched) setTimeSlot(matched.id);
+    }, [appointment, shifts, timeSlot]);
 
     // Fetch all available services
     useEffect(() => {
@@ -199,15 +241,16 @@ export default function AppointmentDetailPage() {
         try {
             const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             // Send full patient info regardless of customerId
+            const selectedShift = shifts.find(shift => shift.id === timeSlot);
             const body = {
                 guestFullName: fullName,
                 guestPhone: phone,
                 guestEmail: email,
                 guestAddress: address,
-                guestAge: Number(age),
+                guestAge: dob ? calculateAge(dob) : Number(age),
                 guestGender: GENDER_VALUES[gender],
-                scheduledAt: date ? `${date}T${timeSlot === 'afternoon' ? '14:00:00' : '09:00:00'}` : null,
-                timeSlot: timeSlot?.toUpperCase(),
+                scheduledAt: date && selectedShift ? `${date}T${selectedShift.startTime}:00` : null,
+                shiftId: timeSlot || null,
                 serviceIds: selectedServiceIds,
             };
 
@@ -318,6 +361,11 @@ export default function AppointmentDetailPage() {
             setShowConfirmModal(false);
             return;
         }
+        if (!timeSlot) {
+            setError('Vui lòng chọn ca khám.');
+            setShowConfirmModal(false);
+            return;
+        }
 
         setConfirmAction('save');
         setShowConfirmModal(true);
@@ -343,11 +391,6 @@ export default function AppointmentDetailPage() {
             handleCheckIn();
         }
     };
-
-    const timeSlots = [
-        { key: 'morning', label: t('appointmentDetail.step3.morning'), subLabel: t('appointmentDetail.step3.morningTime') },
-        { key: 'afternoon', label: t('appointmentDetail.step3.afternoon'), subLabel: t('appointmentDetail.step3.afternoonTime') },
-    ];
 
     const inputCls = 'w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 bg-white';
     const disabledInputCls = 'w-full h-10 px-3 text-sm border border-gray-200 rounded-lg bg-gray-100 cursor-not-allowed text-gray-500';
@@ -377,7 +420,7 @@ export default function AppointmentDetailPage() {
 
     return (
         <ReceptionistLayout>
-            <div className="max-w-6xl mx-auto space-y-6">
+            <div className="max-w-7xl mx-auto space-y-6">
 
                 {/* Page header */}
                 <div className="flex items-center justify-between">
@@ -401,8 +444,8 @@ export default function AppointmentDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                     
                     {/* Cột trái: Thông tin bệnh nhân & Lịch hẹn */}
-                    <div className="lg:col-span-5 space-y-6">
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-8">
+                    <div className="lg:col-span-6 space-y-6">
+                        <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 space-y-8">
                             {/* ── Step 1: Thông tin bệnh nhân ── */}
                             <section>
                                 <div className="flex items-center gap-2.5 mb-5">
@@ -450,15 +493,18 @@ export default function AppointmentDetailPage() {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className={labelCls}>{t('appointmentDetail.step1.age')}</label>
+                                            <label className={labelCls}>Ngày sinh</label>
                                             <input
-                                                type="number"
-                                                min={1}
-                                                max={120}
-                                                value={age}
-                                                onChange={e => setAge(e.target.value)}
+                                                type="date"
+                                                max={new Date().toLocaleDateString('en-CA')}
+                                                value={dob}
+                                                onChange={e => {
+                                                    setDob(e.target.value);
+                                                    setAge(calculateAge(e.target.value));
+                                                }}
                                                 className={inputCls}
                                             />
+                                            <p className="mt-1 text-xs text-gray-400">Tuổi: {age || '-'}</p>
                                         </div>
                                         <div>
                                             <label className={labelCls}>{t('appointmentDetail.step1.gender')}</label>
@@ -565,21 +611,22 @@ export default function AppointmentDetailPage() {
                                     <div>
                                         <label className={labelCls}>{t('appointmentDetail.step3.timeSlot')}</label>
                                         <div className="flex gap-2">
-                                            {timeSlots.map(slot => (
+                                            {shifts.map(shift => (
                                                 <button
-                                                    key={slot.key}
+                                                    key={shift.id}
                                                     type="button"
-                                                    onClick={() => setTimeSlot(slot.key)}
+                                                    onClick={() => setTimeSlot(shift.id)}
                                                     className={`flex-1 py-2.5 px-3 rounded-lg border text-sm transition-colors text-left ${
-                                                        timeSlot === slot.key
+                                                        timeSlot === shift.id
                                                             ? 'bg-gray-900 text-white border-gray-900'
                                                             : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
                                                     }`}
                                                 >
-                                                    <p className="font-medium">{slot.label}</p>
-                                                    <p className="text-xs mt-0.5 text-gray-400">{slot.subLabel}</p>
+                                                    <p className="font-medium">{shift.name}</p>
+                                                    <p className="text-xs mt-0.5 text-gray-400">{shift.startTime} - {shift.endTime}</p>
                                                 </button>
                                             ))}
+                                            {shifts.length === 0 && <p className="text-sm text-gray-400">Chưa có ca khám đang hoạt động.</p>}
                                         </div>
                                     </div>
                                 </div>
@@ -588,8 +635,8 @@ export default function AppointmentDetailPage() {
                     </div>
 
                     {/* Cột phải: Dịch vụ y tế */}
-                    <div className="lg:col-span-7 h-full">
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6 h-full flex flex-col">
+                    <div className="lg:col-span-6 h-full">
+                        <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 h-full flex flex-col">
                             {/* ── Step 2: Dịch vụ y tế ── */}
                             <section className="flex-1 flex flex-col min-h-0">
                                 <div className="flex items-center justify-between gap-4 mb-5 shrink-0">

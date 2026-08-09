@@ -21,8 +21,8 @@ export default function PatientDetailPage() {
             try {
                 const headers = { Authorization: `Bearer ${token()}` };
                 const [patientRes, visitsRes] = await Promise.all([
-                    fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/customers/${id}`, { headers }),
-                    fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/customers/${id}/visits?page=0&size=100&sort=createdAt,desc`, { headers }),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/customers/${id}`, { headers }),
+                    fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/customers/${id}/visits?page=0&size=100&sort=createdAt,desc`, { headers }),
                 ]);
                 if (!patientRes.ok || !visitsRes.ok) throw new Error('Không thể tải hồ sơ bệnh nhân.');
                 const patientData = await patientRes.json();

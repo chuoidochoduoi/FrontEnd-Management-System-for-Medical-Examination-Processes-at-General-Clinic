@@ -113,6 +113,9 @@ export function useAppointment() {
             const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             const isLoggedIn = !!token;
             const scheduledAt = buildScheduledAt(formData.date, formData.shiftId, shifts);
+            if (!scheduledAt) {
+                throw new Error('Ca khám đã chọn không còn khả dụng. Vui lòng tải lại và chọn ca khám khác.');
+            }
 
             // Xây dựng body request dựa trên trạng thái đăng nhập
             const body = isLoggedIn

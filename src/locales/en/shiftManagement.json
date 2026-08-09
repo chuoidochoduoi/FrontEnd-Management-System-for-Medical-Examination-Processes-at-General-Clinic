@@ -1,0 +1,65 @@
+{
+  "title": "Shift configuration",
+  "subtitle": "Manage working hours and staff shifts for the clinic.",
+  "add": "Add shift",
+  "searchLabel": "Search shifts",
+  "searchPlaceholder": "Search by shift name...",
+  "sortLabel": "Sort by",
+  "sort": {
+    "startAsc": "Start time (Early - Late)",
+    "startDesc": "Start time (Late - Early)",
+    "nameAsc": "Name (A–Z)",
+    "nameDesc": "Name (Z–A)"
+  },
+  "table": {
+    "name": "Shift name",
+    "time": "Working hours",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "loading": "Loading data...",
+  "emptyTitle": "No shifts yet",
+  "emptyHint": "Add a shift to start managing the schedule.",
+  "addFirst": "Add the first shift",
+  "status": {
+    "active": "Active",
+    "inactive": "Hidden"
+  },
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "modal": {
+    "createTitle": "Add new shift",
+    "editTitle": "Update shift",
+    "name": "Shift name",
+    "namePlaceholder": "For example: Morning shift, Afternoon shift...",
+    "startTime": "Start time",
+    "endTime": "End time",
+    "selectTime": "-- Select time --",
+    "activeLabel": "Active status",
+    "activeHint": "Allow staff to be assigned to this shift",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "save": "Save changes"
+  },
+  "validation": {
+    "name": "Please enter a shift name",
+    "startTime": "Please select a start time",
+    "endTime": "Please select an end time",
+    "timeRange": "Start time must be earlier than end time"
+  },
+  "messages": {
+    "loadFailed": "Unable to load shifts",
+    "saveFailed": "Unable to save the shift",
+    "createSuccess": "Shift added successfully!",
+    "updateSuccess": "Shift updated successfully!",
+    "deleteFailed": "Unable to delete this shift",
+    "deleteSuccess": "Shift deleted successfully!"
+  },
+  "deleteModal": {
+    "title": "Delete shift",
+    "message": "Are you sure you want to delete “{{name}}”? Related data may be affected.",
+    "confirm": "Delete permanently"
+  }
+}

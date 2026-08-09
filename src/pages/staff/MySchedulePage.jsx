@@ -83,13 +83,13 @@ export default function MySchedulePage() {
                             {t('scheduleManagement.pageTitle')}
                         </h1>
                         <p className="text-xs text-gray-400 mt-0.5">
-                            Lịch trực cá nhân — tuần {weekLabel}
+                            {t('scheduleManagement.personalWeek', { week: weekLabel })}
                         </p>
                     </div>
                     {/* My shift count badge */}
                     <div className="text-right">
-                        <p className="text-xs text-gray-400">Ca trực của tôi tuần này</p>
-                        <p className="text-2xl font-bold text-primary-500 mt-0.5">{myShiftCount} ca</p>
+                        <p className="text-xs text-gray-400">{t('scheduleManagement.myShiftCount')}</p>
+                        <p className="text-2xl font-bold text-primary-500 mt-0.5">{t('scheduleManagement.shiftCount', { count: myShiftCount })}</p>
                     </div>
                 </div>
 
@@ -113,11 +113,11 @@ export default function MySchedulePage() {
                     <div className="flex items-center gap-4 ml-4">
                         <div className="flex items-center gap-1.5">
                             <div className="w-3 h-3 rounded bg-primary-500" />
-                            <span className="text-xs text-gray-500">Ca của tôi</span>
+                            <span className="text-xs text-gray-500">{t('scheduleManagement.myShift')}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <div className="w-3 h-3 rounded bg-gray-100 border border-gray-200" />
-                            <span className="text-xs text-gray-500">Đồng nghiệp</span>
+                            <span className="text-xs text-gray-500">{t('scheduleManagement.colleague')}</span>
                         </div>
                     </div>
                 </div>
@@ -148,7 +148,7 @@ export default function MySchedulePage() {
                         </span>
                                             {isToday && (
                                                 <span className="ml-1.5 text-xs bg-primary-500 text-white px-1.5 py-0.5 rounded-full">
-                            Hôm nay
+                            {t('scheduleManagement.today')}
                           </span>
                                             )}
                                         </th>

@@ -4,6 +4,8 @@
     "subtitle": "Cổng thông tin khách hàng",
     "home": "Trang chủ",
     "appointment": "Đặt lịch hẹn khám",
+    "myAppointments": "Lịch hẹn của tôi",
+    "myJourney": "Hành trình của tôi",
     "visitHistory": "Lịch sử khám bệnh",
     "testResults": "Kết quả xét nghiệm",
     "paymentHistory": "Lịch sử thanh toán",
@@ -11,6 +13,7 @@
     "settings": "Cài đặt",
     "logout": "Đăng xuất"
   },
+  "brand": { "clinic": "Phòng khám đa khoa" },
   "header": {
     "id": "ID"
   },

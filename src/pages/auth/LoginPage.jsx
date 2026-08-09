@@ -42,8 +42,10 @@ export default function LoginPage() {
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ identifier })
 				});
-				if (!res.ok) throw new Error('Không thể gửi mã OTP');
-				toast.success('Mã OTP đã được gửi (Check email hoặc console/log backend)');
+				const data = await res.json().catch(() => ({}));
+				if (!res.ok) throw new Error(data.message || 'Không thể gửi mã OTP');
+				if (data.mockOtp) toast.success(`Đã gửi mã OTP thành công. Mã OTP giả lập của bạn là: ${data.mockOtp}`, { autoClose: 15000 });
+				else toast.success('Mã OTP đã được gửi đến email/số điện thoại của bạn');
 				setStep(2);
 			} catch (err) {
 				toast.error(err.message);

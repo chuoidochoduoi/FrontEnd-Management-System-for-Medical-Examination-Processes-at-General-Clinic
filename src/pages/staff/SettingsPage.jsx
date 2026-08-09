@@ -11,9 +11,10 @@ import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import CashierLayout from '@/components/layout/CashierLayout';
 import AdminLayout from '@/components/layout/AdminLayout';
+import { applyPreferences, persistPreferences } from '@/utils/appPreferences';
 
 export default function SettingsPage() {
-    const { t, i18n } = useTranslation();
+    const { t, i18n } = useTranslation('settings');
     const [saving, setSaving] = useState(false);
 
     // Lấy systemRole để render đúng Layout
@@ -34,9 +35,9 @@ export default function SettingsPage() {
     });
 
     useEffect(() => {
-        document.documentElement.classList.toggle('dark', settings.theme === 'dark');
-        document.documentElement.dataset.density = settings.compact ? 'compact' : 'comfortable';
-    }, []);
+        applyPreferences(settings);
+        i18n.changeLanguage(settings.language);
+    }, [settings.theme, settings.language, settings.compact, i18n]);
 
     // Handle thay đổi settings
     const handleChange = (key, value) => {
@@ -46,26 +47,16 @@ export default function SettingsPage() {
     const handleSave = () => {
         setSaving(true);
         setTimeout(() => {
-            localStorage.setItem('app_theme', settings.theme);
-            localStorage.setItem('app_lang', settings.language);
+            persistPreferences(settings);
             localStorage.setItem('app_notifications', String(settings.notifications));
             localStorage.setItem('app_sound', String(settings.sound));
-            localStorage.setItem('app_compact', String(settings.compact));
             
             // Apply language
             if (i18n && i18n.changeLanguage) {
                 i18n.changeLanguage(settings.language);
             }
 
-            // Apply theme (simulation)
-            if (settings.theme === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
-            document.documentElement.dataset.density = settings.compact ? 'compact' : 'comfortable';
-
-            toast.success('Đã lưu cấu hình cài đặt thành công!');
+            toast.success(t('saved'));
             setSaving(false);
         }, 600);
     };
@@ -78,8 +69,8 @@ export default function SettingsPage() {
                     {/* Header */}
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Cài đặt hệ thống</h1>
-                            <p className="text-sm text-gray-500 mt-1">Tùy chỉnh giao diện và các cấu hình ngoại vi</p>
+                            <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+                            <p className="text-sm text-gray-500 mt-1">{t('subtitle')}</p>
                         </div>
                         <button 
                             onClick={handleSave}
@@ -87,7 +78,7 @@ export default function SettingsPage() {
                             className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition-colors shadow-sm disabled:opacity-50"
                         >
                             <Save className="w-4 h-4" />
-                            {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                            {saving ? t('saving') : t('save')}
                         </button>
                     </div>
 
@@ -96,28 +87,28 @@ export default function SettingsPage() {
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
                             <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2 border-b border-gray-100 pb-3">
                                 <Monitor className="w-5 h-5 text-primary-500" />
-                                Giao diện & Hiển thị
+                                {t('appearance')}
                             </h2>
                             
                             <div className="space-y-4">
                                 {/* Theme */}
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="font-medium text-gray-800 text-sm">Chế độ giao diện</p>
-                                        <p className="text-xs text-gray-500">Sáng hoặc Tối (Mỏi mắt)</p>
+                                        <p className="font-medium text-gray-800 text-sm">{t('theme')}</p>
+                                        <p className="text-xs text-gray-500">{t('themeHint')}</p>
                                     </div>
                                     <div className="flex items-center bg-gray-100 p-1 rounded-lg">
                                         <button 
                                             onClick={() => handleChange('theme', 'light')}
                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${settings.theme === 'light' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                         >
-                                            <Sun className="w-3.5 h-3.5" /> Sáng
+                                            <Sun className="w-3.5 h-3.5" /> {t('light')}
                                         </button>
                                         <button 
                                             onClick={() => handleChange('theme', 'dark')}
                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${settings.theme === 'dark' ? 'bg-gray-800 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                         >
-                                            <Moon className="w-3.5 h-3.5" /> Tối
+                                            <Moon className="w-3.5 h-3.5" /> {t('dark')}
                                         </button>
                                     </div>
                                 </div>
@@ -125,23 +116,23 @@ export default function SettingsPage() {
                                 {/* Language */}
                                 <div className="flex items-center justify-between pt-2 border-t border-gray-50">
                                     <div>
-                                        <p className="font-medium text-gray-800 text-sm">Ngôn ngữ</p>
-                                        <p className="text-xs text-gray-500">Ngôn ngữ hiển thị chính</p>
+                                        <p className="font-medium text-gray-800 text-sm">{t('language')}</p>
+                                        <p className="text-xs text-gray-500">{t('languageHint')}</p>
                                     </div>
                                     <select 
                                         value={settings.language} 
                                         onChange={(e) => handleChange('language', e.target.value)}
                                         className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block p-2 outline-none"
                                     >
-                                        <option value="vi">🇻🇳 Tiếng Việt</option>
-                                        <option value="en">🇬🇧 English</option>
+                                        <option value="vi">🇻🇳 {t('vietnamese')}</option>
+                                        <option value="en">🇬🇧 {t('english')}</option>
                                     </select>
                                 </div>
 
                                 {[
-                                    ['notifications', Bell, 'Thông báo hệ thống', 'Hiển thị thông báo cập nhật và thao tác'],
-                                    ['sound', Volume2, 'Âm thanh gọi số', 'Phát âm thanh khi gọi bệnh nhân'],
-                                    ['compact', LayoutGrid, 'Hiển thị thu gọn', 'Giảm khoảng cách trong danh sách và bảng'],
+                                    ['notifications', Bell, t('notifications'), t('notificationsHint')],
+                                    ['sound', Volume2, t('sound'), t('soundHint')],
+                                    ['compact', LayoutGrid, t('compact'), t('compactHint')],
                                 ].map(([key, Icon, title, description]) => (
                                     <label key={key} className="flex items-center justify-between pt-3 border-t border-gray-50 cursor-pointer">
                                         <div className="flex items-center gap-3">

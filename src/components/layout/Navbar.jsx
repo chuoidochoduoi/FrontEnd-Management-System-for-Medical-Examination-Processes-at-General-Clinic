@@ -6,6 +6,7 @@ import { User, Calendar, FileText, Settings, LogOut } from 'lucide-react';
 import { useLanguage } from '@/hooks/useLanguage';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
+import AppPreferencesMenu from '@/components/ui/AppPreferencesMenu';
 
 function useAuth() {
     const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -107,8 +108,9 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center gap-2">
+                <AppPreferencesMenu />
                 {/* Chọn ngôn ngữ */}
-                <div className="flex gap-1 mr-2">
+                <div className="hidden">
                     {languages.map(lang => (
                         <button
                             key={lang.code}

@@ -8,11 +8,13 @@ import NotificationBell from '@/components/ui/NotificationBell';
 import { useMyDepartment } from '@/hooks/useMyDepartment';
 import { motion } from 'framer-motion';
 import SidebarBrand from './SidebarBrand';
+import AppPreferencesMenu from '@/components/ui/AppPreferencesMenu';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
 export default function MedicalStaffLayout({ children }) {
     const { t } = useTranslation('doctor');
+    const { t: tCommon } = useTranslation('common');
     const navigate = useNavigate();
     const location = useLocation();
     const username = get('username') || 'Bác sĩ';
@@ -29,7 +31,7 @@ export default function MedicalStaffLayout({ children }) {
             })
             .then(res => res.json())
             .then(data => {
-                // TĂ¹y theo cáº¥u trĂºc RestResponses cá»§a backend (thÆ°á»ng lĂ  data.data)
+                // Hỗ trợ cả phản hồi trực tiếp và phản hồi được bọc trong trường data.
                 if (data.data) {
                     setStaffInfo(data.data);
                 } else {
@@ -44,13 +46,11 @@ export default function MedicalStaffLayout({ children }) {
     const getRoleName = () => {
         if (staffInfo) {
             if (staffInfo.specialization) return staffInfo.specialization.name;
-            if (systemRole === 'NURSE') return 'Y tá';
-            if (systemRole === 'RECEPTIONIST') return 'Lễ tân';
-            if (systemRole === 'DOCTOR') return 'Bác sĩ';
-            if (systemRole === 'GENERAL_DOCTOR') return 'Bác sĩ';
-            if (systemRole === 'SPECIALIST_DOCTOR') return 'Bác sĩ';
+            if (systemRole === 'NURSE') return tCommon('roles.nurse');
+            if (systemRole === 'RECEPTIONIST') return tCommon('roles.receptionist');
+            if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)) return tCommon('roles.doctor');
         }
-        return 'Nhân viên y tế';
+        return tCommon('roles.medicalStaff');
     };
 
     const handleLogout = () => {
@@ -62,8 +62,8 @@ export default function MedicalStaffLayout({ children }) {
 
     const mainNav = [
         { to: ROUTES.DOCTOR_ROOMS, icon: LayoutDashboard, label: t('sidebar.departments') },
-        { to: ROUTES.STAFF_SCHEDULE, icon: CalendarDays, label: 'Lịch trực của tôi' },
-        { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
+        { to: ROUTES.STAFF_SCHEDULE, icon: CalendarDays, label: tCommon('sidebar.mySchedule') },
+        { to: ROUTES.STAFF_PROFILE, icon: Users, label: tCommon('sidebar.profile') },
     ];
 
     const linkClass = ({ isActive }) =>
@@ -85,7 +85,7 @@ export default function MedicalStaffLayout({ children }) {
                     <p className="text-xs text-gray-400 mt-0.5">{getRoleName()}</p>
                     {myDepartment && (
                         <p className="text-[11px] text-primary-600 mt-1 font-medium">
-                            Phòng {myDepartment.roomCode || '—'} · {myDepartment.name}
+                            {t('sidebar.room', { defaultValue: 'Room' })} {myDepartment.roomCode || '—'} · {myDepartment.name}
                         </p>
                     )}
                 </div>
@@ -102,7 +102,7 @@ export default function MedicalStaffLayout({ children }) {
                 <div className="px-2 py-3 border-t border-gray-100 space-y-0.5">
                     <NavLink to={ROUTES.SETTINGS} className={linkClass}>
                         <Settings size={15} className="shrink-0" />
-                        Cài đặt
+                        {tCommon('sidebar.settings')}
                     </NavLink>
                     <button
                         onClick={handleLogout}
@@ -117,6 +117,7 @@ export default function MedicalStaffLayout({ children }) {
             {/* Main content */}
             <main className="flex-1 flex flex-col min-w-0 bg-slate-50 relative overflow-hidden">
                 <header className="absolute top-4 right-8 z-10 bg-white shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100">
+                    <AppPreferencesMenu />
                     <NotificationBell />
                 </header>
                 <motion.div

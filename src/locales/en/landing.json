@@ -1,0 +1,32 @@
+{
+  "brandSubtitle": "General clinic",
+  "nav": { "home": "Home", "about": "About", "appointment": "Book appointment", "process": "Process", "doctors": "Doctors", "pricing": "Pricing", "contact": "Contact", "login": "Sign in", "profile": "Profile", "bookNow": "Book now", "appearance": "Appearance" },
+  "hero": { "eyebrow": "A modern healthcare standard", "line1": "Creating", "bold": "A new standard", "line3": "in healthcare", "description": "A seamless combination of medical expertise and modern management technology. Experience international-standard healthcare designed around your time and comfort.", "register": "Book a visit", "explore": "Explore", "imageAlt": "Premium healthcare", "privilege": "Your benefits", "privilegeText": "Smart patient routing designed to optimize every minute of your visit." },
+  "stats": { "experience": "Years of experience", "experts": "Medical experts", "satisfaction": "Satisfaction rate", "technology": "Management technology" },
+  "services": { "eyebrow": "Service catalog", "title": "Medical services", "titleBold": "At their best", "description": "Every CareS service is supported by qualified professionals and modern medical technology to provide patients with confidence and peace of mind.", "other": "Other services", "empty": "The detailed service price list is being updated...", "items": [
+    { "title": "General medical examination", "desc": "Experienced and dedicated doctors provide comprehensive examinations and effective treatment guidance." },
+    { "title": "Advanced laboratory testing", "desc": "International-standard automated testing systems provide fast and accurate results." },
+    { "title": "Diagnostic imaging", "desc": "Modern digital X-ray and ultrasound systems support screening and early detection." },
+    { "title": "International-standard pharmacy", "desc": "A GPP-compliant pharmacy offering traceable medicines and professional guidance." }
+  ]},
+  "about": { "imageAlt": "Modern clinic interior", "pioneer": "Pioneering", "pioneerText": "A next-generation medical examination management system redefining the healthcare experience in Vietnam.", "eyebrow": "What makes us different", "title": "Thoughtful care in", "titleBold": "Every experience", "description": "We understand that your time and comfort are invaluable. At CareS, a fully digital and professional process replaces confusion and unnecessary waiting.", "features": [
+    { "title": "Time optimized", "desc": "Smart queue management eliminates unnecessary waiting." },
+    { "title": "Maximum security", "desc": "Electronic medical records are encrypted and protected to international standards." },
+    { "title": "Premium service", "desc": "A comfortable, clean and professional healthcare environment." }
+  ]},
+  "process": { "eyebrow": "A consistent process", "title": "Your care", "titleBold": "Journey", "steps": [
+    { "title": "Priority appointment", "desc": "Quick online appointment confirmation." },
+    { "title": "Clinical examination", "desc": "Service at your scheduled time." },
+    { "title": "Diagnostic orders", "desc": "Secure and automated routing." },
+    { "title": "Receive results", "desc": "Detailed consultation with your doctor." }
+  ]},
+  "doctors": { "eyebrow": "Our doctors", "title": "A team of", "titleBold": "Leading experts", "description": "Dedicated and highly qualified medical professionals who always put patient health and safety first.", "viewAll": "View all doctors", "profiles": [
+    { "specialty": "General medicine", "desc": "Over 20 years of experience in general medicine and long-term patient care." },
+    { "specialty": "Biochemistry and laboratory medicine", "desc": "Extensive experience operating advanced laboratory systems." },
+    { "specialty": "Diagnostic imaging", "desc": "A digital ultrasound and X-ray specialist with up-to-date clinical expertise." },
+    { "specialty": "General internal medicine", "desc": "Experienced in diagnosing and treating chronic internal medical conditions." }
+  ]},
+  "pricing": { "eyebrow": "Service pricing", "title": "Clear and", "titleBold": "Transparent costs", "description": "High-quality healthcare with reasonable, clearly stated pricing and no hidden fees." },
+  "cta": { "title": "Experience the difference", "title2": "of", "titleBold": "Premium healthcare", "description": "Our specialists are ready to support your health journey.", "button": "Contact us to book" },
+  "footer": { "description": "Where advanced technology and leading medical expertise come together to provide high-quality healthcare.", "contact": "Contact", "address": "1 Le Thai To Street, Tu Son City, Bac Ninh", "hours": "Opening hours", "weekdays": "Monday - Friday", "saturday": "Saturday", "holiday": "Sunday / Public holidays", "priority": "Priority service by request", "copyright": "General clinic. All rights reserved.", "terms": "Terms", "privacy": "Privacy" }
+}

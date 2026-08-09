@@ -6,11 +6,13 @@ import { FileText, LogOut, Users, Settings, CalendarDays, Clock3 } from 'lucide-
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
 import SidebarBrand from './SidebarBrand';
+import AppPreferencesMenu from '@/components/ui/AppPreferencesMenu';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
 export default function CashierLayout({ children }) {
     const { t } = useTranslation('cashier');
+    const { t: tCommon } = useTranslation('common');
     const navigate = useNavigate();
     const username = get('username') || 'Thu ngân';
     const staffId = get('staffId');
@@ -37,11 +39,10 @@ export default function CashierLayout({ children }) {
 
     const getRoleName = () => {
         if (staffInfo && staffInfo.specialization) return staffInfo.specialization.name;
-        if (systemRole === 'NURSE') return 'Y tá';
-        if (systemRole === 'RECEPTIONIST') return 'Lễ tân';
-        if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)) return 'Bác sĩ';
-        if (systemRole === 'CASHIER') return 'Thu ngân';
-        return 'Thu ngân';
+        if (systemRole === 'NURSE') return tCommon('roles.nurse');
+        if (systemRole === 'RECEPTIONIST') return tCommon('roles.receptionist');
+        if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)) return tCommon('roles.doctor');
+        return tCommon('roles.cashier');
     };
 
     const handleLogout = () => {
@@ -53,8 +54,8 @@ export default function CashierLayout({ children }) {
 
     const mainNav = [
         { to: ROUTES.CASHIER_INVOICES, icon: FileText,  label: t('sidebar.invoiceList') },
-        { to: ROUTES.STAFF_SCHEDULE,   icon: CalendarDays, label: 'Lịch trực của tôi' },
-        { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
+        { to: ROUTES.STAFF_SCHEDULE,   icon: CalendarDays, label: tCommon('sidebar.mySchedule') },
+        { to: ROUTES.STAFF_PROFILE, icon: Users, label: tCommon('sidebar.profile') },
     ];
 
     
@@ -91,20 +92,21 @@ export default function CashierLayout({ children }) {
                     
                     <NavLink to={ROUTES.SETTINGS} className={linkClass}>
                         <Settings size={15} className="shrink-0" />
-                        Cài đặt
+                        {tCommon('sidebar.settings')}
                     </NavLink>
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
                     >
                         <LogOut size={15} className="shrink-0" />
-                        Đăng xuất
+                        {tCommon('sidebar.logout')}
                     </button>
                 </div>
             </aside>
 
             <div className="flex-1 flex flex-col overflow-hidden relative">
                 <header className="absolute top-4 right-8 z-10 bg-white shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100">
+                    <AppPreferencesMenu />
                     <NotificationBell />
                 </header>
                 <main className="flex-1 overflow-y-auto p-8 pt-16">

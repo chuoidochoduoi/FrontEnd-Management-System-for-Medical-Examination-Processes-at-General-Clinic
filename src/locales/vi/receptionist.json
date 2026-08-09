@@ -7,8 +7,10 @@
     "createTicket": "Tạo phiếu khám",
     "manageRecords": "Quản lý hồ sơ",
     "settings": "Settings",
-    "support": "Support"
+    "support": "Hỗ trợ",
+    "onlineSupport": "Hỗ trợ trực tuyến"
   },
+  "notifications": { "newSupport": "Có yêu cầu hỗ trợ mới từ khách hàng!" },
   "header": {
     "queuSummary": "Quầy · Tiếp đón · Tổng hợp"
   },
@@ -48,7 +50,7 @@
       "afternoon": "CHIỀU"
     },
     "loading": "Đang tải...",
-    "noData": "Không có lịch hẽ nào."
+    "noData": "Không có lịch hẹn nào."
   },
 
   "followUp": {

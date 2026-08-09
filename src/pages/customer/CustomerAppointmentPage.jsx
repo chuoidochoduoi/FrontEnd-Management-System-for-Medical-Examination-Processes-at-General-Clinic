@@ -36,17 +36,17 @@ export default function CustomerAppointmentPage() {
     const initialState = location.state || {};
     const isReschedule = !!initialState.rescheduleApptId;
 
-    // Step 1 â€” ThĂ´ng tin khĂ¡ch hĂ ng (chá»‰ dĂ¹ng khi chÆ°a Ä‘Äƒng nháº­p)
+    // Bước 1 — Thông tin khách hàng (chỉ dùng khi chưa đăng nhập)
     const [fullName, setFullName] = useState('');
     const [phone, setPhone]       = useState('');
     const [age, setAge]           = useState('');
     const [gender, setGender]     = useState('');
     const [address, setAddress]   = useState('');
 
-    // Step 2 â€” Dá»‹ch vá»¥
+    // Bước 2 — Dịch vụ
     const [selectedServices, setSelectedServices] = useState(initialState.initialServices || []);
 
-    // Step 3 â€” Thá» i gian
+    // Bước 3 — Thời gian
     const [date, setDate]         = useState(initialState.initialDate || '');
     const [shiftId, setShiftId] = useState(initialState.initialShiftId || '');
     const [showConfirmModal, setShowConfirmModal] = useState(false);

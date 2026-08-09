@@ -22,13 +22,13 @@ export function useRegister() {
                 body: JSON.stringify({ identifier }),
             });
 
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data.message || 'Không thể gửi mã OTP. Vui lòng thử lại.');
-            }
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.message || 'Không thể gửi mã OTP. Vui lòng thử lại.');
 
             setOtpSent(true);
-            toast.success('Đã gửi mã OTP đến email/số điện thoại của bạn!');
+            if (data.mockOtp) toast.success(`Đã gửi mã OTP thành công. Mã OTP giả lập của bạn là: ${data.mockOtp}`, { autoClose: 15000 });
+            else toast.success('Đã gửi mã OTP đến email/số điện thoại của bạn!');
+            return data;
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra');
             toast.error(err.message || 'Lỗi gửi OTP');

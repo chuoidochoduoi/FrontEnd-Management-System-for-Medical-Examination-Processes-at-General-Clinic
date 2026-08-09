@@ -1,0 +1,22 @@
+{
+  "common": { "refresh": "Làm mới", "loading": "Đang tải...", "allStatuses": "Tất cả trạng thái", "guest": "Khách vãng lai", "account": "Có tài khoản", "minutes": "{{count}} phút" },
+  "status": { "BLOCKED": "Chưa đến lượt", "WAITING": "Đang chờ", "CALLED": "Đã gọi", "IN_PROGRESS": "Đang thực hiện", "WAITING_FOR_TEST": "Chờ xét nghiệm", "TEST_DONE": "Cần quay lại bác sĩ", "PENDING": "Đang chờ", "DONE": "Đã hoàn thành", "COMPLETED": "Đã hoàn thành", "UNASSIGNED": "Chưa phân luồng", "CANCELLED": "Đã hủy", "SKIPPED": "Đã bỏ qua", "NEW": "Mới", "PROCESSING": "Đang xử lý", "RESPONDED": "Đã phản hồi", "CLOSED": "Đã đóng" },
+  "journey": {
+    "title": "Điều phối bệnh nhân", "subtitle": "Theo dõi vị trí hiện tại và bước tiếp theo của cả khách có tài khoản và khách vãng lai.",
+    "search": "Tên, số điện thoại hoặc mã lượt khám", "sortNewest": "Check-in mới nhất", "sortWaiting": "Chờ lâu nhất", "sortName": "Tên A–Z",
+    "columns": { "patient": "Bệnh nhân", "currentStep": "Bước hiện tại", "location": "Vị trí", "status": "Trạng thái", "waiting": "Đã chờ", "nextStep": "Bước tiếp theo", "actions": "Thao tác" },
+    "empty": "Không có bệnh nhân phù hợp.", "loadFailed": "Không thể tải hành trình bệnh nhân", "details": "Chi tiết hành trình"
+  },
+  "staffList": {
+    "title": "Danh sách nhân sự", "subtitle": "Xem thông tin toàn bộ nhân sự. Chỉ Quản trị viên mới có thể chỉnh sửa.", "readOnly": "Chế độ chỉ xem",
+    "status": "Trạng thái", "loading": "Đang tải...", "empty": "Không có dữ liệu", "active": "Hoạt động", "locked": "Bị khóa",
+    "pagination": "Hiển thị {{from}}-{{to}} trên tổng số {{total}} nhân sự",
+    "roles": { "ADMIN": "Quản trị viên", "CLINIC_MANAGER": "Quản lý phòng khám", "NURSE": "Y tá", "DOCTOR": "Bác sĩ", "GENERAL_DOCTOR": "Bác sĩ", "SPECIALIST_DOCTOR": "Bác sĩ", "RECEPTIONIST": "Lễ tân", "CASHIER": "Thu ngân" }
+  },
+  "feedback": {
+    "title": "Đánh giá của khách hàng", "managerSubtitle": "Theo dõi, ghi chú nội bộ và trả lời khách hàng trong hệ thống.", "doctorSubtitle": "Các đánh giá liên quan đến lượt khám do bạn phụ trách.",
+    "all": "Tất cả", "loading": "Đang tải đánh giá...", "empty": "Chưa có đánh giá phù hợp.", "doctor": "Bác sĩ", "noComment": "Không có nhận xét.",
+    "responsePlaceholder": "Phản hồi chính thức (khách hàng sẽ nhìn thấy)", "internalPlaceholder": "Ghi chú nội bộ (khách hàng không nhìn thấy)", "doctorExplanation": "Giải trình của bác sĩ:",
+    "save": "Lưu xử lý", "explanationPlaceholder": "Giải trình cho quản lý phòng khám", "sendExplanation": "Gửi giải trình", "updated": "Đã cập nhật đánh giá.", "requestFailed": "Không thể xử lý yêu cầu."
+  }
+}

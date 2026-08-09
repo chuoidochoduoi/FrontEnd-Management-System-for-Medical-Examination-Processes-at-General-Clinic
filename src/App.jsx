@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
@@ -58,6 +59,12 @@ import {ROUTES} from "@/constants/routes.js";
 
 
 function App() {
+  const [toastTheme, setToastTheme] = useState(() => localStorage.getItem('app_theme') === 'dark' ? 'dark' : 'light')
+  useEffect(() => {
+    const syncTheme = event => setToastTheme(event.detail?.theme === 'dark' ? 'dark' : 'light')
+    window.addEventListener('app-preferences-changed', syncTheme)
+    return () => window.removeEventListener('app-preferences-changed', syncTheme)
+  }, [])
   return (
     <>
       <Routes>
@@ -280,7 +287,7 @@ function App() {
         closeOnClick
         pauseOnHover
         draggable
-        theme="light"
+        theme={toastTheme}
       />
     </>
   )

@@ -124,3 +124,71 @@ body {
 .Toastify__close-button:hover {
   opacity: 1 !important;
 }
+
+/* Global application preferences. These compatibility rules make the existing
+   utility-based screens theme-aware while modules are migrated to semantic tokens. */
+html.dark body,
+html.dark #root {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+html.dark .bg-white { background-color: #111827 !important; }
+html.dark [class*="bg-white/"] { background-color: rgba(17, 24, 39, .88) !important; }
+html.dark [class*="bg-[#F5F5F7]"] { background-color: #0f172a !important; }
+html.dark .bg-gray-50,
+html.dark .bg-gray-50\/50 { background-color: #0f172a !important; }
+html.dark .bg-gray-100 { background-color: #1f2937 !important; }
+html.dark .bg-gray-200 { background-color: #374151 !important; }
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark .text-gray-700 { color: #f1f5f9 !important; }
+html.dark .text-gray-600,
+html.dark .text-gray-500 { color: #cbd5e1 !important; }
+html.dark .text-gray-400 { color: #94a3b8 !important; }
+html.dark .text-black { color: #f8fafc !important; }
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700 { color: #f1f5f9 !important; }
+html.dark .text-slate-600,
+html.dark .text-slate-500 { color: #cbd5e1 !important; }
+html.dark .text-slate-400 { color: #94a3b8 !important; }
+html.dark .bg-slate-50 { background-color: #0f172a !important; }
+html.dark [class*="bg-[#FAFAFA]"] { background-color: #0f172a !important; }
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-300 { border-color: #334155 !important; }
+html.dark .border-gray-50,
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300 { border-color: #334155 !important; }
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #0f172a;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: #64748b; }
+html.dark table thead,
+html.dark [class*="bg-slate-50"] { background-color: #1e293b !important; }
+/* Table headers must keep enough contrast when a light header utility is
+   overridden by dark mode. This also covers grid-based table headers. */
+html.dark table thead th,
+html.dark table thead td,
+html.dark [class*="bg-gray-50"][class*="uppercase"] > *,
+html.dark [class*="bg-gray-50/80"] > * {
+  color: #e2e8f0 !important;
+}
+html.dark [class*="shadow"] { --tw-shadow-color: rgba(0, 0, 0, 0.45); }
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-100:hover { background-color: #1e293b !important; }
+
+html[data-density='compact'] table th,
+html[data-density='compact'] table td { padding-top: .5rem !important; padding-bottom: .5rem !important; }
+html[data-density='compact'] .density-card { padding: .75rem !important; }
+
+@media print {
+  html.dark body, html.dark #root { background: white !important; color: black !important; }
+}

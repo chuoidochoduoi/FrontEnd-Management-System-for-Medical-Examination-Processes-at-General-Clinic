@@ -7,6 +7,8 @@ export function useLanguage() {
     const currentLanguage = i18n.language;
 
     const changeLanguage = (code) => {
+        localStorage.setItem('app_lang', code);
+        document.documentElement.lang = code;
         i18n.changeLanguage(code);
     };
 

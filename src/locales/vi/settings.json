@@ -1,0 +1,22 @@
+{
+  "title": "Cài đặt hệ thống",
+  "subtitle": "Tùy chỉnh giao diện và trải nghiệm sử dụng",
+  "save": "Lưu thay đổi",
+  "saving": "Đang lưu...",
+  "saved": "Đã lưu cấu hình cài đặt thành công!",
+  "appearance": "Giao diện & Hiển thị",
+  "theme": "Chế độ giao diện",
+  "themeHint": "Chọn giao diện sáng hoặc tối",
+  "light": "Sáng",
+  "dark": "Tối",
+  "language": "Ngôn ngữ",
+  "languageHint": "Ngôn ngữ hiển thị chính",
+  "vietnamese": "Tiếng Việt",
+  "english": "English",
+  "notifications": "Thông báo hệ thống",
+  "notificationsHint": "Hiển thị thông báo cập nhật và thao tác",
+  "sound": "Âm thanh gọi tên",
+  "soundHint": "Phát âm thanh khi gọi bệnh nhân",
+  "compact": "Hiển thị thu gọn",
+  "compactHint": "Giảm khoảng cách trong danh sách và bảng"
+}

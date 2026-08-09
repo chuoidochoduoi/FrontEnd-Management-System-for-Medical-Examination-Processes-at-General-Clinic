@@ -1,25 +1,44 @@
 {
   "nav": {
-    "appointment": "Book Appointment",
-    "doctors": "Our Doctors",
-    "pricing": "Pricing",
-    "guide": "Customer Guide",
-    "contact": "Contact",
-    "login": "Login",
-    "register": "Register",
-    "profile":        "Trang cá nhân",
+    "appointment": "Đặt lịch khám",
+    "doctors": "Đội ngũ bác sĩ",
+    "pricing": "Bảng giá",
+    "guide": "Hướng dẫn khách hàng",
+    "contact": "Liên hệ",
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "profile": "Trang cá nhân",
     "myAppointments": "Lịch khám của tôi",
-    "medicalRecord":  "Hồ sơ bệnh án",
-    "settings":       "Cài đặt",
-    "logout":         "Đăng xuất",
-    "loggedInAs":     "Đăng nhập với vai trò"
+    "medicalRecord": "Hồ sơ bệnh án",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất",
+    "loggedInAs": "Đăng nhập với vai trò"
   },
-  "loading": "Processing...",
-  "error": "An error occurred",
-  "save": "Save",
-  "cancel": "Cancel",
-  "confirm": "Confirm",
+  "sidebar": {
+    "mySchedule": "Lịch trực của tôi",
+    "profile": "Hồ sơ cá nhân",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất",
+    "statistics": "Thống kê",
+    "schedule": "Lịch trình",
+    "shiftConfig": "Cấu hình ca",
+    "feedback": "Đánh giá",
+    "patientFlow": "Điều phối bệnh nhân",
+    "staff": "Nhân sự",
+    "specialties": "Chuyên khoa",
+    "capabilities": "Danh mục kỹ thuật",
+    "auditLogs": "Nhật ký hệ thống"
+  },
+  "roles": {
+    "doctor": "Bác sĩ", "nurse": "Y tá", "receptionist": "Lễ tân",
+    "cashier": "Thu ngân", "admin": "Quản trị viên", "manager": "Quản lý phòng khám",
+    "medicalStaff": "Nhân viên y tế", "customer": "Khách hàng"
+  },
+  "loading": "Đang xử lý...",
+  "error": "Đã xảy ra lỗi",
+  "save": "Lưu",
+  "cancel": "Hủy",
+  "confirm": "Xác nhận",
   "male": "Nam",
-  "female": "Nữ",
-  "other": "Khác"
+  "female": "Nữ"
 }

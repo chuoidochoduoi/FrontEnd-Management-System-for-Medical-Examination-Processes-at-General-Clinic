@@ -23,16 +23,18 @@ import { useProfile } from '@/hooks/useProfile';
 import ChatWidget from '@/components/ui/ChatWidget';
 import NotificationBell from '@/components/ui/NotificationBell';
 import logoUrl from '@/assets/logo.jpg';
+import AppPreferencesMenu from '@/components/ui/AppPreferencesMenu';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
 export default function CustomerLayout({ children }) {
     const { t } = useTranslation('customer');
+    const { t: tCommon } = useTranslation('common');
     const navigate = useNavigate();
     const location = useLocation();
     const { profile } = useProfile();
 
-    const displayName = profile?.fullName || get('username') || 'Khách hàng';
+    const displayName = profile?.fullName || get('username') || tCommon('roles.customer', { defaultValue: 'Customer' });
     const initials = displayName.slice(0, 2).toUpperCase();
 
     const handleLogout = () => {
@@ -44,8 +46,8 @@ export default function CustomerLayout({ children }) {
     };
 
     const mainNav = [
-        { to: ROUTES.MY_APPOINTMENTS, icon: CalendarCheck, label: 'Lịch hẹn của tôi' },
-        { to: ROUTES.WAITING_ROOM, icon: MapPinned, label: 'Hành trình của tôi' },
+        { to: ROUTES.MY_APPOINTMENTS, icon: CalendarCheck, label: t('sidebar.myAppointments', { defaultValue: 'My appointments' }) },
+        { to: ROUTES.WAITING_ROOM, icon: MapPinned, label: t('sidebar.myJourney', { defaultValue: 'My journey' }) },
         { to: ROUTES.CUSTOMER_VISIT_HISTORY, icon: ClipboardList, label: t('sidebar.visitHistory') },
         { to: ROUTES.CUSTOMER_PAYMENT, icon: CreditCard, label: t('sidebar.paymentHistory') },
         { to: ROUTES.PROFILE, icon: UserCircle, label: t('sidebar.profile') },
@@ -71,7 +73,7 @@ export default function CustomerLayout({ children }) {
                         <img src={logoUrl} alt="CareS" className="w-10 h-10 rounded-lg object-contain" />
                         <div className="flex flex-col">
                             <span className="text-xl font-bold text-black tracking-widest uppercase leading-none">CareS</span>
-                            <span className="text-[10px] text-gray-500 tracking-[0.3em] uppercase mt-1">Phòng khám đa khoa</span>
+                            <span className="text-[10px] text-gray-500 tracking-[0.3em] uppercase mt-1">{t('brand.clinic', { defaultValue: 'General clinic' })}</span>
                         </div>
                     </div>
                 </div>
@@ -113,6 +115,7 @@ export default function CustomerLayout({ children }) {
             {/* ── Main ── */}
             <div className="flex-1 flex flex-col overflow-hidden relative z-10">
                 <header className="absolute top-4 right-8 z-20 bg-white/80 backdrop-blur shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100">
+                    <AppPreferencesMenu />
                     <NotificationBell />
                 </header>
                 {/* Page content */}

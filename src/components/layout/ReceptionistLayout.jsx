@@ -18,11 +18,13 @@ import NotificationBell from '@/components/ui/NotificationBell';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { toast } from 'react-toastify';
 import SidebarBrand from './SidebarBrand';
+import AppPreferencesMenu from '@/components/ui/AppPreferencesMenu';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
 export default function ReceptionistLayout({ children }) {
     const { t } = useTranslation('receptionist');
+    const { t: tCommon } = useTranslation('common');
     const navigate = useNavigate();
     const location = useLocation();
     const username = get('username') || 'Lễ tân';
@@ -37,7 +39,7 @@ export default function ReceptionistLayout({ children }) {
             if (location.pathname !== ROUTES.RECEPTIONIST_SUPPORT) {
                 setHasNewChat(true);
                 if (msg === 'NEW_CHAT_REQUEST') {
-                    toast.info('Có yêu cầu hỗ trợ mới từ khách hàng!', { position: 'top-right', autoClose: 4000 });
+                    toast.info(t('notifications.newSupport', { defaultValue: 'New customer support request!' }), { position: 'top-right', autoClose: 4000 });
                 }
             }
         }
@@ -68,10 +70,9 @@ export default function ReceptionistLayout({ children }) {
 
     const getRoleName = () => {
         if (staffInfo && staffInfo.specialization) return staffInfo.specialization.name;
-        if (systemRole === 'NURSE') return 'Y tá';
-        if (systemRole === 'RECEPTIONIST') return 'Lễ tân';
-        if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)) return 'Bác sĩ';
-        return 'Lễ tân';
+        if (systemRole === 'NURSE') return tCommon('roles.nurse');
+        if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)) return tCommon('roles.doctor');
+        return tCommon('roles.receptionist');
     };
 
     const handleLogout = () => {
@@ -85,10 +86,10 @@ export default function ReceptionistLayout({ children }) {
         { to: ROUTES.RECEPTIONIST_CHECKIN,       icon: ClipboardList, label: t('sidebar.checkIn') },
         { to: ROUTES.RECEPTIONIST_CREATE_TICKET, icon: FilePlus,      label: t('sidebar.createTicket') },
         { to: ROUTES.RECEPTIONIST_RECORDS,       icon: FolderOpen,    label: t('sidebar.manageRecords') },
-        { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: 'Điều phối bệnh nhân' },
-        { to: ROUTES.RECEPTIONIST_SUPPORT,       icon: LifeBuoy,      label: 'Hỗ trợ trực tuyến' },
-        { to: ROUTES.STAFF_SCHEDULE,             icon: CalendarDays, label: 'Lịch trực của tôi' },
-        { to: ROUTES.STAFF_PROFILE, icon: Users, label: 'Hồ sơ cá nhân' },
+        { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: tCommon('sidebar.patientFlow') },
+        { to: ROUTES.RECEPTIONIST_SUPPORT,       icon: LifeBuoy,      label: t('sidebar.onlineSupport', { defaultValue: 'Online support' }) },
+        { to: ROUTES.STAFF_SCHEDULE,             icon: CalendarDays, label: tCommon('sidebar.mySchedule') },
+        { to: ROUTES.STAFF_PROFILE, icon: Users, label: tCommon('sidebar.profile') },
     ];
 
     const linkClass = ({ isActive }) =>
@@ -131,20 +132,21 @@ export default function ReceptionistLayout({ children }) {
                     
                     <NavLink to={ROUTES.SETTINGS} className={linkClass}>
                         <Settings size={15} className="shrink-0" />
-                        Cài đặt
+                        {tCommon('sidebar.settings')}
                     </NavLink>
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
                     >
                         <LogOut size={15} className="shrink-0" />
-                        Đăng xuất
+                        {tCommon('sidebar.logout')}
                     </button>
                 </div>
             </aside>
 
             <div className="flex-1 flex flex-col overflow-hidden relative">
                 <header className="absolute top-4 right-8 z-10 bg-white shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100">
+                    <AppPreferencesMenu />
                     <NotificationBell />
                 </header>
                 <main className="flex-1 overflow-y-auto p-8 pt-16">

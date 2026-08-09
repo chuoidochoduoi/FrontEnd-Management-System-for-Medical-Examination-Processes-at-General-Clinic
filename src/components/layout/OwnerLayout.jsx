@@ -6,10 +6,12 @@ import { BarChart2, CalendarDays, LogOut, Users, Settings, MessageSquare, MapPin
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
 import SidebarBrand from './SidebarBrand';
+import AppPreferencesMenu from '@/components/ui/AppPreferencesMenu';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
 export default function OwnerLayout({ children }) {
+    const { t } = useTranslation('common');
     const navigate = useNavigate();
     const username = get('username') || 'Chủ phòng khám';
     const staffId = get('staffId');
@@ -36,12 +38,12 @@ export default function OwnerLayout({ children }) {
 
     const getRoleName = () => {
         if (staffInfo && staffInfo.specialization) return staffInfo.specialization.name;
-        if (systemRole === 'NURSE') return 'Y tá';
-        if (systemRole === 'RECEPTIONIST') return 'Lễ tân';
-        if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)) return 'Bác sĩ';
-        if (systemRole === 'ADMIN') return 'Quản trị viên';
-        if (systemRole === 'CASHIER') return 'Thu ngân';
-        return 'Chủ phòng khám';
+        if (systemRole === 'NURSE') return t('roles.nurse');
+        if (systemRole === 'RECEPTIONIST') return t('roles.receptionist');
+        if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)) return t('roles.doctor');
+        if (systemRole === 'ADMIN') return t('roles.admin');
+        if (systemRole === 'CASHIER') return t('roles.cashier');
+        return t('roles.manager');
     };
 
     const handleLogout = () => {
@@ -52,12 +54,12 @@ export default function OwnerLayout({ children }) {
     };
 
     const mainNav = [
-        { to: ROUTES.OWNER_REPORT,   icon: BarChart2,    label: 'Thống kê' },
-        { to: ROUTES.OWNER_SCHEDULE, icon: CalendarDays, label: 'Lịch trình' },
-        { to: ROUTES.ADMIN_SHIFTS, icon: Clock3, label: 'Cấu hình ca' },
-        { to: ROUTES.OWNER_FEEDBACKS, icon: MessageSquare, label: 'Đánh giá' },
-        { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: 'Điều phối bệnh nhân' },
-        { to: ROUTES.MANAGER_STAFF, icon: Users, label: 'Nhân sự' },
+        { to: ROUTES.OWNER_REPORT,   icon: BarChart2,    label: t('sidebar.statistics') },
+        { to: ROUTES.OWNER_SCHEDULE, icon: CalendarDays, label: t('sidebar.schedule') },
+        { to: ROUTES.ADMIN_SHIFTS, icon: Clock3, label: t('sidebar.shiftConfig') },
+        { to: ROUTES.OWNER_FEEDBACKS, icon: MessageSquare, label: t('sidebar.feedback') },
+        { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: t('sidebar.patientFlow') },
+        { to: ROUTES.MANAGER_STAFF, icon: Users, label: t('sidebar.staff') },
     ];
 
     const linkClass = ({ isActive }) =>
@@ -91,20 +93,21 @@ export default function OwnerLayout({ children }) {
                 <div className="px-2 py-3 border-t border-gray-100 space-y-0.5">
                     <NavLink to={ROUTES.SETTINGS} className={linkClass}>
                         <Settings size={15} className="shrink-0" />
-                        Cài đặt
+                        {t('sidebar.settings')}
                     </NavLink>
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
                     >
                         <LogOut size={15} className="shrink-0" />
-                        Đăng xuất
+                        {t('sidebar.logout')}
                     </button>
                 </div>
             </aside>
 
             <div className="flex-1 flex flex-col overflow-hidden relative">
                 <header className="absolute top-4 right-8 z-10 bg-white shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100 print:hidden">
+                    <AppPreferencesMenu />
                     <NotificationBell />
                 </header>
                 <main className="flex-1 overflow-y-auto p-8 pt-16 print:p-0 print:overflow-visible">

@@ -68,13 +68,10 @@ export function useCheckIn() {
             );
             if (!res.ok) throw new Error('Không thể tải danh sách lịch hẹn.');
             const data = await res.json();
-            console.log('CheckIn API raw response:', data);
             // Ensure data is always an array (handle paginated response with 'content' or { data: [...] } response)
             const appointmentsArray = Array.isArray(data) ? data : (data?.content ?? data?.data ?? []);
-            console.log('CheckIn appointmentsArray:', appointmentsArray);
             // Map API response to component format
             const mappedAppointments = appointmentsArray.map(mapAppointment).filter(Boolean);
-            console.log('CheckIn mappedAppointments:', mappedAppointments);
             setAppointments(mappedAppointments);
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra.');

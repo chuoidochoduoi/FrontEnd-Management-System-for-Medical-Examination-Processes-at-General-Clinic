@@ -53,7 +53,6 @@ export function useServiceManagement() {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services?${query.toString()}`, { headers: bearer() });
             if (!res.ok) throw new Error('Failed to load services');
             const data = await res.json();
-            console.log('[fetchServices] Response:', data);
 
             // API returns array directly (not paged) or wrapped in content
             const rawList = Array.isArray(data) ? data : (data.content ?? []);

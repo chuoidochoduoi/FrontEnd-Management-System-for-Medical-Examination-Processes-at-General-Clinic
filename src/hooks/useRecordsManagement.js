@@ -29,7 +29,6 @@ export function useRecordsManagement() {
             );
             if (!res.ok) throw new Error('Không thể tải danh sách hồ sơ.');
             const data = await res.json();
-            console.log('Records API response:', data);
             const items = Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : [];
             setRecords(items);
             setTotal(data.total ?? items.length);

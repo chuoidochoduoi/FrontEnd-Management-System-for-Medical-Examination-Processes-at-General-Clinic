@@ -53,7 +53,6 @@ export function useVisitDetail(visitId) {
             );
             if (!res.ok) throw new Error(t('visitDetail.errors.loadFailed'));
             const data = await res.json();
-            console.log('VisitDetail API response:', data);
             const normalized = {
                 ...data,
                 // Tạm thời mặc định tất cả visit đều là COMPLETED để hiện nút đánh giá

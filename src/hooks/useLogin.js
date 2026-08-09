@@ -37,12 +37,9 @@ export function useLogin() {
 
             // Decode JWT to extract staffId (sid claim) for staff users
             const decoded = decodeToken(data.accessToken);
-            console.log('[useLogin] Decoded token:', decoded);
             if (decoded?.sid) {
-                console.log('[useLogin] Saving staffId:', decoded.sid);
                 storage.setItem('staffId', decoded.sid);
             } else {
-                console.log('[useLogin] No sid claim in token (may be customer user)');
             }
 
             // Redirect based on role + systemRole

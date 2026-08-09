@@ -21,10 +21,8 @@ export function useDiagnosis(initial = []) {
             );
             if (res.ok) {
                 const data = await res.json();
-                console.log('ICD-10 API response:', data);
                 // Handle paginated response with 'content' array
                 const items = data?.content ?? data ?? [];
-                console.log('ICD-10 items:', items);
                 setResults(items);
             }
         } finally { setLoading(false); }

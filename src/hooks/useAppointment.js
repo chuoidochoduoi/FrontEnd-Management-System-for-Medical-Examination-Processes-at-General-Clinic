@@ -151,7 +151,6 @@ export function useAppointment() {
             }
 
             // Debug log
-            console.log('Appointment API request:', { endpoint, method, isLoggedIn, customerId: formData.customerId, body });
 
             const res = await fetch(endpoint, {
                 method: method,

@@ -74,16 +74,13 @@ export function useSchedule() {
 
     // Lấy danh sách nhân sự cho lịch
     const fetchStaffList = useCallback(async () => {
-        console.log('[fetchStaffList] Fetching staff list from /api/v1/staff/list');
         try {
             const res = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/v1/staff/list`,
                 { headers: bearer() }
             );
-            console.log('[fetchStaffList] Response status:', res.status);
             if (!res.ok) throw new Error(t('scheduleManagement.errors.loadFailed'));
             const data = await res.json();
-            console.log('[fetchStaffList] Data received:', data);
             setStaff(data.map(s => ({
                 id: s.staffId,
                 name: s.fullName,

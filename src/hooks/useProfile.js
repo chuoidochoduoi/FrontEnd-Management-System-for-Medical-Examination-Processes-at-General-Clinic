@@ -30,10 +30,8 @@ export function useProfile() {
                 if (!res.ok) throw new Error(t('profile.errors.loadFailed'));
                 const data = await res.json();
                 // Map accountId thành id để sử dụng cho appointment
-                console.log('Profile data:', data); // Debug
                 setProfile({ ...data, id: data.accountId || data.id });
             } catch (err) {
-                console.log('Profile error:', err); // Debug
                 setError(err.message || t('profile.errors.unknown'));
             } finally {
                 setLoading(false);

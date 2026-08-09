@@ -53,17 +53,12 @@ export function useQueueList({ status = 'all', search = '', sort = 'newest', pag
                 });
                 url = `${apiBase}/api/queue?${qs.toString()}`;
             }
-            console.log('[useQueueList] Full URL:', url);
             const token = get('token');
             const res = await fetch(url, {
                 headers: token ? { Authorization: `Bearer ${token}` } : undefined,
             });
-            console.log('[useQueueList] Response Status:', res.status);
-            console.log('[useQueueList] Response OK:', res.ok);
             const responseText = await res.clone().text();
-            console.log('[useQueueList] Response Body:', responseText);
             const data = await res.json();
-            console.log('[useQueueList] Parsed Data:', data);
 
             // Ignore stale responses from superseded requests
             if (currentRequest !== requestId.current) return;
@@ -71,7 +66,6 @@ export function useQueueList({ status = 'all', search = '', sort = 'newest', pag
             // Handle both Spring Boot Page format (content/totalElements) and custom format (items/total)
             const responseItems = data.items ?? data.content ?? [];
             const responseTotal = data.total ?? data.totalElements ?? 0;
-            console.log('[useQueueList] Items:', responseItems.length, 'Total:', responseTotal);
 
             setItems(responseItems);
             setTotal(responseTotal);

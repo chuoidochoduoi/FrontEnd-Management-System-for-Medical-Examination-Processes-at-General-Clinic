@@ -25,9 +25,7 @@ export function useWebSocket(topic, queryKeyToInvalidate, onMessage = null) {
         });
 
         client.onConnect = () => {
-            console.log('Connected to WebSocket');
             client.subscribe(topic, (message) => {
-                console.log('Received WebSocket message:', message.body);
                 if (queryKeyToInvalidate) {
                     queryClient.invalidateQueries({ queryKey: queryKeyToInvalidate });
                 }

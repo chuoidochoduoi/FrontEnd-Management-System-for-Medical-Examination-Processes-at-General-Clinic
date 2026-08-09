@@ -14,6 +14,23 @@ export default function VisitDetailPage() {
     const [activeTest, setActiveTest] = useState(0);
     const [activeExam, setActiveExam] = useState(0);
     const [previewPdf, setPreviewPdf] = useState('');
+
+    const openPdfPreview = async (url) => {
+        try {
+            const fullUrl = url.startsWith('http') ? url : `${import.meta.env.VITE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            const response = await fetch(fullUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+            if (!response.ok) throw new Error('Không thể mở phiếu kết quả PDF');
+            setPreviewPdf(URL.createObjectURL(await response.blob()));
+        } catch (error) {
+            setError(error.message);
+        }
+    };
+
+    const closePdfPreview = () => {
+        if (previewPdf.startsWith('blob:')) URL.revokeObjectURL(previewPdf);
+        setPreviewPdf('');
+    };
     const [showRating, setShowRating] = useState(false);
 
     useEffect(() => { fetchVisit(); }, [id]);
@@ -338,11 +355,7 @@ export default function VisitDetailPage() {
                                         <div><p className="text-xs text-gray-400">Bác sĩ thực hiện</p><p>{selectedTest.performedBy || '-'}</p></div>
                                         <div><p className="text-xs text-gray-400">Thời gian</p><p>{selectedTest.performedAt ? new Date(selectedTest.performedAt).toLocaleString('vi-VN') : '-'}</p></div>
                                     </div>
-                                    <button onClick={() => {
-                                        const url = selectedTest.pdfUrl;
-                                        const fullUrl = url.startsWith('http') ? url : `${import.meta.env.VITE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
-                                        setPreviewPdf(fullUrl);
-                                    }} className="inline-flex h-10 items-center px-4 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">Xem trước phiếu kết quả PDF</button>
+                                    <button onClick={() => openPdfPreview(selectedTest.pdfUrl)} className="inline-flex h-10 items-center px-4 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">Xem trước phiếu kết quả PDF</button>
                                 </div>}
                                 {!selectedTest.pdfUrl && <table className="w-full">
                                     <thead className="bg-gray-50 border-b border-gray-100">
@@ -403,7 +416,7 @@ export default function VisitDetailPage() {
                 <div className="bg-white rounded-2xl w-full max-w-6xl h-full flex flex-col overflow-hidden shadow-2xl">
                     <div className="px-5 py-3 border-b flex items-center justify-between gap-3">
                         <p className="font-semibold text-gray-900">Xem trước phiếu kết quả PDF</p>
-                        <div className="flex gap-2"><a href={previewPdf} download className="px-4 h-9 inline-flex items-center rounded-lg border border-gray-300 text-sm">Tải PDF</a><button onClick={() => setPreviewPdf('')} className="px-4 h-9 rounded-lg bg-gray-900 text-white text-sm">Đóng</button></div>
+                        <div className="flex gap-2"><a href={previewPdf} download className="px-4 h-9 inline-flex items-center rounded-lg border border-gray-300 text-sm">Tải PDF</a><button onClick={closePdfPreview} className="px-4 h-9 rounded-lg bg-gray-900 text-white text-sm">Đóng</button></div>
                     </div>
                     <iframe title="Phiếu kết quả PDF" src={previewPdf} className="w-full flex-1 bg-gray-100" />
                 </div>

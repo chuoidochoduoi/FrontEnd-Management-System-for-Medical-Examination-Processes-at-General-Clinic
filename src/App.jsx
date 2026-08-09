@@ -44,6 +44,7 @@ import MySchedulePage from '@/pages/staff/MySchedulePage';
 import StaffProfilePage from '@/pages/staff/StaffProfilePage';
 import SettingsPage from '@/pages/staff/SettingsPage';
 import RecordsManagementPage from '@/pages/receptionist/RecordsManagementPage';
+import RecordDetailPage from '@/pages/receptionist/RecordDetailPage';
 import PaymentHistoryPage from '@/pages/customer/PaymentHistoryPage';
 import ReceiptDetailPage  from '@/pages/customer/ReceiptDetailPage';
 import MedicalHistoryPage from '@/pages/customer/MedicalHistoryPage';
@@ -275,7 +276,7 @@ function App() {
         } />
         <Route path={ROUTES.RECEPTIONIST_RECORD_DETAIL} element={
           <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
-            <div className="p-8">Trang chi tiết hồ sơ - đang phát triển</div>
+            <RecordDetailPage />
           </ProtectedRoute>
         } />
       </Routes>

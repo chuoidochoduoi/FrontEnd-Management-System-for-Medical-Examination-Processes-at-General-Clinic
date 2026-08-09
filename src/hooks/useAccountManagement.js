@@ -24,7 +24,6 @@ export function useStaffList() {
                 throw new Error(err.message || t('accountManagement.errors.loadFailed'));
             }
             const data = await res.json();
-            console.log('[fetchStaff] Response:', data);
             // Spring Data format: { content: [...], totalElements: N, ... }
             setStaff(Array.isArray(data.content) ? data.content : []);
             setTotal(data.totalElements ?? 0);
@@ -116,7 +115,6 @@ export function usePatientList() {
                 throw new Error(err.message || t('accountManagement.errors.loadFailed'));
             }
             const data = await res.json();
-            console.log('[fetchPatients] Response:', data);
             // Spring Data format: { content: [...], totalElements: N, ... }
             setPatients(Array.isArray(data.content) ? data.content : []);
             setTotal(data.totalElements ?? 0);

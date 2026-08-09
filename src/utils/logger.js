@@ -10,6 +10,8 @@ const LOG_LEVELS = {
 
 const createLogger = (namespace) => {
   const log = (level, ...args) => {
+    // Khong dua payload API/JWT/du lieu y te ra console o production.
+    if (!import.meta.env.DEV && (level === LOG_LEVELS.DEBUG || level === LOG_LEVELS.INFO)) return;
     const timestamp = new Date().toISOString();
     const prefix = `[${timestamp}] [${namespace}]`;
 

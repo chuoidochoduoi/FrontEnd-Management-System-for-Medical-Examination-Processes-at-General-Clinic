@@ -70,7 +70,6 @@ export function useRoomManagement() {
             params.append('size', PAGE_SIZE);
 
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/departments/admin?${params}`, { headers: bearer() });
-            console.log('[fetchRooms] Response status:', res.status);
 
             if (!res.ok) {
                 const errorText = await res.text();
@@ -79,7 +78,6 @@ export function useRoomManagement() {
             }
 
             const data = await res.json();
-            console.log('[fetchRooms] Data:', data);
 
             // API returns paginated response
             const deptList = Array.isArray(data) ? data : (data.content ?? []);

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import { useReport } from '@/hooks/useReport';
+import { toast } from 'react-toastify';
 
 /* ── helpers ── */
 const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) : '—';
@@ -436,11 +437,11 @@ export default function ReportPage() {
 
     const handleApplyCustom = () => {
         if (!fromDate || !toDate) {
-            alert('Vui lòng chọn đầy đủ từ ngày và đến ngày');
+            toast.error('Vui lòng chọn đầy đủ từ ngày và đến ngày');
             return;
         }
         if (new Date(fromDate) > new Date(toDate)) {
-            alert('Từ ngày không được lớn hơn đến ngày');
+            toast.error('Từ ngày không được lớn hơn đến ngày');
             return;
         }
         fetchTab1('custom', fromDate, toDate);

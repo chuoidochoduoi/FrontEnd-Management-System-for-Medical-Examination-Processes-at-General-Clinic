@@ -37,23 +37,19 @@ export function useQueueWaiting(departmentId, filters = {}) {
             const url = requiresFullQueue
                 ? `${apiBase}/api/v1/queue-tickets?departmentId=${departmentId}&${params}`
                 : `${apiBase}/api/v1/queue-tickets/waiting/${departmentId}?${params}`;
-            console.log('[useQueueWaiting] URL:', url);
 
             const res = await fetch(url, {
                 headers: token ? { Authorization: `Bearer ${token}` } : undefined,
             });
-            console.log('[useQueueWaiting] Response status:', res.status, res.ok);
 
             if (!res.ok) {
                 throw new Error(`HTTP ${res.status}`);
             }
 
             const responseText = await res.clone().text();
-            console.log('[useQueueWaiting] Response text length:', responseText.length);
 
             // Handle empty response
             if (!responseText || responseText.trim() === '') {
-                console.log('[useQueueWaiting] Empty response');
                 setTickets([]);
                 setWaitingCount(0);
                 return;
@@ -64,7 +60,6 @@ export function useQueueWaiting(departmentId, filters = {}) {
             const data = rawData.data ?? rawData.result ?? rawData;
             const items = data.items ?? data.content ?? [];
 
-            console.log('[useQueueWaiting] Tickets:', items.length);
 
             if (currentRequest !== requestId.current) return;
             const keyword = filters.search?.trim().toLocaleLowerCase('vi') ?? '';

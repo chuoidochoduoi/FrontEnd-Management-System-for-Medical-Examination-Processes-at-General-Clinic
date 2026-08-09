@@ -118,6 +118,7 @@ export default function LabDetailPage() {
     const [notes,      setNotes]      = useState('');
     const [file,       setFile]       = useState(null);       // File object
     const [fileUrl,    setFileUrl]    = useState('');         // uploaded URL
+    const [localPreviewUrl, setLocalPreviewUrl] = useState('');
     const [cancelReason, setCancelReason] = useState('');
     const [uploading,  setUploading]  = useState(false);
     const [queueRequests, setQueueRequests] = useState([]);
@@ -152,6 +153,8 @@ export default function LabDetailPage() {
         if (f.type !== 'application/pdf' && !f.name?.toLowerCase().endsWith('.pdf')) return toast.error('Chỉ chấp nhận phiếu kết quả định dạng PDF');
         if (f.size > 10 * 1024 * 1024) return toast.error('Tệp kết quả không được vượt quá 10 MB');
         setFile(f);
+        if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+        setLocalPreviewUrl(URL.createObjectURL(f));
         setUploading(true);
         try {
             const res = await uploadFile(f);
@@ -220,9 +223,9 @@ export default function LabDetailPage() {
     }
 
     const isCancelled = status === 'CANCELLED';
-    const pdfUrl = fileUrl
+    const pdfUrl = localPreviewUrl || (fileUrl
         ? (fileUrl.startsWith('http') ? fileUrl : `${import.meta.env.VITE_API_URL}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`)
-        : '';
+        : '');
 
     const handlePrintPdf = async () => {
         if (!pdfUrl) return;
@@ -387,7 +390,7 @@ export default function LabDetailPage() {
                             <FileUpload
                                 file={file}
                                 onFile={handleFile}
-                                onClear={() => { setFile(null); setFileUrl(''); }}
+                                onClear={() => { if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl); setLocalPreviewUrl(''); setFile(null); setFileUrl(''); }}
                                 t={t}
                             />
                             {uploading && (

@@ -41,9 +41,16 @@ export default function ChatWidget() {
         if (token) headers['Authorization'] = `Bearer ${token}`;
         
         try {
+            const savedGuestProfileId = guestProfileId || sessionStorage.getItem('guestProfileId');
+            const basePath = token
+                ? `/api/v1/chat/${id}`
+                : `/api/v1/chat/guest/${id}`;
+            const guestQuery = !token && savedGuestProfileId
+                ? `?guestProfileId=${encodeURIComponent(savedGuestProfileId)}`
+                : '';
             const [msgRes, statusRes] = await Promise.all([
-                fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/${id}/messages`, { headers }),
-                fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/${id}/status`, { headers })
+                fetch(`${import.meta.env.VITE_API_URL}${basePath}/messages${guestQuery}`, { headers }),
+                fetch(`${import.meta.env.VITE_API_URL}${basePath}/status${guestQuery}`, { headers })
             ]);
 
             if (msgRes.ok) {

@@ -6,6 +6,7 @@ import PatientLayout from '@/components/layout/CustomerLayout';
 import CancelConfirmModal from '@/components/ui/CancelConfirmModal';
 import { useAppointments } from '@/hooks/useAppointmentsCustomer';
 import { ROUTES } from '@/constants/routes';
+import { toast } from 'react-toastify';
 
 const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + ' đ' : '—';
 
@@ -195,7 +196,7 @@ export default function MyAppointmentsPage() {
                         await cancelAppointment(cancelApptId); 
                         setCancelApptId(null);
                     } catch (e) { 
-                        alert(e.message); 
+                        toast.error(e.message);
                     } finally {
                         setIsCancelling(false);
                     }

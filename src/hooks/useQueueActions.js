@@ -31,9 +31,7 @@ export function useQueueActions() {
 
     const makeRequest = async (url, actionName) => {
         try {
-            console.log(`[QueueActions] Calling ${actionName} at:`, url);
             const res = await fetch(url, { method: 'POST', headers });
-            console.log('[QueueActions] Response:', res.status);
             if (!res.ok) {
                 const errText = await res.text();
                 let errorMsg;
@@ -47,7 +45,6 @@ export function useQueueActions() {
                 notify(errorMsg);
                 return { success: false, error: errorMsg };
             }
-            console.log('[QueueActions] Success:', actionName);
             return { success: true };
         } catch (err) {
             console.error('[QueueActions] Error:', err);

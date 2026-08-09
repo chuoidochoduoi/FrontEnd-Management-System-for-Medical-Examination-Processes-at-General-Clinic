@@ -26,9 +26,10 @@ export function useRegister() {
             if (!res.ok) throw new Error(data.message || 'Không thể gửi mã OTP. Vui lòng thử lại.');
 
             setOtpSent(true);
-            if (data.mockOtp) toast.success(`Đã gửi mã OTP thành công. Mã OTP giả lập của bạn là: ${data.mockOtp}`, { autoClose: 15000 });
+            const mockOtp = data.mockOtp ?? data.data?.mockOtp;
+            if (mockOtp) toast.success(`Đã gửi mã OTP thành công. Mã OTP giả lập của bạn là: ${mockOtp}`, { autoClose: 15000 });
             else toast.success('Đã gửi mã OTP đến email/số điện thoại của bạn!');
-            return data;
+            return { ...data, mockOtp };
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra');
             toast.error(err.message || 'Lỗi gửi OTP');

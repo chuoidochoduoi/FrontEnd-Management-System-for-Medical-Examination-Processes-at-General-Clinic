@@ -44,7 +44,8 @@ export default function LoginPage() {
 				});
 				const data = await res.json().catch(() => ({}));
 				if (!res.ok) throw new Error(data.message || 'Không thể gửi mã OTP');
-				if (data.mockOtp) toast.success(`Đã gửi mã OTP thành công. Mã OTP giả lập của bạn là: ${data.mockOtp}`, { autoClose: 15000 });
+				const mockOtp = data.mockOtp ?? data.data?.mockOtp;
+				if (mockOtp) toast.success(`Đã gửi mã OTP thành công. Mã OTP giả lập của bạn là: ${mockOtp}`, { autoClose: 15000 });
 				else toast.success('Mã OTP đã được gửi đến email/số điện thoại của bạn');
 				setStep(2);
 			} catch (err) {

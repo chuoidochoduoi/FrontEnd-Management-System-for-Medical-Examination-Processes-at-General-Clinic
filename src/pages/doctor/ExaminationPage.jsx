@@ -203,6 +203,7 @@ export default function ExaminationPage() {
     const [completing, setCompleting] = useState(false);
     const [error, setError] = useState('');
     const [testRequests, setTestRequests] = useState([]);
+    const [recordVersion, setRecordVersion] = useState(null);
 
     // Follow-up (khám lại) state
     const [followUpNote, setFollowUpNote] = useState('');
@@ -220,6 +221,7 @@ export default function ExaminationPage() {
                 if (res.ok) {
                     const data = await res.json();
                     const record = data.data ?? data.result ?? data;
+                    setRecordVersion(record.version ?? null);
                     setTestRequests(record.testRequests ?? []);
                     setSymptoms(record.chiefComplaint ?? '');
                     setExamResult(record.clinicalFindings ?? '');
@@ -357,10 +359,7 @@ export default function ExaminationPage() {
         setSaving(true);
         setError('');
         try {
-            // Lưu vital signs trước
-            await saveVitalSigns();
-
-            // Lưu medical record draft
+            // Vital signs được gửi cùng hồ sơ để chỉ cập nhật một phiên bản duy nhất.
             const res = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/v1/medical-records/${examination.recordId}/draft`,
                 {
@@ -394,12 +393,14 @@ export default function ExaminationPage() {
                         })),
                         // Gửi thông tin khám lại (follow-up)
                         followUp: followUpNote.trim() ? { note: followUpNote.trim(), preferredDate: null } : null,
-                        version: examination.medicalRecord?.version ?? null,
+                        version: recordVersion,
                     }),
                 }
             );
             if (!res.ok) { const body = await res.json().catch(() => ({})); throw new Error(body.message || tDoctor('examination.errors.saveFailed')); }
-            await res.json();
+            const savedBody = await res.json();
+            const savedRecord = savedBody.data ?? savedBody.result ?? savedBody;
+            setRecordVersion(savedRecord.version ?? recordVersion);
             await reload();
             toast.success('Lưu nháp thành công!');
         } catch (err) {
@@ -430,9 +431,6 @@ export default function ExaminationPage() {
         setCompleting(true);
         setError('');
         try {
-            // Lưu vital signs trước
-            await saveVitalSigns();
-
             const res = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/v1/queue-tickets/${examination.ticketId}/complete`,
                 {
@@ -476,7 +474,7 @@ export default function ExaminationPage() {
 
                         // Thông tin khám lại (follow-up)
                         followUp: followUpNote.trim() ? { note: followUpNote.trim(), preferredDate: null } : null,
-                        version: examination.medicalRecord?.version ?? null,
+                        version: recordVersion,
                     }),
                 }
             );

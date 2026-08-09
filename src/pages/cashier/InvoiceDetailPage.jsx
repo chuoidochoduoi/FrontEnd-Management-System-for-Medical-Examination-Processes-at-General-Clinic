@@ -196,12 +196,14 @@ export default function InvoiceDetailPage() {
 
                     {/* ── Actions ── */}
                     <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-5">
-                        <button
-                            onClick={() => navigate(ROUTES.CASHIER_INVOICE_PRINT.replace(':id', id))}
-                            className="px-6 h-10 border border-gray-300 hover:border-gray-500 text-gray-700 text-sm font-medium rounded-xl transition-colors"
-                        >
-                            In hóa đơn
-                        </button>
+                        {invoice?.status === 'paid' && (
+                            <button
+                                onClick={() => navigate(ROUTES.CASHIER_INVOICE_PRINT.replace(':id', id))}
+                                className="px-6 h-10 border border-gray-300 hover:border-gray-500 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+                            >
+                                Xem và in phiếu thu
+                            </button>
+                        )}
                         {invoice?.status === 'pending' && (
                             <>
                                 <button

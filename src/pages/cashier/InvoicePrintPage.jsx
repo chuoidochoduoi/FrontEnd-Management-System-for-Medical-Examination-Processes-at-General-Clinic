@@ -40,18 +40,19 @@ export default function InvoicePrintPage() {
     const navigate = useNavigate();
     const { t } = useTranslation('cashier');
     const { invoice, loading, error, reload } = useInvoicePrint(id);
+    const isPaid = invoice?.status === 'paid' || invoice?.status === 'completed';
 
     // Let Ctrl+P trigger the same in-app print handler
     useEffect(() => {
         const handleKeyDown = (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
                 e.preventDefault();
-                window.print();
+                if (isPaid) window.print();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [isPaid]);
 
     const rows = useMemo(() => {
         if (!invoice?.items) return [];
@@ -121,12 +122,19 @@ export default function InvoicePrintPage() {
                     </button>
                     <button
                         onClick={() => window.print()}
-                        className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+                        disabled={!isPaid}
+                        className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <Printer className="h-4 w-4" />
-                        {t('detail.printButton')}
+                        In phiếu thu
                     </button>
                 </div>
+
+                {!isPaid && (
+                    <div className="print:hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                        Hóa đơn chưa được thanh toán nên chưa thể in phiếu thu.
+                    </div>
+                )}
 
                 {/* Receipt card */}
                 <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm print:border-0 print:shadow-none">

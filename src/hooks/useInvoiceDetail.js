@@ -76,7 +76,7 @@ export function useInvoiceDetail(invoiceId) {
             }
             setInvoice(prev => prev ? { ...prev, status: 'paid' } : null);
             toast.success('Thanh toán hóa đơn thành công!');
-            setTimeout(() => navigate(ROUTES.CASHIER_INVOICES), 1000);
+            navigate(ROUTES.CASHIER_INVOICE_PRINT.replace(':id', invoiceId));
         } catch (err) {
             setError(err.message || t('invoiceDetail.errors.unknown'));
             toast.error(err.message || t('invoiceDetail.errors.payFailed'));

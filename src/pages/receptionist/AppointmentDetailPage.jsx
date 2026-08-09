@@ -46,6 +46,10 @@ export default function AppointmentDetailPage() {
     const [confirmAction, setConfirmAction] = useState(null); // 'save' | 'checkin'
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Lễ tân chỉ sửa thông tin liên hệ nhập tại quầy của khách vãng lai.
+    // Hồ sơ của khách có tài khoản phải được cập nhật từ trang hồ sơ khách hàng.
+    const isPatientEditable = appointment?.isGuest === true;
+
     // Insurance & BHYT states
     const [insurances, setInsurances] = useState([]);
     const [insuranceId, setInsuranceId] = useState('');

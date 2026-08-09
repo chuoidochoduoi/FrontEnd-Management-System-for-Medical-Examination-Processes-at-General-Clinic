@@ -47,7 +47,11 @@ export function useStaffList() {
     };
 
     const lockStaff = async (id) => {
-        await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/${id}/lock`, { method: 'PATCH', headers: bearer() });
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/${id}/lock`, { method: 'PATCH', headers: bearer() });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.message || 'Không thể thay đổi trạng thái tài khoản');
+        }
         await fetchStaff({ page });
     };
 
@@ -134,7 +138,11 @@ export function usePatientList() {
     };
 
     const lockPatient = async (id) => {
-        await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/${id}/lock`, { method: 'PATCH', headers: bearer() });
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/accounts/${id}/lock`, { method: 'PATCH', headers: bearer() });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.message || 'Không thể thay đổi trạng thái tài khoản');
+        }
         await fetchPatients({ page });
     };
 

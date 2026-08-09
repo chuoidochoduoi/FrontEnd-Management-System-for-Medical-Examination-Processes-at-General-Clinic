@@ -26,6 +26,9 @@ export default function FollowUpAlert({ followUp, onSchedule }) {
                     <AlertTriangle size={12} className="text-amber-600" />
                 </div>
                 <div className="flex-1">
+                    {followUp.patientName && (
+                        <p className="mb-1 text-sm font-semibold text-gray-900">{followUp.patientName}</p>
+                    )}
                     <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
                             {t('followUp.badge')}

@@ -116,14 +116,22 @@ export default function CreateTicketPage() {
 
     useEffect(() => {
         const queryPhone = searchParams.get('phone');
+        const queryCustomerId = searchParams.get('customerId');
+        if (queryCustomerId) {
+            setCustomerId(queryCustomerId);
+        }
         if (queryPhone) {
-            fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/search-by-phone?phone=${queryPhone}`, {
+            fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/search-by-phone?phone=${encodeURIComponent(queryPhone)}`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}` }
             })
-            .then(res => res.json())
+            .then(async res => {
+                if (!res.ok) throw new Error('Không thể tải hồ sơ bệnh nhân');
+                return res.json();
+            })
             .then(data => {
-                if (data && data.length > 0) {
-                    const patient = data[0]; // Auto-fill with the first matched result
+                const patients = Array.isArray(data) ? data : (data?.data || data?.content || []);
+                if (patients.length > 0) {
+                    const patient = patients.find(item => item.customerId === queryCustomerId) || patients[0];
                     // Hồ sơ khách vãng lai từng khám cũng có profileId và phải
                     // được tái sử dụng, chỉ lịch hẹn guest thuần túy mới không có id.
                     if (patient.customerId) {
@@ -138,9 +146,11 @@ export default function CreateTicketPage() {
                         setGender(g === 'male' || g === 'female' ? g : 'other');
                     }
                     setAddress(patient.address || '');
+                } else {
+                    toast.error('Không tìm thấy hồ sơ bệnh nhân theo số điện thoại');
                 }
             })
-            .catch(err => console.error('Failed to fetch patient data', err));
+            .catch(() => toast.error('Không thể tải thông tin bệnh nhân tái khám'));
         }
     }, [searchParams]);
 

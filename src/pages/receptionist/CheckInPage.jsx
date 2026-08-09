@@ -67,6 +67,13 @@ export default function CheckInPage() {
         fetchFollowUps();
     }, []);
 
+    const openFollowUpTicket = (followUp) => {
+        const params = new URLSearchParams();
+        if (followUp.customerId) params.set('customerId', followUp.customerId);
+        if (followUp.customerPhone) params.set('phone', followUp.customerPhone);
+        navigate(`${ROUTES.RECEPTIONIST_CREATE_TICKET}?${params.toString()}`);
+    };
+
     // Tự động fetch khi date hoặc status thay đổi
     useEffect(() => {
         fetchAppointments({ date, status });
@@ -153,8 +160,13 @@ export default function CheckInPage() {
                 {followUpAlerts.map((alert, idx) => (
                     <FollowUpAlert
                         key={alert.id || idx}
-                        followUp={alert}
-                        onSchedule={() => navigate(ROUTES.RECEPTIONIST_CREATE_TICKET)}
+                        followUp={{
+                            ...alert,
+                            note: alert.followUpNote,
+                            preferredDate: alert.followUpDate,
+                            patientName: alert.customerName,
+                        }}
+                        onSchedule={() => openFollowUpTicket(alert)}
                     />
                 ))}
 

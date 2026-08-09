@@ -58,6 +58,12 @@ export function useQueueActions() {
         return result;
     }, [apiBase, headers]);
 
+    const recallPatient = useCallback(async (patientId) => {
+        const result = await makeRequest(`${apiBase}/api/v1/queue-tickets/${patientId}/call`, 'gọi lại bệnh nhân');
+        if (result.success) notify('Đã gửi thông báo gọi bệnh nhân.', 'success');
+        return result;
+    }, [apiBase, headers]);
+
     const startExam = useCallback(async (patientId) => {
         const result = await makeRequest(`${apiBase}/api/v1/queue-tickets/${patientId}/start-exam`, 'bắt đầu khám');
         return result;
@@ -83,7 +89,7 @@ export function useQueueActions() {
         return result;
     }, [apiBase, headers]);
 
-    return { callPatient, startExam, completeExam, markAbsent, skipPatient, returnToQueue };
+    return { callPatient, recallPatient, startExam, completeExam, markAbsent, skipPatient, returnToQueue };
 }
 
 export default useQueueActions;

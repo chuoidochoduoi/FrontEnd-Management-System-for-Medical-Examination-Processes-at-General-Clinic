@@ -26,7 +26,7 @@ export default function LabCallQueuePage() {
         };
         result[key].requests.push(request);
         return result;
-    }, {})).filter(group => ['WAITING', 'CALLED', 'IN_PROGRESS', 'BLOCKED'].includes(group.status)), [orders]);
+    }, {})).filter(group => ['WAITING', 'CALLED', 'IN_PROGRESS', 'BLOCKED', 'SKIPPED'].includes(group.status)), [orders]);
 
     const callAction = async (ticketId, action) => {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -37,7 +37,13 @@ export default function LabCallQueuePage() {
             const body = await response.json().catch(() => ({}));
             return toast.error(body.message || 'Không thể cập nhật số gọi');
         }
-        toast.success(action === 'call' ? 'Đã gọi bệnh nhân' : action === 'start-exam' ? 'Đã xác nhận bệnh nhân vào phòng' : 'Đã đánh dấu vắng');
+        toast.success(action === 'call'
+            ? 'Đã gửi thông báo gọi bệnh nhân'
+            : action === 'start-exam'
+                ? 'Đã xác nhận bệnh nhân vào phòng'
+                : action === 'return'
+                    ? 'Đã đưa bệnh nhân trở lại hàng chờ'
+                    : 'Đã đánh dấu vắng');
         refetch();
     };
 
@@ -59,7 +65,7 @@ export default function LabCallQueuePage() {
                         <div><p className="font-semibold text-gray-900">{group.patientName || '-'}</p><p className="text-xs text-gray-400">{group.patientCode || '-'}</p></div>
                         <p className="text-sm text-gray-600">{group.requests.map(request => request.serviceName).join(', ')}</p>
                         <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${group.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-700' : group.status === 'CALLED' ? 'bg-green-50 text-green-700' : group.status === 'BLOCKED' ? 'bg-gray-100 text-gray-400' : 'bg-amber-50 text-amber-700'}`}>{statusText[group.status] || group.status}</span>
-                        <div className="flex gap-2">{group.status === 'WAITING' && <button onClick={() => callAction(group.ticketId, 'call')} className="rounded-lg bg-primary-600 px-4 py-2 text-xs font-semibold text-white">Gọi số</button>}{group.status === 'CALLED' && <><button onClick={() => callAction(group.ticketId, 'call')} className="rounded-lg border border-primary-300 px-3 py-2 text-xs font-semibold text-primary-600">Gọi lại</button><button onClick={() => callAction(group.ticketId, 'start-exam')} className="rounded-lg bg-gray-900 px-4 py-2 text-xs font-semibold text-white">Đã vào phòng</button></>}{['WAITING', 'CALLED'].includes(group.status) && <button onClick={() => callAction(group.ticketId, 'skip')} className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-600">Vắng</button>}</div>
+                        <div className="flex gap-2">{group.status === 'WAITING' && <button onClick={() => callAction(group.ticketId, 'call')} className="rounded-lg bg-primary-600 px-4 py-2 text-xs font-semibold text-white">Gọi bệnh nhân</button>}{group.status === 'CALLED' && <><button onClick={() => callAction(group.ticketId, 'call')} className="rounded-lg border border-primary-300 px-3 py-2 text-xs font-semibold text-primary-600">Gọi lại</button><button onClick={() => callAction(group.ticketId, 'start-exam')} className="rounded-lg bg-gray-900 px-4 py-2 text-xs font-semibold text-white">Đã vào phòng</button></>}{['WAITING', 'CALLED'].includes(group.status) && <button onClick={() => callAction(group.ticketId, 'skip')} className="rounded-lg border border-red-200 px-3 py-2 text-xs text-red-600">Đánh vắng</button>}{group.status === 'SKIPPED' && <button onClick={() => callAction(group.ticketId, 'return')} className="rounded-lg border border-primary-300 px-3 py-2 text-xs font-semibold text-primary-600">Đưa lại hàng chờ</button>}</div>
                     </div>)}</div>}
                 </section>
             </div>

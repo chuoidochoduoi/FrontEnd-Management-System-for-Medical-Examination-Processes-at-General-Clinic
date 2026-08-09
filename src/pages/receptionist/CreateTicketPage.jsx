@@ -124,7 +124,9 @@ export default function CreateTicketPage() {
             .then(data => {
                 if (data && data.length > 0) {
                     const patient = data[0]; // Auto-fill with the first matched result
-                    if (!patient.isGuest) {
+                    // Hồ sơ khách vãng lai từng khám cũng có profileId và phải
+                    // được tái sử dụng, chỉ lịch hẹn guest thuần túy mới không có id.
+                    if (patient.customerId) {
                         setCustomerId(patient.customerId);
                     }
                     setFullName(patient.fullName || '');

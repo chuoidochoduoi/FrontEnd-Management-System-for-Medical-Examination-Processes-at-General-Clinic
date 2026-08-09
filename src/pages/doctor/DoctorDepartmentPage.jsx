@@ -53,7 +53,7 @@ export default function DoctorDepartmentPage() {
     const { tickets: waitingTickets, waitingCount, loading: waitingLoading, error: waitingError, reload: reloadWaiting } = useQueueWaiting(departmentId, queueFilters);
 
     // Queue actions
-    const { completeExam, callPatient, startExam, markAbsent } = useQueueActions();
+    const { completeExam, callPatient, recallPatient, startExam, markAbsent, returnToQueue } = useQueueActions();
 
     // Handle start examination - navigate to examination page with departmentId
     const handleStartExamination = () => {
@@ -249,12 +249,25 @@ export default function DoctorDepartmentPage() {
                                                     </>
                                                 )}
                                                 {ticket.status === 'CALLED' && (
-                                                    <button
-                                                        className="text-xs text-gray-700 hover:underline"
-                                                        onClick={() => handleQueueAction(startExam, ticket.ticketId)}
-                                                        disabled={!!inProgressTicket}
-                                                    >
-                                                        Bắt đầu khám
+                                                    <>
+                                                        <button className="mr-2 text-xs text-primary-600 hover:underline" onClick={() => handleQueueAction(recallPatient, ticket.ticketId)}>
+                                                            Gọi lại
+                                                        </button>
+                                                        <button className="mr-2 text-xs text-red-600 hover:underline" onClick={() => handleQueueAction(markAbsent, ticket.ticketId)}>
+                                                            Đánh vắng
+                                                        </button>
+                                                        <button
+                                                            className="text-xs text-gray-700 hover:underline"
+                                                            onClick={() => handleQueueAction(startExam, ticket.ticketId)}
+                                                            disabled={!!inProgressTicket}
+                                                        >
+                                                            Bắt đầu khám
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {ticket.status === 'SKIPPED' && ticket.workDate === new Date().toLocaleDateString('en-CA') && (
+                                                    <button className="text-xs font-medium text-primary-600 hover:underline" onClick={() => handleQueueAction(returnToQueue, ticket.ticketId)}>
+                                                        Đưa lại hàng chờ
                                                     </button>
                                                 )}
                                                 {ticket.status === 'DONE' && ticket.recordId && (

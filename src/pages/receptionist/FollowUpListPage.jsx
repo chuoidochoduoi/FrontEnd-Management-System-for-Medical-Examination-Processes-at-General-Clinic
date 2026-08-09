@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CalendarClock, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarClock, Clock, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { toast } from 'react-toastify';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { ROUTES } from '@/constants/routes';
@@ -18,8 +18,30 @@ export default function FollowUpListPage() {
 
     const [selectedItem, setSelectedItem] = useState(null);
     const [appointmentDate, setAppointmentDate] = useState('');
-    const [timeSlot, setTimeSlot] = useState('MORNING');
+    const [shiftId, setShiftId] = useState('');
+    const [shifts, setShifts] = useState([]);
     const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        const fetchShifts = async () => {
+            try {
+                const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+                const res = await fetch(`${apiBase}/api/v1/shifts/active`);
+                if (!res.ok) return;
+                const body = await res.json();
+                const items = Array.isArray(body) ? body : (body.content || body.data || []);
+                setShifts(items.map(item => ({
+                    id: item.shiftId || item.id,
+                    name: item.name,
+                    startTime: item.startTime,
+                    endTime: item.endTime,
+                })));
+            } catch {
+                toast.error('Không thể tải danh sách ca khám');
+            }
+        };
+        fetchShifts();
+    }, []);
 
     const fetchFollowUps = async (page = 1, searchQuery = search) => {
         setLoading(true);
@@ -62,9 +84,9 @@ export default function FollowUpListPage() {
     // Handle create appointment
     const handleCreateAppointment = (item) => {
         setSelectedItem(item);
-        const date = item.followUpDate ? new Date(item.followUpDate) : new Date();
-        setAppointmentDate(date.toISOString().split('T')[0]);
-        setTimeSlot('MORNING');
+        const today = new Date().toLocaleDateString('en-CA');
+        setAppointmentDate(item.followUpDate && item.followUpDate >= today ? item.followUpDate : today);
+        setShiftId('');
     };
 
     const submitAppointment = async (e) => {
@@ -73,11 +95,15 @@ export default function FollowUpListPage() {
         try {
             const token = get('token');
             const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-            const scheduledTime = timeSlot === 'AFTERNOON' ? '14:00:00' : '09:00:00';
+            const selectedShift = shifts.find(item => item.id === shiftId);
+            if (!appointmentDate || !selectedShift) {
+                toast.error('Vui lòng chọn ngày và ca khám lại');
+                return;
+            }
             const payload = {
                 customerId: selectedItem.customerId,
-                scheduledAt: appointmentDate ? `${appointmentDate}T${scheduledTime}` : null,
-                timeSlot: timeSlot,
+                scheduledAt: `${appointmentDate}T${selectedShift.startTime}:00`,
+                shiftId,
                 serviceIds: []
             };
             const res = await fetch(`${apiBase}/api/receptionist/follow-ups/${selectedItem.recordId}/schedule`, {
@@ -89,7 +115,7 @@ export default function FollowUpListPage() {
                 body: JSON.stringify(payload)
             });
             if (res.ok) {
-                toast.success('Tạo lịch hẹn thành công!');
+                toast.success('Đã tạo lịch hẹn tái khám. Bệnh nhân sẽ check-in vào ngày đã chọn.');
                 setSelectedItem(null);
                 fetchFollowUps(page); // refresh list
             } else {
@@ -249,20 +275,26 @@ export default function FollowUpListPage() {
                                 <input 
                                     type="date" 
                                     required
+                                    min={new Date().toLocaleDateString('en-CA')}
                                     value={appointmentDate} 
                                     onChange={e => setAppointmentDate(e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Buổi khám</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Ca khám</label>
                                 <select 
-                                    value={timeSlot} 
-                                    onChange={e => setTimeSlot(e.target.value)}
+                                    required
+                                    value={shiftId} 
+                                    onChange={e => setShiftId(e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm"
                                 >
-                                    <option value="MORNING">Sáng (07:30 - 11:30)</option>
-                                    <option value="AFTERNOON">Chiều (13:30 - 17:30)</option>
+                                    <option value="">-- Chọn ca khám --</option>
+                                    {shifts.map(shift => (
+                                        <option key={shift.id} value={shift.id}>
+                                            {shift.name} ({shift.startTime} - {shift.endTime})
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="pt-4 flex justify-end gap-3">

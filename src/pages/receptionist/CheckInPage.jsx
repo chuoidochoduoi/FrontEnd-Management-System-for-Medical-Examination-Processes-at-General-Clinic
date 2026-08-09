@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search, Filter } from 'lucide-react';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
-import FollowUpAlert from '@/components/receptionist/FollowUpAlert';
 import { useCheckIn } from '@/hooks/useCheckIn';
 import { ROUTES } from '@/constants/routes';
 
@@ -43,36 +42,6 @@ export default function CheckInPage() {
     const [date,     setDate]     = useState(new Date().toISOString().split('T')[0]);
     const [timeSlot, setTimeSlot] = useState('');
     const [status,   setStatus]   = useState('');
-
-    // Follow-up alerts — danh sách bệnh nhân cần khám lại
-    const [followUpAlerts, setFollowUpAlerts] = useState([]);
-
-    // Fetch follow-up requests khi load trang
-    useEffect(() => {
-        const fetchFollowUps = async () => {
-            try {
-                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-                const res = await fetch(
-                    `${import.meta.env.VITE_API_URL}/api/receptionist/follow-ups`,
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                if (res.ok) {
-                    const data = await res.json();
-                    setFollowUpAlerts(data.content || data || []);
-                }
-            } catch (err) {
-                console.error('Fetch follow-ups failed:', err);
-            }
-        };
-        fetchFollowUps();
-    }, []);
-
-    const openFollowUpTicket = (followUp) => {
-        const params = new URLSearchParams();
-        if (followUp.customerId) params.set('customerId', followUp.customerId);
-        if (followUp.customerPhone) params.set('phone', followUp.customerPhone);
-        navigate(`${ROUTES.RECEPTIONIST_CREATE_TICKET}?${params.toString()}`);
-    };
 
     // Tự động fetch khi date hoặc status thay đổi
     useEffect(() => {
@@ -155,20 +124,6 @@ export default function CheckInPage() {
                         {t('checkIn.createTicket')}
                     </button>
                 </div>
-
-                {/* Follow-up alerts */}
-                {followUpAlerts.map((alert, idx) => (
-                    <FollowUpAlert
-                        key={alert.id || idx}
-                        followUp={{
-                            ...alert,
-                            note: alert.followUpNote,
-                            preferredDate: alert.followUpDate,
-                            patientName: alert.customerName,
-                        }}
-                        onSchedule={() => openFollowUpTicket(alert)}
-                    />
-                ))}
 
                 {/* Table */}
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">

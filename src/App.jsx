@@ -25,6 +25,7 @@ import PrescriptionPreviewPage from '@/pages/doctor/PrescriptionPreviewPage';
 import ExamCompletionPage from '@/pages/doctor/ExamCompletionPage';
 import MedicalRecordPrintPage from '@/pages/doctor/MedicalRecordPrintPage';
 import ReceptionistSupportPage from '@/pages/receptionist/ReceptionistSupportPage';
+import FollowUpListPage from '@/pages/receptionist/FollowUpListPage';
 import DoctorDepartmentPage from '@/pages/doctor/DoctorDepartmentPage';
 import RoomListPage from '@/pages/doctor/RoomListPage';
 import LabTestPage from '@/pages/lab/LabTestPage.jsx';
@@ -131,6 +132,11 @@ function App() {
         <Route path={ROUTES.RECEPTIONIST_CREATE_TICKET} element={
           <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
             <CreateTicketPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.RECEPTIONIST_FOLLOW_UPS} element={
+          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+            <FollowUpListPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_SUPPORT} element={

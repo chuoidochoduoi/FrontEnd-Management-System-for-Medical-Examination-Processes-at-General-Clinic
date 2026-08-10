@@ -52,7 +52,7 @@ export function useInvoicePrint(id) {
                 id: data.invoiceId,
                 code: data.invoiceCode,
                 patientName: data.customerName,
-                patientCode: data.customerId,
+                patientCode: data.customerCode || '—',
                 address: data.address || '',
                 dob: data.dob || '',
                 bhytCode: data.bhytCode || '',

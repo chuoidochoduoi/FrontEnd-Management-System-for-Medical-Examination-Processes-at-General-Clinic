@@ -34,7 +34,7 @@ export function useInvoiceDetail(invoiceId) {
                     id: data.invoiceId,
                     code: data.invoiceCode,
                     patientName: data.customerName,
-                    patientCode: data.customerId?.toString().slice(0, 8) || '—',
+                    patientCode: data.customerCode || '—',
                     visitDate: data.issueDate,
                     status: data.status?.toLowerCase() || 'pending',
                     totalServices: data.subtotal,

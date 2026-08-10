@@ -64,7 +64,7 @@ export function useInvoiceList() {
                     id: inv.invoiceId,
                     code: inv.invoiceCode,
                     patientName: inv.customerName,
-                    patientCode: inv.customerId,
+                    patientCode: inv.customerCode || '—',
                     services: inv.items?.map(it => ({
                         name: it.serviceName || it.itemName || 'Dịch vụ',
                         description: it.serviceSnapshot || it.description || '',

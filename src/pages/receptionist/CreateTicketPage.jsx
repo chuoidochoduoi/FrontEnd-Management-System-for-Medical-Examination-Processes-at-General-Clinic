@@ -77,9 +77,11 @@ export default function CreateTicketPage() {
     const [address,   setAddress]  = useState('');
     const [insuranceId, setInsuranceId] = useState('');
     const [bhytCode,  setBhytCode] = useState('');
+    const [bhytChecked, setBhytChecked] = useState(false);
 
     /* ── autofill from URL ── */
     const checkBhyt = async () => {
+        setBhytChecked(false);
         if (!bhytCode || bhytCode.length < 5) {
             toast.error('Vui lòng nhập mã thẻ BHYT hợp lệ');
             return;
@@ -102,6 +104,7 @@ export default function CreateTicketPage() {
                     return;
                 }
 
+                setBhytChecked(true);
                 toast.success(`Thẻ BHYT hợp lệ: ${result.fullName}`);
                 // Tùy chọn điền luôn tên và ngày sinh nếu user chưa nhập
                 if (!fullName) setFullName(result.fullName);
@@ -206,6 +209,7 @@ export default function CreateTicketPage() {
         setAddress('');
         setInsuranceId('');
         setBhytCode('');
+        setBhytChecked(false);
         setCustomerId(null);
     };
 
@@ -363,6 +367,7 @@ export default function CreateTicketPage() {
                                                 onChange={e => {
                                                     setInsuranceId(e.target.value);
                                                     setBhytCode(''); // Xóa mã thẻ khi đổi hãng
+                                                    setBhytChecked(false);
                                                 }}
                                                 className={inputCls}
                                             >
@@ -383,7 +388,10 @@ export default function CreateTicketPage() {
                                                     <input
                                                         type="text"
                                                         value={bhytCode}
-                                                        onChange={e => setBhytCode(e.target.value)}
+                                                        onChange={e => {
+                                                            setBhytCode(e.target.value);
+                                                            setBhytChecked(false);
+                                                        }}
                                                         placeholder="Nhập mã thẻ..."
                                                         className={inputCls}
                                                     />
@@ -395,6 +403,11 @@ export default function CreateTicketPage() {
                                                         Kiểm tra
                                                     </button>
                                                 </div>
+                                                {bhytChecked && (
+                                                    <p className="mt-2 text-xs font-medium text-green-600">
+                                                        Mã thẻ BHYT đã được xác minh
+                                                    </p>
+                                                )}
                                                 <p className="mt-2 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
                                                     Đã áp dụng chính sách giảm giá của <b>{insurances?.find(i => i.insuranceId === insuranceId)?.name}</b>. Xem chi tiết mức giảm trên từng dịch vụ.
                                                 </p>

@@ -58,6 +58,7 @@ export default function AdminLayout({ children }) {
         { to: ROUTES.ADMIN_SPECIALIZATIONS, icon: Stethoscope, label: tCommon('sidebar.specialties') },
         { to: ROUTES.ADMIN_CAPABILITIES, icon: Wrench, label: tCommon('sidebar.capabilities') },
         { to: ROUTES.ADMIN_ACCOUNTS, icon: Users,     label: t('sidebar.accounts') },
+        { to: ROUTES.ADMIN_SHIFTS, icon: Clock,       label: tCommon('sidebar.shiftConfig') },
         { to: ROUTES.ADMIN_AUDIT_LOGS, icon: Activity, label: tCommon('sidebar.auditLogs') },
     ];
 

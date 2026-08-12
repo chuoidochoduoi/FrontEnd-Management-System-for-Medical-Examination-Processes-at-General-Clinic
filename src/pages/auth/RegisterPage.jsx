@@ -209,6 +209,22 @@ export default function RegisterPage() {
             return false;
         }
 
+        const birthDate = new Date(dob);
+        const today = new Date();
+        if (birthDate > today) {
+            setFormError('Ngày sinh không thể ở trong tương lai.');
+            return false;
+        }
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        if (age > 150) {
+            setFormError('Tuổi không hợp lệ (lớn hơn 150 tuổi).');
+            return false;
+        }
+
         if (!gender) {
             setFormError('Vui lòng chọn giới tính.');
             return false;

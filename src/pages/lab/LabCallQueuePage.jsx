@@ -338,12 +338,12 @@ export default function LabCallQueuePage() {
                                             action(
                                                 currentPatient.ticketId,
                                                 'finish-service',
-                                                'Đã hoàn thành thao tác tại phòng.'
+                                                'Đã xác nhận xong thao tác tại phòng.'
                                             )
                                         }
                                         className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
                                     >
-                                        Hoàn thành tại phòng
+                                        Đã xong thao tác
                                     </button>
 
                                 </div>

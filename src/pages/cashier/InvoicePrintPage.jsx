@@ -1,47 +1,35 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Printer, RotateCcw } from 'lucide-react';
 import CashierLayout from '@/components/layout/CashierLayout';
 import { useInvoicePrint } from '@/hooks/useInvoicePrint';
 
-const money = (value) => new Intl.NumberFormat('vi-VN').format(Math.round(value || 0));
-const valueOrDash = (value) => value || '—';
-const formatDateTime = (value) => {
-    if (!value) return '—';
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('vi-VN', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    }).format(date);
+const fmtNum = (n) =>
+    n != null ? new Intl.NumberFormat('vi-VN').format(n) : '—';
+
+const fmtDate = (dateStr) => {
+    if (!dateStr) return '—';
+    try {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('vi-VN');
+    } catch {
+        return dateStr;
+    }
 };
 
-const amountInWords = (amount) => {
-    const number = Math.max(0, Math.round(Number(amount) || 0));
-    if (!number) return 'Không đồng';
-    const digits = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
-    const readGroup = (group, forceHundred) => {
-        const hundred = Math.floor(group / 100);
-        const tens = Math.floor((group % 100) / 10);
-        const units = group % 10;
-        const result = [];
-        if (hundred || forceHundred) result.push(`${digits[hundred]} trăm`);
-        if (tens > 1) result.push(`${digits[tens]} mươi`);
-        else if (tens === 1) result.push('mười');
-        else if ((hundred || forceHundred) && units) result.push('lẻ');
-        if (units) result.push(tens > 1 && units === 1 ? 'mốt' : tens > 0 && units === 5 ? 'lăm' : digits[units]);
-        return result.join(' ');
-    };
-    const units = ['', 'nghìn', 'triệu', 'tỷ'];
-    const groups = [];
-    let current = number;
-    while (current) { groups.push(current % 1000); current = Math.floor(current / 1000); }
-    const result = groups.map((group, index) => group ? `${readGroup(group, index < groups.length - 1)} ${units[index]}`.trim() : '')
-        .reverse().filter(Boolean).join(' ');
-    return `${result.charAt(0).toUpperCase()}${result.slice(1)} đồng`;
+const STATUS_STYLE = {
+    pending:   'bg-orange-50 text-orange-600 border border-orange-200',
+    paid:      'bg-green-50 text-green-700 border border-green-200',
+    cancelled: 'bg-gray-100 text-gray-500 border border-gray-200',
+    draft:     'bg-blue-50 text-blue-600 border border-blue-200',
+    issued:    'bg-indigo-50 text-indigo-600 border border-indigo-200',
 };
 
 export default function InvoicePrintPage() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { t } = useTranslation('cashier');
     const { invoice, loading, error, reload } = useInvoicePrint(id);
 
     useEffect(() => {
@@ -60,70 +48,160 @@ export default function InvoicePrintPage() {
         return <CashierLayout><div className="flex min-h-72 flex-col items-center justify-center gap-3"><p className="text-sm text-slate-600">{error?.message || 'Không tìm thấy phiếu thu.'}</p><button onClick={reload} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm"><RotateCcw className="h-4 w-4" />Tải lại</button></div></CashierLayout>;
     }
 
+    const items        = invoice?.items        ?? [];
+    const totalSvc     = Number(invoice?.totalServices) || 0;
+    const bhytDeduct   = Number(invoice?.bhytDeduct)    || 0;
+    const vat          = Number(invoice?.vat)           || 0;
+    const grandTotal   = Number(invoice?.grandTotal)    || 0;
+
     return (
         <CashierLayout>
-            <div className="receipt-screen mx-auto max-w-5xl px-4 py-6">
-                <div className="receipt-actions mb-5 flex items-center justify-between">
+            <div className="receipt-screen mx-auto max-w-4xl px-4 py-6">
+                <div className="receipt-actions mb-5 flex items-center justify-between print:hidden">
                     <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><ChevronLeft className="h-4 w-4" />Quay lại</button>
                     <button onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700"><Printer className="h-4 w-4" />In phiếu thu</button>
                 </div>
 
-                <main id="receipt-print-area" className="receipt-sheet mx-auto bg-white text-slate-900 shadow-sm">
-                    <header className="receipt-head">
-                        <div className="clinic-block">
-                            <div className="clinic-mark">✚</div>
-                            <div><h2>PHÒNG KHÁM ĐA KHOA CARES</h2><p>Địa chỉ: —</p><p>Điện thoại: —</p></div>
+                <div id="receipt-print-area" className="mx-auto space-y-0">
+                    <div className="bg-white border border-gray-200 rounded-t-2xl px-8 py-5 flex items-start justify-between border-b-0">
+                        <div>
+                            <h1 className="text-lg font-bold text-gray-900">
+                                {t('invoiceDetail.dept')}
+                            </h1>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                {t('invoiceDetail.deptSubtitle')}
+                            </p>
                         </div>
-                        <div className="receipt-heading">
-                            <h1>PHIẾU THU</h1>
-                            <p>Ngày thu: <strong>{formatDateTime(invoice.paidAt)}</strong></p>
-                            <p>Số hóa đơn: <strong>{valueOrDash(invoice.code)}</strong></p>
-                            <p>Số phiếu: <strong>{valueOrDash(invoice.receiptNumber)}</strong></p>
+                        <span className="text-xs font-semibold text-gray-500 tracking-widest mt-1">
+                            {t('invoiceDetail.queue')}
+                        </span>
+                    </div>
+
+                    <div className="bg-white border border-gray-200 rounded-b-2xl px-8 py-6 space-y-6">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <div className="flex items-center gap-2 mb-1.5">
+                                    <span className="text-xs font-medium bg-gray-900 text-white px-2.5 py-1 rounded-full">
+                                      Mã: {invoice?.code}
+                                    </span>
+                                </div>
+                                <h2 className="text-2xl font-bold text-gray-900">{invoice?.patientName || '—'}</h2>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    Mã BN: {invoice?.patientCode}
+                                    {invoice?.visitDate && (
+                                        <> • Ngày: {fmtDate(invoice.visitDate)}</>
+                                    )}
+                                </p>
+                            </div>
+                            <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${STATUS_STYLE[invoice?.status] ?? STATUS_STYLE.pending}`}>
+                                {invoice?.status === 'paid' ? 'Đã thanh toán' : invoice?.status}
+                            </span>
                         </div>
-                    </header>
 
-                    <section className="patient-lines">
-                        <p><strong>Họ tên:</strong> {valueOrDash(invoice.patientName)}</p>
-                        <p><strong>Ngày sinh:</strong> {valueOrDash(invoice.dob)}</p>
-                        <p><strong>Giới tính:</strong> {valueOrDash(invoice.gender)}</p>
-                        <p className="patient-address"><strong>Địa chỉ:</strong> {valueOrDash(invoice.address)}</p>
-                    </section>
+                        {invoice.bhytCode && (
+                            <section className="rounded-xl border border-blue-100 bg-blue-50/50 p-5 space-y-2">
+                                <p className="text-xs font-medium text-green-700">
+                                    Đã áp dụng BHYT: {invoice.bhytCode}
+                                </p>
+                            </section>
+                        )}
 
-                    <table className="receipt-table">
-                        <thead><tr><th>STT</th><th>Nội dung</th><th>ĐVT</th><th>SL</th><th>Đơn giá</th><th>Giảm giá</th><th>Thành tiền</th></tr></thead>
-                        <tbody>{invoice.items.map((item, index) => <tr key={item.id || index}>
-                            <td>{index + 1}</td><td className="service-cell"><strong>{item.name}</strong><small>Mã DV: {item.code}</small></td><td>Lượt</td><td>{item.qty}</td><td>{money(item.lineTotal)}</td><td>{item.bhytDeductAmount ? money(item.bhytDeductAmount) : '—'}</td><td>{money(item.patientPay)}</td>
-                        </tr>)}</tbody>
-                    </table>
+                        <div>
+                            <h3 className="text-sm font-semibold text-gray-800 mb-3">
+                                Chi tiết dịch vụ
+                            </h3>
 
-                    <section className="receipt-total">
-                        <p><strong>Tổng tiền:</strong> <b>{money(invoice.grandTotal)} đồng</b></p>
-                        <p><strong>Bằng chữ:</strong> <em>{amountInWords(invoice.grandTotal)}</em></p>
-                        {invoice.bhytDeduct > 0 && <p><strong>BHYT chi trả:</strong> {money(invoice.bhytDeduct)} đồng</p>}
-                        <p><strong>Nội dung thu:</strong> Thanh toán chi phí dịch vụ khám, chữa bệnh.</p>
-                    </section>
+                            <div className="grid grid-cols-[40px_1fr_48px_100px_100px_80px_90px_100px] gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-100 text-xs text-gray-400 font-medium">
+                                <span>STT</span>
+                                <span>Tên dịch vụ</span>
+                                <span className="text-center">SL</span>
+                                <span className="text-right">Đơn giá</span>
+                                <span className="text-right">T.tạm</span>
+                                <span className="text-center">BHYT %</span>
+                                <span className="text-right">BHYT trả</span>
+                                <span className="text-right">Bệnh nhân</span>
+                            </div>
 
-                    <footer className="receipt-footer">
-                        <div><strong>Người thu tiền</strong><span>(Ký, ghi rõ họ tên)</span><b>{valueOrDash(invoice.cashierName)}</b></div>
-                        <div><strong>Bệnh nhân</strong><span>(Ký, ghi rõ họ tên)</span><b>{valueOrDash(invoice.patientName)}</b></div>
-                    </footer>
-                </main>
+                            <div className="divide-y divide-gray-50">
+                                {items.length > 0 ? items.map((item, idx) => {
+                                    const subtotal   = (item.qty ?? 1) * (item.basePrice ?? 0);
+                                    const bhytAmount = Math.round(subtotal * ((item.bhytRate ?? 0) / 100));
+                                    const patientAmt = subtotal - bhytAmount;
+
+                                    return (
+                                        <div
+                                            key={item.id ?? idx}
+                                            className="grid grid-cols-[40px_1fr_48px_100px_100px_80px_90px_100px] gap-2 px-3 py-3.5 items-start"
+                                        >
+                                          <span className="text-xs text-gray-400 pt-0.5">
+                                            {String(idx + 1).padStart(2, '0')}
+                                          </span>
+
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900 leading-snug">
+                                                    {item.name}
+                                                </p>
+                                            </div>
+
+                                            <span className="text-sm text-gray-600 text-center">{item.qty ?? 1}</span>
+                                            <span className="text-sm text-gray-400 text-right tabular-nums">{fmtNum(item.basePrice)}</span>
+                                            <span className="text-sm font-medium text-gray-900 text-right tabular-nums">{fmtNum(subtotal)}</span>
+                                            <span className="text-sm text-gray-600 text-center">{item.bhytRate ?? 0}%</span>
+                                            <span className="text-sm text-gray-600 text-right tabular-nums">{fmtNum(bhytAmount)}</span>
+                                            <span className="text-sm font-semibold text-gray-900 text-right tabular-nums">{fmtNum(patientAmt)}</span>
+                                        </div>
+                                    );
+                                }) : (
+                                    <p className="text-sm text-gray-400 text-center py-8">—</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                            <div className="w-72 space-y-2.5">
+                                <div className="flex justify-between text-sm text-gray-600">
+                                    <span>Tổng dịch vụ</span>
+                                    <span className="font-medium tabular-nums">{fmtNum(totalSvc)} VND</span>
+                                </div>
+                                {bhytDeduct > 0 && (
+                                    <div className="flex justify-between text-sm text-gray-600">
+                                        <span>Giảm BHYT</span>
+                                        <span className="font-medium tabular-nums text-red-500">- {fmtNum(bhytDeduct)} VND</span>
+                                    </div>
+                                )}
+                                {vat > 0 && (
+                                    <div className="flex justify-between text-sm text-gray-600">
+                                        <span>Thuế VAT</span>
+                                        <span className="font-medium tabular-nums">{fmtNum(vat)} VND</span>
+                                    </div>
+                                )}
+
+                                <div className="border-t border-gray-200 pt-3">
+                                    <div className="flex justify-between items-start">
+                                      <span className="text-sm font-semibold text-gray-800">
+                                        Tổng cộng
+                                      </span>
+                                        <div className="text-right">
+                                            <p className="text-2xl font-bold text-gray-900 tabular-nums">
+                                                {fmtNum(grandTotal)}
+                                            </p>
+                                            <p className="text-sm font-semibold text-gray-500">VND</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <style>{`
-                .receipt-sheet { width: 210mm; min-height: 297mm; padding: 16mm 15mm; font-family: Arial, sans-serif; font-size: 12px; line-height: 1.35; }
-                .receipt-head { display:flex; justify-content:space-between; gap:20px; border-bottom:1.5px solid #111827; padding-bottom:10px; }
-                .clinic-block { display:flex; align-items:flex-start; gap:8px; } .clinic-mark { color:#087e8b; font-size:27px; font-weight:900; line-height:1; }
-                .clinic-block h2 { margin:0 0 3px; font-size:14px; } .clinic-block p, .receipt-heading p { margin:1px 0; font-size:11px; }
-                .receipt-heading { text-align:right; } .receipt-heading h1 { margin:0 0 6px; font-size:19px; letter-spacing:.5px; }
-                .patient-lines { display:grid; grid-template-columns:1.5fr .8fr .7fr; gap:7px 18px; padding:12px 0; border-bottom:1px solid #777; }
-                .patient-lines p { margin:0; } .patient-address { grid-column:1 / -1; }
-                .receipt-table { width:100%; margin-top:12px; border-collapse:collapse; } .receipt-table th,.receipt-table td { border:1px solid #4b5563; padding:5px 6px; }
-                .receipt-table th { background:#f5eebc; text-align:center; font-size:11px; } .receipt-table td { text-align:center; vertical-align:top; } .receipt-table td:nth-child(2) { text-align:left; }
-                .service-cell small { display:block; margin-top:2px; color:#596579; font-size:10px; }
-                .receipt-total { margin-top:9px; } .receipt-total p { margin:4px 0; } .receipt-total b { margin-left:16px; }
-                .receipt-footer { display:grid; grid-template-columns:1fr 1fr; margin-top:32px; text-align:center; } .receipt-footer div { display:flex; min-height:86px; flex-direction:column; gap:3px; } .receipt-footer span { font-size:10px; font-style:italic; } .receipt-footer b { margin-top:auto; }
-                @media screen and (max-width: 760px) { .receipt-sheet { width:100%; min-height:0; padding:22px 16px; } .receipt-head { display:block; } .receipt-heading { margin-top:14px; text-align:left; } .patient-lines { grid-template-columns:1fr; } .patient-address { grid-column:auto; } .receipt-table { font-size:10px; } .receipt-table th,.receipt-table td { padding:4px 3px; } }
-                @media print { @page { size:A4 portrait; margin:0; } body * { visibility:hidden !important; } #receipt-print-area, #receipt-print-area * { visibility:visible !important; } #receipt-print-area { position:absolute; left:0; top:0; width:210mm; min-height:297mm; margin:0; padding:16mm 15mm; box-shadow:none; } }
+                @media print { 
+                    @page { size:A4 portrait; margin:0; } 
+                    body * { visibility:hidden !important; } 
+                    #receipt-print-area, #receipt-print-area * { visibility:visible !important; } 
+                    #receipt-print-area { position:absolute; left:0; top:0; width:210mm; margin:0; padding:16mm 15mm; box-shadow:none; border:none; }
+                    .print\\:hidden { display: none !important; }
+                }
             `}</style>
         </CashierLayout>
     );

@@ -95,7 +95,7 @@ const statusConfig = (status) => {
 };
 
 const testStatusConfig = (test) => {
-    if (test?.status === 'COMPLETED' || test?.pdfUrl || test?.hasResult) {
+    if (test?.status === 'COMPLETED' || test?.pdfUrl) {
         return {
             label: 'Đã có kết quả',
             cls: 'border-green-200 bg-green-50 text-green-600',

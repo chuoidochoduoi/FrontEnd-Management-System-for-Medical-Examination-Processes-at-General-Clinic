@@ -7,6 +7,12 @@ import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { useLabQueue } from '@/hooks/useLabQueue';
 import { ROUTES } from '@/constants/routes';
 
+const todayLocalIso = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 10);
+};
+
 /* ── Status config ── */
 const STATUS = {
     // Backend TestRequestStatus enum values
@@ -47,7 +53,7 @@ export default function LabQueuePage() {
 
     const [search,     setSearch]     = useState('');
     const [activeTab,  setActiveTab]  = useState('');
-    const [workDate,   setWorkDate]   = useState(new Date().toLocaleDateString('en-CA'));
+    const [workDate,   setWorkDate]   = useState(todayLocalIso);
     const [sort,       setSort]       = useState('newest');
 
     const handleTab = (key) => {

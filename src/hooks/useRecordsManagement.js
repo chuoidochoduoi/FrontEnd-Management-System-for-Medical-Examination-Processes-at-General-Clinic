@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 7;
 
 export function useRecordsManagement() {
     const [records, setRecords] = useState([]);

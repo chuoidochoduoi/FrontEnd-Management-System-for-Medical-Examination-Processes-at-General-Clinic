@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 7;
 
 // Map API status to UI status
 const STATUS_MAP = {

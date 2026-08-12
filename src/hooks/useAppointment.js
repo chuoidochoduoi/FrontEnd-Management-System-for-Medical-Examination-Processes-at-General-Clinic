@@ -13,7 +13,7 @@ const buildScheduledAt = (date, shiftId, shifts) => {
 
     const shift = shifts.find(s => s.id === shiftId || s.shiftId === shiftId);
     if (!shift) return null;
-    
+
     return `${year}-${month}-${day}T${shift.startTime}:00`;
 };
 
@@ -74,20 +74,55 @@ export function useAppointment() {
     // Fetch cấu hình ca trực (admin cấu hình giờ sáng/chiều) để không hard-code
     const fetchShifts = async () => {
         setShiftLoading(true);
+
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/shifts/active`);
-            if (res.ok) {
-                const data = await res.json();
-                const rawShifts = Array.isArray(data) ? data : (data.data ?? data.shifts ?? data.content ?? []);
-                setShifts(rawShifts.map(s => ({
-                    id: s.shiftId || s.id,
-                    name: s.name,
-                    startTime: s.startTime,
-                    endTime: s.endTime,
-                })));
+            const res = await fetch(
+                `${import.meta.env.VITE_API_URL}/api/v1/shifts/active`
+            );
+
+            if (!res.ok) {
+                throw new Error(
+                    `Không tải được ca khám (${res.status})`
+                );
             }
-        } catch {
-            // silent — shift hours are optional for display
+
+            const data = await res.json();
+
+            const rawShifts =
+                Array.isArray(data)
+                    ? data
+                    : (
+                        data.data ??
+                        data.shifts ??
+                        data.content ??
+                        []
+                    );
+
+            const mappedShifts = rawShifts.map(s => ({
+                id: s.shiftId || s.id,
+                name: s.name,
+                startTime: s.startTime,
+                endTime: s.endTime
+            }));
+
+            console.log(
+                'Shifts loaded:',
+                mappedShifts
+            );
+
+            setShifts(mappedShifts);
+
+        } catch (err) {
+            console.error(
+                'Load shifts error:',
+                err
+            );
+
+            setError(
+                err.message ||
+                'Không thể tải ca khám.'
+            );
+
         } finally {
             setShiftLoading(false);
         }
@@ -140,7 +175,7 @@ export function useAppointment() {
             // Chọn endpoint và method dựa trên trạng thái đăng nhập và hành động
             let endpoint = '';
             let method = 'POST';
-            
+
             if (formData.rescheduleApptId && isLoggedIn) {
                 endpoint = `${import.meta.env.VITE_API_URL}/api/v1/appointments/my/${formData.rescheduleApptId}`;
                 method = 'PUT';

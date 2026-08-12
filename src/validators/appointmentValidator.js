@@ -1,19 +1,80 @@
-// src/validators/appointmentValidator.js
+const PHONE_REGEX = /^(\+84|0)\d{9,10}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Regex phone cho cả VN (0...) và (+84...)
-const PHONE_REGEX = /^(\+84|0)[3|5|7|8|9][0-9]{8}$/;
+export function validateAppointment({
+                                        fullName,
+                                        phone,
+                                        email,
+                                        age,
+                                        gender,
+                                        selectedServices,
+                                        date,
+                                        shiftId,
+                                        timeSlot
+                                    }) {
+    if (!fullName?.trim()) {
+        return 'Vui lòng nhập họ và tên.';
+    }
 
-export function validateAppointment({ fullName, phone, age, gender, selectedServices, date, shiftId, timeSlot }) {
-    if (!fullName?.trim())               return 'Vui lòng nhập họ và tên.';
-    if (!phone)                          return 'Vui lòng nhập số điện thoại.';
-    if (!PHONE_REGEX.test(phone))        return 'Số điện thoại không hợp lệ (phải bắt đầu bằng 0 hoặc +84).';
-    if (!age)                            return 'Vui lòng nhập tuổi.';
-    if (isNaN(age) || age < 1 || age > 120) return 'Tuổi không hợp lệ.';
-    if (!gender)                         return 'Vui lòng chọn giới tính.';
-    if (!selectedServices?.length)       return 'Vui lòng chọn ít nhất một dịch vụ.';
-    if (!date)                           return 'Vui lòng chọn ngày khám.';
-    // Form hiện tại gửi mã ca làm việc; timeSlot chỉ được giữ để tương thích
-    // với các màn cũ đang dùng bộ kiểm tra này.
-    if (!shiftId && !timeSlot)           return 'Vui lòng chọn khung giờ.';
+    const normalizedPhone = phone?.trim() || '';
+    const normalizedEmail = email?.trim() || '';
+
+    // Chỉ cần một trong hai
+    if (!normalizedPhone && !normalizedEmail) {
+        return 'Vui lòng cung cấp số điện thoại hoặc email.';
+    }
+
+    // Nếu có số điện thoại thì validate số điện thoại
+    if (
+        normalizedPhone &&
+        !PHONE_REGEX.test(normalizedPhone)
+    ) {
+        return 'Số điện thoại không hợp lệ (phải bắt đầu bằng 0 hoặc +84).';
+    }
+
+    // Nếu có email thì validate email
+    if (
+        normalizedEmail &&
+        !EMAIL_REGEX.test(normalizedEmail)
+    ) {
+        return 'Email không hợp lệ.';
+    }
+
+    if (
+        age === null ||
+        age === undefined ||
+        age === ''
+    ) {
+        return 'Vui lòng nhập tuổi.';
+    }
+
+    const numericAge = Number(age);
+
+    if (
+        Number.isNaN(numericAge) ||
+        numericAge < 1 ||
+        numericAge > 120
+    ) {
+        return 'Tuổi không hợp lệ.';
+    }
+
+    if (!gender) {
+        return 'Vui lòng chọn giới tính.';
+    }
+
+    if (!selectedServices?.length) {
+        return 'Vui lòng chọn ít nhất một dịch vụ.';
+    }
+
+    if (!date) {
+        return 'Vui lòng chọn ngày khám.';
+    }
+
+    // Form hiện tại gửi mã ca làm việc;
+    // timeSlot giữ để tương thích màn cũ
+    if (!shiftId && !timeSlot) {
+        return 'Vui lòng chọn khung giờ.';
+    }
+
     return null;
 }

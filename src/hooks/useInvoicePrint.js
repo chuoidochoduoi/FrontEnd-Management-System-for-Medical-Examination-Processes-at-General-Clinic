@@ -3,19 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = () => ({ Authorization: `Bearer ${get('token')}` });
 
-/**
- * Fetches a single invoice's detail for the cashier module.
- *
- * GET /api/cashier/invoices/:id
- *
- * @param {string|number} id - invoice id (from route param)
- * @returns {{
- *   invoice: object|null,
- *   loading: boolean,
- *   error: Error|null,
- *   reload: () => void,
- * }}
- */
+/** Loads the complete cashier receipt prepared by the backend. */
 export function useInvoicePrint(id) {
     const [invoice, setInvoice] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -30,52 +18,52 @@ export function useInvoicePrint(id) {
 
         setLoading(true);
         setError(null);
-
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/invoices/${id}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/invoices/${id}/print`, {
                 headers: bearer()
             });
-
             if (res.status === 404) {
                 setInvoice(null);
-                setError(null);
                 return;
             }
-
             if (!res.ok) {
-                throw new Error(`Không thể tải hoá đơn (HTTP ${res.status})`);
+                throw new Error(`Không thể tải phiếu thu (HTTP ${res.status})`);
             }
 
             const data = await res.json();
-            // Map API response to print format
             setInvoice({
                 id: data.invoiceId,
                 code: data.invoiceCode,
-                patientName: data.customerName,
-                patientCode: data.customerCode || '—',
-                address: data.address || '',
-                dob: data.dob || '',
-                bhytCode: data.bhytCode || '',
-                status: data.status?.toLowerCase() || 'pending',
+                receiptNumber: data.receiptNumber || data.invoiceCode,
+                patientName: data.patientName || '—',
+                patientCode: data.patientCode || '—',
+                phone: data.patientPhone || '—',
+                address: data.patientAddress || '—',
+                dob: data.dateOfBirth || '—',
+                gender: data.gender || '—',
+                bhytCode: data.bhytCode || '—',
+                status: 'paid',
                 paymentMethod: data.paymentMethod || 'Tiền mặt',
-                clinicName: data.clinicName || 'Phòng khám đa khoa',
-                taxCode: data.taxCode || '',
-                hotline: data.hotline || '',
-                clinicAddress: data.clinicAddress || '',
-                symbol: data.symbol || '01/VP-DK',
-                issuedAt: data.issueDate,
-                totalServices: data.subtotal,
-                bhytDeduct: data.discount,
-                vat: data.tax,
-                grandTotal: data.totalAmount,
-                inWords: data.note || '',
-                items: (data.items || []).map(item => ({
+                cashierName: data.cashierName || '—',
+                issuedAt: data.issuedAt,
+                paidAt: data.paidAt,
+                totalServices: data.subtotal || 0,
+                bhytDeduct: data.bhytAmount || 0,
+                vat: data.tax || 0,
+                grandTotal: data.totalAmount || 0,
+                paidAmount: data.paidAmount || 0,
+                balance: data.balance || 0,
+                note: data.note || '',
+                items: (data.items || []).map((item) => ({
                     id: item.itemId,
-                    name: item.serviceName || item.itemName || 'Dịch vụ',
-                    category: item.category || '',
-                    qty: item.quantity,
-                    basePrice: item.unitPrice,
-                    bhytRate: item.bhytRate
+                    name: item.serviceName || item.serviceSnapshot || 'Dịch vụ',
+                    code: item.serviceCodeSnapshot || '—',
+                    qty: item.quantity || 1,
+                    basePrice: item.unitPrice || 0,
+                    lineTotal: item.lineTotal || 0,
+                    bhytRate: item.bhytRate || 0,
+                    bhytDeductAmount: item.bhytAmount || 0,
+                    patientPay: item.patientAmount || 0
                 }))
             });
         } catch (err) {

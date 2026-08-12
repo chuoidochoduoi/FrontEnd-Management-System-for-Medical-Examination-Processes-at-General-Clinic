@@ -1,428 +1,1501 @@
 // src/pages/patient/VisitDetailPage.jsx
-import { useState, useEffect } from 'react';
+
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
+import {
+    ArrowLeft,
+    ChevronRight,
+    FileText,
+    FlaskConical,
+    HeartPulse,
+    Printer,
+    Star,
+    Stethoscope,
+    X,
+} from 'lucide-react';
+
 import PatientLayout from '@/components/layout/CustomerLayout';
 import { useVisitDetail } from '@/hooks/useMedicalHistory';
 import { ROUTES } from '@/constants/routes';
 
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const formatDateTime = (value) => {
+    if (!value) return '-';
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return date.toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    });
+};
+
+const formatDate = (value) => {
+    if (!value) return '-';
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return date.toLocaleDateString('vi-VN');
+};
+
+const statusConfig = (status) => {
+    switch (status) {
+        case 'COMPLETED':
+            return {
+                label: 'Đã hoàn thành',
+                cls: 'border-green-200 bg-green-50 text-green-600',
+            };
+
+        case 'IN_PROGRESS':
+            return {
+                label: 'Đang thực hiện',
+                cls: 'border-blue-200 bg-blue-50 text-blue-600',
+            };
+
+        case 'WAITING_FOR_TEST':
+            return {
+                label: 'Chờ kết quả CLS',
+                cls: 'border-purple-200 bg-purple-50 text-purple-600',
+            };
+
+        case 'TEST_DONE':
+            return {
+                label: 'Đã có kết quả',
+                cls: 'border-emerald-200 bg-emerald-50 text-emerald-600',
+            };
+
+        case 'CANCELLED':
+            return {
+                label: 'Đã hủy',
+                cls: 'border-red-200 bg-red-50 text-red-500',
+            };
+
+        default:
+            return {
+                label: status || 'Đang xử lý',
+                cls: 'border-gray-200 bg-gray-50 text-gray-500',
+            };
+    }
+};
+
+const testStatusConfig = (test) => {
+    if (test?.status === 'COMPLETED' || test?.pdfUrl || test?.hasResult) {
+        return {
+            label: 'Đã có kết quả',
+            cls: 'border-green-200 bg-green-50 text-green-600',
+        };
+    }
+
+    if (test?.status === 'IN_PROGRESS') {
+        return {
+            label: 'Đang xử lý',
+            cls: 'border-blue-200 bg-blue-50 text-blue-600',
+        };
+    }
+
+    if (test?.status === 'BLOCKED') {
+        return {
+            label: 'Bước tiếp theo',
+            cls: 'border-gray-200 bg-gray-50 text-gray-500',
+        };
+    }
+
+    return {
+        label: 'Đang chờ',
+        cls: 'border-orange-200 bg-orange-50 text-orange-600',
+    };
+};
+
+/* =========================================================
+   SMALL COMPONENTS
+========================================================= */
+
+function StatusBadge({ status }) {
+    const cfg = statusConfig(status);
+
+    return (
+        <span
+            className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-medium ${cfg.cls}`}
+        >
+            {cfg.label}
+        </span>
+    );
+}
+
+function SummaryItem({ label, value }) {
+    return (
+        <div className="min-w-0 border-r border-gray-100 pr-5 last:border-r-0">
+            <p className="mb-1 text-xs text-gray-400">
+                {label}
+            </p>
+
+            <p className="truncate text-sm font-semibold text-gray-900">
+                {value ?? '-'}
+            </p>
+        </div>
+    );
+}
+
+/* =========================================================
+   EXAMINATION LIST ITEM
+========================================================= */
+
+function ExaminationItem({
+                             exam,
+                             index,
+                             active,
+                             onClick,
+                         }) {
+    const cfg = statusConfig(exam?.status);
+
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`w-full rounded-xl border p-3 text-left transition ${
+                active
+                    ? 'border-primary-400 bg-primary-50'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+        >
+            <div className="flex items-start gap-3">
+                <div
+                    className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                        active
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-primary-50 text-primary-500'
+                    }`}
+                >
+                    <Stethoscope size={17} />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                        <p className="truncate text-sm font-semibold text-gray-900">
+                            {index + 1}.{' '}
+                            {exam?.serviceName ||
+                                `Khám bệnh ${index + 1}`}
+                        </p>
+
+                        <ChevronRight
+                            size={15}
+                            className="mt-0.5 shrink-0 text-gray-400"
+                        />
+                    </div>
+
+                    <p className="mt-1 truncate text-xs text-gray-500">
+                        BS. {exam?.doctorName || '-'}
+                    </p>
+
+                    <span
+                        className={`mt-1.5 inline-flex rounded border px-2 py-0.5 text-[10px] font-medium ${cfg.cls}`}
+                    >
+                        {cfg.label}
+                    </span>
+                </div>
+            </div>
+        </button>
+    );
+}
+
+/* =========================================================
+   TEST LIST ITEM
+========================================================= */
+
+function TestItem({
+                      test,
+                      index,
+                      active,
+                      onClick,
+                  }) {
+    const cfg = testStatusConfig(test);
+
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`w-full rounded-xl border p-3 text-left transition ${
+                active
+                    ? 'border-primary-400 bg-primary-50'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+        >
+            <div className="flex items-start gap-3">
+                <div
+                    className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                        active
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-primary-50 text-primary-500'
+                    }`}
+                >
+                    <FlaskConical size={15} />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                        <p className="truncate text-xs font-semibold text-gray-900">
+                            {index + 1}. {test?.name || '-'}
+                        </p>
+
+                        <ChevronRight
+                            size={14}
+                            className="shrink-0 text-gray-400"
+                        />
+                    </div>
+
+                    <p className="mt-1 text-[11px] text-gray-400">
+                        {test?.performedAt
+                            ? formatDateTime(test.performedAt)
+                            : test?.createdAt
+                                ? formatDateTime(test.createdAt)
+                                : '-'}
+                    </p>
+
+                    <span
+                        className={`mt-1 inline-flex rounded border px-1.5 py-0.5 text-[9px] font-medium ${cfg.cls}`}
+                    >
+                        {cfg.label}
+                    </span>
+                </div>
+            </div>
+        </button>
+    );
+}
+
+/* =========================================================
+   EXAMINATION DETAIL
+========================================================= */
+
+function ExaminationDetail({ exam }) {
+    if (!exam) {
+        return (
+            <div className="flex min-h-[300px] items-center justify-center rounded-xl border border-gray-200 bg-white">
+                <p className="text-sm text-gray-400">
+                    Không có hồ sơ khám bệnh.
+                </p>
+            </div>
+        );
+    }
+
+    const cfg = statusConfig(exam.status);
+
+    return (
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+
+            {/* HEADER */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
+                <div className="flex items-center gap-3">
+                    <h2 className="text-sm font-bold uppercase text-gray-900">
+                        {exam.serviceName || 'Khám bệnh'}
+                    </h2>
+
+                    <span
+                        className={`rounded border px-2 py-0.5 text-[10px] font-medium ${cfg.cls}`}
+                    >
+                        {cfg.label}
+                    </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400">
+                    <span>
+                        Bác sĩ:{' '}
+                        <strong className="font-medium text-gray-700">
+                            {exam.doctorName || '-'}
+                        </strong>
+                    </span>
+
+                    {(exam.startedAt ||
+                        exam.completedAt) && (
+                        <span>
+                            Thời gian:{' '}
+                            <strong className="font-medium text-gray-700">
+                                {exam.startedAt
+                                    ? new Date(
+                                        exam.startedAt
+                                    ).toLocaleTimeString(
+                                        'vi-VN',
+                                        {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        }
+                                    )
+                                    : '-'}
+                                {' - '}
+                                {exam.completedAt
+                                    ? new Date(
+                                        exam.completedAt
+                                    ).toLocaleTimeString(
+                                        'vi-VN',
+                                        {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        }
+                                    )
+                                    : '-'}
+                            </strong>
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            {/* MAIN INFORMATION */}
+            <div className="grid grid-cols-1 divide-y divide-gray-100 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+
+                {/* Symptoms + Clinical */}
+                <div className="space-y-5 p-5">
+                    <div>
+                        <p className="mb-2 text-xs font-semibold text-gray-400">
+                            Triệu chứng
+                        </p>
+
+                        <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                            {exam.symptoms ||
+                                exam.chiefComplaint ||
+                                '-'}
+                        </p>
+                    </div>
+
+                    <div>
+                        <p className="mb-2 text-xs font-semibold text-gray-400">
+                            Kết quả lâm sàng
+                        </p>
+
+                        <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                            {exam.clinicalResult ||
+                                exam.clinicalFindings ||
+                                '-'}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Diagnosis + Conclusion */}
+                <div className="space-y-5 p-5">
+                    <div>
+                        <p className="mb-2 text-xs font-semibold text-gray-400">
+                            Chẩn đoán
+                        </p>
+
+                        {exam?.diagnoses?.length > 0 ? (
+                            <div className="space-y-2">
+                                {exam.diagnoses.map(
+                                    (diagnosis, index) => (
+                                        <div
+                                            key={`${diagnosis.code}-${index}`}
+                                            className="flex items-start gap-2"
+                                        >
+                                            <span className="shrink-0 rounded bg-primary-50 px-2 py-1 text-[10px] font-medium text-primary-600">
+                                                {diagnosis.code ||
+                                                    '-'}
+                                            </span>
+
+                                            <p className="pt-0.5 text-sm text-gray-700">
+                                                {diagnosis.label ||
+                                                    diagnosis.codeName ||
+                                                    '-'}
+                                            </p>
+                                        </div>
+                                    )
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-500">
+                                {exam.diagnosis || '-'}
+                            </p>
+                        )}
+                    </div>
+
+                    <div>
+                        <p className="mb-2 text-xs font-semibold text-gray-400">
+                            Kết luận và điều trị
+                        </p>
+
+                        <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                            {exam.treatmentPlan ||
+                                exam.conclusion ||
+                                '-'}
+                        </p>
+
+                        {(exam.followUpNote ||
+                            exam.patientInstruction) && (
+                            <div className="mt-3 border-l-2 border-gray-300 pl-3">
+                                <p className="mb-1 text-xs font-semibold text-gray-700">
+                                    ▲ Hướng dẫn theo dõi /
+                                    tái khám
+                                </p>
+
+                                <p className="whitespace-pre-wrap text-xs italic leading-5 text-gray-500">
+                                    {exam.followUpNote ||
+                                        exam.patientInstruction}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Prescription */}
+                <div className="p-5">
+                    <p className="mb-3 text-xs font-semibold text-gray-400">
+                        Đơn thuốc
+                    </p>
+
+                    {exam?.prescriptionItems?.length >
+                    0 ? (
+                        <div className="space-y-3">
+                            {exam.prescriptionItems.map(
+                                (item, index) => (
+                                    <div
+                                        key={index}
+                                        className="flex gap-3"
+                                    >
+                                        <span className="text-xs font-bold text-gray-500">
+                                            {index + 1}.
+                                        </span>
+
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-semibold text-gray-800">
+                                                {item.medicineName ||
+                                                    '-'}
+                                            </p>
+
+                                            <p className="mt-0.5 text-xs italic text-gray-500">
+                                                {item.note ||
+                                                    item.instruction ||
+                                                    '-'}
+                                            </p>
+                                        </div>
+
+                                        <p className="shrink-0 text-xs text-gray-400">
+                                            {item.quantity
+                                                ? `${item.quantity} ${item.unit || ''}`
+                                                : ''}
+                                        </p>
+                                    </div>
+                                )
+                            )}
+                        </div>
+                    ) : exam.prescription ? (
+                        <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                            {exam.prescription}
+                        </p>
+                    ) : (
+                        <p className="text-sm text-gray-400">
+                            Không có đơn thuốc
+                        </p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* =========================================================
+   TEST DETAIL
+========================================================= */
+
+function TestDetail({
+                        test,
+                        onOpenPdf,
+                    }) {
+    if (!test) {
+        return (
+            <div className="flex min-h-[250px] items-center justify-center rounded-xl border border-gray-200 bg-white">
+                <p className="text-sm text-gray-400">
+                    Không có kết quả cận lâm sàng.
+                </p>
+            </div>
+        );
+    }
+
+    const cfg = testStatusConfig(test);
+
+    return (
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+
+            {/* HEADER */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
+                <div className="flex items-center gap-3">
+                    <h2 className="text-sm font-bold uppercase text-gray-900">
+                        {test.name || 'Cận lâm sàng'}
+                    </h2>
+
+                    <span
+                        className={`rounded border px-2 py-0.5 text-[10px] font-medium ${cfg.cls}`}
+                    >
+                        {cfg.label}
+                    </span>
+                </div>
+            </div>
+
+            <div className="p-5">
+
+                {/* INFO */}
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-5">
+                    <div>
+                        <p className="mb-1 text-xs text-gray-400">
+                            Phòng thực hiện
+                        </p>
+
+                        <p className="text-sm font-medium text-gray-800">
+                            {test.departmentName || '-'}
+                        </p>
+                    </div>
+
+                    <div className="md:col-span-1">
+                        <p className="mb-1 text-xs text-gray-400">
+                            Kết luận
+                        </p>
+
+                        <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                            {test.conclusion || '-'}
+                        </p>
+                    </div>
+
+                    <div>
+                        <p className="mb-1 text-xs text-gray-400">
+                            Mã mẫu
+                        </p>
+
+                        <p className="text-sm font-medium text-gray-800">
+                            {test.sampleId || '-'}
+                        </p>
+
+                        {(test.sampleType || test.sampleStatus) && (
+                            <p className="mt-1 text-xs text-gray-400">
+                                {[test.sampleType, test.sampleStatus]
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                            </p>
+                        )}
+                    </div>
+
+                    <div>
+                        <p className="mb-1 text-xs text-gray-400">
+                            Bác sĩ/KTV thực hiện
+                        </p>
+
+                        <p className="text-sm font-medium text-gray-800">
+                            {test.performedBy || '-'}
+                        </p>
+                    </div>
+
+                    <div>
+                        <p className="mb-1 text-xs text-gray-400">
+                            Thời gian thực hiện
+                        </p>
+
+                        <p className="text-sm font-medium text-gray-800">
+                            {test.performedAt
+                                ? formatDateTime(
+                                    test.performedAt
+                                )
+                                : '-'}
+                        </p>
+                    </div>
+                </div>
+
+                {/* STRUCTURED RESULTS */}
+                {test?.results?.length > 0 && (
+                    <div className="mt-5 grid grid-cols-2 overflow-hidden rounded-xl border border-gray-200 sm:grid-cols-3 xl:grid-cols-6">
+                        {test.results.map(
+                            (result, index) => {
+                                const abnormal =
+                                    result.assessment &&
+                                    result.assessment.toLowerCase() !==
+                                    'normal';
+
+                                return (
+                                    <div
+                                        key={index}
+                                        className="border-b border-r border-gray-100 px-4 py-3"
+                                    >
+                                        <p className="text-[10px] font-semibold uppercase text-gray-400">
+                                            {result.name ||
+                                                '-'}
+                                        </p>
+
+                                        <p
+                                            className={`mt-1 text-sm font-semibold ${
+                                                abnormal
+                                                    ? 'text-red-500'
+                                                    : 'text-gray-800'
+                                            }`}
+                                        >
+                                            {result.result ||
+                                                '-'}{' '}
+                                            <span className="text-xs font-normal text-gray-400">
+                                                {result.unit ||
+                                                    ''}
+                                            </span>
+                                        </p>
+
+                                        {result.referenceRange && (
+                                            <p className="mt-0.5 text-[10px] text-gray-400">
+                                                {
+                                                    result.referenceRange
+                                                }
+                                            </p>
+                                        )}
+                                    </div>
+                                );
+                            }
+                        )}
+                    </div>
+                )}
+
+                {/* PDF */}
+                {test.pdfUrl && (
+                    <div className="mt-5">
+                        <button
+                            type="button"
+                            onClick={() =>
+                                onOpenPdf(test.pdfUrl)
+                            }
+                            className="inline-flex h-10 items-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-medium text-white transition hover:bg-gray-700"
+                        >
+                            <FileText size={16} />
+                            Xem trước phiếu kết quả PDF
+                        </button>
+                    </div>
+                )}
+
+                {!test.pdfUrl &&
+                    !test?.results?.length && (
+                        <div className="mt-5 rounded-xl border border-dashed border-gray-200 p-5 text-center">
+                            <p className="text-sm text-gray-400">
+                                Chưa có dữ liệu kết quả.
+                            </p>
+                        </div>
+                    )}
+            </div>
+        </div>
+    );
+}
+
+/* =========================================================
+   MAIN
+========================================================= */
+
 export default function VisitDetailPage() {
-    const { id }   = useParams();
+    const { id } = useParams();
     const navigate = useNavigate();
-    const { t }    = useTranslation('medicalHistory');
-    const { visit, loading, error, fetchVisit, rateVisit } = useVisitDetail(id);
-    const [activeTest, setActiveTest] = useState(0);
-    const [activeExam, setActiveExam] = useState(0);
-    const [previewPdf, setPreviewPdf] = useState('');
+    const { t } = useTranslation(
+        'medicalHistory'
+    );
+
+    const {
+        visit,
+        loading,
+        error,
+        fetchVisit,
+        rateVisit,
+    } = useVisitDetail(id);
+
+    const [activeExam, setActiveExam] =
+        useState(0);
+
+    const [activeTest, setActiveTest] =
+        useState(0);
+
+    const [previewPdf, setPreviewPdf] =
+        useState('');
+
+    const [showRating, setShowRating] =
+        useState(false);
+
+    useEffect(() => () => {
+        if (previewPdf?.startsWith('blob:')) URL.revokeObjectURL(previewPdf);
+    }, [previewPdf]);
+
+    useEffect(() => {
+        fetchVisit();
+    }, [id]);
+
+    const examinations =
+        visit?.examinations ?? [];
+
+    const tests =
+        visit?.tests ?? [];
+
+    const selectedExam =
+        examinations[activeExam] ?? null;
+
+    const selectedTest =
+        tests[activeTest] ?? null;
+
+    useEffect(() => {
+        if (activeExam >= examinations.length) {
+            setActiveExam(0);
+        }
+    }, [examinations.length]);
+
+    useEffect(() => {
+        if (activeTest >= tests.length) {
+            setActiveTest(0);
+        }
+    }, [tests.length]);
+
+    const doctors = useMemo(() => {
+        const names = new Set();
+
+        examinations.forEach((exam) => {
+            if (exam?.doctorName) {
+                names.add(exam.doctorName);
+            }
+        });
+
+        tests.forEach((test) => {
+            if (test?.performedBy) {
+                names.add(test.performedBy);
+            }
+        });
+
+        return Array.from(names);
+    }, [examinations, tests]);
+
+    // Trang chi tiet phai tuan theo trang thai tong hop tu backend, thay vi
+    // tu suy doan tu PDF (PDF co the da tai len khi yeu cau chua duoc ky xong).
+    const completed = visit?.status === 'COMPLETED';
+
+    /* =====================================================
+       PDF
+    ===================================================== */
 
     const openPdfPreview = async (url) => {
         try {
-            const fullUrl = url.startsWith('http') ? url : `${import.meta.env.VITE_API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
-            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-            const response = await fetch(fullUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-            if (!response.ok) throw new Error('Không thể mở phiếu kết quả PDF');
-            setPreviewPdf(URL.createObjectURL(await response.blob()));
-        } catch (error) {
-            setError(error.message);
+            const fullUrl =
+                url.startsWith('http')
+                    ? url
+                    : `${import.meta.env.VITE_API_URL}${
+                        url.startsWith('/')
+                            ? ''
+                            : '/'
+                    }${url}`;
+
+            const token =
+                localStorage.getItem('token') ||
+                sessionStorage.getItem('token');
+
+            const response = await fetch(
+                fullUrl,
+                {
+                    headers: token
+                        ? {
+                            Authorization: `Bearer ${token}`,
+                        }
+                        : {},
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    'Không thể mở phiếu kết quả PDF'
+                );
+            }
+
+            const blob =
+                await response.blob();
+
+            setPreviewPdf(
+                URL.createObjectURL(blob)
+            );
+        } catch (err) {
+            console.error(err);
+            toast.error(err?.message || 'Không thể mở phiếu kết quả PDF');
         }
     };
 
     const closePdfPreview = () => {
-        if (previewPdf.startsWith('blob:')) URL.revokeObjectURL(previewPdf);
+        if (
+            previewPdf.startsWith('blob:')
+        ) {
+            URL.revokeObjectURL(
+                previewPdf
+            );
+        }
+
         setPreviewPdf('');
     };
-    const [showRating, setShowRating] = useState(false);
 
-    useEffect(() => { fetchVisit(); }, [id]);
+    /* =====================================================
+       RATING
+    ===================================================== */
 
-    if (loading) return (
-        <PatientLayout>
-            <p className="text-sm text-gray-400 text-center py-20">{t('visitDetail.errors.loadFailed')}</p>
-        </PatientLayout>
-    );
-
-    const tests        = visit?.tests ?? [];
-    const selectedTest = tests[activeTest];
-    const examinations = visit?.examinations ?? [];
-    const selectedExam = examinations[activeExam] ?? null;
-
-    /* ── reusable styles ── */
-    const sectionLabelCls = 'text-xs font-semibold text-gray-400 tracking-widest mb-3';
-    const boxCls          = 'border border-gray-200 rounded-xl p-4 bg-white';
-
-    /* ── Rating Modal ── */
     const RatingModal = () => {
-        const [score, setScore] = useState(5);
-        const [comment, setComment] = useState('');
-        const [submitting, setSubmitting] = useState(false);
+        const alreadyRated = Boolean(visit?.ratingScore);
+
+        const [score, setScore] = useState(
+            visit?.ratingScore || 5
+        );
+
+        const [comment, setComment] = useState(
+            visit?.ratingComment || ''
+        );
+
+        const [submitting, setSubmitting] =
+            useState(false);
+
+        const receptionistResponse =
+            visit?.receptionistResponse ||
+            visit?.managerResponse ||
+            '';
+
+        const responseAt =
+            visit?.receptionistRespondedAt ||
+            visit?.respondedAt ||
+            null;
+
+        const receptionistName =
+            visit?.receptionistName ||
+            visit?.respondedByName ||
+            'Lễ tân';
+
         const handleRate = async () => {
+            if (alreadyRated) {
+                return;
+            }
+
             setSubmitting(true);
-            const success = await rateVisit({ overallRating: score, comment });
+
+            const success = await rateVisit({
+                overallRating: score,
+                comment: comment.trim(),
+            });
+
             setSubmitting(false);
-            if (success) setShowRating(false);
+
+            if (success) {
+                setShowRating(false);
+            }
         };
+
+        const ratingText = {
+            1: 'Rất không hài lòng',
+            2: 'Không hài lòng',
+            3: 'Bình thường',
+            4: 'Hài lòng',
+            5: 'Tuyệt vời',
+        };
+
         return (
-            <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-xl text-center">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">Đánh giá dịch vụ</h3>
-                    <p className="text-sm text-gray-500 mb-6">Bạn cảm thấy hài lòng với lượt khám này chứ?</p>
-                    <div className="flex justify-center gap-2 mb-8">
-                        {[1, 2, 3, 4, 5].map(star => (
-                            <button key={star} onClick={() => setScore(star)}
-                                    className={`text-3xl transition-colors ${score >= star ? 'text-yellow-400' : 'text-gray-200 hover:text-yellow-200'}`}>
-                                ★
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+                onMouseDown={(e) => {
+                    if (e.target === e.currentTarget) {
+                        setShowRating(false);
+                    }
+                }}
+            >
+                <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+
+                    {/* ================= HEADER ================= */}
+                    <div className="flex items-start justify-between px-6 pt-6">
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-900">
+                                {alreadyRated
+                                    ? 'Đánh giá của bạn'
+                                    : 'Đánh giá lượt khám'}
+                            </h3>
+
+                            {!alreadyRated && (
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Bạn cảm thấy hài lòng với lượt khám này chứ?
+                                </p>
+                            )}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setShowRating(false)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+                        >
+                            ×
+                        </button>
+                    </div>
+
+                    {/* ================= CUSTOMER RATING ================= */}
+                    <div className="px-6 pb-6 pt-5">
+
+                        {/* STAR */}
+                        <div className="flex flex-wrap items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        disabled={alreadyRated}
+                                        onClick={() =>
+                                            !alreadyRated &&
+                                            setScore(star)
+                                        }
+                                        className={`text-3xl leading-none transition ${
+                                            score >= star
+                                                ? 'text-yellow-400'
+                                                : 'text-gray-200'
+                                        } ${
+                                            alreadyRated
+                                                ? 'cursor-default'
+                                                : 'hover:scale-110'
+                                        }`}
+                                    >
+                                        ★
+                                    </button>
+                                ))}
+                            </div>
+
+                            <span
+                                className={`text-sm font-semibold ${
+                                    score >= 4
+                                        ? 'text-green-600'
+                                        : score === 3
+                                            ? 'text-orange-500'
+                                            : 'text-red-500'
+                                }`}
+                            >
+                            {ratingText[score]} ({score}/5)
+                        </span>
+                        </div>
+
+                        {/* COMMENT */}
+                        <div className="mt-6">
+                            {alreadyRated ? (
+                                <>
+                                    <p className="mb-2 text-xs font-medium text-gray-500">
+                                        Nhận xét của bạn
+                                    </p>
+
+                                    <div className="min-h-[90px] rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                                        <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                                            {visit?.ratingComment?.trim()
+                                                ? visit.ratingComment
+                                                : 'Không có nhận xét.'}
+                                        </p>
+                                    </div>
+
+                                    {visit?.ratedAt && (
+                                        <p className="mt-2 text-xs text-gray-400">
+                                            Đánh giá lúc:{' '}
+                                            {new Date(
+                                                visit.ratedAt
+                                            ).toLocaleString(
+                                                'vi-VN'
+                                            )}
+                                        </p>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <div className="relative">
+                                    <textarea
+                                        value={comment}
+                                        onChange={(e) =>
+                                            setComment(
+                                                e.target.value.slice(
+                                                    0,
+                                                    500
+                                                )
+                                            )
+                                        }
+                                        placeholder="Nhận xét của bạn..."
+                                        rows={4}
+                                        className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 pb-8 text-sm outline-none transition placeholder:text-gray-400 focus:border-gray-400"
+                                    />
+
+                                        <span className="absolute bottom-3 right-4 text-xs text-gray-400">
+                                        {comment.length}/500
+                                    </span>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* ================= RECEPTIONIST RESPONSE ================= */}
+                    {receptionistResponse && (
+                        <div className="border-t border-gray-100 px-6 py-5">
+                            <p className="mb-3 text-sm font-semibold text-gray-900">
+                                Phản hồi của lễ tân
+                            </p>
+
+                            <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+
+                                <div className="flex items-start gap-3">
+
+                                    {/* Avatar */}
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white">
+                                        {receptionistName
+                                                ?.trim()
+                                                ?.charAt(0)
+                                                ?.toUpperCase() ||
+                                            'L'}
+                                    </div>
+
+                                    <div className="min-w-0 flex-1">
+
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <p className="text-sm font-semibold text-gray-900">
+                                                {receptionistName}
+                                            </p>
+
+                                            <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-600">
+                                            Lễ tân
+                                        </span>
+                                        </div>
+
+                                        {responseAt && (
+                                            <p className="mt-0.5 text-xs text-gray-400">
+                                                {new Date(
+                                                    responseAt
+                                                ).toLocaleString(
+                                                    'vi-VN'
+                                                )}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                                    {receptionistResponse}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ================= FOOTER ================= */}
+                    <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+
+                        <button
+                            type="button"
+                            onClick={() => setShowRating(false)}
+                            className="h-10 rounded-xl border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+                        >
+                            {alreadyRated ? 'Đóng' : 'Hủy'}
+                        </button>
+
+                        {!alreadyRated && (
+                            <button
+                                type="button"
+                                disabled={submitting}
+                                onClick={handleRate}
+                                className="h-10 rounded-xl bg-gray-900 px-6 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {submitting
+                                    ? 'Đang gửi...'
+                                    : 'Gửi đánh giá'}
                             </button>
-                        ))}
-                    </div>
-                    <div className="text-left mb-4">
-                        <textarea value={comment} onChange={e => setComment(e.target.value.slice(0,500))} placeholder="Nhận xét của bạn (không bắt buộc)" className="w-full border rounded-xl p-3 text-sm mb-3" rows={3} />
-                    </div>
-                    <div className="flex gap-3">
-                        <button onClick={() => setShowRating(false)}
-                                className="flex-1 h-10 border border-gray-200 text-sm font-medium text-gray-600 rounded-xl hover:bg-gray-50 transition-colors">
-                            Hủy
-                        </button>
-                        <button onClick={handleRate} disabled={submitting}
-                                className="flex-1 h-10 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-60">
-                            {submitting ? 'Đang gửi...' : 'Gửi đánh giá'}
-                        </button>
+                        )}
                     </div>
                 </div>
             </div>
         );
     };
 
+    /* =====================================================
+       LOADING
+    ===================================================== */
+
+    if (loading) {
+        return (
+            <PatientLayout>
+                <div className="flex min-h-[60vh] items-center justify-center">
+                    <p className="text-sm text-gray-400">
+                        Đang tải chi tiết lượt
+                        khám...
+                    </p>
+                </div>
+            </PatientLayout>
+        );
+    }
+
     return (
         <PatientLayout>
-            <div className="w-full max-w-7xl mx-auto space-y-6 px-1 pb-10">
+            <div className="w-full px-5 py-5 lg:px-6">
 
-                {/* Page header */}
-                <h1 className="text-sm font-bold text-gray-900 tracking-widest mb-4">
-                    {t('visitDetail.pageTitle')}
-                </h1>
+                {/* =================================================
+                    HEADER
+                ================================================= */}
 
-                {/* Back + actions */}
-                <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4 mb-5">
+                <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+
                     <div>
-                        <button onClick={() => navigate(ROUTES.CUSTOMER_VISIT_HISTORY)}
-                                className="text-xs text-gray-400 hover:text-primary-500 transition-colors flex items-center gap-1">
-                            ← {t('visitDetail.backBtn')}
+                        <h1 className="text-xl font-bold text-gray-900">
+                            Chi tiết lượt khám
+                        </h1>
+
+                        <button
+                            onClick={() =>
+                                navigate(
+                                    ROUTES.CUSTOMER_VISIT_HISTORY
+                                )
+                            }
+                            className="mt-2 flex items-center gap-1.5 text-xs font-medium text-primary-500 hover:text-primary-600"
+                        >
+                            <ArrowLeft size={14} />
+
+                            Quay lại danh sách
                         </button>
-                        <div className="flex items-center gap-x-3 gap-y-2 mt-3 flex-wrap">
-                            <p className="text-xs text-gray-400">
-                                {t('visitDetail.recordId')} <span className="font-semibold text-primary-500">{visit?.recordId}</span>
-                            </p>
-                            {visit?.appointmentDate && (
-                                <>
-                                    <span className="text-gray-200">•</span>
-                                    <p className="text-xs text-gray-400">
-                                        {t('visitDetail.appointmentDate')} {visit.appointmentDate}
-                                    </p>
-                                </>
-                            )}
-                            {visit?.doctorName && (
-                                <>
-                                    <span className="text-gray-200">•</span>
-                                    <p className="text-xs text-gray-400">
-                                        Bác sĩ khám: <span className="font-medium text-gray-700">{visit.doctorName}</span>
-                                    </p>
-                                </>
-                            )}
-                            {visit?.labDoctors?.length > 0 && (
-                                <>
-                                    <span className="text-gray-200">•</span>
-                                    <p className="text-xs text-gray-400">
-                                        BS xét nghiệm: <span className="font-medium text-gray-700">{visit.labDoctors.join(', ')}</span>
-                                    </p>
-                                </>
-                            )}
-                            {visit?.status && (
-                                <>
-                                    <span className="text-gray-200">•</span>
-                                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${
-                                        visit.status === 'COMPLETED' ? 'bg-green-50 text-green-600 border border-green-200'
-                                        : 'bg-blue-50 text-blue-600 border border-blue-200'
-                                    }`}>
-                                        {visit.status === 'COMPLETED' ? 'Đã hoàn thành' : 'Đang xử lý'}
-                                    </span>
-                                </>
-                            )}
-                        </div>
                     </div>
+
                     <div className="flex items-center gap-2">
-                        {visit?.status === 'COMPLETED' && !visit?.ratingScore && (
-                            <button onClick={() => setShowRating(true)} className="px-4 h-9 border border-gray-300 text-sm text-gray-600 rounded-xl hover:border-gray-500 transition-colors">
-                                Đánh giá
-                            </button>
-                        )}
-                        {visit?.ratingScore && (
-                            <div className="px-4 h-9 flex items-center gap-1 border border-yellow-200 bg-yellow-50 rounded-xl">
-                                <span className="text-sm font-semibold text-yellow-600">{visit.ratingScore}</span>
-                                <span className="text-yellow-400 text-sm">★</span>
+                        {completed && (
+                                <button
+                                    onClick={() =>
+                                        setShowRating(
+                                            true
+                                        )
+                                    }
+                                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-gray-200 px-4 text-sm text-gray-600 transition hover:border-gray-400"
+                                >
+                                    <Star size={16} />
+                                    {visit?.ratingScore ? 'Xem đánh giá' : 'Đánh giá'}
+                                </button>
+                            )}
+
+                        <button
+                            disabled={!selectedExam}
+                            onClick={() => selectedExam && navigate(
+                                ROUTES.DOCTOR_MEDICAL_RECORD_PRINT.replace(':recordId', selectedExam.recordId),
+                                { state: { record: selectedExam, patient: {
+                                    fullName: visit?.patientName, dateOfBirth: visit?.patientDateOfBirth,
+                                    gender: visit?.patientGender, phone: visit?.patientPhone, address: visit?.patientAddress,
+                                }, serviceName: selectedExam.serviceName, completedAt: selectedExam.completedAt,
+                                    departmentName: selectedExam.departmentName } }
+                            )}
+                            className="inline-flex h-10 items-center gap-2 rounded-xl bg-gray-900 px-5 text-sm font-medium text-white transition hover:bg-gray-700"
+                        >
+                            <Printer size={16} />
+
+                            In phiếu
+                        </button>
+                    </div>
+                </div>
+
+                {/* =================================================
+                    SUMMARY
+                ================================================= */}
+
+                <div className="mb-5 grid grid-cols-2 gap-5 rounded-xl border border-gray-200 bg-white px-6 py-5 sm:grid-cols-3 xl:grid-cols-6">
+
+                    <SummaryItem
+                        label="Mã lượt khám"
+                        value={
+                            visit?.visitCode ||
+                            visit?.recordCode ||
+                            visit?.recordId ||
+                            id
+                        }
+                    />
+
+                    <SummaryItem
+                        label="Ngày khám"
+                        value={
+                            visit?.appointmentDate ||
+                            formatDate(
+                                visit?.checkInTime
+                            )
+                        }
+                    />
+
+                    <div className="border-r border-gray-100 pr-5">
+                        <p className="mb-1 text-xs text-gray-400">
+                            Trạng thái
+                        </p>
+
+                        <StatusBadge
+                            status={
+                                completed
+                                    ? 'COMPLETED'
+                                    : visit?.status
+                            }
+                        />
+                    </div>
+
+                    <SummaryItem
+                        label="Số hồ sơ khám"
+                        value={
+                            examinations.length
+                        }
+                    />
+
+                    <SummaryItem
+                        label="Số kết quả cận lâm sàng"
+                        value={tests.length}
+                    />
+
+                    <SummaryItem
+                        label="Bác sĩ tham gia"
+                        value={doctors.length}
+                    />
+                </div>
+
+                {/* =================================================
+                    EXAMINATION SECTION
+                ================================================= */}
+
+                <div className="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
+
+                    {/* EXAM LIST */}
+                    <aside className="rounded-xl border border-gray-200 bg-white p-4">
+
+                        <div className="mb-3 flex items-center gap-2">
+                            <HeartPulse
+                                size={16}
+                                className="text-primary-500"
+                            />
+
+                            <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                                Danh sách hồ sơ khám (
+                                {
+                                    examinations.length
+                                }
+                                )
+                            </h2>
+                        </div>
+
+                        {examinations.length >
+                        0 ? (
+                            <>
+                                <div className="max-h-[340px] space-y-2 overflow-y-auto pr-1">
+                                    {examinations.map(
+                                        (
+                                            exam,
+                                            index
+                                        ) => (
+                                            <ExaminationItem
+                                                key={
+                                                    exam.recordId ||
+                                                    index
+                                                }
+                                                exam={
+                                                    exam
+                                                }
+                                                index={
+                                                    index
+                                                }
+                                                active={
+                                                    activeExam ===
+                                                    index
+                                                }
+                                                onClick={() =>
+                                                    setActiveExam(
+                                                        index
+                                                    )
+                                                }
+                                            />
+                                        )
+                                    )}
+                                </div>
+
+                                {examinations.length >
+                                    3 && (
+                                        <p className="mt-3 text-center text-[11px] text-gray-400">
+                                            ↓ Cuộn để xem
+                                            thêm
+                                        </p>
+                                    )}
+                            </>
+                        ) : (
+                            <div className="rounded-xl border border-dashed border-gray-200 p-5 text-center text-sm text-gray-400">
+                                Không có hồ sơ khám
+                                bệnh.
                             </div>
                         )}
-                        <button onClick={() => window.print()}
-                                className="px-4 h-9 bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium rounded-xl transition-colors">
-                            {t('visitDetail.printBtn')}
-                        </button>
-                    </div>
+                    </aside>
+
+                    {/* EXAM DETAIL */}
+                    <ExaminationDetail
+                        exam={selectedExam}
+                    />
                 </div>
 
-                {/* ── Triage ── */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-5">
-                    <div><p className="text-xs text-gray-400 mb-1">Mã hồ sơ</p><p className="text-sm font-semibold text-gray-800 break-all">{visit?.recordCode || visit?.recordId || '-'}</p></div>
-                    <div><p className="text-xs text-gray-400 mb-1">Ngày khám</p><p className="text-sm font-semibold text-gray-800">{visit?.appointmentDate || '-'}</p></div>
-                    <div><p className="text-xs text-gray-400 mb-1">Bác sĩ khám</p><p className="text-sm font-semibold text-gray-800">{visit?.doctorName || '-'}</p></div>
-                    <div><p className="text-xs text-gray-400 mb-1">Bác sĩ cận lâm sàng</p><p className="text-sm font-semibold text-gray-800">{visit?.labDoctors?.length ? visit.labDoctors.join(', ') : '-'}</p></div>
-                    <div><p className="text-xs text-gray-400 mb-1">Đánh giá</p><p className="text-sm font-semibold text-gray-800">{visit?.ratingScore ? `${visit.ratingScore}/5` : '-'}</p></div>
+                {/* =================================================
+                    TEST SECTION
+                ================================================= */}
+
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
+
+                    {/* TEST LIST */}
+                    <aside className="rounded-xl border border-gray-200 bg-white p-4">
+
+                        <div className="mb-3 flex items-center gap-2">
+                            <FlaskConical
+                                size={16}
+                                className="text-primary-500"
+                            />
+
+                            <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                                Kết quả cận lâm sàng (
+                                {tests.length})
+                            </h2>
+                        </div>
+
+                        {tests.length > 0 ? (
+                            <>
+                                <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
+                                    {tests.map(
+                                        (
+                                            test,
+                                            index
+                                        ) => (
+                                            <TestItem
+                                                key={
+                                                    test.id ||
+                                                    test.testRequestId ||
+                                                    index
+                                                }
+                                                test={
+                                                    test
+                                                }
+                                                index={
+                                                    index
+                                                }
+                                                active={
+                                                    activeTest ===
+                                                    index
+                                                }
+                                                onClick={() =>
+                                                    setActiveTest(
+                                                        index
+                                                    )
+                                                }
+                                            />
+                                        )
+                                    )}
+                                </div>
+
+                                {tests.length >
+                                    4 && (
+                                        <p className="mt-3 text-center text-[11px] text-gray-400">
+                                            ↓ Cuộn để xem
+                                            thêm
+                                        </p>
+                                    )}
+                            </>
+                        ) : (
+                            <div className="rounded-xl border border-dashed border-gray-200 p-5 text-center text-sm text-gray-400">
+                                Không có kết quả cận
+                                lâm sàng.
+                            </div>
+                        )}
+                    </aside>
+
+                    {/* TEST DETAIL */}
+                    <TestDetail
+                        test={selectedTest}
+                        onOpenPdf={
+                            openPdfPreview
+                        }
+                    />
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-xl p-5">
-                    <p className={sectionLabelCls}>CÁC DỊCH VỤ KHÁM BỆNH ({examinations.length})</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                        {examinations.map((exam, index) => <button key={exam?.recordId || index} onClick={() => setActiveExam(index)} className={`text-left rounded-xl border p-4 transition-colors ${activeExam === index ? 'border-primary-400 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                            <p className="text-sm font-semibold text-gray-900">{exam?.serviceName || `Khám bệnh ${index + 1}`}</p>
-                            <p className="text-xs text-gray-500 mt-1">Bác sĩ: {exam?.doctorName || '-'}</p>
-                            <p className="text-xs text-gray-500 mt-1">Trạng thái: {exam?.status === 'COMPLETED' ? 'Đã hoàn thành' : 'Đang xử lý'}</p>
-                        </button>)}
-                        {examinations.length === 0 && <div className="rounded-xl border border-dashed border-gray-200 p-4 text-sm text-gray-400">-</div>}
-                    </div>
-                </div>
+                {/* =================================================
+                    RATING
+                ================================================= */}
 
                 {visit?.ratingScore && (
-                    <div className="border border-gray-200 rounded-xl p-5 bg-white mb-4">
-                        <p className={sectionLabelCls}>{t('visitDetail.feedback.title')}</p>
-
-                        <div className="space-y-4">
-                            {/* Rating summary: score, date, status */}
-                            <div className="flex flex-wrap gap-4 items-center justify-between border-b border-gray-100 pb-3">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-yellow-400 text-lg">★★★★★</span>
-                                    <span className="font-semibold text-gray-800">{visit.ratingScore}/5</span>
-                                </div>
-                                <div className="flex flex-wrap gap-4 items-center text-xs">
-                                    {visit.ratedAt && (
-                                        <span className="text-gray-400">
-                                            {t('visitDetail.feedback.ratingDate')}:{' '}
-                                            {new Date(visit.ratedAt).toLocaleDateString('vi-VN')}
-                                        </span>
-                                    )}
-                                    {visit.feedbackStatus && (
-                                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                            visit.feedbackStatus === 'RESPONDED' ? 'bg-green-50 text-green-600 border border-green-200'
-                                            : visit.feedbackStatus === 'CLOSED' ? 'bg-gray-100 text-gray-500 border border-gray-200'
-                                            : visit.feedbackStatus === 'WAITING_INTERNAL' ? 'bg-orange-50 text-orange-600 border border-orange-200'
-                                            : visit.feedbackStatus === 'IN_REVIEW' || visit.feedbackStatus === 'PROCESSING' ? 'bg-blue-50 text-blue-600 border border-blue-200'
-                                            : 'bg-gray-100 text-gray-500 border border-gray-200'
-                                        }`}>
-                                            {visit.feedbackStatus === 'RESPONDED' ? t('visitDetail.feedback.statusResponded')
-                                             : visit.feedbackStatus === 'CLOSED' ? t('visitDetail.feedback.statusClosed')
-                                             : visit.feedbackStatus === 'WAITING_INTERNAL' ? t('visitDetail.feedback.statusWaitingInternal')
-                                             : visit.feedbackStatus === 'IN_REVIEW' || visit.feedbackStatus === 'PROCESSING' ? t('visitDetail.feedback.statusInReview')
-                                             : t('visitDetail.feedback.statusNew')}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Contact requested indicator */}
-                            {visit.contactRequested && (
-                                <div className="text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg">
-                                    {t('visitDetail.feedback.contactRequested')}
-                                </div>
-                            )}
-
-                            {/* Customer comment */}
-                            <div>
-                                <p className="text-xs text-gray-400 mb-1">{t('visitDetail.feedback.commentLabel')}</p>
-                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{visit.ratingComment || t('visitDetail.feedback.noComment')}</p>
-                            </div>
-
-                            {/* Manager response */}
-                            <div>
-                                <p className="text-xs text-gray-400 mb-1">{t('visitDetail.feedback.responseLabel')}</p>
-                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{visit.managerResponse || t('visitDetail.feedback.noResponse')}</p>
-                                {visit.respondedAt && (
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        {t('visitDetail.feedback.responseDate')}:{' '}
-                                        {new Date(visit.respondedAt).toLocaleString('vi-VN')}
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Doctor explanation */}
-                            {visit.doctorExplanation && (
-                                <div>
-                                    <p className="text-xs text-gray-400 mb-1">{t('visitDetail.feedback.doctorExplanation')}</p>
-                                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{visit.doctorExplanation}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                <div className="border border-gray-200 rounded-xl p-5 bg-white mb-4">
-                    <p className={sectionLabelCls}>{t('visitDetail.triage.title')}</p>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                        <div>
-                            <p className="text-xs font-semibold text-gray-400 mb-2">{t('visitDetail.triage.symptoms')}</p>
-                            <div className={boxCls}>
-                                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedExam?.symptoms || '-'}</p>
-                            </div>
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-400 mb-2">{t('visitDetail.triage.clinicalResult')}</p>
-                            <div className={boxCls}>
-                                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedExam?.clinicalResult || '-'}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── Diagnosis + Treatment ── */}
-                <div className="border border-gray-200 rounded-xl p-5 bg-white mb-4">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div>
-                            <p className="text-xs font-semibold text-gray-400 mb-3">{t('visitDetail.diagnosis.title')}</p>
-                            {selectedExam?.diagnoses?.map((d, i) => (
-                                <div key={i} className="bg-gray-900 text-white rounded-lg px-4 py-3 mb-2">
-                                    <p className="text-xs text-gray-400">{d.code}</p>
-                                    <p className="text-sm font-semibold mt-0.5">{d.label}</p>
-                                </div>
-                            ))}
-                            {!selectedExam?.diagnoses?.length && <div className={boxCls}><p className="text-sm text-gray-500">-</p></div>}
-                        </div>
-                        <div>
-                            <p className="text-xs font-semibold text-gray-400 mb-3">{t('visitDetail.diagnosis.treatmentTitle')}</p>
-                            <p className="text-sm text-gray-700 leading-relaxed mb-3 whitespace-pre-wrap">{selectedExam?.treatmentPlan || '-'}</p>
-                            {(
-                                <div className="border-l-2 border-gray-300 pl-3">
-                                    <p className="text-xs font-bold text-gray-700 mb-1">▲ {t('visitDetail.diagnosis.followUp')}</p>
-                                    <p className="text-xs text-gray-600 italic leading-relaxed">{selectedExam?.followUpNote || '-'}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                
-                {/* ── Prescription ── */}
-                {(
-                    <div className="border border-gray-200 rounded-xl p-5 bg-white mb-4">
-                        <p className={sectionLabelCls}>🗒 {t('visitDetail.prescription.title')}</p>
-                        <p className="text-xs font-mono text-gray-700 leading-relaxed whitespace-pre-line">
-                            {selectedExam?.prescription || '-'}
-                        </p>
-                    </div>
-                )}
-
-                {/* ── Tests ── */}
-                {tests.length > 0 && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 border border-gray-200 rounded-xl p-5 bg-gray-50/40">
-                        {/* Sidebar list */}
-                        <div className="lg:col-span-4 xl:col-span-3">
-                            <p className="text-xs font-semibold text-gray-400 tracking-widest mb-2 uppercase">
-                                {t('visitDetail.tests.title')} ({tests.length})
+                    <div className="mt-5 rounded-xl border border-gray-200 bg-white p-5">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <p className="text-sm font-semibold text-gray-900">
+                                Đánh giá lượt khám
                             </p>
-                            <div className="space-y-1">
-                                {tests.map((test, i) => (
-                                    <button key={test.id || i} onClick={() => setActiveTest(i)}
-                                            className={`w-full text-left px-3 py-3 rounded-xl border transition-colors ${
-                                                i === activeTest
-                                                    ? 'border-primary-300 bg-primary-50'
-                                                    : 'border-gray-100 bg-white hover:border-gray-200'
-                                            }`}>
-                                        <p className="text-xs text-gray-400 break-all">Mã yêu cầu: {test.id || '-'}</p>
-                                        <p className="text-sm font-semibold text-gray-800 mt-0.5">{i+1}. {test.name || '-'}</p>
-                                        {test.hasAbnormal
-                                            ? <p className="text-xs text-orange-500 mt-0.5">▲ {t('visitDetail.tests.abnormal')}</p>
-                                            : <p className="text-xs text-gray-400 mt-0.5">{t('visitDetail.tests.normal')}</p>}
-                                    </button>
-                                ))}
-                            </div>
+
+                            <span className="text-yellow-400">
+                                ★
+                            </span>
+
+                            <span className="text-sm font-bold text-gray-700">
+                                {visit.ratingScore}/5
+                            </span>
                         </div>
 
-                        {/* Test table */}
-                        {selectedTest && (
-                            <div className="lg:col-span-8 xl:col-span-9 bg-white border border-gray-200 rounded-xl overflow-hidden min-h-64">
-                                <div className="px-5 py-4 border-b border-gray-100">
-                                    <h3 className="text-sm font-bold text-gray-900">{selectedTest.name || '-'}</h3>
-                                </div>
-                                {selectedTest.pdfUrl && <div className="p-5 space-y-4">
-                                    <div><p className="text-xs text-gray-400 mb-1">Kết luận của bác sĩ</p><p className="text-sm text-gray-800 whitespace-pre-wrap">{selectedTest.conclusion || '-'}</p></div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                                        <div><p className="text-xs text-gray-400">Mã mẫu</p><p>{selectedTest.sampleId || '-'}</p></div>
-                                        <div><p className="text-xs text-gray-400">Bác sĩ thực hiện</p><p>{selectedTest.performedBy || '-'}</p></div>
-                                        <div><p className="text-xs text-gray-400">Thời gian</p><p>{selectedTest.performedAt ? new Date(selectedTest.performedAt).toLocaleString('vi-VN') : '-'}</p></div>
-                                    </div>
-                                    <button onClick={() => openPdfPreview(selectedTest.pdfUrl)} className="inline-flex h-10 items-center px-4 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-700">Xem trước phiếu kết quả PDF</button>
-                                </div>}
-                                {!selectedTest.pdfUrl && <table className="w-full">
-                                    <thead className="bg-gray-50 border-b border-gray-100">
-                                    <tr>
-                                        {[
-                                            t('visitDetail.tests.tableName'),
-                                            t('visitDetail.tests.tableResult'),
-                                            t('visitDetail.tests.tableRange'),
-                                            t('visitDetail.tests.tableUnit'),
-                                            t('visitDetail.tests.tableAssessment'),
-                                        ].map(col => (
-                                            <th key={col} className="text-xs font-medium text-gray-400 text-left px-4 py-2.5">{col}</th>
-                                        ))}
-                                    </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                    {(selectedTest.results ?? []).map((r, i) => {
-                                        const isHigh = r.assessment?.toLowerCase() === 'high';
-                                        const isLow  = r.assessment?.toLowerCase() === 'low';
-                                        return (
-                                            <tr key={i} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-4 py-3 text-sm text-gray-800">{r.name || '-'}</td>
-                                                <td className="px-4 py-3 text-sm font-semibold text-gray-900 tabular-nums">{r.result || '-'}</td>
-                                                <td className="px-4 py-3 text-sm text-gray-400 tabular-nums">{r.referenceRange || '-'}</td>
-                                                <td className="px-4 py-3 text-sm text-gray-500">{r.unit || '-'}</td>
-                                                <td className="px-4 py-3">
-                                                    {(isHigh || isLow) ? (
-                                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${
-                                                            isHigh
-                                                                ? 'text-red-600 border-red-300 bg-red-50'
-                                                                : 'text-blue-600 border-blue-300 bg-blue-50'
-                                                        }`}>
-                                    {isHigh ? t('visitDetail.tests.high') : t('visitDetail.tests.low')}
-                                  </span>
-                                                    ) : (
-                                                        <span className="text-xs text-gray-400">{r.assessment || '-'}</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                    </tbody>
-                                </table>}
-                            </div>
+                        {visit.ratingComment && (
+                            <p className="mt-3 whitespace-pre-wrap text-sm text-gray-600">
+                                {
+                                    visit.ratingComment
+                                }
+                            </p>
                         )}
                     </div>
                 )}
-                {tests.length === 0 && <div className="border border-gray-200 rounded-xl bg-white min-h-36 p-5 flex flex-col justify-center items-center">
-                    <p className={sectionLabelCls}>{t('visitDetail.tests.title')} (0)</p>
-                    <p className="text-sm text-gray-400">-</p>
-                </div>}
 
-                {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
+                {error && (
+                    <div className="mt-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-500">
+                        {error}
+                    </div>
+                )}
             </div>
 
-            {showRating && <RatingModal />}
-            {previewPdf && <div className="fixed inset-0 z-50 bg-black/60 p-4 md:p-8 flex items-center justify-center">
-                <div className="bg-white rounded-2xl w-full max-w-6xl h-full flex flex-col overflow-hidden shadow-2xl">
-                    <div className="px-5 py-3 border-b flex items-center justify-between gap-3">
-                        <p className="font-semibold text-gray-900">Xem trước phiếu kết quả PDF</p>
-                        <div className="flex gap-2"><a href={previewPdf} download className="px-4 h-9 inline-flex items-center rounded-lg border border-gray-300 text-sm">Tải PDF</a><button onClick={closePdfPreview} className="px-4 h-9 rounded-lg bg-gray-900 text-white text-sm">Đóng</button></div>
-                    </div>
-                    <iframe title="Phiếu kết quả PDF" src={previewPdf} className="w-full flex-1 bg-gray-100" />
-                </div>
-            </div>}
+            {/* =================================================
+                RATING MODAL
+            ================================================= */}
 
-            <style>{`@media print { aside { display: none; } header { display: none; } }`}</style>
+            {showRating && <RatingModal />}
+
+            {/* =================================================
+                PDF PREVIEW
+            ================================================= */}
+
+            {previewPdf && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 md:p-8">
+                    <div className="flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+
+                        <div className="flex items-center justify-between border-b px-5 py-3">
+                            <p className="font-semibold text-gray-900">
+                                Xem trước phiếu kết
+                                quả PDF
+                            </p>
+
+                            <button
+                                onClick={
+                                    closePdfPreview
+                                }
+                                className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-white"
+                            >
+                                <X size={17} />
+                            </button>
+                        </div>
+
+                        <iframe
+                            title="Phiếu kết quả PDF"
+                            src={previewPdf}
+                            className="w-full flex-1 bg-gray-100"
+                        />
+                    </div>
+                </div>
+            )}
+
+            <style>
+                {`
+                    @media print {
+                        aside {
+                            display: none !important;
+                        }
+
+                        header {
+                            display: none !important;
+                        }
+
+                        button {
+                            display: none !important;
+                        }
+                    }
+                `}
+            </style>
         </PatientLayout>
     );
 }

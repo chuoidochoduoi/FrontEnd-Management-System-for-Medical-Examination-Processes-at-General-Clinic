@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 7;
 
 
 
@@ -68,12 +68,10 @@ export function useServiceManagement() {
                 specialty: s.requiredSpecializationName || '',
                 departmentId: s.departmentId || '',
                 departmentName: s.departmentName || '',
-                durationMinutes: s.durationMinutes ?? 15,
                 workflowPriority: s.workflowPriority ?? 1,
                 requiresDoctorOrder: s.requiresDoctorOrder === true,
                 requiresReturnToDoctor: s.requiresReturnToDoctor === true,
-                resultWaitMinutes: s.resultWaitMinutes ?? 0,
-                allowCustomerBooking: s.allowCustomerBooking !== false,
+                requiresSpecimen: s.requiresSpecimen === true,
                 minimumAge: s.minimumAge ?? 0,
                 maximumAge: s.maximumAge ?? 120,
                 allowedGender: s.allowedGender || '',
@@ -128,13 +126,10 @@ export function useServiceManagement() {
             departmentType: apiType,
             price: payload.price,
             requiredSpecializationId: apiType === 'EXAMINATION' ? payload.specialtyId : null,
-            // Thời lượng không còn do admin nhập khi tạo; dùng mặc định kỹ thuật.
-            durationMinutes: 15,
             workflowPriority: Number(payload.workflowPriority ?? 1),
             requiresDoctorOrder: payload.requiresDoctorOrder === true,
             requiresReturnToDoctor: payload.requiresReturnToDoctor === true,
-            resultWaitMinutes: Number(payload.resultWaitMinutes ?? 0),
-            allowCustomerBooking: payload.allowCustomerBooking !== false,
+            requiresSpecimen: payload.requiresSpecimen === true,
             minimumAge: Number(payload.minimumAge),
             maximumAge: Number(payload.maximumAge),
             allowedGender: payload.allowedGender || null,
@@ -168,12 +163,10 @@ export function useServiceManagement() {
         if (apiType) body.departmentType = apiType;
         if (payload.price) body.price = payload.price;
         if (payload.specialtyId !== undefined) body.requiredSpecializationId = apiType === 'EXAMINATION' ? payload.specialtyId : null;
-        if (payload.durationMinutes !== undefined) body.durationMinutes = Number(payload.durationMinutes);
         if (payload.workflowPriority !== undefined) body.workflowPriority = Number(payload.workflowPriority);
         if (payload.requiresDoctorOrder !== undefined) body.requiresDoctorOrder = payload.requiresDoctorOrder;
         if (payload.requiresReturnToDoctor !== undefined) body.requiresReturnToDoctor = payload.requiresReturnToDoctor;
-        if (payload.resultWaitMinutes !== undefined) body.resultWaitMinutes = Number(payload.resultWaitMinutes);
-        if (payload.allowCustomerBooking !== undefined) body.allowCustomerBooking = payload.allowCustomerBooking;
+        if (payload.requiresSpecimen !== undefined) body.requiresSpecimen = payload.requiresSpecimen;
         if (payload.minimumAge !== undefined) body.minimumAge = Number(payload.minimumAge);
         if (payload.maximumAge !== undefined) body.maximumAge = Number(payload.maximumAge);
         if (payload.allowedGender !== undefined) body.allowedGender = payload.allowedGender || null;

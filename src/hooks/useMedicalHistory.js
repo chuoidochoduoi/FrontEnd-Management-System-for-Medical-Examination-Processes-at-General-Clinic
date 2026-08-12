@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 7;
 
 export function useMedicalHistory() {
     const { t } = useTranslation('medicalHistory');
@@ -53,12 +53,13 @@ export function useVisitDetail(visitId) {
             );
             if (!res.ok) throw new Error(t('visitDetail.errors.loadFailed'));
             const data = await res.json();
-            const normalized = {
+            // API trả về dữ liệu của cả CustomerVisit. Không ép COMPLETED ở client,
+            // tránh hiển thị nút đánh giá khi lượt khám chưa thực sự kết thúc.
+            setVisit({
                 ...data,
-                // Tạm thời mặc định tất cả visit đều là COMPLETED để hiện nút đánh giá
-                status: 'COMPLETED',
-            };
-            setVisit(normalized);
+                examinations: Array.isArray(data.examinations) ? data.examinations : [],
+                tests: Array.isArray(data.tests) ? data.tests : [],
+            });
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
     }, [visitId]);

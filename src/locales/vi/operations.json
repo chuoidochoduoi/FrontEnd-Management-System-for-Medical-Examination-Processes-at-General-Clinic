@@ -1,6 +1,6 @@
 {
   "common": { "refresh": "Làm mới", "loading": "Đang tải...", "allStatuses": "Tất cả trạng thái", "guest": "Khách vãng lai", "account": "Có tài khoản", "minutes": "{{count}} phút" },
-  "status": { "BLOCKED": "Chưa đến lượt", "WAITING": "Đang chờ", "CALLED": "Đã gọi", "IN_PROGRESS": "Đang thực hiện", "WAITING_FOR_TEST": "Chờ xét nghiệm", "TEST_DONE": "Cần quay lại bác sĩ", "PENDING": "Đang chờ", "DONE": "Đã hoàn thành", "COMPLETED": "Đã hoàn thành", "UNASSIGNED": "Chưa phân luồng", "CANCELLED": "Đã hủy", "SKIPPED": "Đã bỏ qua", "NEW": "Mới", "PROCESSING": "Đang xử lý", "RESPONDED": "Đã phản hồi", "CLOSED": "Đã đóng" },
+  "status": { "BLOCKED": "Chưa đến lượt", "WAITING": "Đang chờ", "CALLED": "Đã gọi", "IN_PROGRESS": "Đang thực hiện", "WAITING_FOR_TEST": "Chờ khám cận lâm sàng", "TEST_DONE": "Cần quay lại bác sĩ", "PENDING": "Đang chờ", "DONE": "Đã hoàn thành", "COMPLETED": "Đã hoàn thành", "UNASSIGNED": "Chưa phân luồng", "CANCELLED": "Đã hủy", "SKIPPED": "Đã bỏ qua", "NEW": "Mới", "PROCESSING": "Đang xử lý", "RESPONDED": "Đã phản hồi", "CLOSED": "Đã đóng" },
   "journey": {
     "title": "Điều phối bệnh nhân", "subtitle": "Theo dõi vị trí hiện tại và bước tiếp theo của cả khách có tài khoản và khách vãng lai.",
     "search": "Tên, số điện thoại hoặc mã lượt khám", "sortNewest": "Check-in mới nhất", "sortWaiting": "Chờ lâu nhất", "sortName": "Tên A–Z",

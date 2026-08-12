@@ -1,21 +1,47 @@
-// src/hooks/useInvoiceDetail.js
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import { toast } from 'react-toastify';
 
-const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
-const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
+const get = key => localStorage.getItem(key) || sessionStorage.getItem(key);
+const bearer = () => ({ Authorization: `Bearer ${get('token')}` });
+
+const mapInvoiceData = data => ({
+    id: data.invoiceId,
+    code: data.invoiceCode,
+    patientName: data.customerName,
+    patientCode: data.customerCode || '—',
+    bhytCode: data.bhytCode || '',
+    visitDate: data.issueDate,
+    status: data.status?.toLowerCase() || 'pending',
+    totalServices: data.subtotal,
+    bhytDeduct: data.discount,
+    vat: data.tax,
+    grandTotal: data.totalAmount,
+    inWords: data.note || '',
+    items: (data.items || []).map(item => ({
+        id: item.itemId,
+        name: item.serviceName || item.itemName || 'Dịch vụ',
+        description: item.serviceSnapshot || item.description || '',
+        category: item.category || '',
+        qty: item.quantity,
+        basePrice: item.unitPrice,
+        bhytRate: item.bhytRate,
+        bhytAmount: item.bhytAmount,
+        patientAmount: item.patientAmount
+    }))
+});
 
 export function useInvoiceDetail(invoiceId) {
     const { t } = useTranslation('cashier');
     const navigate = useNavigate();
-
-    const [invoice,    setInvoice]    = useState(null);
-    const [loading,    setLoading]    = useState(false);
+    const [invoice, setInvoice] = useState(null);
+    const [insurances, setInsurances] = useState([]);
+    const [loading, setLoading] = useState(false);
     const [confirming, setConfirming] = useState(false);
-    const [error,      setError]      = useState('');
+    const [applyingInsurance, setApplyingInsurance] = useState(false);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         if (!invoiceId) return;
@@ -23,35 +49,11 @@ export function useInvoiceDetail(invoiceId) {
             setLoading(true);
             setError('');
             try {
-                const res = await fetch(
-                    `${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}`,
-                    { headers: bearer() }
-                );
-                if (!res.ok) throw new Error(t('invoiceDetail.errors.loadFailed'));
-                const data = await res.json();
-                // Map API response to page format
-                setInvoice({
-                    id: data.invoiceId,
-                    code: data.invoiceCode,
-                    patientName: data.customerName,
-                    patientCode: data.customerCode || '—',
-                    visitDate: data.issueDate,
-                    status: data.status?.toLowerCase() || 'pending',
-                    totalServices: data.subtotal,
-                    bhytDeduct: data.discount,
-                    vat: data.tax,
-                    grandTotal: data.totalAmount,
-                    inWords: data.note || '',
-                    items: (data.items || []).map(item => ({
-                        id: item.itemId,
-                        name: item.serviceName || item.itemName || 'Dịch vụ',
-                        description: item.serviceSnapshot || item.description || '',
-                        category: item.category || '',
-                        qty: item.quantity,
-                        basePrice: item.unitPrice,
-                        bhytRate: item.bhytRate
-                    }))
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}`, {
+                    headers: bearer()
                 });
+                if (!res.ok) throw new Error(t('invoiceDetail.errors.loadFailed'));
+                setInvoice(mapInvoiceData(await res.json()));
             } catch (err) {
                 setError(err.message || t('invoiceDetail.errors.unknown'));
             } finally {
@@ -59,16 +61,45 @@ export function useInvoiceDetail(invoiceId) {
             }
         };
         fetchInvoice();
-    }, [invoiceId]);
+    }, [invoiceId, t]);
+
+    useEffect(() => {
+        fetch(`${import.meta.env.VITE_API_URL}/api/v1/insurances`, { headers: bearer() })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setInsurances(Array.isArray(data) ? data : []))
+            .catch(() => setInsurances([]));
+    }, []);
+
+    const applyInsurance = async (insuranceId, bhytCode) => {
+        setApplyingInsurance(true);
+        setError('');
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}/insurance`, {
+                method: 'POST',
+                headers: { ...bearer(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ insuranceId, bhytCode: bhytCode.trim() })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.message || 'Không thể áp dụng BHYT.');
+            setInvoice(mapInvoiceData(data));
+            toast.success('Đã xác minh và áp dụng BHYT cho hóa đơn.');
+            return true;
+        } catch (err) {
+            setError(err.message || 'Không thể áp dụng BHYT.');
+            toast.error(err.message || 'Không thể áp dụng BHYT.');
+            return false;
+        } finally {
+            setApplyingInsurance(false);
+        }
+    };
 
     const confirmPayment = async () => {
         setConfirming(true);
         setError('');
         try {
-            const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}/pay`,
-                { method: 'POST', headers: bearer() }
-            );
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}/pay`, {
+                method: 'POST', headers: bearer()
+            });
             if (!res.ok) {
                 const body = await res.json().catch(() => ({}));
                 if (res.status === 409) setInvoice(prev => prev ? { ...prev, status: 'paid' } : null);
@@ -85,19 +116,15 @@ export function useInvoiceDetail(invoiceId) {
         }
     };
 
-    const printReceipt = () => {
-        window.open(
-            `${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}/print`,
-            '_blank'
-        );
-    };
+    const printReceipt = () => window.open(
+        `${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}/print`, '_blank'
+    );
 
     const checkQRPayment = async () => {
         try {
-            const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}`,
-                { headers: bearer() }
-            );
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}`, {
+                headers: bearer()
+            });
             if (res.ok) {
                 const data = await res.json();
                 if (data.status?.toLowerCase() === 'paid') {
@@ -109,5 +136,8 @@ export function useInvoiceDetail(invoiceId) {
         }
     };
 
-    return { invoice, loading, confirming, error, confirmPayment, printReceipt, checkQRPayment };
+    return {
+        invoice, insurances, loading, confirming, applyingInsurance, error,
+        confirmPayment, applyInsurance, printReceipt, checkQRPayment
+    };
 }

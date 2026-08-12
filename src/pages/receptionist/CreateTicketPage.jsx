@@ -1,596 +1,1344 @@
 // src/pages/receptionist/CreateTicketPage.jsx
-import { useState, useEffect } from 'react';
+
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { RotateCcw, Search } from 'lucide-react';
+import {
+    RotateCcw,
+    Search,
+} from 'lucide-react';
+
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { useCreateTicket } from '@/hooks/useCreateTicket';
 import { useToast } from '@/hooks/useToast';
 import CreateTicketConfirmModal from '@/components/ui/CreateTicketConfirmModal';
 
-const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const fmt = (value) =>
+    value != null
+        ? `${new Intl.NumberFormat('vi-VN').format(
+            Number(value)
+        )}đ`
+        : '—';
 
 const DEPARTMENT_TYPE_LABELS = {
-    'EXAMINATION': 'Khám bệnh',
-    'PARACLINICAL': 'Cận lâm sàng',
-    'OTHER': 'Dịch vụ khác'
+    EXAMINATION: 'Khám bệnh',
+    PARACLINICAL: 'Cận lâm sàng',
+    OTHER: 'Dịch vụ khác',
 };
 
-/* ── nhỏ: một dòng service có checkbox ── */
-function ServiceRow({ item, checked, onToggle }) {
-    return (
-        <label className="flex items-start justify-between gap-3 py-2.5 cursor-pointer group">
-            <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={onToggle}
-                    className="mt-0.5 w-3.5 h-3.5 accent-gray-800 shrink-0"
-                />
-                <div className="min-w-0">
-                    <p className="text-sm text-gray-800 leading-snug">{item.name}</p>
-                    {item.description && (
-                        <p className="text-xs text-gray-400 mt-0.5 truncate">{item.description}</p>
-                    )}
-                </div>
-            </div>
-            <span className="text-sm text-gray-700 shrink-0">{fmt(item.price)}</span>
-        </label>
-    );
-}
+const inputCls =
+    'w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-200 bg-white placeholder:text-gray-300';
 
-/* ── input helper ── */
-const inputCls = 'w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-200 bg-white placeholder:text-gray-300';
-const labelCls = 'block text-xs text-gray-500 mb-1.5';
+const labelCls =
+    'block text-xs text-gray-500 mb-1.5';
 
-// Helper to convert gender to backend enum
-const toGenderEnum = (g) => {
-    if (!g) return null;
-    if (g === 'male') return 'MALE';
-    if (g === 'female') return 'FEMALE';
-    if (g === 'other') return 'OTHER';
-    return g; // already enum value
+const toGenderEnum = (gender) => {
+    if (!gender) return null;
+
+    if (gender === 'male') {
+        return 'MALE';
+    }
+
+    if (gender === 'female') {
+        return 'FEMALE';
+    }
+
+    if (gender === 'other') {
+        return 'OTHER';
+    }
+
+    return gender;
 };
+
+/* =========================================================
+   MAIN
+========================================================= */
 
 export default function CreateTicketPage() {
-    const { t } = useTranslation(['receptionist', 'createTicketConfirmModal']);
-    const { services, insurances, loadingSvc, submitting, error: submitError, submit } = useCreateTicket();
+    const { t } = useTranslation([
+        'receptionist',
+        'createTicketConfirmModal',
+    ]);
+
+    const {
+        services = [],
+        loadingSvc,
+        submitting,
+        error: submitError,
+        submit,
+    } = useCreateTicket();
+
     const toast = useToast();
-    const [validationError, setValidationError] = useState('');
-    const [searchParams] = useSearchParams();
 
-    /* ── service selection ── */
-    const [selectedServiceIds, setSelectedServiceIds] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [departmentType, setDepartmentType] = useState('');
+    const [searchParams] =
+        useSearchParams();
 
-    /* ── confirmation modal ── */
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    /* =========================================================
+       ERROR
+    ========================================================= */
 
-    /* ── form fields ── */
-    const [customerId, setCustomerId] = useState(null);
-    const [reason,    setReason]  = useState('');
-    const [fullName,  setFullName] = useState('');
-    const [phone,     setPhone]    = useState('');
-    const [dob,       setDob]      = useState('');
-    const [gender,    setGender]   = useState('male');
-    const [address,   setAddress]  = useState('');
-    const [insuranceId, setInsuranceId] = useState('');
-    const [bhytCode,  setBhytCode] = useState('');
-    const [bhytChecked, setBhytChecked] = useState(false);
+    const [
+        validationError,
+        setValidationError,
+    ] = useState('');
 
-    /* ── autofill from URL ── */
-    const checkBhyt = async () => {
-        setBhytChecked(false);
-        if (!bhytCode || bhytCode.length < 5) {
-            toast.error('Vui lòng nhập mã thẻ BHYT hợp lệ');
+    /* =========================================================
+       SERVICE
+    ========================================================= */
+
+    const [
+        selectedServiceIds,
+        setSelectedServiceIds,
+    ] = useState([]);
+
+    const [
+        searchTerm,
+        setSearchTerm,
+    ] = useState('');
+
+    const [
+        departmentType,
+        setDepartmentType,
+    ] = useState('');
+
+    /* =========================================================
+       MODAL
+    ========================================================= */
+
+    const [
+        showConfirmModal,
+        setShowConfirmModal,
+    ] = useState(false);
+
+    /* =========================================================
+       PATIENT
+    ========================================================= */
+
+    const [
+        customerId,
+        setCustomerId,
+    ] = useState(null);
+
+    const [
+        fullName,
+        setFullName,
+    ] = useState('');
+
+    const [
+        phone,
+        setPhone,
+    ] = useState('');
+
+    const [
+        dob,
+        setDob,
+    ] = useState('');
+
+    const [
+        gender,
+        setGender,
+    ] = useState('male');
+
+    const [
+        address,
+        setAddress,
+    ] = useState('');
+
+    const [
+        reason,
+        setReason,
+    ] = useState('');
+
+    /* =========================================================
+       TOKEN
+    ========================================================= */
+
+    const getToken = () =>
+        localStorage.getItem('token') ||
+        sessionStorage.getItem(
+            'token'
+        );
+
+    /* =========================================================
+       AUTOFILL PATIENT FROM URL
+    ========================================================= */
+
+    useEffect(() => {
+        const queryPhone =
+            searchParams.get('phone');
+
+        const queryCustomerId =
+            searchParams.get(
+                'customerId'
+            );
+
+        if (queryCustomerId) {
+            setCustomerId(
+                queryCustomerId
+            );
+        }
+
+        if (!queryPhone) {
             return;
         }
-        if (!insuranceId) {
-            toast.error('Vui lòng chọn Loại bảo hiểm trước khi kiểm tra');
-            return;
-        }
-        try {
-            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/bhxh/check?cardNumber=${bhytCode}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const result = await res.json();
-            
-            if (result.isValid) {
-                // Kiểm tra xem thẻ có thuộc hãng bảo hiểm đã chọn không
-                if (result.insuranceId !== insuranceId) {
-                    toast.error(`Mã thẻ này là của ${result.insuranceName}, không thuộc hãng bảo hiểm bạn đang chọn!`);
+
+        fetch(
+            `${
+                import.meta.env
+                    .VITE_API_URL
+            }/api/receptionist/records/search-by-phone?phone=${encodeURIComponent(
+                queryPhone
+            )}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${getToken()}`,
+                },
+            }
+        )
+            .then(async (response) => {
+                if (!response.ok) {
+                    throw new Error(
+                        'Không thể tải hồ sơ bệnh nhân'
+                    );
+                }
+
+                return response.json();
+            })
+            .then((data) => {
+                const patients =
+                    Array.isArray(data)
+                        ? data
+                        : data?.data ||
+                        data?.content ||
+                        [];
+
+                if (
+                    patients.length ===
+                    0
+                ) {
+                    toast.error(
+                        'Không tìm thấy hồ sơ bệnh nhân theo số điện thoại'
+                    );
+
                     return;
                 }
 
-                setBhytChecked(true);
-                toast.success(`Thẻ BHYT hợp lệ: ${result.fullName}`);
-                // Tùy chọn điền luôn tên và ngày sinh nếu user chưa nhập
-                if (!fullName) setFullName(result.fullName);
-                if (!dob && result.dateOfBirth) setDob(result.dateOfBirth);
-            } else {
-                toast.error(result.message || 'Mã thẻ không hợp lệ!');
-            }
-        } catch (err) {
-            toast.error('Lỗi kết nối khi tra cứu thẻ BHYT');
-        }
-    };
+                const patient =
+                    patients.find(
+                        (item) =>
+                            item.customerId ===
+                            queryCustomerId
+                    ) || patients[0];
 
-    useEffect(() => {
-        const queryPhone = searchParams.get('phone');
-        const queryCustomerId = searchParams.get('customerId');
-        if (queryCustomerId) {
-            setCustomerId(queryCustomerId);
-        }
-        if (queryPhone) {
-            fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/search-by-phone?phone=${encodeURIComponent(queryPhone)}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}` }
-            })
-            .then(async res => {
-                if (!res.ok) throw new Error('Không thể tải hồ sơ bệnh nhân');
-                return res.json();
-            })
-            .then(data => {
-                const patients = Array.isArray(data) ? data : (data?.data || data?.content || []);
-                if (patients.length > 0) {
-                    const patient = patients.find(item => item.customerId === queryCustomerId) || patients[0];
-                    // Hồ sơ khách vãng lai từng khám cũng có profileId và phải
-                    // được tái sử dụng, chỉ lịch hẹn guest thuần túy mới không có id.
-                    if (patient.customerId) {
-                        setCustomerId(patient.customerId);
-                    }
-                    setFullName(patient.fullName || '');
-                    setPhone(patient.phone || '');
-                    if (patient.dateOfBirth) setDob(patient.dateOfBirth.split('T')[0]);
-                    
-                    if (patient.gender) {
-                        const g = patient.gender.toLowerCase();
-                        setGender(g === 'male' || g === 'female' ? g : 'other');
-                    }
-                    setAddress(patient.address || '');
-                } else {
-                    toast.error('Không tìm thấy hồ sơ bệnh nhân theo số điện thoại');
+                if (
+                    patient.customerId
+                ) {
+                    setCustomerId(
+                        patient.customerId
+                    );
                 }
+
+                setFullName(
+                    patient.fullName ||
+                    ''
+                );
+
+                setPhone(
+                    patient.phone || ''
+                );
+
+                if (
+                    patient.dateOfBirth
+                ) {
+                    setDob(
+                        patient.dateOfBirth.split(
+                            'T'
+                        )[0]
+                    );
+                }
+
+                if (patient.gender) {
+                    const normalizedGender =
+                        patient.gender.toLowerCase();
+
+                    setGender(
+                        normalizedGender ===
+                        'male' ||
+                        normalizedGender ===
+                        'female'
+                            ? normalizedGender
+                            : 'other'
+                    );
+                }
+
+                setAddress(
+                    patient.address || ''
+                );
             })
-            .catch(() => toast.error('Không thể tải thông tin bệnh nhân tái khám'));
-        }
+            .catch((error) => {
+                console.error(error);
+
+                toast.error(
+                    'Không thể tải thông tin bệnh nhân tái khám'
+                );
+            });
     }, [searchParams]);
 
-    const toggleService = (svc) =>
-        setSelectedServiceIds(prev =>
-            prev.includes(svc.id)
-                ? prev.filter(id => id !== svc.id)
-                : [...prev, svc.id]
+    /* =========================================================
+       SERVICE TOGGLE
+    ========================================================= */
+
+    const toggleService = (
+        service
+    ) => {
+        setSelectedServiceIds(
+            (previous) =>
+                previous.includes(
+                    service.id
+                )
+                    ? previous.filter(
+                        (id) =>
+                            id !==
+                            service.id
+                    )
+                    : [
+                        ...previous,
+                        service.id,
+                    ]
         );
 
-    const getDiscountRule = (service) => {
-        if (!insuranceId) return null;
-        const ins = insurances?.find(i => i.insuranceId === insuranceId);
-        if (!ins) return null;
-        const rule = ins.rules?.find(r => r.departmentType === service.departmentType);
-        return rule ? rule.discountPercent : 0;
+        setValidationError('');
     };
 
-    const calculateItemPrice = (service) => {
-        const discountPercent = getDiscountRule(service) || 0;
-        const discountAmount = (service.price * discountPercent) / 100;
-        return {
-            original: service.price,
-            discountPercent,
-            discountAmount,
-            final: service.price - discountAmount
-        };
-    };
+    /* =========================================================
+       SELECTED SERVICES
+    ========================================================= */
 
-    const selectedItems = selectedServiceIds
-        .map(id => services.find(s => s.id === id))
-        .filter(Boolean)
-        .map(s => ({ service: s, ...calculateItemPrice(s) }));
+    const selectedServices =
+        selectedServiceIds
+            .map((id) =>
+                services.find(
+                    (service) =>
+                        service.id === id
+                )
+            )
+            .filter(Boolean);
 
-    const totalOriginal = selectedItems.reduce((sum, item) => sum + item.original, 0);
-    const totalDiscount = selectedItems.reduce((sum, item) => sum + item.discountAmount, 0);
-    const totalFinal = selectedItems.reduce((sum, item) => sum + item.final, 0);
+    /*
+     * Không còn BHYT ở Receptionist.
+     * Tổng giá = tổng giá niêm yết của các dịch vụ.
+     */
+    const total =
+        selectedServices.reduce(
+            (sum, service) =>
+                sum +
+                Number(
+                    service.price ||
+                    0
+                ),
+            0
+        );
 
-    const filteredServices = services.filter(s => {
-        const matchSearch = (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (s.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-        const matchDept = departmentType ? s.departmentType === departmentType : true;
-        return matchSearch && matchDept;
-    });
+    /* =========================================================
+       FILTER SERVICE
+    ========================================================= */
+
+    const filteredServices =
+        services.filter(
+            (service) => {
+                const keyword =
+                    searchTerm
+                        .trim()
+                        .toLowerCase();
+
+                const matchSearch =
+                    !keyword ||
+                    (
+                        service.name ||
+                        ''
+                    )
+                        .toLowerCase()
+                        .includes(
+                            keyword
+                        ) ||
+                    (
+                        service.description ||
+                        ''
+                    )
+                        .toLowerCase()
+                        .includes(
+                            keyword
+                        );
+
+                const matchDepartmentType =
+                    !departmentType ||
+                    service.departmentType ===
+                    departmentType;
+
+                return (
+                    matchSearch &&
+                    matchDepartmentType
+                );
+            }
+        );
+
+    /* =========================================================
+       GROUP SERVICE
+    ========================================================= */
+
+    const groupedServices =
+        filteredServices.reduce(
+            (
+                result,
+                service
+            ) => {
+                let type =
+                    service.departmentType;
+
+                if (
+                    type !==
+                    'EXAMINATION' &&
+                    type !==
+                    'PARACLINICAL' &&
+                    type !== 'OTHER'
+                ) {
+                    type = 'OTHER';
+                }
+
+                if (!result[type]) {
+                    result[type] = [];
+                }
+
+                result[type].push(
+                    service
+                );
+
+                return result;
+            },
+            {}
+        );
+
+    const orderedGroups =
+        Object.entries(
+            groupedServices
+        ).sort(([a], [b]) => {
+            const order = {
+                EXAMINATION: 1,
+                PARACLINICAL: 2,
+                OTHER: 3,
+            };
+
+            return (
+                (order[a] || 99) -
+                (order[b] || 99)
+            );
+        });
+
+    /* =========================================================
+       RESET
+    ========================================================= */
 
     const handleReset = () => {
         setSelectedServiceIds([]);
-        setReason('');
+        setSearchTerm('');
+        setDepartmentType('');
+
+        setCustomerId(null);
+
         setFullName('');
         setPhone('');
         setDob('');
         setGender('male');
         setAddress('');
-        setInsuranceId('');
-        setBhytCode('');
-        setBhytChecked(false);
-        setCustomerId(null);
+        setReason('');
+
+        setValidationError('');
     };
+
+    /* =========================================================
+       VALIDATION
+    ========================================================= */
 
     const handleSubmit = () => {
-        // Validation check
+        setValidationError('');
+
         if (!fullName.trim()) {
-            setValidationError(t('validation.fullNameRequired'));
+            setValidationError(
+                t(
+                    'validation.fullNameRequired'
+                )
+            );
+
             return;
         }
+
         if (!phone.trim()) {
-            setValidationError(t('validation.phoneRequired'));
-            return;
-        }
-        if (!/^(\+84|0)\d{9,10}$/.test(phone.trim())) {
-            setValidationError('Số điện thoại Việt Nam không hợp lệ');
-            return;
-        }
-        if (dob && new Date(dob) >= new Date()) {
-            setValidationError('Ngày sinh phải là ngày trong quá khứ');
-            return;
-        }
-        if (address.length > 255) {
-            setValidationError('Địa chỉ không được vượt quá 255 ký tự');
-            return;
-        }
-        if (insuranceId && (!bhytCode || !bhytChecked)) {
-            setValidationError('Vui lòng kiểm tra mã bảo hiểm trước khi tạo phiếu');
-            return;
-        }
-        if (selectedServiceIds.length === 0) {
-            setValidationError(t('validation.serviceRequired'));
+            setValidationError(
+                t(
+                    'validation.phoneRequired'
+                )
+            );
+
             return;
         }
 
-        setShowConfirmModal(true);
+        if (
+            !/^(\+84|0)\d{9,10}$/.test(
+                phone.trim()
+            )
+        ) {
+            setValidationError(
+                'Số điện thoại Việt Nam không hợp lệ'
+            );
+
+            return;
+        }
+
+        if (dob) {
+            const birthDate =
+                new Date(dob);
+
+            const today =
+                new Date();
+
+            if (
+                birthDate >= today
+            ) {
+                setValidationError(
+                    'Ngày sinh phải là ngày trong quá khứ'
+                );
+
+                return;
+            }
+        }
+
+        if (
+            address.length > 255
+        ) {
+            setValidationError(
+                'Địa chỉ không được vượt quá 255 ký tự'
+            );
+
+            return;
+        }
+
+        if (
+            selectedServiceIds.length ===
+            0
+        ) {
+            setValidationError(
+                t(
+                    'validation.serviceRequired'
+                )
+            );
+
+            return;
+        }
+
+        setShowConfirmModal(
+            true
+        );
     };
 
-    // Helper to get accountId/staffId from storage for issuedById
+    /* =========================================================
+       ISSUER
+    ========================================================= */
+
     const getIssuerId = () => {
-        const storage = localStorage.getItem('token') ? localStorage : sessionStorage;
-        return storage.getItem('staffId') || storage.getItem('accountId');
+        const storage =
+            localStorage.getItem(
+                'token'
+            )
+                ? localStorage
+                : sessionStorage;
+
+        return (
+            storage.getItem(
+                'staffId'
+            ) ||
+            storage.getItem(
+                'accountId'
+            )
+        );
     };
+
+    /* =========================================================
+       CONFIRM
+    ========================================================= */
 
     const handleConfirm = () => {
         submit({
             customerId,
-            serviceIds: selectedServiceIds,
-            issuedById: getIssuerId(),
-            reason,
-            guestFullName: fullName,
-            guestPhone: phone,
-            guestAddress: address,
-            guestDateOfBirth: dob || null,
-            guestGender: toGenderEnum(gender),
-            insuranceId: insuranceId || null,
+
+            serviceIds:
+            selectedServiceIds,
+
+            issuedById:
+                getIssuerId(),
+
+            reason:
+                reason.trim(),
+
+            guestFullName:
+                fullName.trim(),
+
+            guestPhone:
+                phone.trim(),
+
+            guestAddress:
+                address.trim(),
+
+            guestDateOfBirth:
+                dob || null,
+
+            guestGender:
+                toGenderEnum(
+                    gender
+                ),
         });
-        setShowConfirmModal(false);
+
+        setShowConfirmModal(
+            false
+        );
     };
+
+    /* =========================================================
+       UI
+    ========================================================= */
 
     return (
         <ReceptionistLayout>
-            <div className="flex flex-col min-h-[calc(100vh-3.5rem)] -m-8">
+            <div className="flex min-h-[calc(100vh-3.5rem)] flex-col -m-8 bg-slate-50">
 
-                {/* ── Scrollable body ── */}
-                <div className="flex-1 overflow-y-auto p-8 pb-28">
-                    <div className="max-w-7xl mx-auto space-y-6">
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                            
-                            {/* ────── Cột trái: Thông tin bệnh nhân & BHYT ────── */}
-                            <div className="lg:col-span-6 h-full">
-                                {/* ────── Block 1: Thông tin khách hàng ────── */}
-                                <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 h-full flex flex-col">
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-900 text-white text-xs font-bold shrink-0">1</span>
-                                        <h2 className="text-sm font-bold text-gray-900">Thông tin khách hàng</h2>
+                {/* =====================================================
+                    BODY
+                ===================================================== */}
+
+                <div className="flex-1 overflow-y-auto px-5 py-5 pb-28 lg:px-8">
+
+                    <div className="w-full space-y-5">
+
+                        {/* =================================================
+                            HEADER
+                        ================================================= */}
+
+                        <div className="flex flex-wrap items-end justify-between gap-4">
+
+                            <div>
+                                <h1 className="text-xl font-bold text-gray-900">
+                                    Tạo phiếu khám
+                                </h1>
+
+                                <p className="mt-1 text-sm text-gray-400">
+                                    Tiếp nhận thông tin bệnh nhân và lựa chọn dịch vụ y tế
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={
+                                    handleReset
+                                }
+                                className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-xs font-medium text-gray-500 transition hover:border-gray-300 hover:text-gray-800"
+                            >
+                                <RotateCcw
+                                    size={14}
+                                />
+
+                                Đặt lại
+                            </button>
+                        </div>
+
+                        {/* =================================================
+                            MAIN
+                        ================================================= */}
+
+                        <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+
+                            {/* =================================================
+                                PATIENT INFO
+                            ================================================= */}
+
+                            <div className="xl:col-span-5">
+
+                                <div className="h-full rounded-2xl border border-gray-200 bg-white shadow-sm">
+
+                                    {/* HEADER */}
+
+                                    <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4">
+
+                                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
+                                            1
+                                        </span>
+
+                                        <div>
+                                            <h2 className="text-sm font-bold text-gray-900">
+                                                Thông tin bệnh nhân
+                                            </h2>
+
+                                            <p className="mt-0.5 text-xs text-gray-400">
+                                                Thông tin tiếp nhận của lượt khám
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    <div className="space-y-4 mb-4">
-                                        {/* Họ và tên (1 hàng riêng) */}
+                                    {/* BODY */}
+
+                                    <div className="space-y-4 p-5">
+
+                                        {/* FULL NAME */}
+
                                         <div>
-                                            <label className={labelCls}>{t('createTicket.patientInfo.fullName')}</label>
+                                            <label className={labelCls}>
+                                                {t(
+                                                    'createTicket.patientInfo.fullName'
+                                                )}
+
+                                                <span className="ml-1 text-red-400">
+                                                    *
+                                                </span>
+                                            </label>
+
                                             <input
                                                 type="text"
-                                                value={fullName}
-                                                onChange={e => setFullName(e.target.value)}
-                                                placeholder={t('createTicket.patientInfo.fullNamePlaceholder')}
-                                                className={inputCls}
+                                                value={
+                                                    fullName
+                                                }
+                                                onChange={(
+                                                    event
+                                                ) => {
+                                                    setFullName(
+                                                        event
+                                                            .target
+                                                            .value
+                                                    );
+
+                                                    setValidationError(
+                                                        ''
+                                                    );
+                                                }}
+                                                placeholder={t(
+                                                    'createTicket.patientInfo.fullNamePlaceholder'
+                                                )}
+                                                className={
+                                                    inputCls
+                                                }
                                             />
                                         </div>
 
-                                        {/* SĐT và Ngày sinh (2 cột) */}
-                                        <div className="grid grid-cols-2 gap-4">
+                                        {/* PHONE + DOB */}
+
+                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
                                             <div>
-                                                <label className={labelCls}>{t('createTicket.patientInfo.phone')}</label>
+                                                <label className={labelCls}>
+                                                    {t(
+                                                        'createTicket.patientInfo.phone'
+                                                    )}
+
+                                                    <span className="ml-1 text-red-400">
+                                                        *
+                                                    </span>
+                                                </label>
+
                                                 <input
                                                     type="tel"
-                                                    value={phone}
-                                                    onChange={e => setPhone(e.target.value)}
-                                                    placeholder={t('createTicket.patientInfo.phonePlaceholder')}
-                                                    className={inputCls}
+                                                    value={
+                                                        phone
+                                                    }
+                                                    onChange={(
+                                                        event
+                                                    ) => {
+                                                        setPhone(
+                                                            event
+                                                                .target
+                                                                .value
+                                                        );
+
+                                                        setValidationError(
+                                                            ''
+                                                        );
+                                                    }}
+                                                    placeholder={t(
+                                                        'createTicket.patientInfo.phonePlaceholder'
+                                                    )}
+                                                    className={
+                                                        inputCls
+                                                    }
                                                 />
                                             </div>
+
                                             <div>
-                                                <label className={labelCls}>{t('createTicket.patientInfo.dob')}</label>
+                                                <label className={labelCls}>
+                                                    {t(
+                                                        'createTicket.patientInfo.dob'
+                                                    )}
+                                                </label>
+
                                                 <input
                                                     type="date"
-                                                    value={dob}
-                                                    onChange={e => setDob(e.target.value)}
-                                                    className={inputCls}
+                                                    max={new Date().toLocaleDateString(
+                                                        'en-CA'
+                                                    )}
+                                                    value={
+                                                        dob
+                                                    }
+                                                    onChange={(
+                                                        event
+                                                    ) =>
+                                                        setDob(
+                                                            event
+                                                                .target
+                                                                .value
+                                                        )
+                                                    }
+                                                    className={
+                                                        inputCls
+                                                    }
                                                 />
                                             </div>
                                         </div>
 
-                                        {/* Giới tính và Địa chỉ (2 cột) */}
-                                        <div className="grid grid-cols-2 gap-4">
+                                        {/* GENDER + ADDRESS */}
+
+                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
                                             <div>
-                                                <label className={labelCls}>{t('createTicket.patientInfo.gender')}</label>
-                                                <div className="flex gap-2">
+                                                <label className={labelCls}>
+                                                    {t(
+                                                        'createTicket.patientInfo.gender'
+                                                    )}
+                                                </label>
+
+                                                <div className="grid grid-cols-2 gap-2">
+
                                                     {[
-                                                        { val: 'male', label: t('createTicket.patientInfo.male') },
-                                                        { val: 'female', label: t('createTicket.patientInfo.female') },
-                                                    ].map(({ val, label }) => (
-                                                        <button
-                                                            key={val}
-                                                            type="button"
-                                                            onClick={() => setGender(val)}
-                                                            className={`flex-1 h-10 text-sm rounded-lg border transition-colors ${
-                                                                gender === val
-                                                                    ? 'border-gray-900 bg-gray-900 text-white'
-                                                                    : 'border-gray-200 text-gray-600 hover:border-gray-400'
-                                                            }`}
-                                                        >
-                                                            {label}
-                                                        </button>
-                                                    ))}
+                                                        {
+                                                            value:
+                                                                'male',
+                                                            label: t(
+                                                                'createTicket.patientInfo.male'
+                                                            ),
+                                                        },
+                                                        {
+                                                            value:
+                                                                'female',
+                                                            label: t(
+                                                                'createTicket.patientInfo.female'
+                                                            ),
+                                                        },
+                                                    ].map(
+                                                        ({
+                                                             value,
+                                                             label,
+                                                         }) => (
+                                                            <button
+                                                                key={
+                                                                    value
+                                                                }
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setGender(
+                                                                        value
+                                                                    )
+                                                                }
+                                                                className={`h-10 rounded-lg border text-sm font-medium transition ${
+                                                                    gender ===
+                                                                    value
+                                                                        ? 'border-gray-900 bg-gray-900 text-white'
+                                                                        : 'border-gray-200 bg-white text-gray-500 hover:border-gray-400'
+                                                                }`}
+                                                            >
+                                                                {
+                                                                    label
+                                                                }
+                                                            </button>
+                                                        )
+                                                    )}
                                                 </div>
                                             </div>
+
                                             <div>
-                                                <label className={labelCls}>{t('createTicket.patientInfo.address')}</label>
+                                                <label className={labelCls}>
+                                                    {t(
+                                                        'createTicket.patientInfo.address'
+                                                    )}
+                                                </label>
+
                                                 <input
                                                     type="text"
-                                                    value={address}
-                                                    onChange={e => setAddress(e.target.value)}
-                                                    placeholder={t('createTicket.patientInfo.addressPlaceholder')}
-                                                    className={inputCls}
+                                                    value={
+                                                        address
+                                                    }
+                                                    onChange={(
+                                                        event
+                                                    ) =>
+                                                        setAddress(
+                                                            event
+                                                                .target
+                                                                .value
+                                                        )
+                                                    }
+                                                    placeholder={t(
+                                                        'createTicket.patientInfo.addressPlaceholder'
+                                                    )}
+                                                    className={
+                                                        inputCls
+                                                    }
                                                 />
                                             </div>
                                         </div>
-                                        
-                                        {/* Loại Bảo hiểm (Chọn trước) */}
-                                        <div>
-                                            <label className={labelCls}>Bảo hiểm y tế (nếu có)</label>
-                                            <select
-                                                value={insuranceId}
-                                                onChange={e => {
-                                                    setInsuranceId(e.target.value);
-                                                    setBhytCode(''); // Xóa mã thẻ khi đổi hãng
-                                                    setBhytChecked(false);
-                                                }}
-                                                className={inputCls}
-                                            >
-                                                <option value="">Không áp dụng</option>
-                                                {insurances?.map(ins => (
-                                                    <option key={ins.insuranceId} value={ins.insuranceId}>
-                                                        {ins.name}
-                                                    </option>
-                                                ))}
-                                            </select>
+
+                                        {/* NOTE */}
+
+                                        <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+
+                                            <p className="text-xs leading-5 text-gray-500">
+                                                Bảo hiểm y tế và mức giảm thanh toán sẽ được xử lý tại quầy thu ngân.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* =================================================
+                                SERVICES
+                            ================================================= */}
+
+                            <div className="xl:col-span-7">
+
+                                <div className="flex h-full min-h-[560px] flex-col rounded-2xl border border-gray-200 bg-white shadow-sm">
+
+                                    {/* HEADER */}
+
+                                    <div className="border-b border-gray-100 px-5 py-4">
+
+                                        <div className="flex flex-wrap items-center justify-between gap-4">
+
+                                            <div className="flex items-center gap-3">
+
+                                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
+                                                    2
+                                                </span>
+
+                                                <div>
+                                                    <h2 className="text-sm font-bold text-gray-900">
+                                                        Dịch vụ y tế
+                                                    </h2>
+
+                                                    <p className="mt-0.5 text-xs text-gray-400">
+                                                        Chọn dịch vụ cho lượt khám này
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {selectedServiceIds.length >
+                                                0 && (
+                                                    <span className="rounded-full bg-gray-900 px-2.5 py-1 text-[11px] font-medium text-white">
+                                                    Đã chọn{' '}
+                                                        {
+                                                            selectedServiceIds.length
+                                                        }
+                                                </span>
+                                                )}
                                         </div>
 
-                                        {/* Mã thẻ BHYT hiện ra nếu có chọn bảo hiểm */}
-                                        {insuranceId && (
-                                            <div>
-                                                <label className={labelCls}>Số thẻ bảo hiểm (để tra cứu & lưu hồ sơ)</label>
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={bhytCode}
-                                                        onChange={e => {
-                                                            setBhytCode(e.target.value);
-                                                            setBhytChecked(false);
-                                                        }}
-                                                        placeholder="Nhập mã thẻ..."
-                                                        className={inputCls}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={checkBhyt}
-                                                        className="px-4 py-0 bg-blue-50 text-blue-600 border border-blue-200 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors shrink-0 h-10"
-                                                    >
-                                                        Kiểm tra
-                                                    </button>
-                                                </div>
-                                                {bhytChecked && (
-                                                    <p className="mt-2 text-xs font-medium text-green-600">
-                                                        Mã thẻ BHYT đã được xác minh
-                                                    </p>
+                                        {/* SEARCH + FILTER */}
+
+                                        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_190px]">
+
+                                            <div className="relative">
+
+                                                <Search
+                                                    size={
+                                                        16
+                                                    }
+                                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                                />
+
+                                                <input
+                                                    type="text"
+                                                    value={
+                                                        searchTerm
+                                                    }
+                                                    onChange={(
+                                                        event
+                                                    ) =>
+                                                        setSearchTerm(
+                                                            event
+                                                                .target
+                                                                .value
+                                                        )
+                                                    }
+                                                    placeholder="Tìm kiếm dịch vụ..."
+                                                    className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm outline-none transition focus:border-gray-400 focus:bg-white focus:ring-1 focus:ring-gray-200"
+                                                />
+                                            </div>
+
+                                            <select
+                                                value={
+                                                    departmentType
+                                                }
+                                                onChange={(
+                                                    event
+                                                ) =>
+                                                    setDepartmentType(
+                                                        event
+                                                            .target
+                                                            .value
+                                                    )
+                                                }
+                                                className={
+                                                    inputCls
+                                                }
+                                            >
+                                                <option value="">
+                                                    Tất cả loại dịch vụ
+                                                </option>
+
+                                                <option value="EXAMINATION">
+                                                    Khám bệnh
+                                                </option>
+
+                                                <option value="PARACLINICAL">
+                                                    Cận lâm sàng
+                                                </option>
+
+                                                <option value="OTHER">
+                                                    Dịch vụ khác
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* =================================================
+                                        SERVICE LIST
+                                    ================================================= */}
+
+                                    <div className="flex-1 min-h-0 p-5">
+
+                                        {loadingSvc ? (
+                                            <div className="flex h-40 items-center justify-center">
+
+                                                <p className="text-sm text-gray-400">
+                                                    {t(
+                                                        'createTicket.loading'
+                                                    )}
+                                                </p>
+                                            </div>
+                                        ) : orderedGroups.length >
+                                        0 ? (
+                                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+
+                                                {orderedGroups.map(
+                                                    ([
+                                                         type,
+                                                         servicesGroup,
+                                                     ]) => (
+                                                        <div
+                                                            key={
+                                                                type
+                                                            }
+                                                            className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-gray-200 bg-gray-50/60"
+                                                        >
+
+                                                            {/* GROUP HEADER */}
+
+                                                            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+
+                                                                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                                                                    {DEPARTMENT_TYPE_LABELS[
+                                                                            type
+                                                                            ] ||
+                                                                        type}
+                                                                </h3>
+
+                                                                <span className="text-[11px] text-gray-400">
+                                                                    {
+                                                                        servicesGroup.length
+                                                                    }{' '}
+                                                                    dịch vụ
+                                                                </span>
+                                                            </div>
+
+                                                            {/* =================================================
+                                                                FIXED HEIGHT SERVICE LIST
+                                                                khoảng 4 item
+                                                            ================================================= */}
+
+                                                            <div className="h-[272px] divide-y divide-gray-200 overflow-y-auto overflow-x-hidden px-4 pr-2 custom-scrollbar">
+
+                                                                {servicesGroup.map(
+                                                                    (
+                                                                        service
+                                                                    ) => {
+                                                                        const checked =
+                                                                            selectedServiceIds.includes(
+                                                                                service.id
+                                                                            );
+
+                                                                        return (
+                                                                            <label
+                                                                                key={
+                                                                                    service.id
+                                                                                }
+                                                                                className={`flex min-h-[64px] cursor-pointer items-start gap-3 py-3 transition ${
+                                                                                    checked
+                                                                                        ? 'bg-primary-50/50'
+                                                                                        : 'hover:bg-gray-100/50'
+                                                                                }`}
+                                                                            >
+
+                                                                                {/* CHECKBOX */}
+
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={
+                                                                                        checked
+                                                                                    }
+                                                                                    onChange={() =>
+                                                                                        toggleService(
+                                                                                            service
+                                                                                        )
+                                                                                    }
+                                                                                    className="mt-0.5 h-4 w-4 shrink-0 accent-gray-900"
+                                                                                />
+
+                                                                                {/* INFO */}
+
+                                                                                <div className="min-w-0 flex-1">
+
+                                                                                    <p className="text-sm font-medium leading-snug text-gray-800">
+                                                                                        {
+                                                                                            service.name
+                                                                                        }
+                                                                                    </p>
+
+                                                                                    {service.description && (
+                                                                                        <p className="mt-1 truncate text-xs text-gray-400">
+                                                                                            {
+                                                                                                service.description
+                                                                                            }
+                                                                                        </p>
+                                                                                    )}
+
+                                                                                    {type ===
+                                                                                        'PARACLINICAL' &&
+                                                                                        service.capabilityName && (
+                                                                                            <p className="mt-1 truncate text-[11px] text-gray-500">
+                                                                                                Năng lực:{' '}
+                                                                                                {
+                                                                                                    service.capabilityName
+                                                                                                }
+                                                                                            </p>
+                                                                                        )}
+                                                                                </div>
+
+                                                                                {/* PRICE */}
+
+                                                                                <div className="shrink-0 pl-2 text-right">
+
+                                                                                    <p className="text-sm font-semibold text-gray-900">
+                                                                                        {fmt(
+                                                                                            service.price
+                                                                                        )}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </label>
+                                                                        );
+                                                                    }
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )
                                                 )}
-                                                <p className="mt-2 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
-                                                    Đã áp dụng chính sách giảm giá của <b>{insurances?.find(i => i.insuranceId === insuranceId)?.name}</b>. Xem chi tiết mức giảm trên từng dịch vụ.
+                                            </div>
+                                        ) : (
+                                            <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
+
+                                                <p className="text-sm text-gray-400">
+                                                    Không tìm thấy dịch vụ phù hợp
                                                 </p>
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Reset link */}
-                                    <div className="flex justify-end mt-auto pt-5">
-                                        <button
-                                            onClick={handleReset}
-                                            className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-900 transition-colors"
-                                        >
-                                            <RotateCcw size={12} />
-                                            {t('createTicket.resetForm')}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                                    {/* =================================================
+                                        REASON
+                                    ================================================= */}
 
-                            {/* ────── Cột phải: Dịch vụ y tế ────── */}
-                            <div className="lg:col-span-6 h-full">
-                                <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 h-full flex flex-col">
-                                    {/* ────── Block 2: Chọn dịch vụ ────── */}
-                                    <section className="flex-1 flex flex-col min-h-0">
-                                        <div className="flex items-center justify-between gap-4 mb-6 shrink-0">
-                                            <div className="flex items-center gap-3">
-                                                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-900 text-white text-xs font-bold shrink-0">2</span>
-                                                <h2 className="text-sm font-bold text-gray-900">
-                                                    Dịch vụ y tế
-                                                </h2>
-                                            </div>
-                                            <div className="relative max-w-xs w-full">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                    <Search className="h-4 w-4 text-gray-400" />
-                                                </div>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Tìm kiếm dịch vụ..."
-                                                    value={searchTerm}
-                                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                                    className="block w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary-50 focus:border-primary-500 transition-colors outline-none"
-                                                />
-                                            </div>
-                                        </div>
+                                    <div className="border-t border-gray-100 px-5 py-4">
 
-                                        <div className="flex-1 min-h-0">
-                                            {loadingSvc ? (
-                                                <p className="text-sm text-gray-400 text-center py-4">{t('createTicket.loading')}</p>
-                                            ) : filteredServices.length > 0 ? (
-                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
-                                                    {Object.entries(
-                                                        filteredServices.reduce((acc, service) => {
-                                                            const type = service.departmentType === 'EXAMINATION' ? 'EXAMINATION' : 'PARACLINICAL';
-                                                            if (!acc[type]) acc[type] = [];
-                                                            acc[type].push(service);
-                                                            return acc;
-                                                        }, {})
-                                                    ).sort(([a], [b]) => a === 'EXAMINATION' ? -1 : b === 'EXAMINATION' ? 1 : 0).map(([type, servicesGroup]) => (
-                                                        <div key={type} className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col h-full overflow-hidden">
-                                                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 shrink-0">
-                                                                {DEPARTMENT_TYPE_LABELS[type] || type}
-                                                            </h3>
-                                                            <div className="divide-y divide-gray-200 flex-1 overflow-y-auto overflow-x-hidden pr-1 custom-scrollbar">
-                                                                {servicesGroup.map(svc => {
-                                                                    const checked = selectedServiceIds.includes(svc.id);
-                                                                    const priceInfo = calculateItemPrice(svc);
-                                                                    return (
-                                                                        <label
-                                                                            key={svc.id}
-                                                                            className="flex items-start gap-3 py-2.5 cursor-pointer hover:bg-gray-100/50 rounded-lg px-2 -mx-2 transition-colors w-full"
-                                                                        >
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                checked={checked}
-                                                                                onChange={() => toggleService(svc)}
-                                                                                className="mt-0.5 w-4 h-4 accent-gray-800 shrink-0 rounded border-gray-300"
-                                                                            />
-                                                                            <div className="flex-1 min-w-0">
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <p className={`text-sm font-medium break-words ${checked ? 'text-gray-900' : 'text-gray-800'}`}>
-                                                                                        {svc.name}
-                                                                                    </p>
-                                                                                    {priceInfo.discountPercent > 0 && (
-                                                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-green-100 text-green-700 shrink-0">
-                                                                                            -{priceInfo.discountPercent}%
-                                                                                        </span>
-                                                                                    )}
-                                                                                </div>
-                                                                                {svc.description && (
-                                                                                    <p className="text-xs text-gray-400 mt-0.5 truncate">{svc.description}</p>
-                                                                                )}
-                                                                                {type === 'PARACLINICAL' && svc.capabilityName && <p className="text-xs text-gray-500 mt-0.5">{svc.capabilityName}</p>}
-                                                                            </div>
-                                                                            <div className="flex flex-col items-end shrink-0 pl-2">
-                                                                                {priceInfo.discountPercent > 0 && (
-                                                                                    <span className="text-xs text-gray-400 line-through mb-0.5">
-                                                                                        {fmt(priceInfo.original)}
-                                                                                    </span>
-                                                                                )}
-                                                                                <span className={`text-sm font-semibold ${priceInfo.discountPercent > 0 ? 'text-green-600' : 'text-gray-900'}`}>
-                                                                                    {fmt(priceInfo.final)}
-                                                                                </span>
-                                                                            </div>
-                                                                        </label>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-sm text-gray-400 py-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                                    Không tìm thấy dịch vụ nào phù hợp
-                                                </p>
+                                        <label className={labelCls}>
+                                            {t(
+                                                'createTicket.bundle.reasonLabel'
                                             )}
-                                        </div>
-                                        
-                                        {/* Lý do khám */}
-                                        <div className="mt-6 pt-5 border-t border-gray-100 shrink-0">
-                                            <p className={labelCls}>{t('createTicket.bundle.reasonLabel')}</p>
-                                            <textarea
-                                                value={reason}
-                                                onChange={e => setReason(e.target.value)}
-                                                placeholder={t('createTicket.bundle.reasonPlaceholder')}
-                                                rows={2}
-                                                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-gray-400 resize-none placeholder:text-gray-300"
-                                            />
-                                        </div>
-                                    </section>
+                                        </label>
+
+                                        <textarea
+                                            value={
+                                                reason
+                                            }
+                                            onChange={(
+                                                event
+                                            ) =>
+                                                setReason(
+                                                    event
+                                                        .target
+                                                        .value
+                                                )
+                                            }
+                                            placeholder={t(
+                                                'createTicket.bundle.reasonPlaceholder'
+                                            )}
+                                            rows={2}
+                                            className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none placeholder:text-gray-300 focus:border-gray-400 focus:ring-1 focus:ring-gray-200"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {(validationError || submitError) && <p className="text-red-500 text-sm text-center">{validationError || submitError}</p>}
-                    </div>
-                </div>
+                        {/* =================================================
+                            ERROR
+                        ================================================= */}
 
-                {/* ── Sticky footer ── */}
-                <div className="fixed bottom-0 left-52 right-0 bg-white border-t border-gray-200 px-10 h-16 flex items-center justify-between z-40">
-                    <div className="flex items-center gap-6">
-                        {totalDiscount > 0 && (
-                            <div className="flex flex-col text-sm">
-                                <span className="text-gray-500">Tiền gốc: <span className="line-through">{fmt(totalOriginal)}</span></span>
-                                <span className="text-green-600 font-medium">Giảm BHYT: -{fmt(totalDiscount)}</span>
+                        {(validationError ||
+                            submitError) && (
+                            <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+
+                                <p className="text-sm text-red-500">
+                                    {validationError ||
+                                        submitError}
+                                </p>
                             </div>
                         )}
-                        <p className="text-sm text-gray-500 flex items-center gap-2">
-                            {t('createTicket.totalCost')}
-                            <span className="text-xl font-bold text-gray-900">{fmt(totalFinal)}</span>
-                        </p>
                     </div>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={submitting}
-                        className="h-10 px-7 bg-gray-900 hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl transition-colors"
-                    >
-                        {submitting ? t('createTicket.submitting') : t('createTicket.submit')}
-                    </button>
                 </div>
 
-                {/* Modal xác nhận */}
+                {/* =====================================================
+                    STICKY FOOTER
+                ===================================================== */}
+
+                <div className="fixed bottom-0 left-52 right-0 z-40 border-t border-gray-200 bg-white">
+
+                    <div className="flex h-[72px] items-center justify-between gap-5 px-6 lg:px-8">
+
+                        {/* SUMMARY */}
+
+                        <div className="flex min-w-0 items-center gap-6">
+
+                            <div className="hidden border-r border-gray-200 pr-6 sm:block">
+
+                                <p className="text-xs text-gray-400">
+                                    Dịch vụ đã chọn
+                                </p>
+
+                                <p className="mt-0.5 text-sm font-semibold text-gray-800">
+                                    {
+                                        selectedServiceIds.length
+                                    }
+                                </p>
+                            </div>
+
+                            <div>
+                                <p className="text-xs text-gray-400">
+                                    Tổng chi phí dự kiến
+                                </p>
+
+                                <p className="text-xl font-bold text-gray-900">
+                                    {fmt(total)}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* SUBMIT */}
+
+                        <button
+                            type="button"
+                            onClick={
+                                handleSubmit
+                            }
+                            disabled={
+                                submitting
+                            }
+                            className="h-10 shrink-0 rounded-xl bg-gray-900 px-7 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {submitting
+                                ? t(
+                                    'createTicket.submitting'
+                                )
+                                : t(
+                                    'createTicket.submit'
+                                )}
+                        </button>
+                    </div>
+                </div>
+
+                {/* =====================================================
+                    CONFIRM MODAL
+                ===================================================== */}
+
                 {showConfirmModal && (
                     <CreateTicketConfirmModal
                         data={{
                             fullName,
+
                             phone,
-                            age: dob ? new Date().getFullYear() - new Date(dob).getFullYear() : '',
-                            gender: gender === 'male' ? t('createTicket.patientInfo.male') : gender === 'female' ? t('createTicket.patientInfo.female') : t('createTicket.patientInfo.other'),
+
+                            age: dob
+                                ? new Date().getFullYear() -
+                                new Date(
+                                    dob
+                                ).getFullYear()
+                                : '',
+
+                            gender:
+                                gender ===
+                                'male'
+                                    ? t(
+                                        'createTicket.patientInfo.male'
+                                    )
+                                    : gender ===
+                                    'female'
+                                        ? t(
+                                            'createTicket.patientInfo.female'
+                                        )
+                                        : t(
+                                            'createTicket.patientInfo.other'
+                                        ),
+
                             address,
-                            total: fmt(totalFinal),
-                            services: selectedItems.map(item => item.service),
+
+                            total:
+                                fmt(total),
+
+                            services:
+                            selectedServices,
+
                             reason,
                         }}
                         onClose={() => {
-                            setShowConfirmModal(false);
-                            setValidationError('');
+                            setShowConfirmModal(
+                                false
+                            );
+
+                            setValidationError(
+                                ''
+                            );
                         }}
-                        onConfirm={handleConfirm}
-                        submitting={submitting}
+                        onConfirm={
+                            handleConfirm
+                        }
+                        submitting={
+                            submitting
+                        }
                     />
                 )}
-
             </div>
         </ReceptionistLayout>
     );

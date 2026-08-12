@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/axios';
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 7;
 
 export function useAppointments() {
     const { t } = useTranslation('appointments');
@@ -12,7 +12,6 @@ export function useAppointments() {
     
     const [params, setParams] = useState({
         code: '',
-        specialty: '',
         status: '',
         page: 0
     });
@@ -22,7 +21,6 @@ export function useAppointments() {
         queryFn: async () => {
             const queryParams = new URLSearchParams({
                 code: params.code,
-                specialty: params.specialty,
                 status: params.status,
                 page: String(params.page),
                 size: String(PAGE_SIZE)

@@ -31,6 +31,9 @@ export function useLabDetail(orderId, departmentId = null) {
                 // Map status từ enum object sang string nếu cần
                 const data = {
                     ...rawData,
+                    // TestRequestResponse dùng performingDepartmentId, còn màn chi tiết
+                    // dùng departmentId để quay lại đúng danh sách phòng cận lâm sàng.
+                    departmentId: rawData.performingDepartmentId ?? rawData.departmentId ?? null,
                     status: typeof rawData.status === 'object' && rawData.status?.name
                         ? rawData.status.name
                         : (typeof rawData.status === 'string' ? rawData.status : String(rawData.status || 'PENDING')),
@@ -44,7 +47,12 @@ export function useLabDetail(orderId, departmentId = null) {
                         const result = await resultRes.json();
                         data.notes = result.conclusion || '';
                         data.specimenId = result.sampleId || '';
+                        data.sampleType = result.sampleType || '';
+                        data.sampleStatus = result.sampleStatus || '';
+                        data.collectedAt = result.collectedAt || null;
+                        data.collectedByName = result.collectedByName || '';
                         data.resultFileUrl = result.imageUrl || '';
+                        data.resultFileName = result.fileName || '';
                     }
                 }
                 setOrder(data);
@@ -88,7 +96,9 @@ export function useLabDetail(orderId, departmentId = null) {
                         testRequestId: orderId,
                         imageUrl: payload.resultFileUrl || null,
                         conclusion: payload.notes || '',
-                        sampleId: payload.specimenId || '',
+                        sampleId: payload.specimenId || null,
+                        sampleType: payload.sampleType || null,
+                        sampleStatus: payload.sampleStatus || null,
                         performedById,
                         complete: false,
                     }),
@@ -104,7 +114,12 @@ export function useLabDetail(orderId, departmentId = null) {
                 testResultId: saved.resultId,
                 notes: saved.conclusion || '',
                 specimenId: saved.sampleId || '',
+                sampleType: saved.sampleType || '',
+                sampleStatus: saved.sampleStatus || '',
+                collectedAt: saved.collectedAt || previous?.collectedAt || null,
+                collectedByName: saved.collectedByName || previous?.collectedByName || '',
                 resultFileUrl: saved.imageUrl || '',
+                resultFileName: saved.fileName || previous?.resultFileName || '',
                 status: previous?.status === 'PENDING' ? 'IN_PROGRESS' : previous?.status,
             }));
             toast.success('Lưu nháp kết quả thành công!');
@@ -123,7 +138,9 @@ export function useLabDetail(orderId, departmentId = null) {
                 testRequestId: orderId,
                 imageUrl: payload.resultFileUrl || null,
                 conclusion: payload.notes || '',
-                sampleId: payload.specimenId || '',
+                sampleId: payload.specimenId || null,
+                sampleType: payload.sampleType || null,
+                sampleStatus: payload.sampleStatus || null,
                 performedById,
             };
 
@@ -134,7 +151,7 @@ export function useLabDetail(orderId, departmentId = null) {
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', ...bearer() },
-                        body: JSON.stringify({ cancelReason: payload.cancelReason || '' }),
+                        body: JSON.stringify({ reason: payload.cancelReason?.trim() || '' }),
                     }
                 );
             } else {

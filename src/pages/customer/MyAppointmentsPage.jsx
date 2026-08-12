@@ -1,204 +1,821 @@
 // src/pages/patient/MyAppointmentsPage.jsx
-import { useState, useEffect } from 'react';
+
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import {
+    CalendarDays,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
+    Filter,
+    Plus,
+} from 'lucide-react';
+
 import PatientLayout from '@/components/layout/CustomerLayout';
 import CancelConfirmModal from '@/components/ui/CancelConfirmModal';
 import { useAppointments } from '@/hooks/useAppointmentsCustomer';
 import { ROUTES } from '@/constants/routes';
 import { toast } from 'react-toastify';
 
-const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + ' đ' : '—';
+/* =========================================================
+   HELPERS
+========================================================= */
 
-/** Normalize a raw API status string to the lowercase key used by i18n / STATUS_CFG */
-const normalizeStatus = (status) => (status || '').toString().toLowerCase().trim();
+const normalizeStatus = (status) =>
+    (status || '')
+        .toString()
+        .toLowerCase()
+        .trim();
 
-/* ── Class-only config (labels are translated via t() inside component) ── */
+const STATUSES = [
+    '',
+    'upcoming',
+    'checked_in',
+    'completed',
+    'cancelled',
+];
+
+const inputCls =
+    'w-full h-11 px-4 text-sm border border-gray-200 rounded-lg outline-none bg-white focus:border-gray-400 focus:ring-1 focus:ring-gray-200 transition';
+
+const labelCls =
+    'block text-xs font-semibold text-gray-500 mb-2';
+
 const STATUS_CLS = {
-    upcoming:   { cls: 'border border-gray-800 text-gray-800 bg-white text-xs font-semibold px-2.5 py-1 rounded' },
-    completed:  { cls: 'border border-gray-300 text-gray-400 bg-white text-xs px-2.5 py-1 rounded' },
-    cancelled:  { cls: 'border border-red-200 text-red-400 bg-white text-xs px-2.5 py-1 rounded' },
-    checked_in: { cls: 'border border-blue-200 text-blue-600 bg-blue-50 text-xs px-2.5 py-1 rounded' },
+    upcoming:
+        'inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700',
+
+    checked_in:
+        'inline-flex items-center rounded-lg border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700',
+
+    completed:
+        'inline-flex items-center rounded-lg border border-gray-200 bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-500',
+
+    cancelled:
+        'inline-flex items-center rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-500',
 };
 
-const SPECIALTIES = ['', 'Cardiology', 'Endocrinology', 'General Physician', 'Ophthalmology', 'Dermatology'];
-const STATUSES    = ['', 'upcoming', 'checked_in', 'completed', 'cancelled'];
+/* =========================================================
+   PAGINATION
+========================================================= */
 
-const inputCls  = 'w-full h-9 px-3 text-xs border border-gray-200 rounded-lg outline-none focus:border-primary-500 bg-white';
-const labelCls  = 'block text-xs font-semibold text-gray-400 tracking-wide mb-1.5';
+function Pagination({
+                        page,
+                        total,
+                        pageSize,
+                        onChange,
+                    }) {
+    const totalPages = Math.max(
+        1,
+        Math.ceil(total / pageSize)
+    );
 
-function Pagination({ page, total, pageSize, onChange }) {
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    if (totalPages <= 1) return null;
+    if (totalPages <= 1) {
+        return null;
+    }
+
+    const pages = [];
+
+    for (
+        let current = 1;
+        current <= totalPages;
+        current++
+    ) {
+        if (
+            totalPages <= 7 ||
+            current === 1 ||
+            current === totalPages ||
+            Math.abs(current - page) <= 1
+        ) {
+            pages.push(current);
+        }
+    }
+
     return (
-        <div className="flex justify-end gap-1 mt-4">
-            <button onClick={() => onChange(page - 1)} disabled={page === 1}
-                    className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded text-gray-400 disabled:opacity-30 hover:border-gray-400 transition-colors text-sm">‹</button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                <button key={p} onClick={() => onChange(p)}
-                        className={`w-8 h-8 text-sm rounded border transition-colors ${p === page ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
-                    {p}
-                </button>
-            ))}
-            <button onClick={() => onChange(page + 1)} disabled={page === totalPages}
-                    className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded text-gray-400 disabled:opacity-30 hover:border-gray-400 transition-colors text-sm">›</button>
+        <div className="flex items-center gap-2">
+
+            <button
+                type="button"
+                disabled={page === 1}
+                onClick={() => onChange(1)}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+                <ChevronsLeft size={16} />
+            </button>
+
+            <button
+                type="button"
+                disabled={page === 1}
+                onClick={() =>
+                    onChange(
+                        Math.max(1, page - 1)
+                    )
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+                <ChevronLeft size={16} />
+            </button>
+
+            {pages.map(
+                (
+                    pageNumber,
+                    index
+                ) => {
+                    const previous =
+                        pages[index - 1];
+
+                    return (
+                        <div
+                            key={pageNumber}
+                            className="flex items-center gap-2"
+                        >
+                            {previous &&
+                                pageNumber -
+                                previous >
+                                1 && (
+                                    <span className="px-1 text-gray-400">
+                                        ...
+                                    </span>
+                                )}
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    onChange(
+                                        pageNumber
+                                    )
+                                }
+                                className={`flex h-9 min-w-9 items-center justify-center rounded-lg border px-3 text-sm font-medium transition ${
+                                    page ===
+                                    pageNumber
+                                        ? 'border-gray-900 bg-white text-gray-900'
+                                        : 'border-gray-200 bg-white text-gray-500 hover:border-gray-400'
+                                }`}
+                            >
+                                {pageNumber}
+                            </button>
+                        </div>
+                    );
+                }
+            )}
+
+            <button
+                type="button"
+                disabled={
+                    page === totalPages
+                }
+                onClick={() =>
+                    onChange(
+                        Math.min(
+                            totalPages,
+                            page + 1
+                        )
+                    )
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+                <ChevronRight size={16} />
+            </button>
+
+            <button
+                type="button"
+                disabled={
+                    page === totalPages
+                }
+                onClick={() =>
+                    onChange(totalPages)
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+                <ChevronsRight size={16} />
+            </button>
         </div>
     );
 }
 
-export default function MyAppointmentsPage() {
-    const { t }    = useTranslation('appointments');
-    const navigate = useNavigate();
-    const { appointments, loading, error, total, page, PAGE_SIZE, fetchAppointments, cancelAppointment } = useAppointments();
-    const [cancelApptId, setCancelApptId] = useState(null);
-    const [isCancelling, setIsCancelling] = useState(false);
+/* =========================================================
+   MAIN
+========================================================= */
 
-    // Build status config with Vietnamese labels via i18n
+export default function MyAppointmentsPage() {
+    const { t } =
+        useTranslation(
+            'appointments'
+        );
+
+    const navigate =
+        useNavigate();
+
+    const {
+        appointments,
+        loading,
+        error,
+        total,
+        page,
+        PAGE_SIZE,
+        fetchAppointments,
+        cancelAppointment,
+    } = useAppointments();
+
+    const [
+        cancelApptId,
+        setCancelApptId,
+    ] = useState(null);
+
+    const [
+        isCancelling,
+        setIsCancelling,
+    ] = useState(false);
+
+    const [
+        status,
+        setStatus,
+    ] = useState('');
+
+    /* =====================================================
+       STATUS CONFIG
+    ===================================================== */
+
     const STATUS_CFG = {
-        upcoming:   { label: t('myAppointments.status.upcoming'),   cls: STATUS_CLS.upcoming.cls },
-        completed:  { label: t('myAppointments.status.completed'),  cls: STATUS_CLS.completed.cls },
-        cancelled:  { label: t('myAppointments.status.cancelled'),  cls: STATUS_CLS.cancelled.cls },
-        checked_in: { label: t('myAppointments.status.checked_in'),  cls: STATUS_CLS.checked_in.cls },
+        upcoming: {
+            label: t(
+                'myAppointments.status.upcoming'
+            ),
+            cls: STATUS_CLS.upcoming,
+        },
+
+        completed: {
+            label: t(
+                'myAppointments.status.completed'
+            ),
+            cls: STATUS_CLS.completed,
+        },
+
+        cancelled: {
+            label: t(
+                'myAppointments.status.cancelled'
+            ),
+            cls: STATUS_CLS.cancelled,
+        },
+
+        checked_in: {
+            label: t(
+                'myAppointments.status.checked_in'
+            ),
+            cls: STATUS_CLS.checked_in,
+        },
     };
 
-    const [code,      setCode]      = useState('');
-    const [specialty, setSpecialty] = useState('');
-    const [status,    setStatus]    = useState('');
+    /* =====================================================
+       LOAD
+    ===================================================== */
 
-    useEffect(() => { fetchAppointments(); }, []);
+    useEffect(() => {
+        fetchAppointments();
+    }, []);
 
-    const handleFilter = () => fetchAppointments({ code, specialty, status, page: 0 });
-    const handlePage   = (p) => fetchAppointments({ code, specialty, status, page: p - 1 }); // Frontend 1-based → backend 0-based
+    /* =====================================================
+       FILTER
+    ===================================================== */
 
-    const thCls = 'text-xs font-semibold text-gray-400 tracking-wide text-left px-4 py-3';
-    const tdCls = 'px-4 py-4 align-top text-sm';
+    const handleFilter = () => {
+        fetchAppointments({
+            status,
+            page: 0,
+        });
+    };
+
+    /* =====================================================
+       PAGE
+    ===================================================== */
+
+    const handlePage = (nextPage) => {
+        fetchAppointments({
+            status,
+            page:
+                nextPage - 1,
+        });
+    };
+
+    /* =====================================================
+       RESULT RANGE
+    ===================================================== */
+
+    const resultStart =
+        total === 0
+            ? 0
+            : (page - 1) *
+            PAGE_SIZE +
+            1;
+
+    const resultEnd =
+        Math.min(
+            page * PAGE_SIZE,
+            total
+        );
+
+    /* =====================================================
+       UI
+    ===================================================== */
 
     return (
         <PatientLayout>
-            <div className="space-y-5">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                    <h1 className="text-sm font-bold text-gray-900 tracking-widest">{t('myAppointments.pageTitle')}</h1>
+            <div className="w-full space-y-5">
+
+                {/* =================================================
+                    HEADER
+                ================================================= */}
+
+                <div className="flex flex-wrap items-start justify-between gap-4">
+
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">
+                            {t(
+                                'myAppointments.pageTitle'
+                            )}
+                        </h1>
+
+                        <p className="mt-4 text-sm leading-6 text-gray-400">
+                            {t(
+                                'myAppointments.notice'
+                            )}
+
+                            <br />
+
+                            {t(
+                                'myAppointments.noticeQueue'
+                            )}
+                        </p>
+                    </div>
+
                     <button
-                        onClick={() => navigate(ROUTES.CUSTOMER_APPOINTMENT)}
-                        className="px-5 h-9 bg-gray-900 hover:bg-gray-700 text-white text-xs font-semibold rounded-xl transition-colors tracking-wide">
-                        {t('myAppointments.newBtn')}
-                    </button>
-                </div>
+                        type="button"
+                        onClick={() =>
+                            navigate(
+                                ROUTES.CUSTOMER_APPOINTMENT
+                            )
+                        }
+                        className="inline-flex h-11 items-center gap-2 rounded-xl bg-gray-900 px-5 text-sm font-semibold text-white transition hover:bg-gray-700"
+                    >
+                        <Plus size={17} />
 
-                {/* Notice */}
-                <p className="text-xs text-gray-400 leading-relaxed">
-                    {t('myAppointments.notice')}<br />{t('myAppointments.noticeQueue')}
-                </p>
-
-                {/* Filter */}
-                <div className="bg-white border border-gray-200 rounded-xl px-5 py-4 grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
-                    {/* Removed Code Filter */}
-                    <div>
-                        <label className={labelCls}>{t('myAppointments.filter.specialty')}</label>
-                        <select value={specialty} onChange={e => setSpecialty(e.target.value)} className={inputCls}>
-                            <option value="">{t('myAppointments.filter.specialtyAll')}</option>
-                            {SPECIALTIES.filter(Boolean).map(s => <option key={s} value={s}>{t(`myAppointments.specialties.${s}`, { defaultValue: s })}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className={labelCls}>{t('myAppointments.filter.status')}</label>
-                        <select value={status} onChange={e => setStatus(e.target.value)} className={inputCls}>
-                            <option value="">{t('myAppointments.filter.statusAll')}</option>
-                            {STATUSES.filter(Boolean).map(s => (
-                                <option key={s} value={s}>{t(`myAppointments.status.${s}`)}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <button onClick={handleFilter}
-                            className="h-9 px-4 bg-gray-900 hover:bg-gray-700 text-white text-xs font-semibold rounded-lg transition-colors tracking-wide whitespace-nowrap">
-                        {t('myAppointments.filter.filterBtn')}
-                    </button>
-                </div>
-
-                {/* Table */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                    <table className="w-full">
-                        <thead className="border-b border-gray-100">
-                        <tr>
-                            <th className={thCls}>{t('myAppointments.table.dateTime')}</th>
-                            <th className={thCls}>{t('myAppointments.table.specialty')}</th>
-                            <th className={thCls}>{t('myAppointments.table.status')}</th>
-                            <th className={thCls}>{t('myAppointments.table.actions')}</th>
-                        </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                        {loading && <tr><td colSpan={6} className="text-center py-12 text-sm text-gray-400">{t('myAppointments.loading')}</td></tr>}
-                        {!loading && error && <tr><td colSpan={4} className="text-center py-12 text-sm text-red-500">{error}</td></tr>}
-                        {!loading && !error && appointments.length === 0 && (
-                            <tr><td colSpan={4} className="text-center py-12 text-sm text-gray-400">{t('myAppointments.noData')}</td></tr>
+                        {t(
+                            'myAppointments.newBtn'
                         )}
-                        {!loading && appointments.map(appt => {
-                            const normStatus = normalizeStatus(appt.status);
-                            const stCfg   = STATUS_CFG[normStatus] ?? STATUS_CFG.upcoming;
+                    </button>
+                </div>
 
-                            let isPast = false;
-                            if (appt.date) {
-                                const [day, month, year] = appt.date.split('/');
-                                const apptDate = new Date(`${year}-${month}-${day}T00:00:00`);
-                                const today = new Date();
-                                today.setHours(0, 0, 0, 0);
-                                if (apptDate <= today) isPast = true;
-                            }
+                {/* =================================================
+                    FILTER
+                ================================================= */}
 
-                            const isActive = normStatus === 'upcoming' && !isPast;
-                            const isDone   = normStatus === 'completed';
-                            return (
-                                <tr key={appt.id} className={`hover:bg-gray-50 transition-colors ${isDone ? 'opacity-50' : ''}`}>
-                                    <td className={tdCls}>
-                                        <p className={`font-semibold ${isDone ? 'text-gray-400' : 'text-gray-800'}`}>{appt.date}</p>
-                                        <p className="text-xs text-gray-400 mt-0.5">{appt.timeWindow}</p>
-                                        <p className="text-xs text-gray-400">({appt.shift})</p>
-                                    </td>
-                                    <td className={tdCls + (isDone ? ' text-gray-400' : ' text-gray-700')}>{t(`myAppointments.specialties.${appt.specialty}`, { defaultValue: appt.specialty })}</td>
-                                    <td className={tdCls}>
-                                        <span className={stCfg.cls}>{stCfg.label}</span>
-                                    </td>
-                                    <td className={tdCls}>
-                                        <div className="flex flex-col gap-1">
+                <div className="rounded-2xl border border-gray-200 bg-white p-5">
+
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_260px]">
+
+                        {/* STATUS */}
+
+                        <div>
+                            <label className={labelCls}>
+                                {t(
+                                    'myAppointments.filter.status'
+                                )}
+                            </label>
+
+                            <select
+                                value={
+                                    status
+                                }
+                                onChange={(
+                                    event
+                                ) =>
+                                    setStatus(
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                }
+                                className={
+                                    inputCls
+                                }
+                            >
+                                <option value="">
+                                    {t(
+                                        'myAppointments.filter.statusAll'
+                                    )}
+                                </option>
+
+                                {STATUSES.filter(
+                                    Boolean
+                                ).map(
+                                    (
+                                        item
+                                    ) => (
+                                        <option
+                                            key={
+                                                item
+                                            }
+                                            value={
+                                                item
+                                            }
+                                        >
+                                            {t(
+                                                `myAppointments.status.${item}`
+                                            )}
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </div>
+
+                        {/* FILTER BUTTON */}
+
+                        <div className="flex items-end">
+
+                            <button
+                                type="button"
+                                onClick={
+                                    handleFilter
+                                }
+                                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-5 text-sm font-semibold text-white transition hover:bg-gray-700"
+                            >
+                                <Filter
+                                    size={
+                                        16
+                                    }
+                                />
+
+                                {t(
+                                    'myAppointments.filter.filterBtn'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* =================================================
+                    APPOINTMENT TABLE
+                ================================================= */}
+
+                <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+
+                    {/* TABLE HEADER */}
+
+                    <div className="hidden grid-cols-[1.1fr_1.4fr_1fr_220px] border-b border-gray-100 px-5 py-4 text-xs font-semibold text-gray-500 md:grid">
+
+                        <div>
+                            {t(
+                                'myAppointments.table.dateTime'
+                            )}
+                        </div>
+
+                        <div>
+                            Dịch vụ đã đặt
+                        </div>
+
+                        <div>
+                            {t(
+                                'myAppointments.table.status'
+                            )}
+                        </div>
+
+                        <div>
+                            {t(
+                                'myAppointments.table.actions'
+                            )}
+                        </div>
+                    </div>
+
+                    {/* LOADING */}
+
+                    {loading && (
+                        <div className="py-16 text-center">
+
+                            <p className="text-sm text-gray-400">
+                                {t(
+                                    'myAppointments.loading'
+                                )}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* ERROR */}
+
+                    {!loading &&
+                        error && (
+                            <div className="py-16 text-center">
+
+                                <p className="text-sm text-red-500">
+                                    {error}
+                                </p>
+                            </div>
+                        )}
+
+                    {/* EMPTY */}
+
+                    {!loading &&
+                        !error &&
+                        appointments.length ===
+                        0 && (
+                            <div className="py-16 text-center">
+
+                                <CalendarDays
+                                    size={
+                                        30
+                                    }
+                                    className="mx-auto mb-3 text-gray-200"
+                                />
+
+                                <p className="text-sm text-gray-400">
+                                    {t(
+                                        'myAppointments.noData'
+                                    )}
+                                </p>
+                            </div>
+                        )}
+
+                    {/* =================================================
+                        ROWS
+                    ================================================= */}
+
+                    {!loading &&
+                        !error &&
+                        appointments.map(
+                            (
+                                appointment
+                            ) => {
+                                const normalizedStatus =
+                                    normalizeStatus(
+                                        appointment.status
+                                    );
+
+                                const statusConfig =
+                                    STATUS_CFG[
+                                        normalizedStatus
+                                        ] ||
+                                    STATUS_CFG.upcoming;
+
+                                let isPast =
+                                    false;
+
+                                if (
+                                    appointment.date
+                                ) {
+                                    const [
+                                        day,
+                                        month,
+                                        year,
+                                    ] =
+                                        appointment.date.split(
+                                            '/'
+                                        );
+
+                                    const appointmentDate =
+                                        new Date(
+                                            `${year}-${month}-${day}T00:00:00`
+                                        );
+
+                                    const today =
+                                        new Date();
+
+                                    today.setHours(
+                                        0,
+                                        0,
+                                        0,
+                                        0
+                                    );
+
+                                    isPast =
+                                        appointmentDate <=
+                                        today;
+                                }
+
+                                const isActive =
+                                    normalizedStatus ===
+                                    'upcoming' &&
+                                    !isPast;
+
+                                const isDone =
+                                    normalizedStatus ===
+                                    'completed';
+
+                                return (
+                                    <div
+                                        key={
+                                            appointment.id
+                                        }
+                                        className={`grid grid-cols-1 gap-4 border-b border-gray-100 px-5 py-5 transition hover:bg-gray-50 md:grid-cols-[1.1fr_1.4fr_1fr_220px] md:items-center ${
+                                            isDone
+                                                ? 'text-gray-400'
+                                                : ''
+                                        }`}
+                                    >
+
+                                        {/* DATE */}
+
+                                        <div className="flex gap-3">
+
+                                            <CalendarDays
+                                                size={
+                                                    19
+                                                }
+                                                className={`mt-0.5 shrink-0 ${
+                                                    isDone
+                                                        ? 'text-gray-300'
+                                                        : 'text-gray-600'
+                                                }`}
+                                            />
+
+                                            <div>
+                                                <p
+                                                    className={`text-sm font-semibold ${
+                                                        isDone
+                                                            ? 'text-gray-400'
+                                                            : 'text-gray-900'
+                                                    }`}
+                                                >
+                                                    {
+                                                        appointment.date
+                                                    }
+                                                </p>
+
+                                                <p className="mt-1 text-sm text-gray-500">
+                                                    {
+                                                        appointment.timeWindow
+                                                    }
+                                                </p>
+
+                                                <p className="mt-0.5 text-xs text-gray-400">
+                                                    (
+                                                    {
+                                                        appointment.shift
+                                                    }
+                                                    )
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* SERVICES */}
+
+                                        <div>
+                                            <p
+                                                className={`text-sm font-medium ${
+                                                    isDone
+                                                        ? 'text-gray-400'
+                                                        : 'text-gray-800'
+                                                }`}
+                                            >
+                                                {appointment.serviceSummary || appointment.serviceName || 'Chưa chọn dịch vụ'}
+                                            </p>
+                                        </div>
+
+                                        {/* STATUS */}
+
+                                        <div>
+                                            <span
+                                                className={
+                                                    statusConfig.cls
+                                                }
+                                            >
+                                                {
+                                                    statusConfig.label
+                                                }
+                                            </span>
+                                        </div>
+
+                                        {/* ACTION */}
+
+                                        <div className="flex flex-col items-start gap-2">
+
                                             <button
-                                                onClick={() => navigate(`/my-appointments/${appt.id}`)}
-                                                className="text-xs text-gray-500 hover:text-primary-500 transition-colors text-left">
-                                                {t('myAppointments.viewBtn')}
+                                                type="button"
+                                                onClick={() =>
+                                                    navigate(
+                                                        `/my-appointments/${appointment.id}`
+                                                    )
+                                                }
+                                                className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 transition hover:text-black"
+                                            >
+                                                {t(
+                                                    'myAppointments.viewBtn'
+                                                )}
+
+                                                <ChevronRight
+                                                    size={
+                                                        15
+                                                    }
+                                                />
                                             </button>
+
                                             {isActive && (
                                                 <button
-                                                    onClick={() => setCancelApptId(appt.id)}
-                                                    className="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors text-left">
-                                                    {t('myAppointments.cancelBtn')}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setCancelApptId(
+                                                            appointment.id
+                                                        )
+                                                    }
+                                                    className="text-sm font-medium text-red-500 transition hover:text-red-700"
+                                                >
+                                                    {t(
+                                                        'myAppointments.cancelBtn'
+                                                    )}
                                                 </button>
                                             )}
                                         </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                        </tbody>
-                    </table>
-                    <div className="px-4 py-3 border-t border-gray-50">
-                        <Pagination page={page} total={total} pageSize={PAGE_SIZE} onChange={handlePage} />
-                    </div>
+                                    </div>
+                                );
+                            }
+                        )}
+
+                    {/* =================================================
+                        FOOTER / PAGINATION
+                    ================================================= */}
+
+                    {!loading &&
+                        !error &&
+                        total > 0 && (
+                            <div className="flex flex-col items-center justify-between gap-4 px-5 py-4 sm:flex-row">
+
+                                <p className="text-sm text-gray-500">
+                                    Hiển thị{' '}
+                                    <strong className="font-medium text-gray-700">
+                                        {resultStart}
+                                        {' - '}
+                                        {resultEnd}
+                                    </strong>{' '}
+                                    của{' '}
+                                    <strong className="font-medium text-gray-700">
+                                        {total}
+                                    </strong>{' '}
+                                    lịch hẹn
+                                </p>
+
+                                <div className="flex items-center gap-5">
+
+                                    <Pagination
+                                        page={
+                                            page
+                                        }
+                                        total={
+                                            total
+                                        }
+                                        pageSize={
+                                            PAGE_SIZE
+                                        }
+                                        onChange={
+                                            handlePage
+                                        }
+                                    />
+
+                                    <div className="flex h-9 items-center rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-600">
+                                        {PAGE_SIZE} / trang
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                 </div>
             </div>
 
-            <CancelConfirmModal 
-                isOpen={!!cancelApptId}
-                isLoading={isCancelling}
-                onClose={() => setCancelApptId(null)}
+            {/* =================================================
+                CANCEL MODAL
+            ================================================= */}
+
+            <CancelConfirmModal
+                isOpen={
+                    !!cancelApptId
+                }
+                isLoading={
+                    isCancelling
+                }
+                onClose={() =>
+                    setCancelApptId(
+                        null
+                    )
+                }
                 onConfirm={async () => {
-                    setIsCancelling(true);
-                    try { 
-                        await cancelAppointment(cancelApptId); 
-                        setCancelApptId(null);
-                    } catch (e) { 
-                        toast.error(e.message);
+                    setIsCancelling(
+                        true
+                    );
+
+                    try {
+                        await cancelAppointment(
+                            cancelApptId
+                        );
+
+                        setCancelApptId(
+                            null
+                        );
+                    } catch (error) {
+                        toast.error(
+                            error.message
+                        );
                     } finally {
-                        setIsCancelling(false);
+                        setIsCancelling(
+                            false
+                        );
                     }
                 }}
             />

@@ -94,7 +94,7 @@ export default function InvoiceListPage() {
     const [fromDate, setFromDate] = useState('');
     const [toDate,   setToDate]   = useState('');
 
-    const PAGE_SIZE = 100; // Tăng để lấy đủ dữ liệu, hoặc để backend trả về > 10
+    const PAGE_SIZE = 7;
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
     useEffect(() => {

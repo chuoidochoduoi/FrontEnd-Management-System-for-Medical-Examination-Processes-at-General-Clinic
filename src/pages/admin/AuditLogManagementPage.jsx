@@ -3,7 +3,7 @@ import { Search } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useAuditLog } from "@/hooks/useAuditLog";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 7;
 
 /* ── Pagination ── */
 function Pagination({ page, total, pageSize, onChange }) {

@@ -1,478 +1,1891 @@
 // src/pages/lab/LabDetailPage.jsx
-import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Upload, FileText, X, AlertTriangle, ArrowLeft, CheckCircle2, Circle, Clock3 } from 'lucide-react';
+
+import {
+    AlertTriangle,
+    ArrowLeft,
+    CheckCircle2,
+    ChevronDown,
+    ChevronRight,
+    ChevronUp,
+    Circle,
+    Clock3,
+    Eye,
+    FileText,
+    FlaskConical,
+    Info,
+    Upload,
+    UserRound,
+    X,
+} from 'lucide-react';
+
+import { toast } from 'react-toastify';
+
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { useLabDetail } from '@/hooks/useLabDetail';
 import { ROUTES } from '@/constants/routes';
-import { toast } from 'react-toastify';
 
-/* ── Status toggle button ── */
-function StatusBtn({ value, active, onClick, children }) {
-    return (
-        <button
-            type="button"
-            onClick={() => onClick(value)}
-            className={`px-5 h-10 text-sm rounded-lg border transition-colors font-medium ${
-                active
-                    ? 'bg-gray-900 text-white border-gray-900'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-            }`}
-        >
-            {children}
-        </button>
-    );
-}
+/* =========================================================
+   HELPERS
+========================================================= */
 
-/* ── File upload zone ── */
-function FileUpload({ file, onFile, onClear, t }) {
+const displayQueueNumber = (number) =>
+    String(number ?? 0).padStart(3, '0');
+
+const statusConfig = {
+    PENDING: {
+        label: 'Chờ xử lý',
+        cls: 'bg-amber-50 text-amber-700',
+    },
+
+    IN_PROGRESS: {
+        label: 'Đang xử lý',
+        cls: 'bg-blue-50 text-blue-700',
+    },
+
+    COMPLETED: {
+        label: 'Hoàn thành',
+        cls: 'bg-emerald-50 text-emerald-700',
+    },
+
+    CANCELLED: {
+        label: 'Đã hủy',
+        cls: 'bg-red-50 text-red-600',
+    },
+};
+
+const SAMPLE_TYPES = [
+    { value: 'BLOOD', label: 'Máu' },
+    { value: 'URINE', label: 'Nước tiểu' },
+    { value: 'STOOL', label: 'Phân' },
+    { value: 'SPUTUM', label: 'Đờm' },
+    { value: 'SWAB', label: 'Mẫu ngoáy' },
+    { value: 'BODY_FLUID', label: 'Dịch cơ thể' },
+    { value: 'TISSUE', label: 'Mô' },
+    { value: 'OTHER', label: 'Khác' },
+];
+
+const SAMPLE_STATUSES = [
+    {
+        value: 'ACCEPTED',
+        label: 'Đạt yêu cầu',
+    },
+    {
+        value: 'REJECTED',
+        label: 'Không đạt yêu cầu',
+    },
+    {
+        value: 'RECOLLECT',
+        label: 'Cần lấy lại',
+    },
+];
+
+/* =========================================================
+   FILE UPLOAD
+========================================================= */
+
+function FileUpload({
+                        file,
+                        fileUrl,
+                        onFile,
+                        onClear,
+                        uploading,
+                        disabled,
+                        pdfUrl,
+                        fileName,
+                    }) {
     const inputRef = useRef(null);
-    const [dragging, setDragging] = useState(false);
 
-    const handleDrop = (e) => {
-        e.preventDefault(); setDragging(false);
-        const f = e.dataTransfer.files[0];
-        if (f) onFile(f);
+    const [dragging, setDragging] =
+        useState(false);
+
+    const handleDrop = (event) => {
+        event.preventDefault();
+
+        if (disabled) return;
+
+        setDragging(false);
+
+        const selectedFile =
+            event.dataTransfer.files?.[0];
+
+        if (selectedFile) {
+            onFile(selectedFile);
+        }
     };
 
+    const hasFile =
+        !!file || !!fileUrl;
+
     return (
-        <div
-            onDragOver={e => { e.preventDefault(); setDragging(true); }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-xl p-6 transition-colors ${
-                dragging ? 'border-primary-400 bg-primary-50' : 'border-gray-200 bg-white'
-            }`}
-        >
-            {file ? (
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 border border-gray-200 rounded-lg flex flex-col items-center justify-center bg-green-50 shrink-0">
-                            <FileText size={20} className="text-green-500" />
-                            <span className="text-xs text-green-600 mt-0.5 font-medium">
-                {file.name?.split('.').pop()?.toUpperCase() ?? 'FILE'}
-              </span>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+
+            {/* HEADER */}
+
+            <div className="mb-3 flex items-center gap-2">
+                <FileText
+                    size={18}
+                    className="text-primary-600"
+                />
+
+                <h3 className="text-sm font-semibold text-slate-900">
+                    Tệp / hình ảnh kết quả
+                </h3>
+            </div>
+
+            {hasFile ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+
+                        <div className="flex min-w-0 items-center gap-3">
+
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-red-50">
+                                <FileText
+                                    size={20}
+                                    className="text-red-500"
+                                />
+                            </div>
+
+                            <div className="min-w-0">
+
+                                <p className="truncate text-sm font-semibold text-slate-800">
+                                    {file?.name ||
+                                        fileName ||
+                                        'Phiếu kết quả'}
+                                </p>
+
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                    {file
+                                        ? `${(
+                                            file.size /
+                                            1024 /
+                                            1024
+                                        ).toFixed(
+                                            2
+                                        )} MB`
+                                        : 'Tệp đã tải lên'}
+                                </p>
+
+                            </div>
+
                         </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-800">{t('labDetail.result.label')}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">{file.name}</p>
+
+                        <div className="flex items-center gap-2">
+
+                            {pdfUrl && (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        window.open(
+                                            pdfUrl,
+                                            '_blank'
+                                        )
+                                    }
+                                    className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                                >
+                                    <Eye size={15} />
+
+                                    Xem
+                                </button>
+                            )}
+
+                            {!disabled && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            inputRef.current?.click()
+                                        }
+                                        className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                                    >
+                                        Thay đổi tệp
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            onClear
+                                        }
+                                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:text-red-500"
+                                    >
+                                        <X
+                                            size={
+                                                15
+                                            }
+                                        />
+                                    </button>
+                                </>
+                            )}
+
                         </div>
+
                     </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => inputRef.current?.click()}
-                            className="px-4 h-9 border border-gray-200 text-sm text-gray-600 rounded-lg hover:border-gray-400 transition-colors"
-                        >
-                            {t('labDetail.result.uploadBtn')}
-                        </button>
-                        <button
-                            onClick={onClear}
-                            className="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-gray-600 transition-colors"
-                        >
-                            <X size={15} />
-                        </button>
-                    </div>
+
                 </div>
             ) : (
-                <div className="flex items-center justify-between">
+                <div
+                    onDragOver={(event) => {
+                        event.preventDefault();
+
+                        if (!disabled) {
+                            setDragging(
+                                true
+                            );
+                        }
+                    }}
+                    onDragLeave={() =>
+                        setDragging(false)
+                    }
+                    onDrop={handleDrop}
+                    className={`flex min-h-[92px] items-center justify-between gap-4 rounded-xl border border-dashed px-4 py-3 transition ${
+                        dragging
+                            ? 'border-primary-400 bg-primary-50'
+                            : 'border-slate-200 bg-slate-50/40'
+                    }`}
+                >
+
                     <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center shrink-0">
-                            <Upload size={18} className="text-gray-300" />
-                            <span className="text-xs text-gray-300 mt-0.5">PDF</span>
+
+                        <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white">
+                            <Upload
+                                size={18}
+                                className="text-slate-400"
+                            />
                         </div>
-                        <p className="text-sm font-medium text-gray-500">{t('labDetail.result.label')}</p>
+
+                        <div>
+                            <p className="text-sm font-medium text-slate-600">
+                                Kéo thả tệp vào đây
+                            </p>
+
+                            <p className="mt-0.5 text-xs text-slate-400">
+                                PDF tối đa 10 MB
+                            </p>
+                        </div>
+
                     </div>
-                    <button
-                        onClick={() => inputRef.current?.click()}
-                        className="px-5 h-9 border border-gray-800 text-sm font-medium text-gray-800 rounded-lg hover:bg-gray-800 hover:text-white transition-colors"
-                    >
-                        {t('labDetail.result.uploadBtn')}
-                    </button>
+
+                    {!disabled && (
+                        <button
+                            type="button"
+                            onClick={() =>
+                                inputRef.current?.click()
+                            }
+                            className="h-9 shrink-0 rounded-lg border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                            Chọn tệp
+                        </button>
+                    )}
+
                 </div>
             )}
+
+            {uploading && (
+                <p className="mt-2 text-xs text-slate-400">
+                    Đang tải file lên...
+                </p>
+            )}
+
             <input
                 ref={inputRef}
                 type="file"
                 className="hidden"
                 accept="application/pdf,.pdf"
-                onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); }}
+                disabled={disabled}
+                onChange={(event) => {
+                    const selectedFile =
+                        event.target.files?.[0];
+
+                    if (selectedFile) {
+                        onFile(
+                            selectedFile
+                        );
+                    }
+                }}
             />
+
         </div>
     );
 }
 
-/* ── Main page ── */
+/* =========================================================
+   CONFIRM MODAL
+========================================================= */
+
+function ConfirmCompleteModal({
+                                  open,
+                                  onClose,
+                                  onConfirm,
+                                  saving,
+                                  order,
+                                  specimenId,
+                                  requiresSpecimen,
+                              }) {
+    if (!open) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-[1px]">
+
+            <div className="w-full max-w-[460px] rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+
+                {/* HEADER */}
+
+                <div className="flex items-start justify-between gap-4">
+
+                    <div className="flex items-start gap-3">
+
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-50">
+                            <AlertTriangle
+                                size={19}
+                                className="text-amber-600"
+                            />
+                        </div>
+
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-900">
+                                Xác nhận hoàn thành kết quả
+                            </h2>
+
+                            <p className="mt-1 text-sm leading-5 text-slate-500">
+                                Bạn có chắc chắn muốn hoàn thành kết quả cận lâm sàng này?
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={saving}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100"
+                    >
+                        <X size={17} />
+                    </button>
+
+                </div>
+
+                {/* INFORMATION */}
+
+                <div className="mt-5 space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm">
+
+                    <div className="grid grid-cols-[110px_1fr] gap-3">
+
+                        <span className="text-slate-500">
+                            Dịch vụ
+                        </span>
+
+                        <span className="font-semibold text-slate-800">
+                            {order?.serviceName ||
+                                '—'}
+                        </span>
+
+                    </div>
+
+                    {requiresSpecimen && (
+                        <div className="grid grid-cols-[110px_1fr] gap-3">
+
+                            <span className="text-slate-500">
+                                Mã mẫu vật
+                            </span>
+
+                            <span className="font-semibold text-slate-800">
+                                {specimenId ||
+                                    '—'}
+                            </span>
+
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-[110px_1fr] gap-3">
+
+                        <span className="text-slate-500">
+                            Bệnh nhân
+                        </span>
+
+                        <span className="font-semibold text-slate-800">
+                            {order?.patientName ||
+                                '—'}
+
+                            {order?.patientCode &&
+                                ` (${order.patientCode})`}
+                        </span>
+
+                    </div>
+
+                </div>
+
+                {/* WARNING */}
+
+                <div className="mt-4 flex gap-2 rounded-xl bg-amber-50 px-3.5 py-3">
+
+                    <Info
+                        size={16}
+                        className="mt-0.5 shrink-0 text-amber-600"
+                    />
+
+                    <p className="text-xs leading-5 text-amber-800">
+                        Sau khi xác nhận, kết quả sẽ chuyển sang trạng thái{' '}
+                        <strong>
+                            Hoàn thành
+                        </strong>
+                        .
+                    </p>
+
+                </div>
+
+                {/* ACTION */}
+
+                <div className="mt-5 flex justify-end gap-2">
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={saving}
+                        className="h-10 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                    >
+                        Hủy
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={onConfirm}
+                        disabled={saving}
+                        className="h-10 rounded-xl bg-primary-600 px-5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:opacity-50"
+                    >
+                        {saving
+                            ? 'Đang xử lý...'
+                            : 'Xác nhận hoàn thành'}
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+    );
+}
+
+/* =========================================================
+   MAIN PAGE
+========================================================= */
+
 export default function LabDetailPage() {
     const { id } = useParams();
-    const navigate = useNavigate();
-    const { t }  = useTranslation('lab');
-    const { order, loading, saving, error, saveDraft, save, uploadFile } = useLabDetail(id);
-    const departmentId = order?.departmentId;
-    const systemRole = (localStorage.getItem('systemRole') || sessionStorage.getItem('systemRole') || '').toUpperCase();
-    const isNurse = systemRole === 'NURSE';
 
-    // Form state
-    const [specimenId, setSpecimenId] = useState('');
-    const [status,     setStatus]     = useState('PENDING');
-    const [notes,      setNotes]      = useState('');
-    const [file,       setFile]       = useState(null);       // File object
-    const [fileUrl,    setFileUrl]    = useState('');         // uploaded URL
-    const [localPreviewUrl, setLocalPreviewUrl] = useState('');
-    const [cancelReason, setCancelReason] = useState('');
-    const [uploading,  setUploading]  = useState(false);
-    const [queueRequests, setQueueRequests] = useState([]);
+    const navigate = useNavigate();
+
+    const { t } =
+        useTranslation('lab');
+
+    const {
+        order,
+        loading,
+        saving,
+        error,
+        saveDraft,
+        save,
+        uploadFile,
+    } = useLabDetail(id);
+
+    const departmentId =
+        order?.departmentId;
+
+    const systemRole = (
+        localStorage.getItem(
+            'systemRole'
+        ) ||
+        sessionStorage.getItem(
+            'systemRole'
+        ) ||
+        ''
+    ).toUpperCase();
+
+    const isNurse =
+        systemRole === 'NURSE';
+
+    /* =========================================================
+       STATE
+    ========================================================= */
+
+    const [
+        specimenId,
+        setSpecimenId,
+    ] = useState('');
+
+    const [
+        sampleType,
+        setSampleType,
+    ] = useState('');
+
+    const [
+        sampleStatus,
+        setSampleStatus,
+    ] = useState('');
+
+    const [status, setStatus] =
+        useState('PENDING');
+
+    const [notes, setNotes] =
+        useState('');
+
+    const [file, setFile] =
+        useState(null);
+
+    const [fileUrl, setFileUrl] =
+        useState('');
+
+    const [
+        localPreviewUrl,
+        setLocalPreviewUrl,
+    ] = useState('');
+
+    const [
+        cancelReason,
+        setCancelReason,
+    ] = useState('');
+
+    const [
+        uploading,
+        setUploading,
+    ] = useState(false);
+
+    const [
+        queueRequests,
+        setQueueRequests,
+    ] = useState([]);
+
+    const [
+        showAllServices,
+        setShowAllServices,
+    ] = useState(false);
+
+    const [
+        confirmOpen,
+        setConfirmOpen,
+    ] = useState(false);
+
+    const [cancelModalOpen, setCancelModalOpen] = useState(false);
+
+    /* =========================================================
+       DATA INIT
+    ========================================================= */
 
     useEffect(() => {
         if (!order) return;
-        setSpecimenId(order.specimenId     ?? '');
-        setStatus(order.status             ?? 'IN_PROGRESS');
-        setNotes(order.notes               ?? '');
-        setFileUrl(order.resultFileUrl     ?? '');
-        setCancelReason(order.cancelReason ?? '');
+
+        setSpecimenId(
+            order.specimenId ?? ''
+        );
+
+        setSampleType(
+            order.sampleType ?? ''
+        );
+
+        setSampleStatus(
+            order.sampleStatus ?? ''
+        );
+
+        setStatus(
+            order.status ??
+            'IN_PROGRESS'
+        );
+
+        setNotes(
+            order.notes ?? ''
+        );
+
+        setFileUrl(
+            order.resultFileUrl ?? ''
+        );
+
+        setCancelReason(
+            order.cancelReason ?? ''
+        );
     }, [order]);
+
+    /* =========================================================
+       LOAD SERVICES IN SAME QUEUE
+    ========================================================= */
 
     useEffect(() => {
         if (!order?.queueTicketId) {
-            setQueueRequests(order ? [order] : []);
+            setQueueRequests(
+                order ? [order] : []
+            );
+
             return;
         }
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        fetch(`${import.meta.env.VITE_API_URL}/api/v1/test-requests/queue/${order.queueTicketId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-            .then(async response => {
-                if (!response.ok) throw new Error('Không thể tải danh sách xét nghiệm trong lượt');
+
+        const token =
+            localStorage.getItem(
+                'token'
+            ) ||
+            sessionStorage.getItem(
+                'token'
+            );
+
+        fetch(
+            `${
+                import.meta.env
+                    .VITE_API_URL
+            }/api/v1/test-requests/queue/${
+                order.queueTicketId
+            }`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        )
+            .then(async (response) => {
+                if (!response.ok) {
+                    throw new Error(
+                        'Không thể tải danh sách xét nghiệm trong lượt'
+                    );
+                }
+
                 return response.json();
             })
             .then(setQueueRequests)
-            .catch(error => toast.error(error.message));
-    }, [order?.queueTicketId, id]);
+            .catch((fetchError) =>
+                toast.error(
+                    fetchError.message
+                )
+            );
+    }, [
+        order?.queueTicketId,
+        id,
+    ]);
 
-    const handleFile = async (f) => {
-        if (f.type !== 'application/pdf' && !f.name?.toLowerCase().endsWith('.pdf')) return toast.error('Chỉ chấp nhận phiếu kết quả định dạng PDF');
-        if (f.size > 10 * 1024 * 1024) return toast.error('Tệp kết quả không được vượt quá 10 MB');
-        setFile(f);
-        if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
-        setLocalPreviewUrl(URL.createObjectURL(f));
+    /* =========================================================
+       DERIVED
+    ========================================================= */
+
+    const requiresSpecimen =
+        order?.requiresSpecimen ===
+        true;
+
+    const isFinished =
+        order?.status ===
+        'COMPLETED' ||
+        order?.status ===
+        'CANCELLED';
+
+    const isCancelled =
+        status === 'CANCELLED';
+
+    const currentRequest =
+        queueRequests.find(
+            (request) =>
+                String(
+                    request.testRequestId
+                ) === String(id)
+        ) || order;
+
+    const otherRequests =
+        queueRequests.filter(
+            (request) =>
+                String(
+                    request.testRequestId
+                ) !== String(id)
+        );
+
+    const completedCount =
+        queueRequests.filter(
+            (request) =>
+                request.status ===
+                'COMPLETED'
+        ).length;
+
+    const currentStatus =
+        statusConfig[
+            order?.status
+            ] ||
+        statusConfig.PENDING;
+
+    const pdfUrl =
+        localPreviewUrl ||
+        (fileUrl
+            ? fileUrl.startsWith(
+                'http'
+            )
+                ? fileUrl
+                : `${
+                    import.meta.env
+                        .VITE_API_URL
+                }${
+                    fileUrl.startsWith(
+                        '/'
+                    )
+                        ? ''
+                        : '/'
+                }${fileUrl}`
+            : '');
+
+    /* =========================================================
+       FILE
+    ========================================================= */
+
+    const handleFile = async (
+        selectedFile
+    ) => {
+        if (
+            selectedFile.type !==
+            'application/pdf' &&
+            !selectedFile.name
+                ?.toLowerCase()
+                .endsWith('.pdf')
+        ) {
+            return toast.error(
+                'Chỉ chấp nhận phiếu kết quả định dạng PDF'
+            );
+        }
+
+        if (
+            selectedFile.size >
+            10 * 1024 * 1024
+        ) {
+            return toast.error(
+                'Tệp kết quả không được vượt quá 10 MB'
+            );
+        }
+
+        setFile(selectedFile);
+
+        if (localPreviewUrl) {
+            URL.revokeObjectURL(
+                localPreviewUrl
+            );
+        }
+
+        setLocalPreviewUrl(
+            URL.createObjectURL(
+                selectedFile
+            )
+        );
+
         setUploading(true);
+
         try {
-            const res = await uploadFile(f);
-            setFileUrl(res.imageUrl || res.fileUrl || '');
+            const response =
+                await uploadFile(
+                    selectedFile
+                );
+
+            setFileUrl(
+                response.imageUrl ||
+                response.fileUrl ||
+                ''
+            );
         } catch {
-            // fileUrl stays empty; will be uploaded on save
-        } finally { setUploading(false); }
+            // File se duoc upload lai theo logic cua hook neu can.
+        } finally {
+            setUploading(false);
+        }
     };
 
-    const buildPayload = () => ({
-        specimenId, status, notes,
+    const handleClearFile = () => {
+        if (localPreviewUrl) {
+            URL.revokeObjectURL(
+                localPreviewUrl
+            );
+        }
+
+        setLocalPreviewUrl('');
+        setFile(null);
+        setFileUrl('');
+    };
+
+    /* =========================================================
+       PAYLOAD
+    ========================================================= */
+
+    const buildPayload = (
+        targetStatus = status
+    ) => ({
+        specimenId,
+        status: targetStatus,
+        notes,
+
+        sampleType,
+        sampleStatus,
+
         resultFileUrl: fileUrl,
-        cancelReason: status === 'CANCELLED' ? cancelReason : '',
+
+        cancelReason:
+            targetStatus ===
+            'CANCELLED'
+                ? cancelReason
+                : '',
     });
 
-    const validateResult = (finalize) => {
-        if (!specimenId.trim()) return 'Vui lòng nhập mã mẫu vật';
-        if (specimenId.trim().length > 100) return 'Mã mẫu vật không được vượt quá 100 ký tự';
-        if (status === 'CANCELLED' && !cancelReason.trim()) return 'Vui lòng nhập lý do hủy';
-        if (finalize && status === 'COMPLETED' && !notes.trim()) return 'Vui lòng nhập kết luận của bác sĩ';
-        if (finalize && status === 'COMPLETED' && !fileUrl) return 'Vui lòng tải phiếu kết quả PDF';
+    /* =========================================================
+       VALIDATE
+    ========================================================= */
+
+    const validateResult = (
+        finalize,
+        targetStatus = status
+    ) => {
+        if (
+            requiresSpecimen &&
+            specimenId.trim().length >
+            100
+        ) {
+            return 'Mã mẫu vật không được vượt quá 100 ký tự';
+        }
+
+        if (
+            finalize &&
+            requiresSpecimen &&
+            !specimenId.trim()
+        ) {
+            return 'Vui lòng nhập mã mẫu vật';
+        }
+
+        if (
+            finalize &&
+            requiresSpecimen &&
+            (!sampleType ||
+                !sampleStatus)
+        ) {
+            return 'Vui lòng chọn loại và tình trạng mẫu vật';
+        }
+
+        if (
+            targetStatus ===
+            'CANCELLED' &&
+            !cancelReason.trim()
+        ) {
+            return 'Vui lòng nhập lý do hủy';
+        }
+
+        if (
+            finalize &&
+            targetStatus ===
+            'COMPLETED' &&
+            !notes.trim()
+        ) {
+            return 'Vui lòng nhập kết luận';
+        }
+
+        if (
+            finalize &&
+            targetStatus ===
+            'COMPLETED' &&
+            !fileUrl
+        ) {
+            return 'Vui lòng tải phiếu kết quả PDF';
+        }
+
         return '';
     };
 
+    /* =========================================================
+       SAVE DRAFT
+    ========================================================= */
+
     const handleSaveDraft = () => {
-        const message = validateResult(false);
-        if (message) return toast.error(message);
-        saveDraft(buildPayload());
+        const message =
+            validateResult(false);
+
+        if (message) {
+            return toast.error(
+                message
+            );
+        }
+
+        saveDraft(
+            buildPayload()
+        );
     };
 
-    const handleSave = async () => {
-        if (isNurse) return toast.error('Y tá chỉ được lưu nháp kết quả. Bác sĩ phải ký xác nhận để hoàn thành.');
-        if (status !== 'COMPLETED' && status !== 'CANCELLED') {
-            return toast.error('Hãy chọn Hoàn thành để ký xác nhận, hoặc dùng nút Lưu nháp.');
+    /* =========================================================
+       OPEN CONFIRM
+    ========================================================= */
+
+    const handleOpenConfirm = () => {
+        if (isNurse) {
+            return toast.error(
+                'Y tá chỉ được lưu nháp kết quả.'
+            );
         }
-        const message = validateResult(true);
-        if (message) return toast.error(message);
-        const saved = await save(buildPayload());
-        if (!saved || status === 'CANCELLED') return;
-        const next = queueRequests.find(request =>
-            request.testRequestId !== id && !['COMPLETED', 'CANCELLED'].includes(request.status));
-        if (next) {
-            toast.info('Đã hoàn thành kỹ thuật này. Chuyển sang kỹ thuật tiếp theo.');
-            navigate(ROUTES.DOCTOR_LAB_DETAIL.replace(':id', next.testRequestId));
-        } else {
-            toast.success('Đã hoàn thành yêu cầu xét nghiệm.');
-            if (departmentId) navigate(ROUTES.DOCTOR_LAB.replace(':departmentId', departmentId));
-            else navigate(-1);
+
+        const message =
+            validateResult(
+                true,
+                'COMPLETED'
+            );
+
+        if (message) {
+            return toast.error(
+                message
+            );
         }
+
+        setConfirmOpen(true);
     };
+
+    /* =========================================================
+       CONFIRM COMPLETE
+    ========================================================= */
+
+    const handleConfirmComplete =
+        async () => {
+            const message =
+                validateResult(
+                    true,
+                    'COMPLETED'
+                );
+
+            if (message) {
+                setConfirmOpen(false);
+
+                return toast.error(
+                    message
+                );
+            }
+
+            const saved =
+                await save(
+                    buildPayload(
+                        'COMPLETED'
+                    )
+                );
+
+            if (!saved) return;
+
+            setConfirmOpen(false);
+
+            setStatus(
+                'COMPLETED'
+            );
+
+            const next =
+                queueRequests.find(
+                    (request) =>
+                        String(
+                            request.testRequestId
+                        ) !==
+                        String(id) &&
+                        ![
+                            'COMPLETED',
+                            'CANCELLED',
+                        ].includes(
+                            request.status
+                        )
+                );
+
+            if (next) {
+                toast.info(
+                    'Đã hoàn thành dịch vụ. Chuyển sang dịch vụ tiếp theo.'
+                );
+
+                navigate(
+                    ROUTES.DOCTOR_LAB_DETAIL.replace(
+                        ':id',
+                        next.testRequestId
+                    )
+                );
+
+                return;
+            }
+
+            toast.success(
+                'Đã hoàn thành yêu cầu cận lâm sàng.'
+            );
+
+            if (departmentId) {
+                navigate(
+                    ROUTES.DOCTOR_LAB.replace(
+                        ':departmentId',
+                        departmentId
+                    )
+                );
+            } else {
+                navigate(-1);
+            }
+        };
+
+    /* =========================================================
+       CANCEL
+    ========================================================= */
+
+    const handleCancelResult =
+        async () => {
+            if (!cancelReason.trim()) {
+                return toast.error(
+                    'Vui lòng nhập lý do hủy'
+                );
+            }
+
+            const saved =
+                await save(
+                    buildPayload(
+                        'CANCELLED'
+                    )
+                );
+
+            if (saved) {
+                setCancelModalOpen(false);
+                toast.success(
+                    'Đã hủy yêu cầu.'
+                );
+            }
+        };
+
+    /* =========================================================
+       BACK
+    ========================================================= */
 
     const handleBack = () => {
         if (departmentId) {
-            navigate(ROUTES.DOCTOR_LAB.replace(':departmentId', departmentId));
+            navigate(
+                ROUTES.DOCTOR_LAB.replace(
+                    ':departmentId',
+                    departmentId
+                )
+            );
         } else {
             navigate(-1);
         }
     };
 
+    /* =========================================================
+       LOADING
+    ========================================================= */
+
     if (loading) {
         return (
             <MedicalStaffLayout>
-                <p className="text-sm text-gray-400 text-center py-20">{t('labDetail.errors.loadFailed')}</p>
+                <div className="flex flex-1 items-center justify-center bg-slate-50">
+                    <p className="text-sm text-slate-400">
+                        Đang tải dữ liệu...
+                    </p>
+                </div>
             </MedicalStaffLayout>
         );
     }
 
-    const isCancelled = status === 'CANCELLED';
-    const pdfUrl = localPreviewUrl || (fileUrl
-        ? (fileUrl.startsWith('http') ? fileUrl : `${import.meta.env.VITE_API_URL}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`)
-        : '');
-
-    const handlePrintPdf = async () => {
-        if (!pdfUrl) return;
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return toast.error('Trình duyệt đang chặn cửa sổ in');
-        try {
-            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-            const response = await fetch(pdfUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-            if (!response.ok) throw new Error();
-            const objectUrl = URL.createObjectURL(await response.blob());
-            printWindow.location.href = objectUrl;
-            window.setTimeout(() => { printWindow.focus(); printWindow.print(); }, 1200);
-            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
-        } catch {
-            printWindow.location.href = pdfUrl;
-            toast.info('Dùng nút in trong trình xem PDF của trình duyệt.');
-        }
-    };
+    /* =========================================================
+       UI
+    ========================================================= */
 
     return (
         <MedicalStaffLayout>
-            {/* Top bar — simplified (no search needed on detail page) */}
-            <div className="h-13 bg-white border-b border-gray-100 px-4 flex items-center shrink-0">
-                <div className="ml-52 flex-1">
-                    <p className="text-sm font-semibold text-gray-900">
-                        {order?.serviceName || t('labDetail.pageTitle')}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                        {order?.patientName || '—'} • {order?.patientCode || '—'}
-                    </p>
-                </div>
-            </div>
 
-            <div className="flex-1 overflow-y-auto bg-gray-50 px-6 py-8">
-                <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-                    <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-4 lg:sticky lg:top-6">
-                        <div className="border-b border-gray-100 pb-4">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Phiếu số</p>
-                            <div className="mt-2 flex items-center justify-between">
-                                <span className="text-3xl font-bold text-primary-600">#{order?.queueNumber ?? '-'}</span>
-                                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                    order?.status === 'COMPLETED' ? 'bg-green-50 text-green-700' :
-                                    order?.status === 'CANCELLED' ? 'bg-red-50 text-red-700' :
-                                    order?.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-700' :
-                                    'bg-amber-50 text-amber-700'
-                                }`}>
-                                    {order?.status === 'COMPLETED' ? 'Hoàn thành'
-                                     : order?.status === 'CANCELLED' ? 'Đã hủy'
-                                     : order?.status === 'IN_PROGRESS' ? 'Đang xử lý'
-                                     : 'Chờ xử lý'}
-                                </span>
-                            </div>
-                            <p className="mt-3 font-semibold text-gray-900">{order?.patientName || '-'}</p>
-                            <p className="text-sm text-gray-500">{order?.patientCode || '-'}</p>
-                        </div>
-                        <div className="pt-4">
-                            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Các xét nghiệm ({queueRequests.length})</p>
-                            <div className="space-y-2">
-                                {queueRequests.map((request, index) => {
-                                    const done = ['COMPLETED', 'CANCELLED'].includes(request.status);
-                                    const active = request.testRequestId === id;
-                                    return <button key={request.testRequestId} type="button"
-                                        onClick={() => navigate(ROUTES.DOCTOR_LAB_DETAIL.replace(':id', request.testRequestId))}
-                                        className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors ${active ? 'border-primary-300 bg-primary-50' : 'border-gray-100 hover:bg-gray-50'}`}>
-                                        {done ? <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-green-500"/> : active ? <Clock3 size={18} className="mt-0.5 shrink-0 text-blue-500"/> : <Circle size={18} className="mt-0.5 shrink-0 text-gray-300"/>}
-                                        <span><span className="block text-xs text-gray-400">Kỹ thuật {index + 1}</span><span className="block text-sm font-semibold text-gray-800">{request.serviceName || '-'}</span><span className={`mt-1 block text-xs ${done ? 'text-green-600' : active ? 'text-blue-600' : 'text-gray-400'}`}>{done ? 'Đã hoàn thành' : active ? 'Đang chọn xử lý' : 'Chưa thực hiện'}</span></span>
-                                    </button>;
-                                })}
-                            </div>
-                        </div>
-                    </aside>
-                    <main className="rounded-2xl border border-gray-200 bg-white p-6 lg:p-8">
+            {/* =================================================
+                MAIN PAGE
+            ================================================= */}
 
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-8">
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <button
-                                    onClick={handleBack}
-                                    className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-colors"
-                                >
-                                    <ArrowLeft size={16} />
-                                </button>
-                                <div><p className="text-xs font-semibold uppercase tracking-wide text-primary-600">Xét nghiệm đang xử lý</p><h1 className="text-2xl font-bold text-gray-900">{order?.serviceName || t('labDetail.pageTitle')}</h1></div>
-                            </div>
-                            <p className="text-sm text-gray-500 mt-1">
-                                {order?.patientName}
-                                {order?.gender && ` (${order.gender}`}
-                                {order?.age && `, ${order.age} tuổi)`}
-                            </p>
-                            <p className="text-sm text-gray-400">ID: {order?.patientCode}</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-xs text-gray-400">{t('labDetail.collectionDate')}</p>
-                            <p className="text-sm font-bold text-gray-900 mt-0.5">{order?.collectionDate ?? '—'}</p>
-                        </div>
-                    </div>
+            <div className="flex-1 overflow-y-auto bg-slate-50 px-5 py-5">
 
-                    {/* ID mẫu vật */}
-                    <div className="mb-6">
-                        <label className="block text-xs font-medium text-gray-500 mb-2">
-                            {t('labDetail.specimenId')}
-                        </label>
-                        <input
-                            type="text"
-                            value={specimenId}
-                            onChange={e => setSpecimenId(e.target.value)}
-                            placeholder={t('labDetail.specimenIdPlaceholder')}
-                            className="w-full h-11 px-4 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-100"
+                <div className="w-full">
+
+                    {/* BACK */}
+
+                    <button
+                        type="button"
+                        onClick={handleBack}
+                        className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-800"
+                    >
+                        <ArrowLeft
+                            size={17}
                         />
-                    </div>
 
-                    {/* Trạng thái */}
-                    {!isNurse && !(order?.status === 'COMPLETED' || order?.status === 'CANCELLED') && (
-                        <div className="mb-6">
-                            <label className="block text-xs font-medium text-gray-500 mb-2">
-                                {t('labDetail.status.label')}
-                            </label>
-                            <div className="flex gap-2">
-                                <StatusBtn value="PENDING" active={status === 'PENDING'} onClick={setStatus}>
-                                    {t('labDetail.status.pending')}
-                                </StatusBtn>
-                                <StatusBtn value="IN_PROGRESS" active={status === 'IN_PROGRESS'} onClick={setStatus}>
-                                    {t('labDetail.status.inProgress')}
-                                </StatusBtn>
-                                <StatusBtn value="COMPLETED" active={status === 'COMPLETED'} onClick={setStatus}>
-                                    {t('labDetail.status.completed')}
-                                </StatusBtn>
-                                <StatusBtn value="CANCELLED" active={status === 'CANCELLED'} onClick={setStatus}>
-                                    {t('labDetail.status.cancelled')}
-                                </StatusBtn>
-                            </div>
-                        </div>
-                    )}
+                        Quay lại danh sách
+                    </button>
 
-                    {isNurse && !(order?.status === 'COMPLETED' || order?.status === 'CANCELLED') && (
-                        <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-                            Y tá có thể nhập thông tin và lưu nháp. Chỉ bác sĩ phụ trách mới được ký xác nhận và hoàn thành kết quả.
-                        </div>
-                    )}
+                    {/* =================================================
+                        TWO COLUMNS
+                    ================================================= */}
 
-                    {/* Lý do hủy — hiện thêm block cảnh báo */}
-                    {isCancelled && (
-                        <div className="mb-6 border border-orange-200 bg-orange-50 rounded-xl p-4 space-y-3">
-                            <div className="flex items-center gap-2 text-orange-600">
-                                <AlertTriangle size={16} />
-                                <p className="text-sm font-semibold">{t('labDetail.cancel.reason')}</p>
-                            </div>
-                            <textarea
-                                value={cancelReason}
-                                onChange={e => setCancelReason(e.target.value)}
-                                placeholder={t('labDetail.cancel.reasonPlaceholder')}
-                                rows={3}
-                                className="w-full px-3 py-2.5 text-sm border border-orange-200 rounded-lg outline-none focus:border-orange-400 bg-white resize-none"
-                            />
-                        </div>
-                    )}
+                    <div className="grid w-full gap-4 xl:grid-cols-[290px_minmax(0,1fr)]">
 
-                    {/* Upload file kết quả (ẩn khi mẫu hỏng hoặc đã hoàn tất) */}
-                    {!isCancelled && order?.status !== 'COMPLETED' && (
-                        <div className="mb-6">
-                            <FileUpload
-                                file={file}
-                                onFile={handleFile}
-                                onClear={() => { if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl); setLocalPreviewUrl(''); setFile(null); setFileUrl(''); }}
-                                t={t}
-                            />
-                            {uploading && (
-                                <p className="text-xs text-gray-400 mt-2">Đang tải file lên...</p>
-                            )}
-                        </div>
-                    )}
+                        {/* =================================================
+                            LEFT TICKET
+                        ================================================= */}
 
-                    {/* Xem và in kết quả (chỉ hiện khi đã hoàn thành) */}
-                    {order?.status === 'COMPLETED' && pdfUrl && (
-                        <div className="mb-6 overflow-hidden rounded-xl border border-green-200 bg-green-50 p-5 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
-                                    <FileText className="text-green-500" size={24} />
+                        <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-5">
+
+                            {/* TICKET */}
+
+                            <div className="border-b border-slate-100 pb-4">
+
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                    Phiếu xét nghiệm
+                                </p>
+
+                                <div className="mt-2 flex items-center justify-between gap-3">
+
+                                    <span className="text-3xl font-bold text-primary-600">
+                                        #
+                                        {displayQueueNumber(
+                                            order?.queueNumber
+                                        )}
+                                    </span>
+
+                                    <span
+                                        className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold ${currentStatus.cls}`}
+                                    >
+                                        {
+                                            currentStatus.label
+                                        }
+                                    </span>
+
                                 </div>
+
+                                <p className="mt-3 truncate text-sm font-bold text-slate-900">
+                                    {order?.patientName ||
+                                        '—'}
+                                </p>
+
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                    {order?.patientCode ||
+                                        '—'}
+                                </p>
+
+                            </div>
+
+                            {/* CURRENT SERVICE */}
+
+                            <div className="border-b border-slate-100 py-4">
+
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                    Dịch vụ hiện tại
+                                </p>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (
+                                            currentRequest?.testRequestId
+                                        ) {
+                                            navigate(
+                                                ROUTES.DOCTOR_LAB_DETAIL.replace(
+                                                    ':id',
+                                                    currentRequest.testRequestId
+                                                )
+                                            );
+                                        }
+                                    }}
+                                    className="mt-2 flex w-full items-center gap-3 rounded-xl border border-primary-200 bg-primary-50 px-3 py-3 text-left transition hover:border-primary-300"
+                                >
+
+                                    <Clock3
+                                        size={17}
+                                        className="shrink-0 text-primary-600"
+                                    />
+
+                                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">
+                                        {currentRequest?.serviceName ||
+                                            order?.serviceName ||
+                                            '—'}
+                                    </span>
+
+                                </button>
+
+                                {otherRequests.length >
+                                    0 && (
+                                        <div className="mt-3">
+
+                                            <p className="text-xs text-slate-500">
+                                                -{' '}
+                                                {
+                                                    otherRequests.length
+                                                }{' '}
+                                                dịch vụ khác
+                                            </p>
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setShowAllServices(
+                                                        (
+                                                            value
+                                                        ) =>
+                                                            !value
+                                                    )
+                                                }
+                                                className="mt-2 flex items-center gap-1 text-xs font-semibold text-primary-600 transition hover:text-primary-700"
+                                            >
+                                                {showAllServices
+                                                    ? 'Thu gọn'
+                                                    : 'Xem tất cả'}
+
+                                                {showAllServices ? (
+                                                    <ChevronUp
+                                                        size={
+                                                            15
+                                                        }
+                                                    />
+                                                ) : (
+                                                    <ChevronRight
+                                                        size={
+                                                            15
+                                                        }
+                                                    />
+                                                )}
+                                            </button>
+
+                                        </div>
+                                    )}
+
+                                {/* EXPANDED SERVICES */}
+
+                                {showAllServices &&
+                                    otherRequests.length >
+                                    0 && (
+                                        <div className="mt-3 space-y-2">
+
+                                            {otherRequests.map(
+                                                (
+                                                    request
+                                                ) => {
+                                                    const done =
+                                                        [
+                                                            'COMPLETED',
+                                                            'CANCELLED',
+                                                        ].includes(
+                                                            request.status
+                                                        );
+
+                                                    return (
+                                                        <button
+                                                            key={
+                                                                request.testRequestId
+                                                            }
+                                                            type="button"
+                                                            onClick={() =>
+                                                                navigate(
+                                                                    ROUTES.DOCTOR_LAB_DETAIL.replace(
+                                                                        ':id',
+                                                                        request.testRequestId
+                                                                    )
+                                                                )
+                                                            }
+                                                            className="flex w-full items-center gap-2.5 rounded-lg border border-slate-100 px-3 py-2.5 text-left transition hover:border-primary-200 hover:bg-primary-50/40"
+                                                        >
+                                                            {done ? (
+                                                                <CheckCircle2
+                                                                    size={
+                                                                        16
+                                                                    }
+                                                                    className="shrink-0 text-emerald-500"
+                                                                />
+                                                            ) : (
+                                                                <Circle
+                                                                    size={
+                                                                        16
+                                                                    }
+                                                                    className="shrink-0 text-slate-300"
+                                                                />
+                                                            )}
+
+                                                            <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-700">
+                                                            {request.serviceName ||
+                                                                '—'}
+                                                        </span>
+
+                                                            <ChevronRight
+                                                                size={
+                                                                    14
+                                                                }
+                                                                className="shrink-0 text-slate-300"
+                                                            />
+                                                        </button>
+                                                    );
+                                                }
+                                            )}
+
+                                        </div>
+                                    )}
+
+                            </div>
+
+                            {/* SUMMARY */}
+
+                            <div className="pt-4">
+
+                                <div className="flex items-center justify-between text-xs">
+
+                                    <span className="text-slate-400">
+                                        Tiến độ
+                                    </span>
+
+                                    <span className="font-semibold text-slate-700">
+                                        {
+                                            completedCount
+                                        }
+                                        /
+                                        {
+                                            queueRequests.length
+                                        }
+                                    </span>
+
+                                </div>
+
+                                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+
+                                    <div
+                                        className="h-full rounded-full bg-primary-500 transition-all"
+                                        style={{
+                                            width:
+                                                queueRequests.length >
+                                                0
+                                                    ? `${(
+                                                        completedCount /
+                                                        queueRequests.length
+                                                    ) *
+                                                    100}%`
+                                                    : '0%',
+                                        }}
+                                    />
+
+                                </div>
+
+                            </div>
+
+                        </aside>
+
+                        {/* =================================================
+                            RIGHT CONTENT
+                        ================================================= */}
+
+                        <main className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+                            {/* HEADER */}
+
+                            <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
+
                                 <div>
-                                    <p className="text-base font-semibold text-green-900">Phiếu kết quả xét nghiệm</p>
-                                    <p className="text-sm text-green-700 mt-0.5">Đã tải lên và xác nhận hoàn tất</p>
-                                </div>
-                            </div>
-                            <div className="flex gap-3">
-                                <button type="button" onClick={() => window.open(pdfUrl, '_blank')} className="rounded-xl border border-green-300 bg-white px-5 py-2.5 text-sm font-semibold text-green-700 hover:bg-green-100 transition-colors">
-                                    Mở trang xem
-                                </button>
-                                <button type="button" onClick={handlePrintPdf} className="rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-700 shadow-sm transition-colors shadow-green-600/20">
-                                    In phiếu
-                                </button>
-                            </div>
-                        </div>
-                    )}
 
-                    {/* Nhận xét / Ghi chú */}
-                    <div className="mb-8">
-                        <label className="block text-xs font-semibold text-gray-500 tracking-wide mb-2">
-                            {t('labDetail.notes.label')}
-                        </label>
-                        <textarea
-                            value={notes}
-                            onChange={e => setNotes(e.target.value)}
-                            placeholder={t('labDetail.notes.placeholder')}
-                            rows={5}
-                            className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 resize-none"
-                        />
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-primary-600">
+                                        Cận lâm sàng
+                                    </p>
+
+                                    <h1 className="mt-1 text-2xl font-bold text-slate-900">
+                                        {order?.serviceName ||
+                                            t(
+                                                'labDetail.pageTitle'
+                                            )}
+                                    </h1>
+
+                                    <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
+
+                                        <span>
+                                            ID:{' '}
+                                            {order?.testRequestId ||
+                                                id}
+                                        </span>
+
+                                        {order?.patientCode && (
+                                            <>
+                                                <span>
+                                                    •
+                                                </span>
+
+                                                <span>
+                                                    {
+                                                        order.patientCode
+                                                    }
+                                                </span>
+                                            </>
+                                        )}
+
+                                    </div>
+
+                                </div>
+
+                                <span
+                                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${currentStatus.cls}`}
+                                >
+                                    {
+                                        currentStatus.label
+                                    }
+                                </span>
+
+                            </div>
+
+                            {/* =================================================
+                                SPECIMEN
+                            ================================================= */}
+
+                            {requiresSpecimen && (
+                                <section className="mb-4 rounded-xl border border-primary-100 bg-primary-50/20 p-4">
+
+                                    <div className="mb-4 flex items-center gap-2">
+
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50">
+                                            <FlaskConical
+                                                size={
+                                                    17
+                                                }
+                                                className="text-primary-600"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <h2 className="text-sm font-semibold text-slate-900">
+                                                Thông tin mẫu vật
+                                            </h2>
+
+                                            <p className="text-xs text-slate-400">
+                                                Thông tin dành cho dịch vụ có lấy mẫu
+                                            </p>
+                                        </div>
+
+                                    </div>
+
+                                    {/* FIRST ROW */}
+
+                                    <div className="grid gap-3 lg:grid-cols-3">
+
+                                        {/* SAMPLE ID */}
+
+                                        <div>
+
+                                            <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                                                Mã mẫu vật
+                                            </label>
+
+                                            <input
+                                                type="text"
+                                                value={
+                                                    specimenId
+                                                }
+                                                disabled={
+                                                    isFinished
+                                                }
+                                                onChange={(
+                                                    event
+                                                ) =>
+                                                    setSpecimenId(
+                                                        event
+                                                            .target
+                                                            .value
+                                                    )
+                                                }
+                                                placeholder="VD: SMP-20260811-A8F912"
+                                                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-primary-400 disabled:bg-slate-50 disabled:text-slate-500"
+                                            />
+
+                                        </div>
+
+                                        {/* TYPE */}
+
+                                        <div>
+
+                                            <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                                                Loại mẫu
+                                            </label>
+
+                                            <select
+                                                value={
+                                                    sampleType
+                                                }
+                                                disabled={
+                                                    isFinished
+                                                }
+                                                onChange={(
+                                                    event
+                                                ) =>
+                                                    setSampleType(
+                                                        event
+                                                            .target
+                                                            .value
+                                                    )
+                                                }
+                                                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none disabled:bg-slate-50"
+                                            >
+                                                <option value="">
+                                                    -- Chọn loại mẫu --
+                                                </option>
+
+                                                {SAMPLE_TYPES.map(
+                                                    (
+                                                        option
+                                                    ) => (
+                                                        <option
+                                                            key={
+                                                                option.value
+                                                            }
+                                                            value={
+                                                                option.value
+                                                            }
+                                                        >
+                                                            {
+                                                                option.label
+                                                            }
+                                                        </option>
+                                                    )
+                                                )}
+                                            </select>
+
+                                        </div>
+
+                                        {/* STATUS */}
+
+                                        <div>
+
+                                            <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                                                Tình trạng mẫu
+                                            </label>
+
+                                            <select
+                                                value={
+                                                    sampleStatus
+                                                }
+                                                disabled={
+                                                    isFinished
+                                                }
+                                                onChange={(
+                                                    event
+                                                ) =>
+                                                    setSampleStatus(
+                                                        event
+                                                            .target
+                                                            .value
+                                                    )
+                                                }
+                                                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none disabled:bg-slate-50"
+                                            >
+                                                <option value="">
+                                                    -- Chọn tình trạng --
+                                                </option>
+
+                                                {SAMPLE_STATUSES.map(
+                                                    (
+                                                        option
+                                                    ) => (
+                                                        <option
+                                                            key={
+                                                                option.value
+                                                            }
+                                                            value={
+                                                                option.value
+                                                            }
+                                                        >
+                                                            {
+                                                                option.label
+                                                            }
+                                                        </option>
+                                                    )
+                                                )}
+                                            </select>
+
+                                        </div>
+
+                                    </div>
+
+                                    {/* AUTO INFO */}
+
+                                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+
+                                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+
+                                            <p className="text-[11px] font-medium text-slate-400">
+                                                Thời gian lấy mẫu
+                                            </p>
+
+                                            <p className="mt-1 text-sm font-semibold text-slate-700">
+                                                {order?.collectedAt
+                                                    ? new Date(
+                                                        order.collectedAt
+                                                    ).toLocaleString(
+                                                        'vi-VN'
+                                                    )
+                                                    : 'Hệ thống tự ghi nhận khi lưu'}
+                                            </p>
+
+                                        </div>
+
+                                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+
+                                            <p className="text-[11px] font-medium text-slate-400">
+                                                Người lấy mẫu
+                                            </p>
+
+                                            <p className="mt-1 text-sm font-semibold text-slate-700">
+                                                {order?.collectedByName ||
+                                                    'Hệ thống tự lấy nhân viên đang đăng nhập'}
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                </section>
+                            )}
+
+                            {/* =================================================
+                                FILE
+                            ================================================= */}
+
+                            {!isCancelled && (
+                                <div className="mb-4">
+
+                                    <FileUpload
+                                        file={file}
+                                        fileUrl={
+                                            fileUrl
+                                        }
+                                        pdfUrl={
+                                            pdfUrl
+                                        }
+                                        fileName={
+                                            order?.resultFileName
+                                        }
+                                        onFile={
+                                            handleFile
+                                        }
+                                        onClear={
+                                            handleClearFile
+                                        }
+                                        uploading={
+                                            uploading
+                                        }
+                                        disabled={
+                                            isFinished
+                                        }
+                                    />
+
+                                </div>
+                            )}
+
+                            {/* =================================================
+                                CANCEL
+                            ================================================= */}
+
+                            {isCancelled && (
+                                <section className="mb-4 rounded-xl border border-red-100 bg-red-50 p-4">
+
+                                    <div className="mb-2 flex items-center gap-2 text-red-600">
+                                        <AlertTriangle
+                                            size={
+                                                16
+                                            }
+                                        />
+
+                                        <p className="text-sm font-semibold">
+                                            Lý do hủy
+                                        </p>
+                                    </div>
+
+                                    <textarea
+                                        value={
+                                            cancelReason
+                                        }
+                                        onChange={(
+                                            event
+                                        ) =>
+                                            setCancelReason(
+                                                event
+                                                    .target
+                                                    .value
+                                            )
+                                        }
+                                        rows={3}
+                                        className="w-full resize-none rounded-lg border border-red-200 bg-white px-3 py-2.5 text-sm outline-none"
+                                    />
+
+                                </section>
+                            )}
+
+                            {/* =================================================
+                                CONCLUSION
+                            ================================================= */}
+
+                            <section className="mb-4 rounded-xl border border-slate-200 bg-white p-4">
+
+                                <label className="mb-2 block text-sm font-semibold text-slate-900">
+                                    Kết luận
+                                </label>
+
+                                <div className="relative">
+
+                                    <textarea
+                                        value={
+                                            notes
+                                        }
+                                        onChange={(
+                                            event
+                                        ) =>
+                                            setNotes(
+                                                event
+                                                    .target
+                                                    .value
+                                            )
+                                        }
+                                        disabled={
+                                            isFinished
+                                        }
+                                        placeholder="Nhập kết luận / nhận xét kết quả..."
+                                        rows={4}
+                                        maxLength={
+                                            500
+                                        }
+                                        className="w-full resize-none rounded-xl border border-slate-200 px-3 py-3 pb-7 text-sm outline-none transition focus:border-primary-400 disabled:bg-slate-50"
+                                    />
+
+                                    <span className="absolute bottom-2 right-3 text-[11px] text-slate-400">
+                                        {
+                                            notes.length
+                                        }
+                                        /500
+                                    </span>
+
+                                </div>
+
+                            </section>
+
+                            {/* ERROR */}
+
+                            {error && (
+                                <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+                                    {error}
+                                </p>
+                            )}
+
+                            {/* =================================================
+                                ACTIONS
+                            ================================================= */}
+
+                            {!isFinished ? (
+                                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+
+                                    {/* Cancel link */}
+
+                                    {!isNurse ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setCancelModalOpen(true)}
+                                            className="text-xs font-semibold text-red-500 transition hover:text-red-600"
+                                        >
+                                            {status ===
+                                            'CANCELLED'
+                                                ? 'Tiếp tục xử lý'
+                                                : 'Hủy yêu cầu'}
+                                        </button>
+                                    ) : (
+                                        <span />
+                                    )}
+
+                                    <div className="flex gap-2">
+
+                                        <button
+                                            type="button"
+                                            onClick={
+                                                handleSaveDraft
+                                            }
+                                            disabled={
+                                                saving
+                                            }
+                                            className="h-10 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                                        >
+                                            Lưu nháp
+                                        </button>
+
+                                        {status ===
+                                        'CANCELLED' &&
+                                        !isNurse ? (
+                                            <button
+                                                type="button"
+                                                onClick={
+                                                    handleCancelResult
+                                                }
+                                                disabled={
+                                                    saving
+                                                }
+                                                className="h-10 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                                            >
+                                                Xác nhận hủy
+                                            </button>
+                                        ) : (
+                                            !isNurse && (
+                                                <button
+                                                    type="button"
+                                                    onClick={
+                                                        handleOpenConfirm
+                                                    }
+                                                    disabled={
+                                                        saving
+                                                    }
+                                                    className="h-10 rounded-xl bg-primary-600 px-5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:opacity-50"
+                                                >
+                                                    Ký xác nhận & hoàn thành
+                                                </button>
+                                            )
+                                        )}
+
+                                    </div>
+
+                                </div>
+                            ) : (
+                                <div className="flex justify-end border-t border-slate-100 pt-4">
+
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            handleBack
+                                        }
+                                        className="h-10 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                                    >
+                                        Quay lại
+                                    </button>
+
+                                </div>
+                            )}
+
+                        </main>
+
                     </div>
 
-                    {/* Error */}
-                    {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-
-                    {/* Actions */}
-                    {!(order?.status === 'COMPLETED' || order?.status === 'CANCELLED') ? (
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={handleSaveDraft}
-                                disabled={saving}
-                                className="px-6 h-11 border border-gray-300 hover:border-gray-500 text-gray-700 text-sm font-medium rounded-xl transition-colors disabled:opacity-60"
-                            >
-                                {t('labDetail.actions.draft')}
-                            </button>
-                            {!isNurse && (
-                                <button
-                                    onClick={handleSave}
-                                    disabled={saving}
-                                    className="px-8 h-11 bg-gray-900 hover:bg-gray-700 disabled:opacity-60 text-white text-sm font-medium rounded-xl transition-colors"
-                                >
-                                    {saving ? t('labDetail.actions.saving') : 'Ký xác nhận & hoàn thành'}
-                                </button>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={handleBack}
-                                className="px-8 h-11 border border-gray-300 hover:border-gray-500 text-gray-700 text-sm font-medium rounded-xl transition-colors"
-                            >
-                                Quay lại
-                            </button>
-                        </div>
-                    )}
-
-                    </main>
                 </div>
+
             </div>
+
+            {/* =================================================
+                CONFIRM MODAL
+            ================================================= */}
+
+            <ConfirmCompleteModal
+                open={confirmOpen}
+                onClose={() =>
+                    setConfirmOpen(false)
+                }
+                onConfirm={
+                    handleConfirmComplete
+                }
+                saving={saving}
+                order={order}
+                specimenId={specimenId}
+                requiresSpecimen={
+                    requiresSpecimen
+                }
+            />
+
+            {cancelModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 p-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
+                        <h2 className="text-base font-bold text-slate-900">Hủy yêu cầu cận lâm sàng</h2>
+                        <p className="mt-2 text-sm text-slate-600">Bạn có chắc chắn muốn hủy yêu cầu này?</p>
+                        <label className="mt-4 block text-sm font-medium text-slate-800">Lý do hủy <span className="text-red-600">*</span></label>
+                        <textarea value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} rows={4}
+                            className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-red-400"
+                            placeholder="Nhập lý do hủy..." />
+                        <div className="mt-5 flex justify-end gap-3">
+                            <button type="button" onClick={() => setCancelModalOpen(false)} className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600">Quay lại</button>
+                            <button type="button" onClick={handleCancelResult} disabled={saving} className="h-10 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white disabled:opacity-50">Xác nhận hủy</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </MedicalStaffLayout>
     );
 }

@@ -1,281 +1,130 @@
-// src/pages/cashier/InvoicePrintPage.jsx
-import { useMemo, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { Printer, ChevronLeft, RotateCcw } from 'lucide-react';
+import { useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ChevronLeft, Printer, RotateCcw } from 'lucide-react';
 import CashierLayout from '@/components/layout/CashierLayout';
 import { useInvoicePrint } from '@/hooks/useInvoicePrint';
 
-const formatVND = (n) =>
-    `${new Intl.NumberFormat('vi-VN').format(Math.round(n || 0))} VND`;
+const money = (value) => new Intl.NumberFormat('vi-VN').format(Math.round(value || 0));
+const valueOrDash = (value) => value || '—';
+const formatDateTime = (value) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    }).format(date);
+};
 
-const formatMoney = (n) => new Intl.NumberFormat('vi-VN').format(Math.round(n || 0));
-
-function StatusBadge({ status, t }) {
-    const isPaid = status === 'paid' || status === 'completed';
-    return (
-        <span
-            className={`inline-block rounded px-2 py-0.5 text-xs font-semibold ${
-                isPaid
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : 'bg-amber-50 text-amber-700 border border-amber-200'
-            }`}
-        >
-      {isPaid ? t('detail.statusPaid') : t('detail.statusPending')}
-    </span>
-    );
-}
-
-function InfoRow({ label, value, alignRight }) {
-    return (
-        <div className={alignRight ? 'text-right' : ''}>
-            <span className="text-sm text-gray-500">{label}: </span>
-            <span className="text-sm font-semibold text-gray-800">{value}</span>
-        </div>
-    );
-}
+const amountInWords = (amount) => {
+    const number = Math.max(0, Math.round(Number(amount) || 0));
+    if (!number) return 'Không đồng';
+    const digits = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+    const readGroup = (group, forceHundred) => {
+        const hundred = Math.floor(group / 100);
+        const tens = Math.floor((group % 100) / 10);
+        const units = group % 10;
+        const result = [];
+        if (hundred || forceHundred) result.push(`${digits[hundred]} trăm`);
+        if (tens > 1) result.push(`${digits[tens]} mươi`);
+        else if (tens === 1) result.push('mười');
+        else if ((hundred || forceHundred) && units) result.push('lẻ');
+        if (units) result.push(tens > 1 && units === 1 ? 'mốt' : tens > 0 && units === 5 ? 'lăm' : digits[units]);
+        return result.join(' ');
+    };
+    const units = ['', 'nghìn', 'triệu', 'tỷ'];
+    const groups = [];
+    let current = number;
+    while (current) { groups.push(current % 1000); current = Math.floor(current / 1000); }
+    const result = groups.map((group, index) => group ? `${readGroup(group, index < groups.length - 1)} ${units[index]}`.trim() : '')
+        .reverse().filter(Boolean).join(' ');
+    return `${result.charAt(0).toUpperCase()}${result.slice(1)} đồng`;
+};
 
 export default function InvoicePrintPage() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { t } = useTranslation('cashier');
     const { invoice, loading, error, reload } = useInvoicePrint(id);
-    const isPaid = invoice?.status === 'paid' || invoice?.status === 'completed';
 
-    // Let Ctrl+P trigger the same in-app print handler
     useEffect(() => {
-        const handleKeyDown = (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
-                e.preventDefault();
-                if (isPaid) window.print();
+        const shortcut = (event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p') {
+                event.preventDefault();
+                window.print();
             }
         };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isPaid]);
+        window.addEventListener('keydown', shortcut);
+        return () => window.removeEventListener('keydown', shortcut);
+    }, []);
 
-    const rows = useMemo(() => {
-        if (!invoice?.items) return [];
-        return invoice.items.map((item) => {
-            const lineTotal = (item.qty ?? 1) * (item.basePrice ?? 0);
-            const bhytAmount =
-                item.bhytDeductAmount ?? Math.round((lineTotal * (item.bhytRate ?? 0)) / 100);
-            const patientPay = item.patientPay ?? lineTotal - bhytAmount;
-            const bhytPercent = item.bhytDeductPercent ?? item.bhytRate ?? 0;
-            return { ...item, lineTotal, bhytAmount, patientPay, bhytPercent };
-        });
-    }, [invoice]);
-
-    if (loading) {
-        return (
-            <CashierLayout>
-                <p className="text-sm text-gray-400 text-center py-20">{t('detail.loading')}</p>
-            </CashierLayout>
-        );
-    }
-
-    if (error) {
-        return (
-            <CashierLayout>
-                <div className="flex flex-col items-center justify-center gap-3 text-gray-600 py-20">
-                    <p>{t('detail.error')}</p>
-                    <button
-                        onClick={reload}
-                        className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                        <RotateCcw className="h-4 w-4" />
-                        {t('detail.retry')}
-                    </button>
-                </div>
-            </CashierLayout>
-        );
-    }
-
-    if (!invoice) {
-        return (
-            <CashierLayout>
-                <div className="flex flex-col items-center justify-center gap-3 text-gray-500 py-20">
-                    <p>{t('detail.notFound')}</p>
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                        {t('detail.backToList')}
-                    </button>
-                </div>
-            </CashierLayout>
-        );
+    if (loading) return <CashierLayout><p className="py-20 text-center text-sm text-slate-500">Đang tải phiếu thu...</p></CashierLayout>;
+    if (error || !invoice) {
+        return <CashierLayout><div className="flex min-h-72 flex-col items-center justify-center gap-3"><p className="text-sm text-slate-600">{error?.message || 'Không tìm thấy phiếu thu.'}</p><button onClick={reload} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm"><RotateCcw className="h-4 w-4" />Tải lại</button></div></CashierLayout>;
     }
 
     return (
         <CashierLayout>
-            <div className="max-w-4xl mx-auto space-y-6">
-                {/* Top bar with back button */}
-                <div className="flex items-center justify-between print:hidden">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                        Quay lại
-                    </button>
-                    <button
-                        onClick={() => window.print()}
-                        disabled={!isPaid}
-                        className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        <Printer className="h-4 w-4" />
-                        In phiếu thu
-                    </button>
+            <div className="receipt-screen mx-auto max-w-5xl px-4 py-6">
+                <div className="receipt-actions mb-5 flex items-center justify-between">
+                    <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><ChevronLeft className="h-4 w-4" />Quay lại</button>
+                    <button onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700"><Printer className="h-4 w-4" />In phiếu thu</button>
                 </div>
 
-                {!isPaid && (
-                    <div className="print:hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                        Hóa đơn chưa được thanh toán nên chưa thể in phiếu thu.
-                    </div>
-                )}
-
-                {/* Receipt card */}
-                <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm print:border-0 print:shadow-none">
-                    {/* Clinic / receipt meta header */}
-                    <div className="flex flex-col justify-between gap-4 border-b border-dashed border-gray-200 pb-5 sm:flex-row">
-                        <div>
-                            <p className="text-base font-bold uppercase text-gray-900">
-                                {invoice.clinicName ?? t('detail.clinicName')}
-                            </p>
-                            <p className="mt-1 text-sm text-gray-500">
-                                {t('detail.taxCode')}: {invoice.taxCode ?? '—'}
-                                {invoice.hotline ? ` — ${t('detail.hotline')}: ${invoice.hotline}` : ''}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                                {t('detail.address')}: {invoice.clinicAddress ?? '—'}
-                            </p>
+                <main id="receipt-print-area" className="receipt-sheet mx-auto bg-white text-slate-900 shadow-sm">
+                    <header className="receipt-head">
+                        <div className="clinic-block">
+                            <div className="clinic-mark">✚</div>
+                            <div><h2>PHÒNG KHÁM ĐA KHOA CARES</h2><p>Địa chỉ: —</p><p>Điện thoại: —</p></div>
                         </div>
-                        <div className="sm:text-right">
-                            <p className="text-base font-bold uppercase tracking-wide text-gray-900">
-                                {t('detail.receiptTitle')}
-                            </p>
-                            <p className="mt-1 text-sm text-gray-500">
-                                {t('detail.symbol')}: {invoice.symbol ?? '—'}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                                {t('detail.docNumber')}: {invoice.code}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                                {t('detail.issueDate')}: {invoice.issuedAt ?? invoice.visitDate}
-                            </p>
+                        <div className="receipt-heading">
+                            <h1>PHIẾU THU</h1>
+                            <p>Ngày thu: <strong>{formatDateTime(invoice.paidAt)}</strong></p>
+                            <p>Số hóa đơn: <strong>{valueOrDash(invoice.code)}</strong></p>
+                            <p>Số phiếu: <strong>{valueOrDash(invoice.receiptNumber)}</strong></p>
                         </div>
-                    </div>
+                    </header>
 
-                    {/* Title */}
-                    <div className="py-6 text-center">
-                        <h1 className="text-xl font-bold uppercase tracking-wide text-gray-900">
-                            {t('detail.mainTitle')}
-                        </h1>
-                        <p className="mt-1 text-sm italic text-gray-400">{t('detail.subTitle')}</p>
-                    </div>
+                    <section className="patient-lines">
+                        <p><strong>Họ tên:</strong> {valueOrDash(invoice.patientName)}</p>
+                        <p><strong>Ngày sinh:</strong> {valueOrDash(invoice.dob)}</p>
+                        <p><strong>Giới tính:</strong> {valueOrDash(invoice.gender)}</p>
+                        <p className="patient-address"><strong>Địa chỉ:</strong> {valueOrDash(invoice.address)}</p>
+                    </section>
 
-                    {/* Patient info */}
-                    <div className="grid grid-cols-1 gap-x-8 gap-y-3 rounded-lg border border-gray-100 bg-gray-50/60 p-5 sm:grid-cols-2">
-                        <InfoRow label={t('detail.patientName')} value={invoice.patientName} />
-                        <InfoRow label={t('detail.patientCode')} value={invoice.patientCode} alignRight />
-                        <InfoRow label={t('detail.patientAddress')} value={invoice.address} />
-                        <InfoRow label={t('detail.dob')} value={invoice.dob} alignRight />
-                        <InfoRow label={t('detail.bhytCode')} value={invoice.bhytCode} alignRight />
-                    </div>
+                    <table className="receipt-table">
+                        <thead><tr><th>STT</th><th>Nội dung</th><th>ĐVT</th><th>SL</th><th>Đơn giá</th><th>Giảm giá</th><th>Thành tiền</th></tr></thead>
+                        <tbody>{invoice.items.map((item, index) => <tr key={item.id || index}>
+                            <td>{index + 1}</td><td className="service-cell"><strong>{item.name}</strong><small>Mã DV: {item.code}</small></td><td>Lượt</td><td>{item.qty}</td><td>{money(item.lineTotal)}</td><td>{item.bhytDeductAmount ? money(item.bhytDeductAmount) : '—'}</td><td>{money(item.patientPay)}</td>
+                        </tr>)}</tbody>
+                    </table>
 
-                    {/* Payment method / status */}
-                    <div className="mt-4 flex flex-col gap-3 border-b border-dashed border-gray-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
-                        <InfoRow label={t('detail.paymentMethod')} value={invoice.paymentMethod} />
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500">{t('detail.paymentStatus')}:</span>
-                            <StatusBadge status={invoice.status} t={t} />
-                        </div>
-                    </div>
+                    <section className="receipt-total">
+                        <p><strong>Tổng tiền:</strong> <b>{money(invoice.grandTotal)} đồng</b></p>
+                        <p><strong>Bằng chữ:</strong> <em>{amountInWords(invoice.grandTotal)}</em></p>
+                        {invoice.bhytDeduct > 0 && <p><strong>BHYT chi trả:</strong> {money(invoice.bhytDeduct)} đồng</p>}
+                        <p><strong>Nội dung thu:</strong> Thanh toán chi phí dịch vụ khám, chữa bệnh.</p>
+                    </section>
 
-                    {/* Services table */}
-                    <h2 className="mt-6 mb-3 text-sm font-bold text-gray-900">{t('detail.sectionTitle')}</h2>
-                    <div className="overflow-x-auto">
-                        <table className="w-full border-collapse text-sm">
-                            <thead>
-                            <tr className="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
-                                <th className="w-12 py-2 text-center font-medium">{t('detail.col.stt')}</th>
-                                <th className="py-2 text-left font-medium">{t('detail.col.service')}</th>
-                                <th className="w-14 py-2 text-center font-medium">{t('detail.col.qty')}</th>
-                                <th className="py-2 text-right font-medium">{t('detail.col.price')}</th>
-                                <th className="py-2 text-right font-medium">{t('detail.col.bhyt')}</th>
-                                <th className="py-2 text-right font-medium">{t('detail.col.patientPay')}</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {rows.map((item, idx) => (
-                                <tr key={item.id ?? idx} className="border-b border-gray-100 align-top">
-                                    <td className="py-3 text-center text-gray-400">
-                                        {String(idx + 1).padStart(2, '0')}
-                                    </td>
-                                    <td className="py-3 pr-4">
-                                        <p className="font-semibold text-gray-900">{item.name}</p>
-                                        {item.category && (
-                                            <p className="mt-0.5 text-xs text-gray-400">{item.category}</p>
-                                        )}
-                                    </td>
-                                    <td className="py-3 text-center text-gray-700">{item.qty ?? 1}</td>
-                                    <td className="py-3 text-right text-gray-700">
-                                        {formatMoney(item.lineTotal)}
-                                    </td>
-                                    <td className="py-3 text-right text-gray-700">
-                                        {item.bhytAmount > 0
-                                            ? `- ${formatMoney(item.bhytAmount)} (${item.bhytPercent}%)`
-                                            : '—'}
-                                    </td>
-                                    <td className="py-3 text-right font-semibold text-gray-900">
-                                        {formatMoney(item.patientPay)}
-                                    </td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Footer: note + totals */}
-                    <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:justify-between">
-                        <p className="max-w-xs text-xs text-gray-400 sm:max-w-sm">{t('detail.note')}</p>
-
-                        <div className="w-full max-w-sm rounded-lg border border-gray-200 p-4 sm:w-96">
-                            <div className="flex items-center justify-between py-1 text-sm">
-                                <span className="text-gray-500">{t('detail.totalGross')}:</span>
-                                <span className="font-medium text-gray-900">
-                {formatVND(invoice.totalServices)}
-              </span>
-                            </div>
-                            <div className="flex items-center justify-between py-1 text-sm">
-                                <span className="text-gray-500">{t('detail.bhytDeduct')}:</span>
-                                <span className="font-medium text-gray-900">
-                - {formatVND(invoice.bhytDeduct)}
-              </span>
-                            </div>
-                            <div className="flex items-center justify-between py-1 text-sm">
-                                <span className="text-gray-500">{t('detail.vat')}:</span>
-                                <span className="font-medium text-gray-900">{formatVND(invoice.vat)}</span>
-                            </div>
-                            <div className="mt-2 flex items-center justify-between border-t border-gray-200 pt-2">
-              <span className="text-sm font-semibold text-gray-700">
-                {t('detail.grandTotalLabel')}:
-              </span>
-                                <span className="text-lg font-bold text-gray-900">
-                {formatVND(invoice.grandTotal)}
-              </span>
-                            </div>
-                            {invoice.inWords && (
-                                <p className="mt-1 text-right text-xs italic text-gray-400">
-                                    {t('detail.grandTotalWordsWrap', { words: invoice.inWords })}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                </div>
+                    <footer className="receipt-footer">
+                        <div><strong>Người thu tiền</strong><span>(Ký, ghi rõ họ tên)</span><b>{valueOrDash(invoice.cashierName)}</b></div>
+                        <div><strong>Bệnh nhân</strong><span>(Ký, ghi rõ họ tên)</span><b>{valueOrDash(invoice.patientName)}</b></div>
+                    </footer>
+                </main>
             </div>
+            <style>{`
+                .receipt-sheet { width: 210mm; min-height: 297mm; padding: 16mm 15mm; font-family: Arial, sans-serif; font-size: 12px; line-height: 1.35; }
+                .receipt-head { display:flex; justify-content:space-between; gap:20px; border-bottom:1.5px solid #111827; padding-bottom:10px; }
+                .clinic-block { display:flex; align-items:flex-start; gap:8px; } .clinic-mark { color:#087e8b; font-size:27px; font-weight:900; line-height:1; }
+                .clinic-block h2 { margin:0 0 3px; font-size:14px; } .clinic-block p, .receipt-heading p { margin:1px 0; font-size:11px; }
+                .receipt-heading { text-align:right; } .receipt-heading h1 { margin:0 0 6px; font-size:19px; letter-spacing:.5px; }
+                .patient-lines { display:grid; grid-template-columns:1.5fr .8fr .7fr; gap:7px 18px; padding:12px 0; border-bottom:1px solid #777; }
+                .patient-lines p { margin:0; } .patient-address { grid-column:1 / -1; }
+                .receipt-table { width:100%; margin-top:12px; border-collapse:collapse; } .receipt-table th,.receipt-table td { border:1px solid #4b5563; padding:5px 6px; }
+                .receipt-table th { background:#f5eebc; text-align:center; font-size:11px; } .receipt-table td { text-align:center; vertical-align:top; } .receipt-table td:nth-child(2) { text-align:left; }
+                .service-cell small { display:block; margin-top:2px; color:#596579; font-size:10px; }
+                .receipt-total { margin-top:9px; } .receipt-total p { margin:4px 0; } .receipt-total b { margin-left:16px; }
+                .receipt-footer { display:grid; grid-template-columns:1fr 1fr; margin-top:32px; text-align:center; } .receipt-footer div { display:flex; min-height:86px; flex-direction:column; gap:3px; } .receipt-footer span { font-size:10px; font-style:italic; } .receipt-footer b { margin-top:auto; }
+                @media screen and (max-width: 760px) { .receipt-sheet { width:100%; min-height:0; padding:22px 16px; } .receipt-head { display:block; } .receipt-heading { margin-top:14px; text-align:left; } .patient-lines { grid-template-columns:1fr; } .patient-address { grid-column:auto; } .receipt-table { font-size:10px; } .receipt-table th,.receipt-table td { padding:4px 3px; } }
+                @media print { @page { size:A4 portrait; margin:0; } body * { visibility:hidden !important; } #receipt-print-area, #receipt-print-area * { visibility:visible !important; } #receipt-print-area { position:absolute; left:0; top:0; width:210mm; min-height:297mm; margin:0; padding:16mm 15mm; box-shadow:none; } }
+            `}</style>
         </CashierLayout>
     );
 }

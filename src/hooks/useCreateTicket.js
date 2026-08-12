@@ -9,19 +9,17 @@ const bearer = () => ({ Authorization: `Bearer ${get('token')}` });
 
 export function useCreateTicket() {
     const [services, setServices] = useState([]);
-    const [insurances, setInsurances] = useState([]);
     const [loadingSvc, setLoadingSvc] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    // Fetch all available services and insurances
+    // Fetch available medical services for the receptionist ticket form.
     useEffect(() => {
         const fetchData = async () => {
             setLoadingSvc(true);
             setError('');
             try {
-                // Fetch services
                 const resSvc = await fetch(
                     `${import.meta.env.VITE_API_URL}/api/v1/medical-services/available?size=1000`,
                     { headers: bearer() }
@@ -37,16 +35,6 @@ export function useCreateTicket() {
                     capabilityName: s.requiredCapabilityName || '',
                 }));
                 setServices(mappedServices);
-
-                // Fetch insurances
-                const resIns = await fetch(
-                    `${import.meta.env.VITE_API_URL}/api/v1/insurances`,
-                    { headers: bearer() }
-                );
-                if (resIns.ok) {
-                    const dataIns = await resIns.json();
-                    setInsurances(dataIns);
-                }
             } catch (err) {
                 setError(err.message || 'Có lỗi xảy ra.');
             } finally {
@@ -80,5 +68,5 @@ export function useCreateTicket() {
         }
     };
 
-    return { services, insurances, loadingSvc, submitting, error, submit };
+    return { services, loadingSvc, submitting, error, submit };
 }

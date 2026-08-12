@@ -1,138 +1,1249 @@
 // src/pages/patient/MedicalHistoryPage.jsx
-import { useState, useEffect } from 'react';
+
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { Calendar, Stethoscope, ChevronRight, Activity } from 'lucide-react';
+import {
+    Activity,
+    CalendarDays,
+    ChevronLeft,
+    ChevronRight,
+    Filter,
+    RotateCcw,
+    Search,
+    Stethoscope,
+} from 'lucide-react';
+
 import PatientLayout from '@/components/layout/CustomerLayout';
 import { useMedicalHistory } from '@/hooks/useMedicalHistory';
 import { ROUTES } from '@/constants/routes';
 
-const PAGE_SIZE = 10;
+/* =========================================================
+   CONSTANTS
+========================================================= */
 
-function Pagination({ page, total, pageSize, onChange }) {
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    if (totalPages <= 1) return null;
+const DEFAULT_PAGE_SIZE = 7;
+
+const RECORD_TYPES = [
+    { value: '', label: 'Tất cả' },
+    { value: 'EXAMINATION', label: 'Khám bệnh' },
+    { value: 'PARACLINICAL', label: 'Cận lâm sàng' },
+];
+
+const STATUSES = [
+    { value: '', label: 'Tất cả' },
+    { value: 'COMPLETED', label: 'Hoàn thành' },
+    { value: 'IN_PROGRESS', label: 'Đang xử lý' },
+    { value: 'CANCELLED', label: 'Đã hủy' },
+];
+
+const SORT_OPTIONS = [
+    { value: 'DESC', label: 'Mới nhất' },
+    { value: 'ASC', label: 'Cũ nhất' },
+];
+
+const inputCls =
+    'h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-200';
+
+const labelCls =
+    'mb-1.5 block text-xs font-medium text-gray-500';
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const normalize = (value) =>
+    String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+
+const normalizeRecordType = (value) => {
+    const type = String(value || '').toUpperCase();
+
+    if (type === 'EXAMINATION') {
+        return 'EXAMINATION';
+    }
+
+    if (
+        type === 'PARACLINICAL' ||
+        type === 'LABORATORY' ||
+        type === 'IMAGING'
+    ) {
+        return 'PARACLINICAL';
+    }
+
+    return type;
+};
+
+const recordTypeLabel = (value) => {
+    const type = normalizeRecordType(value);
+
+    if (type === 'EXAMINATION') {
+        return 'Khám bệnh';
+    }
+
+    if (type === 'PARACLINICAL') {
+        return 'Cận lâm sàng';
+    }
+
+    return value || '-';
+};
+
+const recordStatusLabel = (value) => {
+    switch (String(value || '').toUpperCase()) {
+        case 'COMPLETED':
+            return 'Hoàn thành';
+
+        case 'IN_PROGRESS':
+            return 'Đang xử lý';
+
+        case 'CANCELLED':
+            return 'Đã hủy';
+
+        default:
+            return value || 'Hoàn thành';
+    }
+};
+
+const statusClass = (value) => {
+    switch (String(value || '').toUpperCase()) {
+        case 'CANCELLED':
+            return 'border-red-200 bg-white text-red-500';
+
+        case 'IN_PROGRESS':
+            return 'border-gray-300 bg-gray-50 text-gray-700';
+
+        case 'COMPLETED':
+        default:
+            return 'border-gray-200 bg-gray-50 text-gray-600';
+    }
+};
+
+const parseVisitDate = (value) => {
+    if (!value) {
+        return null;
+    }
+
+    // YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const date = new Date(`${value}T00:00:00`);
+
+        return Number.isNaN(date.getTime())
+            ? null
+            : date;
+    }
+
+    // DD/MM/YYYY
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+        const [day, month, year] = value.split('/');
+
+        const date = new Date(
+            `${year}-${month}-${day}T00:00:00`
+        );
+
+        return Number.isNaN(date.getTime())
+            ? null
+            : date;
+    }
+
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+        ? null
+        : date;
+};
+
+const toDateInputValue = (date) => {
+    if (!date) {
+        return '';
+    }
+
+    const parsed = parseVisitDate(date);
+
+    if (!parsed) {
+        return '';
+    }
+
+    return [
+        parsed.getFullYear(),
+        String(parsed.getMonth() + 1).padStart(2, '0'),
+        String(parsed.getDate()).padStart(2, '0'),
+    ].join('-');
+};
+
+/* =========================================================
+   PAGINATION
+========================================================= */
+
+function Pagination({
+                        page,
+                        total,
+                        pageSize,
+                        onChange,
+                    }) {
+    const totalPages = Math.max(
+        1,
+        Math.ceil(total / pageSize)
+    );
+
+    if (totalPages <= 1) {
+        return null;
+    }
+
+    const visiblePages = [];
+
+    for (
+        let pageNumber = 1;
+        pageNumber <= totalPages;
+        pageNumber++
+    ) {
+        if (
+            totalPages <= 7 ||
+            pageNumber === 1 ||
+            pageNumber === totalPages ||
+            Math.abs(pageNumber - page) <= 1
+        ) {
+            visiblePages.push(pageNumber);
+        }
+    }
+
     return (
-        <div className="flex items-center gap-1">
-            <button onClick={() => onChange(page - 1)} disabled={page === 1}
-                    className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded text-gray-400 disabled:opacity-30 hover:border-gray-400 transition-colors text-sm">‹</button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                <button key={p} onClick={() => onChange(p)}
-                        className={`w-8 h-8 text-sm rounded border transition-colors ${
-                            p === page ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600 hover:border-gray-400'
-                        }`}>{p}</button>
-            ))}
-            <button onClick={() => onChange(page + 1)} disabled={page === totalPages}
-                    className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded text-gray-400 disabled:opacity-30 hover:border-gray-400 transition-colors text-sm">›</button>
+        <div className="flex items-center gap-1.5">
+            <button
+                type="button"
+                disabled={page === 1}
+                onClick={() =>
+                    onChange(
+                        Math.max(1, page - 1)
+                    )
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-gray-400 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+                <ChevronLeft size={16} />
+            </button>
+
+            {visiblePages.map(
+                (
+                    pageNumber,
+                    index
+                ) => {
+                    const previous =
+                        visiblePages[
+                        index - 1
+                            ];
+
+                    return (
+                        <div
+                            key={pageNumber}
+                            className="flex items-center gap-1.5"
+                        >
+                            {previous &&
+                                pageNumber -
+                                previous >
+                                1 && (
+                                    <span className="px-1 text-sm text-gray-400">
+                                        ...
+                                    </span>
+                                )}
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    onChange(
+                                        pageNumber
+                                    )
+                                }
+                                className={`flex h-9 min-w-9 items-center justify-center rounded-lg border px-3 text-sm font-medium transition ${
+                                    page ===
+                                    pageNumber
+                                        ? 'border-gray-900 bg-gray-900 text-white'
+                                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+                                }`}
+                            >
+                                {pageNumber}
+                            </button>
+                        </div>
+                    );
+                }
+            )}
+
+            <button
+                type="button"
+                disabled={
+                    page === totalPages
+                }
+                onClick={() =>
+                    onChange(
+                        Math.min(
+                            totalPages,
+                            page + 1
+                        )
+                    )
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-gray-400 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+                <ChevronRight size={16} />
+            </button>
         </div>
     );
 }
 
+/* =========================================================
+   MAIN
+========================================================= */
+
 export default function MedicalHistoryPage() {
-    const { t }    = useTranslation('medicalHistory');
     const navigate = useNavigate();
-    const { visits, loading, error, total, page, PAGE_SIZE: PS, fetchHistory } = useMedicalHistory();
-    const [search, setSearch] = useState('');
 
-    useEffect(() => { fetchHistory(); }, []);
+    const {
+        visits = [],
+        loading,
+        error,
+        total = 0,
+        page = 1,
+        PAGE_SIZE: hookPageSize,
+        fetchHistory,
+    } = useMedicalHistory();
 
-    const handleSearch = (val) => { setSearch(val); fetchHistory({ search: val, page: 0 }); };
-    const handlePage   = (p)   => fetchHistory({ search, page: p - 1 }); // Frontend 1-based → backend 0-based
+    const pageSize =
+        hookPageSize ||
+        DEFAULT_PAGE_SIZE;
 
-    const from = (page - 1) * (PS ?? PAGE_SIZE) + 1;
-    const to   = Math.min(page * (PS ?? PAGE_SIZE), total);
+    /* =====================================================
+       FILTER STATE
+    ===================================================== */
 
-    const thCls = 'text-xs font-medium text-primary-500 text-left px-5 py-3';
-    const tdCls = 'px-5 py-4 text-sm align-middle';
+    const [
+        search,
+        setSearch,
+    ] = useState('');
+
+    const [
+        fromDate,
+        setFromDate,
+    ] = useState('');
+
+    const [
+        toDate,
+        setToDate,
+    ] = useState('');
+
+    const [
+        recordType,
+        setRecordType,
+    ] = useState('');
+
+    const [
+        status,
+        setStatus,
+    ] = useState('');
+
+    const [
+        sort,
+        setSort,
+    ] = useState('DESC');
+
+    /*
+     * appliedFilter giúp phân trang tiếp tục sử dụng
+     * đúng filter sau khi người dùng bấm "Lọc".
+     */
+    const [
+        appliedFilter,
+        setAppliedFilter,
+    ] = useState({
+        search: '',
+        fromDate: '',
+        toDate: '',
+        recordType: '',
+        status: '',
+        sort: 'DESC',
+    });
+
+    /* =====================================================
+       LOAD
+    ===================================================== */
+
+    useEffect(() => {
+        fetchHistory({
+            page: 0,
+            size: pageSize,
+            sort: 'DESC',
+        });
+    }, []);
+
+    /* =====================================================
+       FILTER
+    ===================================================== */
+
+    const handleFilter = () => {
+        if (
+            fromDate &&
+            toDate &&
+            fromDate > toDate
+        ) {
+            return;
+        }
+
+        const filters = {
+            search:
+                search.trim(),
+
+            fromDate:
+                fromDate || undefined,
+
+            toDate:
+                toDate || undefined,
+
+            recordType:
+                recordType || undefined,
+
+            status:
+                status || undefined,
+
+            sort,
+
+            page: 0,
+
+            size: pageSize,
+        };
+
+        setAppliedFilter({
+            search:
+                search.trim(),
+            fromDate,
+            toDate,
+            recordType,
+            status,
+            sort,
+        });
+
+        fetchHistory(filters);
+    };
+
+    /* =====================================================
+       RESET
+    ===================================================== */
+
+    const handleReset = () => {
+        setSearch('');
+        setFromDate('');
+        setToDate('');
+        setRecordType('');
+        setStatus('');
+        setSort('DESC');
+
+        setAppliedFilter({
+            search: '',
+            fromDate: '',
+            toDate: '',
+            recordType: '',
+            status: '',
+            sort: 'DESC',
+        });
+
+        fetchHistory({
+            page: 0,
+            size: pageSize,
+            sort: 'DESC',
+        });
+    };
+
+    /* =====================================================
+       PAGE
+    ===================================================== */
+
+    const handlePage = (
+        nextPage
+    ) => {
+        fetchHistory({
+            ...appliedFilter,
+
+            fromDate:
+                appliedFilter.fromDate ||
+                undefined,
+
+            toDate:
+                appliedFilter.toDate ||
+                undefined,
+
+            recordType:
+                appliedFilter.recordType ||
+                undefined,
+
+            status:
+                appliedFilter.status ||
+                undefined,
+
+            page:
+                nextPage - 1,
+
+            size:
+            pageSize,
+        });
+    };
+
+    /* =====================================================
+       LOCAL DISPLAY FILTER FALLBACK
+    ===================================================== */
+
+    /*
+     * Nếu backend/hook đã hỗ trợ các filter mới,
+     * phần này vẫn không gây ảnh hưởng.
+     *
+     * Nó giúp recordType/status/sort hoạt động ở dữ liệu
+     * hiện tại trong lúc backend chưa map đầy đủ.
+     */
+    const displayVisits =
+        useMemo(() => {
+            let result = [
+                ...visits,
+            ];
+
+            const keyword =
+                normalize(
+                    appliedFilter.search
+                );
+
+            if (keyword) {
+                result =
+                    result.filter(
+                        (visit) => {
+                            const text =
+                                normalize(
+                                    [
+                                        visit.recordCode,
+                                        visit.visitCode,
+                                        visit.doctor,
+                                        visit.diagnosis,
+                                        visit.specialty,
+                                    ].join(
+                                        ' '
+                                    )
+                                );
+
+                            return text.includes(
+                                keyword
+                            );
+                        }
+                    );
+            }
+
+            if (
+                appliedFilter.recordType
+            ) {
+                result =
+                    result.filter(
+                        (visit) =>
+                            normalizeRecordType(
+                                visit.specialty
+                            ) ===
+                            appliedFilter.recordType
+                    );
+            }
+
+            if (
+                appliedFilter.status
+            ) {
+                result =
+                    result.filter(
+                        (visit) =>
+                            String(
+                                visit.status ||
+                                'COMPLETED'
+                            ).toUpperCase() ===
+                            appliedFilter.status
+                    );
+            }
+
+            if (
+                appliedFilter.fromDate
+            ) {
+                result =
+                    result.filter(
+                        (visit) => {
+                            const value =
+                                toDateInputValue(
+                                    visit.date
+                                );
+
+                            return (
+                                !value ||
+                                value >=
+                                appliedFilter.fromDate
+                            );
+                        }
+                    );
+            }
+
+            if (
+                appliedFilter.toDate
+            ) {
+                result =
+                    result.filter(
+                        (visit) => {
+                            const value =
+                                toDateInputValue(
+                                    visit.date
+                                );
+
+                            return (
+                                !value ||
+                                value <=
+                                appliedFilter.toDate
+                            );
+                        }
+                    );
+            }
+
+            result.sort(
+                (a, b) => {
+                    const dateA =
+                        parseVisitDate(
+                            a.date
+                        );
+
+                    const dateB =
+                        parseVisitDate(
+                            b.date
+                        );
+
+                    const valueA =
+                        dateA?.getTime() ||
+                        0;
+
+                    const valueB =
+                        dateB?.getTime() ||
+                        0;
+
+                    return appliedFilter.sort ===
+                    'ASC'
+                        ? valueA -
+                        valueB
+                        : valueB -
+                        valueA;
+                }
+            );
+
+            return result;
+        }, [
+            visits,
+            appliedFilter,
+        ]);
+
+    /* =====================================================
+       PAGINATION RANGE
+    ===================================================== */
+
+    const from =
+        total === 0
+            ? 0
+            : (page - 1) *
+            pageSize +
+            1;
+
+    const to = Math.min(
+        page * pageSize,
+        total
+    );
+
+    /* =====================================================
+       UI
+    ===================================================== */
 
     return (
         <PatientLayout>
-            <div className="space-y-5">
-                {/* Page title */}
-                <h1 className="text-base font-semibold text-gray-900">{t('medicalHistory.pageTitle')}</h1>
+            <div className="w-full space-y-5">
 
-                {/* Search bar */}
-                <div className="flex items-center gap-0">
-                    <label className="text-sm text-gray-500 whitespace-nowrap mr-3">
-                        {t('medicalHistory.searchPlaceholder')}
-                    </label>
-                    <input
-                        value={search}
-                        onChange={e => handleSearch(e.target.value)}
-                        className="w-64 h-9 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500 bg-white"
-                    />
+                {/* =================================================
+                    TITLE
+                ================================================= */}
+
+                <div>
+                    <h1 className="text-xl font-bold text-gray-900">
+                        Lịch sử khám bệnh
+                    </h1>
                 </div>
 
-                {/* List View */}
-                <div className="space-y-3">
-                    {loading && (
-                        <div className="text-center py-12 text-sm text-gray-400 bg-white rounded-xl border border-gray-200">
-                            {t('medicalHistory.loading')}
-                        </div>
-                    )}
-                    {!loading && error && (
-                        <div className="text-center py-12 text-sm text-red-500 bg-white rounded-xl border border-gray-200">
-                            {error}
-                        </div>
-                    )}
-                    {!loading && !error && visits.length === 0 && (
-                        <div className="text-center py-12 text-sm text-gray-400 bg-white rounded-xl border border-gray-200">
-                            {t('medicalHistory.noData')}
-                        </div>
-                    )}
-                    {!loading && visits.map(v => (
-                        <div 
-                            key={v.id} 
-                            onClick={() => navigate(`${ROUTES.CUSTOMER_VISIT_HISTORY}/${v.id}`)}
-                            className="group bg-white border border-gray-100 rounded-2xl p-5 hover:border-primary-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all cursor-pointer flex flex-col md:flex-row md:items-center gap-4"
-                        >
-                            {/* Date & Time */}
-                            <div className="flex items-start gap-3 md:w-1/4 shrink-0">
-                                <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-primary-50 group-hover:text-primary-500 transition-colors shrink-0">
-                                    <Calendar className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <p className="font-bold text-gray-900">{v.date}</p>
-                                    <p className="text-xs text-gray-500 mt-0.5">{v.time}</p>
-                                </div>
-                            </div>
+                {/* =================================================
+                    FILTER CARD
+                ================================================= */}
 
-                            {/* Specialty & Doctor */}
-                            <div className="flex flex-col md:w-1/4 shrink-0">
-                                <div className="flex items-center gap-1.5 mb-0.5">
-                                    <Activity className="w-3.5 h-3.5 text-primary-500" />
-                                    <p className="text-sm font-semibold text-primary-600">{{ EXAMINATION: 'Khám bệnh', PARACLINICAL: 'Cận lâm sàng', LABORATORY: 'Cận lâm sàng', IMAGING: 'Cận lâm sàng' }[v.specialty] || v.specialty || '-'}</p>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <Stethoscope className="w-3.5 h-3.5 text-gray-400" />
-                                    <p className="text-xs text-gray-600">{v.doctor || '-'}</p>
-                                </div>
-                            </div>
+                <div className="rounded-2xl border border-gray-200 bg-white p-5">
 
-                            {/* Diagnosis & Status */}
-                            <div className="flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div className="flex-1">
-                                    <p className="text-xs text-gray-400 mb-0.5">{t('medicalHistory.table.diagnosis')}</p>
-                                    <p className="text-sm font-semibold text-gray-900 line-clamp-1">{v.diagnosis || '-'}</p>
-                                </div>
-                                <div className="flex items-center gap-4 shrink-0">
-                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-green-50 text-green-600 border border-green-100">
-                                        {t('medicalHistory.statusAvailable')}
-                                    </span>
-                                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-primary-500 transition-colors" />
-                                </div>
+                    {/* ROW 1 */}
+
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.8fr_0.95fr_0.95fr_0.95fr]">
+
+                        {/* SEARCH */}
+
+                        <div>
+                            <label className={labelCls}>
+                                Tìm kiếm
+                            </label>
+
+                            <div className="relative">
+                                <Search
+                                    size={16}
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                />
+
+                                <input
+                                    type="text"
+                                    value={
+                                        search
+                                    }
+                                    onChange={(
+                                        event
+                                    ) =>
+                                        setSearch(
+                                            event
+                                                .target
+                                                .value
+                                        )
+                                    }
+                                    onKeyDown={(
+                                        event
+                                    ) => {
+                                        if (
+                                            event.key ===
+                                            'Enter'
+                                        ) {
+                                            handleFilter();
+                                        }
+                                    }}
+                                    placeholder="Tìm theo mã hồ sơ, bác sĩ, chẩn đoán..."
+                                    className={`${inputCls} pl-9`}
+                                />
                             </div>
                         </div>
-                    ))}
-                </div>
 
-                    {/* Footer: count + pagination */}
-                    {total > 0 && (
-                        <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-                            <p className="text-xs text-gray-400">
-                                Hiển thị {from}–{to} trong tổng số {total} lượt khám
+                        {/* FROM DATE */}
+
+                        <div>
+                            <label className={labelCls}>
+                                Từ ngày
+                            </label>
+
+                            <input
+                                type="date"
+                                value={
+                                    fromDate
+                                }
+                                max={
+                                    toDate ||
+                                    undefined
+                                }
+                                onChange={(
+                                    event
+                                ) =>
+                                    setFromDate(
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                }
+                                className={
+                                    inputCls
+                                }
+                            />
+                        </div>
+
+                        {/* TO DATE */}
+
+                        <div>
+                            <label className={labelCls}>
+                                Đến ngày
+                            </label>
+
+                            <input
+                                type="date"
+                                value={
+                                    toDate
+                                }
+                                min={
+                                    fromDate ||
+                                    undefined
+                                }
+                                onChange={(
+                                    event
+                                ) =>
+                                    setToDate(
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                }
+                                className={
+                                    inputCls
+                                }
+                            />
+                        </div>
+
+                        {/* RECORD TYPE */}
+
+                        <div>
+                            <label className={labelCls}>
+                                Loại hồ sơ
+                            </label>
+
+                            <select
+                                value={
+                                    recordType
+                                }
+                                onChange={(
+                                    event
+                                ) =>
+                                    setRecordType(
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                }
+                                className={
+                                    inputCls
+                                }
+                            >
+                                {RECORD_TYPES.map(
+                                    (
+                                        item
+                                    ) => (
+                                        <option
+                                            key={
+                                                item.value
+                                            }
+                                            value={
+                                                item.value
+                                            }
+                                        >
+                                            {
+                                                item.label
+                                            }
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* ROW 2 */}
+
+                    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-[260px_260px_140px_140px]">
+
+                        {/* STATUS */}
+
+                        <div>
+                            <label className={labelCls}>
+                                Trạng thái
+                            </label>
+
+                            <select
+                                value={
+                                    status
+                                }
+                                onChange={(
+                                    event
+                                ) =>
+                                    setStatus(
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                }
+                                className={
+                                    inputCls
+                                }
+                            >
+                                {STATUSES.map(
+                                    (
+                                        item
+                                    ) => (
+                                        <option
+                                            key={
+                                                item.value
+                                            }
+                                            value={
+                                                item.value
+                                            }
+                                        >
+                                            {
+                                                item.label
+                                            }
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </div>
+
+                        {/* SORT */}
+
+                        <div>
+                            <label className={labelCls}>
+                                Sắp xếp
+                            </label>
+
+                            <select
+                                value={
+                                    sort
+                                }
+                                onChange={(
+                                    event
+                                ) =>
+                                    setSort(
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                }
+                                className={
+                                    inputCls
+                                }
+                            >
+                                {SORT_OPTIONS.map(
+                                    (
+                                        item
+                                    ) => (
+                                        <option
+                                            key={
+                                                item.value
+                                            }
+                                            value={
+                                                item.value
+                                            }
+                                        >
+                                            {
+                                                item.label
+                                            }
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </div>
+
+                        {/* FILTER */}
+
+                        <div className="flex items-end">
+
+                            <button
+                                type="button"
+                                onClick={
+                                    handleFilter
+                                }
+                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition hover:bg-gray-700"
+                            >
+                                <Filter
+                                    size={
+                                        15
+                                    }
+                                />
+
+                                Lọc
+                            </button>
+                        </div>
+
+                        {/* RESET */}
+
+                        <div className="flex items-end">
+
+                            <button
+                                type="button"
+                                onClick={
+                                    handleReset
+                                }
+                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition hover:border-gray-400 hover:bg-gray-50"
+                            >
+                                <RotateCcw
+                                    size={
+                                        15
+                                    }
+                                />
+
+                                Đặt lại
+                            </button>
+                        </div>
+                    </div>
+
+                    {fromDate &&
+                        toDate &&
+                        fromDate >
+                        toDate && (
+                            <p className="mt-3 text-xs text-red-500">
+                                Từ ngày không được lớn hơn đến ngày.
                             </p>
-                            <Pagination page={page} total={total} pageSize={PS ?? PAGE_SIZE} onChange={handlePage} />
+                        )}
+                </div>
+
+                {/* =================================================
+                    RESULT COUNT
+                ================================================= */}
+
+                {!loading &&
+                    !error &&
+                    total > 0 && (
+                        <p className="px-1 text-xs text-gray-400">
+                            Hiển thị{' '}
+                            {from}–
+                            {to} trong tổng số{' '}
+                            {total} hồ sơ
+                        </p>
+                    )}
+
+                {/* =================================================
+                    HISTORY LIST
+                ================================================= */}
+
+                <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+
+                    {/* HEADER */}
+
+                    <div className="hidden grid-cols-[190px_220px_260px_minmax(250px,1fr)_130px_100px] border-b border-gray-100 px-5 py-3 text-xs font-medium text-gray-400 lg:grid">
+
+                        <div>
+                            Ngày giờ
+                        </div>
+
+                        <div>
+                            Loại hồ sơ
+                        </div>
+
+                        <div>
+                            Bác sĩ / Mã hồ sơ
+                        </div>
+
+                        <div>
+                            Chẩn đoán
+                        </div>
+
+                        <div>
+                            Trạng thái
+                        </div>
+
+                        <div />
+                    </div>
+
+                    {/* LOADING */}
+
+                    {loading && (
+                        <div className="py-16 text-center text-sm text-gray-400">
+                            Đang tải lịch sử khám bệnh...
+                        </div>
+                    )}
+
+                    {/* ERROR */}
+
+                    {!loading &&
+                        error && (
+                            <div className="py-16 text-center text-sm text-red-500">
+                                {error}
+                            </div>
+                        )}
+
+                    {/* EMPTY */}
+
+                    {!loading &&
+                        !error &&
+                        displayVisits.length ===
+                        0 && (
+                            <div className="py-16 text-center">
+
+                                <CalendarDays
+                                    size={30}
+                                    className="mx-auto mb-3 text-gray-200"
+                                />
+
+                                <p className="text-sm text-gray-400">
+                                    Không có lịch sử khám bệnh phù hợp.
+                                </p>
+                            </div>
+                        )}
+
+                    {/* =================================================
+                        ROWS
+                    ================================================= */}
+
+                    {!loading &&
+                        !error &&
+                        displayVisits.map(
+                            (visit) => {
+                                const type =
+                                    normalizeRecordType(
+                                        visit.specialty
+                                    );
+
+                                const visitStatus =
+                                    visit.status ||
+                                    'COMPLETED';
+
+                                return (
+                                    <button
+                                        key={
+                                            visit.id
+                                        }
+                                        type="button"
+                                        onClick={() =>
+                                            navigate(
+                                                `${ROUTES.CUSTOMER_VISIT_HISTORY}/${visit.id}`
+                                            )
+                                        }
+                                        className="group grid w-full grid-cols-1 gap-4 border-b border-gray-100 px-5 py-4 text-left transition last:border-b-0 hover:bg-gray-50 lg:grid-cols-[190px_220px_260px_minmax(250px,1fr)_130px_100px] lg:items-center"
+                                    >
+
+                                        {/* DATE */}
+
+                                        <div className="flex items-start gap-3">
+
+                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-400">
+
+                                                <CalendarDays
+                                                    size={
+                                                        17
+                                                    }
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">
+                                                    {visit.date ||
+                                                        '-'}
+                                                </p>
+
+                                                <p className="mt-0.5 text-xs text-gray-400">
+                                                    {visit.time ||
+                                                        '-'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* TYPE */}
+
+                                        <div>
+                                            <p className="mb-1 text-[10px] text-gray-400 lg:hidden">
+                                                Loại hồ sơ
+                                            </p>
+
+                                            <div className="flex items-center gap-2">
+
+                                                {type ===
+                                                'PARACLINICAL' ? (
+                                                    <Activity
+                                                        size={
+                                                            16
+                                                        }
+                                                        className="text-gray-500"
+                                                    />
+                                                ) : (
+                                                    <Stethoscope
+                                                        size={
+                                                            16
+                                                        }
+                                                        className="text-gray-500"
+                                                    />
+                                                )}
+
+                                                <p className="text-sm font-semibold text-gray-800">
+                                                    {recordTypeLabel(
+                                                        visit.specialty
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* DOCTOR / RECORD */}
+
+                                        <div>
+                                            <p className="mb-1 text-[10px] text-gray-400 lg:hidden">
+                                                Bác sĩ / Mã hồ sơ
+                                            </p>
+
+                                            <p className="truncate text-sm text-gray-700">
+                                                {visit.doctor ||
+                                                    '-'}
+                                            </p>
+
+                                            {(visit.recordCode ||
+                                                visit.visitCode) && (
+                                                <p className="mt-0.5 truncate text-xs text-gray-400">
+                                                    {visit.recordCode ||
+                                                        visit.visitCode}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* DIAGNOSIS */}
+
+                                        <div>
+                                            <p className="mb-1 text-[10px] text-gray-400 lg:hidden">
+                                                Chẩn đoán
+                                            </p>
+
+                                            <p className="line-clamp-2 text-sm font-medium leading-5 text-gray-900">
+                                                {visit.diagnosis ||
+                                                    '-'}
+                                            </p>
+                                        </div>
+
+                                        {/* STATUS */}
+
+                                        <div>
+                                            <span
+                                                className={`inline-flex rounded-md border px-2.5 py-1 text-[11px] font-medium ${statusClass(
+                                                    visitStatus
+                                                )}`}
+                                            >
+                                                {recordStatusLabel(
+                                                    visitStatus
+                                                )}
+                                            </span>
+                                        </div>
+
+                                        {/* ACTION */}
+
+                                        <div className="flex items-center justify-end gap-2 text-sm text-gray-500">
+
+                                            <span className="hidden group-hover:text-gray-900 lg:inline">
+                                                Xem chi tiết
+                                            </span>
+
+                                            <ChevronRight
+                                                size={
+                                                    17
+                                                }
+                                                className="text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-gray-700"
+                                            />
+                                        </div>
+                                    </button>
+                                );
+                            }
+                        )}
+                </div>
+
+                {/* =================================================
+                    PAGINATION
+                ================================================= */}
+
+                {!loading &&
+                    !error &&
+                    total > 0 && (
+                        <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+
+                            <Pagination
+                                page={
+                                    page
+                                }
+                                total={
+                                    total
+                                }
+                                pageSize={
+                                    pageSize
+                                }
+                                onChange={
+                                    handlePage
+                                }
+                            />
+
+                            <div className="flex h-9 items-center rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-600">
+                                {pageSize} / trang
+                            </div>
                         </div>
                     )}
             </div>

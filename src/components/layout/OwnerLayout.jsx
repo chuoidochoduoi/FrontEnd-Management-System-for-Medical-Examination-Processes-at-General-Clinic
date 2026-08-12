@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BarChart2, CalendarDays, LogOut, Users, Settings, MessageSquare, MapPinned, Clock3, QrCode } from 'lucide-react';
+import { BarChart2, CalendarDays, LogOut, Users, Settings } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
 import SidebarBrand from './SidebarBrand';
@@ -56,9 +56,6 @@ export default function OwnerLayout({ children }) {
     const mainNav = [
         { to: ROUTES.OWNER_REPORT,   icon: BarChart2,    label: t('sidebar.statistics') },
         { to: ROUTES.OWNER_SCHEDULE, icon: CalendarDays, label: t('sidebar.schedule') },
-        { to: ROUTES.ADMIN_SHIFTS, icon: Clock3, label: t('sidebar.shiftConfig') },
-        { to: ROUTES.OWNER_FEEDBACKS, icon: MessageSquare, label: t('sidebar.feedback') },
-        { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: t('sidebar.patientFlow') },
         { to: ROUTES.MANAGER_STAFF, icon: Users, label: t('sidebar.staff') },
     ];
 

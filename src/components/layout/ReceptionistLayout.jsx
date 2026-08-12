@@ -10,8 +10,7 @@ import {
     LifeBuoy,
     LogOut,
     Users,
-    CalendarClock,
-    CalendarDays, Clock3, MapPinned,
+    CalendarDays, Clock3, MapPinned, MessageSquare,
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
@@ -84,10 +83,10 @@ export default function ReceptionistLayout({ children }) {
 
     const mainNav = [
         { to: ROUTES.RECEPTIONIST_CHECKIN,       icon: ClipboardList, label: t('sidebar.checkIn') },
-        { to: ROUTES.RECEPTIONIST_FOLLOW_UPS,    icon: CalendarClock, label: 'Quản lý tái khám' },
         { to: ROUTES.RECEPTIONIST_CREATE_TICKET, icon: FilePlus,      label: t('sidebar.createTicket') },
         { to: ROUTES.RECEPTIONIST_RECORDS,       icon: FolderOpen,    label: t('sidebar.manageRecords') },
         { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: tCommon('sidebar.patientFlow') },
+        { to: ROUTES.RECEPTIONIST_FEEDBACKS,     icon: MessageSquare, label: 'Đánh giá liên quan' },
         { to: ROUTES.RECEPTIONIST_SUPPORT,       icon: LifeBuoy,      label: t('sidebar.onlineSupport', { defaultValue: 'Online support' }) },
         { to: ROUTES.STAFF_SCHEDULE,             icon: CalendarDays, label: tCommon('sidebar.mySchedule') },
         { to: ROUTES.STAFF_PROFILE, icon: Users, label: tCommon('sidebar.profile') },

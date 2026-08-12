@@ -25,6 +25,7 @@ export const ROUTES = {
     RECEPTIONIST_SETTINGS:      '/receptionist/settings',
     RECEPTIONIST_SUPPORT:      '/receptionist/support',
     RECEPTIONIST_FOLLOW_UPS:   '/receptionist/follow-ups',
+    RECEPTIONIST_FEEDBACKS:    '/receptionist/feedbacks',
     PATIENT_JOURNEYS: '/staff/patient-journeys',
 
 

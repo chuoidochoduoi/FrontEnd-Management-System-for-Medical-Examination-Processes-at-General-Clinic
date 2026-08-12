@@ -1,5 +1,6 @@
 // src/pages/cashier/InvoiceDetailPage.jsx
 import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import CashierLayout from '@/components/layout/CashierLayout';
 import { useInvoiceDetail } from '@/hooks/useInvoiceDetail';
@@ -31,8 +32,22 @@ export default function InvoiceDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { t }  = useTranslation('cashier');
-    const { invoice, loading, confirming, error, confirmPayment, checkQRPayment } =
+    const {
+        invoice, insurances, loading, confirming, applyingInsurance, error,
+        confirmPayment, applyInsurance, checkQRPayment
+    } =
         useInvoiceDetail(id);
+    const [selectedInsuranceId, setSelectedInsuranceId] = useState('');
+    const [bhytCode, setBhytCode] = useState('');
+
+    useEffect(() => {
+        if (invoice?.bhytCode) setBhytCode(invoice.bhytCode);
+    }, [invoice?.bhytCode]);
+
+    const handleApplyInsurance = () => {
+        if (!selectedInsuranceId || !bhytCode.trim()) return;
+        applyInsurance(selectedInsuranceId, bhytCode);
+    };
 
     if (loading) {
         return (
@@ -100,6 +115,56 @@ export default function InvoiceDetailPage() {
               {t(`invoiceDetail.status.${invoice?.status}`) || invoice?.status}
             </span>
                     </div>
+
+                    {invoice?.status === 'pending' && (
+                        <section className="rounded-xl border border-blue-100 bg-blue-50/50 p-5 space-y-4">
+                            <div>
+                                <h3 className="text-sm font-semibold text-gray-900">Bảo hiểm y tế</h3>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Thu ngân kiểm tra thẻ và áp dụng mức BHYT trước khi xác nhận thanh toán.
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-[1fr_1.4fr_auto] gap-3 items-end">
+                                <label className="text-xs font-medium text-gray-600">
+                                    Loại bảo hiểm
+                                    <select
+                                        value={selectedInsuranceId}
+                                        onChange={event => setSelectedInsuranceId(event.target.value)}
+                                        className="mt-1.5 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none focus:border-blue-400"
+                                    >
+                                        <option value="">Chọn loại bảo hiểm</option>
+                                        {insurances.map(insurance => (
+                                            <option key={insurance.insuranceId} value={insurance.insuranceId}>
+                                                {insurance.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <label className="text-xs font-medium text-gray-600">
+                                    Mã thẻ BHYT
+                                    <input
+                                        value={bhytCode}
+                                        onChange={event => setBhytCode(event.target.value.toUpperCase())}
+                                        placeholder="Nhập mã thẻ BHYT"
+                                        className="mt-1.5 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none focus:border-blue-400"
+                                    />
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={handleApplyInsurance}
+                                    disabled={!selectedInsuranceId || !bhytCode.trim() || applyingInsurance}
+                                    className="h-10 rounded-lg bg-blue-600 px-5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {applyingInsurance ? 'Đang kiểm tra...' : 'Kiểm tra và áp dụng'}
+                                </button>
+                            </div>
+                            {invoice.bhytCode && (
+                                <p className="text-xs font-medium text-green-700">
+                                    Đã áp dụng BHYT: {invoice.bhytCode}
+                                </p>
+                            )}
+                        </section>
+                    )}
 
                     {/* ── Service table ── */}
                     <div>

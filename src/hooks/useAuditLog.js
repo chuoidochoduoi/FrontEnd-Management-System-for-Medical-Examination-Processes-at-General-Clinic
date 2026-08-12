@@ -8,7 +8,7 @@ export function useAuditLog() {
     const [page, setPage] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const PAGE_SIZE = 10;
+    const PAGE_SIZE = 7;
 
     const fetchLogs = useCallback(async (params = {}) => {
         setLoading(true);

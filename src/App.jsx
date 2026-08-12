@@ -28,7 +28,7 @@ import ReceptionistSupportPage from '@/pages/receptionist/ReceptionistSupportPag
 import FollowUpListPage from '@/pages/receptionist/FollowUpListPage';
 import DoctorDepartmentPage from '@/pages/doctor/DoctorDepartmentPage';
 import RoomListPage from '@/pages/doctor/RoomListPage';
-import LabTestPage from '@/pages/lab/LabTestPage.jsx';
+import LabRequestListPage from '@/pages/lab/LabRequestListPage.jsx';
 import LabCallQueuePage from '@/pages/lab/LabCallQueuePage.jsx';
 import RoomQueueDisplayPage from '@/pages/display/RoomQueueDisplayPage.jsx';
 import LabDetailPage from '@/pages/lab/LabDetailPage';
@@ -189,15 +189,16 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path={ROUTES.DOCTOR_EXAM_COMPLETED} element={<ProtectedRoute allowedRoles={['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}><ExamCompletionPage /></ProtectedRoute>} />
-        <Route path={ROUTES.DOCTOR_MEDICAL_RECORD_PRINT} element={<ProtectedRoute allowedRoles={['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}><MedicalRecordPrintPage /></ProtectedRoute>} />
+        <Route path={ROUTES.DOCTOR_MEDICAL_RECORD_PRINT} element={<ProtectedRoute allowedRoles={['CUSTOMER', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}><MedicalRecordPrintPage /></ProtectedRoute>} />
         <Route path={ROUTES.WAITING_ROOM} element={<ProtectedRoute allowedRoles={['CUSTOMER']}><WaitingRoomPage /></ProtectedRoute>} />
         <Route path={ROUTES.PATIENT_JOURNEYS} element={<ProtectedRoute allowedRoles={['RECEPTIONIST','CLINIC_MANAGER']}><PatientJourneyPage /></ProtectedRoute>} />
         <Route path={ROUTES.DOCTOR_FEEDBACKS} element={<ProtectedRoute allowedRoles={['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}><FeedbackPage /></ProtectedRoute>} />
+        <Route path={ROUTES.RECEPTIONIST_FEEDBACKS} element={<ProtectedRoute allowedRoles={['RECEPTIONIST']}><FeedbackPage /></ProtectedRoute>} />
 
         {/* LAB - xét nghiệm (NURSE có thể truy cập) */}
         <Route path={ROUTES.DOCTOR_LAB} element={
           <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}>
-            <LabTestPage />
+            <LabRequestListPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.DOCTOR_LAB_DETAIL} element={
@@ -222,7 +223,7 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path={ROUTES.ADMIN_SHIFTS} element={
-          <ProtectedRoute allowedRoles={['CLINIC_MANAGER']}>
+          <ProtectedRoute allowedRoles={['ADMIN']}>
             <ShiftManagementPage />
           </ProtectedRoute>
         } />
@@ -255,7 +256,6 @@ function App() {
             <RoomQueueDisplayPage />
           </ProtectedRoute>
         } />
-        <Route path={ROUTES.OWNER_FEEDBACKS} element={<ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><FeedbackPage /></ProtectedRoute>} />
         <Route path={ROUTES.MANAGER_STAFF} element={<ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><ManagerStaffPage /></ProtectedRoute>} />
 //        <Route path={ROUTES.OWNER_ATTENDANCE} element={<ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><AttendanceManagementPage /></ProtectedRoute>} />
 //        <Route path={ROUTES.OWNER_ATTENDANCE_KIOSK} element={<ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><AttendanceKioskPage /></ProtectedRoute>} />

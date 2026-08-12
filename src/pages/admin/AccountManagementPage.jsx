@@ -9,7 +9,7 @@ import { useStaffList, usePatientList } from "@/hooks/useAccountManagement";
 import { useSpecializations } from "@/hooks/useSpecializations";
 import { useCapabilities } from "@/hooks/useCapabilities";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 7;
 
 /* ── Pagination ── */
 function Pagination({ page, total, pageSize, onChange }) {

@@ -49,7 +49,7 @@ export function useLogin() {
             if (role === 'ADMIN') {
                 navigate(ROUTES.ADMIN_ROOMS);
             } else if (role === 'CUSTOMER') {
-                navigate(ROUTES.PROFILE);
+                navigate(ROUTES.MY_APPOINTMENTS);
             } else if (role === 'STAFF') {
                 // Redirect based on systemRole
                 if (systemRole === 'RECEPTIONIST') {

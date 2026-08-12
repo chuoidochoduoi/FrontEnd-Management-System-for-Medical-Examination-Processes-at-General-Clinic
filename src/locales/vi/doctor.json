@@ -108,7 +108,7 @@
     "inProgress": "Đang khám",
     "done": "Hoàn thành",
     "skipped": "Bỏ qua",
-    "waitingForTest": "Chờ xét nghiệm",
+    "waitingForTest": "Chờ khám cận lâm sàng",
     "testDone": "Xét nghiệm xong"
   },
   "selectRoom": "Chọn phòng khám",

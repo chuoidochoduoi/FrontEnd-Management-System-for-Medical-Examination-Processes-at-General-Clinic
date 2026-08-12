@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 7;
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 

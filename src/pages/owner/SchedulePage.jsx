@@ -191,6 +191,7 @@ export default function SchedulePage() {
 
     const [monday,         setMonday]         = useState(() => getMonday());
     const [assignCell,     setAssignCell]     = useState(null); // { shiftId, dayKey, shiftName, dayLabel }
+    const readOnly = false;
 
     useEffect(() => { fetchSchedule(toISO(monday)); }, [monday]);
 
@@ -228,10 +229,10 @@ export default function SchedulePage() {
                         <button onClick={nextWeek} className="text-gray-400 hover:text-gray-700 transition-colors"><ChevronRight size={15}/></button>
                     </div>
 
-                    <button onClick={copyLastWeek}
+                    {!readOnly && <button onClick={copyLastWeek}
                             className="h-10 px-4 border border-gray-200 rounded-xl text-sm text-gray-700 hover:border-gray-400 transition-colors whitespace-nowrap ml-auto">
                         {t('scheduleManagement.copyLastWeek')}
-                    </button>
+                    </button>}
                 </div>
 
                 {/* Grid */}
@@ -275,14 +276,14 @@ export default function SchedulePage() {
                                                             <span>{p.name} <span className="text-gray-400">({p.role})</span></span>
                                                         </div>
                                                     ))}
-                                                    <button
+                                                    {!readOnly && <button
                                                         onClick={() => {
                                                             fetchStaffList(); // Load staff when opening modal
                                                             setAssignCell({ shiftId: shift.id, dayKey: dk, shiftName: shift.name, dayLabel });
                                                         }}
                                                         className="text-xs text-primary-500 hover:text-primary-600 transition-colors mt-1">
                                                         {t('scheduleManagement.addPerson')}
-                                                    </button>
+                                                    </button>}
                                                 </div>
                                             </td>
                                         );

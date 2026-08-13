@@ -86,6 +86,11 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, specializations, 
     const [nurseSearch, setNurseSearch] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
+    useEffect(() => {
+        if (!error) return;
+        toast.error(error);
+        setError('');
+    }, [error]);
     const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
     const filteredDoctors = doctors.filter(d => d.fullName.toLowerCase().includes(docSearch.toLowerCase()) || (d.specializationName && d.specializationName.toLowerCase().includes(docSearch.toLowerCase())));
@@ -241,7 +246,6 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, specializations, 
                 <label className={labelCls}>{t('roomManagement.addModal.initialStatus')}</label>
                 <StatusGroup value={form.status} onChange={v => set('status', v)} />
             </div>
-            {error && <p className="text-red-500 text-xs md:col-span-2">{error}</p>}
         </Modal>
     );
 }
@@ -264,6 +268,11 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
     const [deleting, setDeleting] = useState(false);
     const [showConfirmDelete, setShowConfirmDelete] = useState(false);
     const [error, setError] = useState('');
+    useEffect(() => {
+        if (!error) return;
+        toast.error(error);
+        setError('');
+    }, [error]);
     const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
     const filteredDoctors = doctors.filter(d => d.fullName.toLowerCase().includes(docSearch.toLowerCase()) || (d.specializationName && d.specializationName.toLowerCase().includes(docSearch.toLowerCase())));
@@ -430,7 +439,6 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
                 <label className={labelCls}>{t('roomManagement.editModal.currentStatus')}</label>
                 <StatusGroup value={form.status} onChange={v => set('status', v)} />
             </div>
-            {error && <p className="text-red-500 text-xs md:col-span-2">{error}</p>}
             
             <ConfirmModal 
                 isOpen={showConfirmDelete}

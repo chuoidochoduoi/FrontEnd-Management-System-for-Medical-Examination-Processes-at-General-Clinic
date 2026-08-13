@@ -36,13 +36,17 @@ export default function SpecializationManagementPage() {
         if (!form.name.trim()) return toast.error('Vui lòng nhập tên chuyên khoa');
         if (form.name.trim().length > 150) return toast.error('Tên chuyên khoa không được quá 150 ký tự');
         if (form.description.length > 500) return toast.error('Mô tả không được quá 500 ký tự');
+        const normalizedName = form.name.trim().replace(/\s+/g, ' ');
+        const duplicated = items.some(item => item.specializationId !== editing.specializationId
+            && item.name?.trim().replace(/\s+/g, ' ').toLocaleLowerCase('vi') === normalizedName.toLocaleLowerCase('vi'));
+        if (duplicated) return toast.error(`Tên chuyên khoa đã tồn tại: ${normalizedName}`);
         setSaving(true);
         try {
             const isEdit = !!editing.specializationId;
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/specializations${isEdit ? `/${editing.specializationId}` : ''}`, {
                 method: isEdit ? 'PUT' : 'POST',
                 headers: { ...headers(), 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: form.name.trim(), description: form.description.trim() })
+                body: JSON.stringify({ name: normalizedName, description: form.description.trim() })
             });
             const data = await res.json().catch(() => null);
             if (!res.ok) throw new Error(data?.message || 'Không thể lưu chuyên khoa');

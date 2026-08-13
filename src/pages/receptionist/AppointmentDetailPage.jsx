@@ -222,13 +222,16 @@ export default function AppointmentDetailPage() {
             0
         );
 
-    const currentStatus =
-        appointment?.status
-            ?.toString()
-            .toUpperCase() || '';
+    const rawStatus = appointment?.status;
+    const currentStatus = (
+        typeof rawStatus === 'string'
+            ? rawStatus
+            : rawStatus?.name || rawStatus?.value || ''
+    ).toUpperCase();
 
     const canCheckIn =
         currentStatus === 'PENDING';
+    const isEditable = currentStatus === 'PENDING';
 
     // =========================================================
     // FETCH SHIFTS
@@ -634,6 +637,10 @@ export default function AppointmentDetailPage() {
     // SAVE CLICK
     // =========================================================
     const handleSaveClick = () => {
+        if (!isEditable) {
+            toast.info('Lịch hẹn đã check-in nên không thể chỉnh sửa.');
+            return;
+        }
         const validationError =
             validateBeforeSave();
 
@@ -654,6 +661,11 @@ export default function AppointmentDetailPage() {
     // SAVE
     // =========================================================
     const handleSave = async () => {
+        if (!isEditable) {
+            toast.info('Lịch hẹn đã check-in nên không thể chỉnh sửa.');
+            setShowConfirmModal(false);
+            return;
+        }
         setSaving(true);
 
         try {
@@ -1039,7 +1051,9 @@ export default function AppointmentDetailPage() {
                                 </h1>
 
                                 <p className="mt-1 text-sm text-gray-400">
-                                    Kiểm tra và cập nhật thông tin bệnh nhân trước khi check-in
+                                    {isEditable
+                                        ? 'Kiểm tra và cập nhật thông tin bệnh nhân trước khi check-in'
+                                        : 'Thông tin đã được khóa sau khi bệnh nhân check-in'}
                                 </p>
                             </div>
 
@@ -1105,6 +1119,7 @@ export default function AppointmentDetailPage() {
 
                                             <input
                                                 type="text"
+                                                disabled={!isEditable}
                                                 value={fullName}
                                                 onChange={(e) =>
                                                     setFullName(
@@ -1112,7 +1127,7 @@ export default function AppointmentDetailPage() {
                                                     )
                                                 }
                                                 placeholder="Nhập họ và tên"
-                                                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-200"
+                                                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
                                             />
                                         </div>
 
@@ -1126,6 +1141,7 @@ export default function AppointmentDetailPage() {
 
                                                 <input
                                                     type="tel"
+                                                    disabled={!isEditable}
                                                     value={phone}
                                                     onChange={(e) =>
                                                         setPhone(
@@ -1133,7 +1149,7 @@ export default function AppointmentDetailPage() {
                                                         )
                                                     }
                                                     placeholder="Nhập số điện thoại"
-                                                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-200"
+                                                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
                                                 />
                                             </div>
 
@@ -1144,6 +1160,7 @@ export default function AppointmentDetailPage() {
 
                                                 <input
                                                     type="email"
+                                                    disabled={!isEditable}
                                                     value={email}
                                                     onChange={(e) =>
                                                         setEmail(
@@ -1151,7 +1168,7 @@ export default function AppointmentDetailPage() {
                                                         )
                                                     }
                                                     placeholder="Nhập email"
-                                                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-200"
+                                                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
                                                 />
                                             </div>
                                         </div>
@@ -1166,6 +1183,7 @@ export default function AppointmentDetailPage() {
 
                                                 <input
                                                     type="date"
+                                                    disabled={!isEditable}
                                                     max={new Date().toLocaleDateString(
                                                         'en-CA'
                                                     )}
@@ -1181,7 +1199,7 @@ export default function AppointmentDetailPage() {
                                                             )
                                                         );
                                                     }}
-                                                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-200"
+                                                    className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
                                                 />
 
                                                 <p className="mt-1 text-[11px] text-gray-400">
@@ -1204,12 +1222,13 @@ export default function AppointmentDetailPage() {
                                                             <button
                                                                 key={value}
                                                                 type="button"
+                                                                disabled={!isEditable}
                                                                 onClick={() =>
                                                                     setGender(
                                                                         value
                                                                     )
                                                                 }
-                                                                className={`h-10 rounded-lg border text-sm font-medium transition ${
+                                                                className={`h-10 rounded-lg border text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
                                                                     gender === value
                                                                         ? 'border-gray-900 bg-gray-900 text-white'
                                                                         : 'border-gray-200 bg-white text-gray-500 hover:border-gray-400'
@@ -1231,6 +1250,7 @@ export default function AppointmentDetailPage() {
 
                                             <input
                                                 type="text"
+                                                disabled={!isEditable}
                                                 value={address}
                                                 onChange={(e) =>
                                                     setAddress(
@@ -1238,7 +1258,7 @@ export default function AppointmentDetailPage() {
                                                     )
                                                 }
                                                 placeholder="Nhập địa chỉ"
-                                                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-200"
+                                                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
                                             />
                                         </div>
                                     </div>
@@ -1281,6 +1301,7 @@ export default function AppointmentDetailPage() {
 
                                             <input
                                                 type="date"
+                                                disabled={!isEditable}
                                                 value={date}
                                                 min={new Date().toLocaleDateString(
                                                     'en-CA'
@@ -1290,7 +1311,7 @@ export default function AppointmentDetailPage() {
                                                         e.target.value
                                                     )
                                                 }
-                                                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-200"
+                                                className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
                                             />
                                         </div>
 
@@ -1314,12 +1335,13 @@ export default function AppointmentDetailPage() {
                                                         <button
                                                             key={shift.id}
                                                             type="button"
+                                                            disabled={!isEditable}
                                                             onClick={() =>
                                                                 setTimeSlot(
                                                                     shift.id
                                                                 )
                                                             }
-                                                            className={`min-h-[56px] rounded-lg border px-3 py-2 text-left transition ${
+                                                            className={`min-h-[56px] rounded-lg border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
                                                                 active
                                                                     ? 'border-gray-900 bg-gray-900 text-white'
                                                                     : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
@@ -1370,7 +1392,9 @@ export default function AppointmentDetailPage() {
                                                     </h2>
 
                                                     <p className="mt-0.5 text-xs text-gray-400">
-                                                        Có thể thêm hoặc bỏ dịch vụ trước khi check-in
+                                                        {isEditable
+                                                            ? 'Có thể thêm hoặc bỏ dịch vụ trước khi check-in'
+                                                            : 'Danh sách dịch vụ đã được khóa sau khi check-in'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -1396,6 +1420,7 @@ export default function AppointmentDetailPage() {
 
                                             <input
                                                 type="text"
+                                                disabled={!isEditable}
                                                 value={searchTerm}
                                                 onChange={(e) =>
                                                     setSearchTerm(
@@ -1403,7 +1428,7 @@ export default function AppointmentDetailPage() {
                                                     )
                                                 }
                                                 placeholder="Tìm kiếm dịch vụ..."
-                                                className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm outline-none transition focus:border-gray-400 focus:bg-white"
+                                                className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm outline-none transition focus:border-gray-400 focus:bg-white disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
                                             />
                                         </div>
                                     </div>
@@ -1509,7 +1534,9 @@ export default function AppointmentDetailPage() {
                                                                                     key={
                                                                                         service.id
                                                                                     }
-                                                                                    className={`flex min-h-[64px] cursor-pointer items-start gap-3 py-3 transition ${
+                                                                                    className={`flex min-h-[64px] items-start gap-3 py-3 transition ${
+                                                                                        isEditable ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'
+                                                                                    } ${
                                                                                         checked
                                                                                             ? 'bg-primary-50/50'
                                                                                             : ''
@@ -1517,6 +1544,7 @@ export default function AppointmentDetailPage() {
                                                                                 >
                                                                                     <input
                                                                                         type="checkbox"
+                                                                                        disabled={!isEditable}
                                                                                         checked={
                                                                                             checked
                                                                                         }
@@ -1525,7 +1553,7 @@ export default function AppointmentDetailPage() {
                                                                                                 service.id
                                                                                             )
                                                                                         }
-                                                                                        className="mt-0.5 h-4 w-4 shrink-0 accent-gray-900"
+                                                                                        className="mt-0.5 h-4 w-4 shrink-0 accent-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
                                                                                     />
 
                                                                                     <div className="min-w-0 flex-1">
@@ -1629,21 +1657,17 @@ export default function AppointmentDetailPage() {
 
                         <div className="flex items-center gap-3">
 
-                            <button
-                                type="button"
-                                onClick={handleSaveClick}
-                                disabled={
-                                    saving ||
-                                    checkingIn
-                                }
-                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 transition hover:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                <Save size={15} />
-
-                                {saving
-                                    ? 'Đang lưu...'
-                                    : 'Lưu thay đổi'}
-                            </button>
+                            {isEditable && (
+                                <button
+                                    type="button"
+                                    onClick={handleSaveClick}
+                                    disabled={saving || checkingIn}
+                                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 transition hover:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <Save size={15} />
+                                    {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                                </button>
+                            )}
 
                             {canCheckIn && (
                                 <button

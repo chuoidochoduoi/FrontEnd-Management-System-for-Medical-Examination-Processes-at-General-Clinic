@@ -52,7 +52,10 @@ export function useProfile() {
                     body: JSON.stringify(formData),
                 }
             );
-            if (!res.ok) throw new Error(t('profile.errors.saveFailed'));
+            if (!res.ok) {
+                const data = await res.json().catch(() => null);
+                throw new Error(data?.message || data?.error || t('profile.errors.saveFailed'));
+            }
             const data = await res.json();
             setProfile({ ...data, id: data.accountId || data.id });
             return true;

@@ -9,22 +9,21 @@
     "logout": "Đăng xuất hệ thống"
   },
   "accountManagement": {
-    "pageTitle": "Quản lý tài khoản vận hành",
+    "pageTitle": "Quản lý tài khoản",
     "lastUpdated": "Cập nhật phiên bản:",
     "tabs": {
-      "staff": "Danh sách nhân sự điều hành",
-      "patients": "Tài khoản bệnh nhân hệ thống"
+      "staff": "Nhân sự",
+      "patients": "Khách hàng"
     },
     "addStaffBtn": "+ Thêm nhân sự mới",
     "staff": {
       "searchPlaceholder": "Tìm tên, mã hoặc tài khoản đăng nhập...",
       "table": {
-        "code": "Mã số",
-        "nameAndDept": "Họ tên / Bộ phận",
-        "loginAccount": "Tài khoản đăng nhập",
-        "password": "Mật khẩu cấp phát",
+        "code": "Mã nhân sự",
+        "nameAndDept": "Họ và tên",
+        "loginAccount": "Tên đăng nhập",
         "role": "Vai trò",
-        "actions": "Hành động"
+        "actions": "Thao tác"
       },
       "showPassword": "Hiện",
       "hidePassword": "Ẩn",
@@ -33,24 +32,23 @@
         "lock": "Khóa",
         "unlock": "Mở khóa"
       },
-      "pagination": "Hiển thị {{from}}-{{to}} trên tổng số {{total}} bệnh nhân"
+      "pagination": "Hiển thị {{from}}-{{to}} trên tổng số {{total}} nhân sự"
     },
     "patients": {
-      "searchPlaceholder": "Tìm tên bệnh nhân, mã số hoặc số điện thoại...",
+      "searchPlaceholder": "Tìm tên khách hàng, mã tài khoản hoặc số điện thoại...",
       "statusFilter": "-- Tất cả trạng thái --",
       "table": {
-        "code": "Mã số",
-        "nameAndAddress": "Bệnh nhân / Địa chỉ",
-        "loginAccount": "Tài khoản đăng nhập",
-        "password": "Mật khẩu",
-        "personalInfo": "Thông tin cá nhân",
-        "actions": "Hành động"
+        "code": "Mã tài khoản",
+        "nameAndAddress": "Khách hàng",
+        "loginAccount": "Tên đăng nhập",
+        "actions": "Thao tác"
       },
       "actions": {
         "update": "Cập nhật",
-        "lock": "Khóa"
+        "lock": "Khóa",
+        "unlock": "Mở khóa"
       },
-      "pagination": "Hiển thị {{from}}-{{to}} trên tổng số {{total}} bệnh nhân"
+      "pagination": "Hiển thị {{from}}-{{to}} trên tổng số {{total}} khách hàng"
     },
     "addStaffModal": {
       "title": "Thêm nhân sự mới",

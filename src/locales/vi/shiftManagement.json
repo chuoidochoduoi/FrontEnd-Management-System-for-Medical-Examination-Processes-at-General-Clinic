@@ -4,7 +4,7 @@
   "add": "Thêm ca mới",
   "searchLabel": "Tìm kiếm ca",
   "searchPlaceholder": "Tìm theo tên ca làm việc...",
-  "sortLabel": "Sắp xếp theo",
+  "sortLabel": "Sắp xếp danh sách",
   "sort": {
     "startAsc": "Giờ bắt đầu (Sớm - Muộn)",
     "startDesc": "Giờ bắt đầu (Muộn - Sớm)",

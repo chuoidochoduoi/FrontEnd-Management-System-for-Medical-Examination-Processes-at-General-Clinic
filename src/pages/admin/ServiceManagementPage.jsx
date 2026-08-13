@@ -89,12 +89,22 @@ function Modal({ title, subtitle, onClose, children, footer }) {
 /* ── Config Modal ── */
 function ConfigModal({ service, onClose, onSubmit, t }) {
     const [status, setStatus] = useState(service.status ?? 'draft');
+    const [price, setPrice] = useState(service.price ?? '');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
+    useEffect(() => {
+        if (!error) return;
+        toast.error(error);
+        setError('');
+    }, [error]);
 
     const handleSubmit = async () => {
+        if (price === '' || Number(price) < 0) {
+            setError('Giá dịch vụ phải lớn hơn hoặc bằng 0');
+            return;
+        }
         setSubmitting(true); setError('');
-        try { await onSubmit(service.id, { status }); onClose(); }
+        try { await onSubmit(service.id, { status, price: Number(price) }); onClose(); }
         catch (err) { setError(err.message); }
         finally { setSubmitting(false); }
     };
@@ -131,7 +141,14 @@ function ConfigModal({ service, onClose, onSubmit, t }) {
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className={labelCls}>{t('serviceManagement.configModal.price')}</label>
-                    <p className="text-sm text-gray-900">{fmt(service.price) || '—'}</p>
+                    <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={price}
+                        onChange={e => setPrice(e.target.value)}
+                        className={inputCls}
+                    />
                 </div>
 
             </div>
@@ -167,13 +184,6 @@ function EditModal({
         workflowPriority:
             service.workflowPriority ?? 1,
 
-        requiresDoctorOrder:
-            service.requiresDoctorOrder === true,
-
-        requiresReturnToDoctor:
-            service.requiresReturnToDoctor ===
-            true,
-
         requiresSpecimen:
             service.requiresSpecimen === true,
 
@@ -194,6 +204,11 @@ function EditModal({
         useState(false);
 
     const [error, setError] = useState('');
+    useEffect(() => {
+        if (!error) return;
+        toast.error(error);
+        setError('');
+    }, [error]);
 
     const setField = (key, value) =>
         setForm((prev) => ({
@@ -550,14 +565,12 @@ function EditModal({
 
                 <div className="border-t border-gray-100" />
 
-                {/* BUSINESS */}
-
                 <section>
                     <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-primary-700">
-                        Yêu cầu nghiệp vụ
+                        Đặc tính thực hiện
                     </h3>
 
-                    <div className="grid gap-3 md:grid-cols-3">
+                    <div className="grid gap-3 md:grid-cols-2">
 
                         <label
                             className={`rounded-xl border p-4 ${
@@ -596,62 +609,6 @@ function EditModal({
                                     <p className="mt-1 text-xs text-gray-400">
                                         Áp dụng cho dịch
                                         vụ cần lấy mẫu.
-                                    </p>
-                                </div>
-
-                            </div>
-                        </label>
-
-                        <label className="cursor-pointer rounded-xl border border-gray-200 p-4">
-
-                            <div className="flex items-start gap-3">
-
-                                <input
-                                    type="checkbox"
-                                    checked={
-                                        form.requiresDoctorOrder
-                                    }
-                                    onChange={(e) =>
-                                        setField(
-                                            'requiresDoctorOrder',
-                                            e.target
-                                                .checked
-                                        )
-                                    }
-                                />
-
-                                <div>
-                                    <p className="text-sm font-medium text-gray-800">
-                                        Cần bác sĩ chỉ
-                                        định trước
-                                    </p>
-                                </div>
-
-                            </div>
-                        </label>
-
-                        <label className="cursor-pointer rounded-xl border border-gray-200 p-4">
-
-                            <div className="flex items-start gap-3">
-
-                                <input
-                                    type="checkbox"
-                                    checked={
-                                        form.requiresReturnToDoctor
-                                    }
-                                    onChange={(e) =>
-                                        setField(
-                                            'requiresReturnToDoctor',
-                                            e.target
-                                                .checked
-                                        )
-                                    }
-                                />
-
-                                <div>
-                                    <p className="text-sm font-medium text-gray-800">
-                                        Cần quay lại bác
-                                        sĩ kết luận
                                     </p>
                                 </div>
 
@@ -782,11 +739,6 @@ function EditModal({
                     </select>
                 </div>
 
-                {error && (
-                    <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-500">
-                        {error}
-                    </p>
-                )}
             </div>
         </Modal>
     );
@@ -817,8 +769,6 @@ function AddModal({
 
         workflowPriority: 1,
 
-        requiresDoctorOrder: false,
-        requiresReturnToDoctor: false,
         requiresSpecimen: false,
     });
 
@@ -826,6 +776,11 @@ function AddModal({
         useState(false);
 
     const [error, setError] = useState('');
+    useEffect(() => {
+        if (!error) return;
+        toast.error(error);
+        setError('');
+    }, [error]);
 
     const set = (key, value) =>
         setForm((prev) => ({
@@ -1243,16 +1198,12 @@ function AddModal({
 
                 <div className="border-t border-gray-100" />
 
-                {/* =====================================================
-                    YÊU CẦU NGHIỆP VỤ
-                ===================================================== */}
-
                 <section>
                     <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-primary-700">
-                        Yêu cầu nghiệp vụ
+                        Đặc tính thực hiện
                     </h3>
 
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 
                         {/* SPECIMEN */}
                         <label
@@ -1297,84 +1248,6 @@ function AddModal({
                                         vụ cần lấy máu,
                                         nước tiểu, mẫu
                                         bệnh phẩm...
-                                    </p>
-                                </div>
-
-                            </div>
-                        </label>
-
-                        {/* DOCTOR ORDER */}
-                        <label className="cursor-pointer rounded-xl border border-gray-200 p-4 transition hover:border-primary-200">
-
-                            <div className="flex items-start gap-3">
-
-                                <input
-                                    type="checkbox"
-                                    checked={
-                                        form.requiresDoctorOrder
-                                    }
-                                    onChange={(
-                                        e
-                                    ) =>
-                                        set(
-                                            'requiresDoctorOrder',
-                                            e.target
-                                                .checked
-                                        )
-                                    }
-                                    className="mt-0.5"
-                                />
-
-                                <div>
-                                    <p className="text-sm font-medium text-gray-800">
-                                        Cần bác sĩ chỉ
-                                        định trước
-                                    </p>
-
-                                    <p className="mt-1 text-xs leading-5 text-gray-400">
-                                        Dịch vụ chỉ được
-                                        thực hiện khi có
-                                        chỉ định của bác
-                                        sĩ.
-                                    </p>
-                                </div>
-
-                            </div>
-                        </label>
-
-                        {/* RETURN DOCTOR */}
-                        <label className="cursor-pointer rounded-xl border border-gray-200 p-4 transition hover:border-primary-200">
-
-                            <div className="flex items-start gap-3">
-
-                                <input
-                                    type="checkbox"
-                                    checked={
-                                        form.requiresReturnToDoctor
-                                    }
-                                    onChange={(
-                                        e
-                                    ) =>
-                                        set(
-                                            'requiresReturnToDoctor',
-                                            e.target
-                                                .checked
-                                        )
-                                    }
-                                    className="mt-0.5"
-                                />
-
-                                <div>
-                                    <p className="text-sm font-medium text-gray-800">
-                                        Cần quay lại bác
-                                        sĩ kết luận
-                                    </p>
-
-                                    <p className="mt-1 text-xs leading-5 text-gray-400">
-                                        Bệnh nhân quay
-                                        lại phòng khám
-                                        sau khi có kết
-                                        quả.
                                     </p>
                                 </div>
 
@@ -1475,11 +1348,6 @@ function AddModal({
                     </div>
                 </section>
 
-                {error && (
-                    <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-500">
-                        {error}
-                    </p>
-                )}
             </div>
         </Modal>
     );

@@ -223,6 +223,7 @@ export default function ProfilePage() {
     const validateOnboarding = () => {
         const errs = {};
         if (!fullName.trim()) errs.fullName = 'Vui lòng nhập họ và tên';
+        else if (/\d/.test(fullName)) errs.fullName = 'Họ tên không được chứa chữ số';
         if (!dob || dob.length !== 10) errs.dob = 'Vui lòng chọn đầy đủ ngày sinh';
         if (!gender) errs.gender = 'Vui lòng chọn giới tính';
 
@@ -244,6 +245,7 @@ export default function ProfilePage() {
 
     const validateProfileFields = () => {
         if (!fullName.trim() || fullName.trim().length < 2) return 'Họ tên phải có ít nhất 2 ký tự';
+        if (/\d/.test(fullName)) return 'Họ tên không được chứa chữ số';
         if (!dob || Number.isNaN(new Date(dob).getTime()) || new Date(dob) >= new Date()) return 'Ngày sinh phải là ngày hợp lệ trong quá khứ';
         if (!gender) return 'Vui lòng chọn giới tính';
 
@@ -320,7 +322,7 @@ export default function ProfilePage() {
                                         type="text"
                                         maxLength={50}
                                         value={fullName}
-                                        onChange={e => { setFullName(capitalizeWords(e.target.value)); setOnboardingErrors(p => ({ ...p, fullName: '' })); }}
+                                        onChange={e => { setFullName(capitalizeWords(e.target.value.replace(/\d/g, ''))); setOnboardingErrors(p => ({ ...p, fullName: '' })); }}
                                         placeholder="Nhập họ và tên đầy đủ"
                                         className={onboardInputCls('fullName')}
                                     />
@@ -653,7 +655,7 @@ export default function ProfilePage() {
                                         <span>{t('profile.personalInfo.fullName')}</span>
                                     </div>
                                     {editing
-                                        ? <input type="text" maxLength={50} value={fullName} onChange={e => setFullName(capitalizeWords(e.target.value))} className={inputCls} />
+                                        ? <input type="text" maxLength={50} value={fullName} onChange={e => setFullName(capitalizeWords(e.target.value.replace(/\d/g, '')))} className={inputCls} />
                                         : <p className={fieldValue}>{fullName || '—'}</p>}
                                 </div>
                                 {/* Ngày sinh */}

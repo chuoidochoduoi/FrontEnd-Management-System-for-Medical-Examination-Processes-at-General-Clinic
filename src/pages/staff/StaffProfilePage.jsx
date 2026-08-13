@@ -178,6 +178,7 @@ export default function StaffProfilePage() {
 
     const handleSaveProfile = async () => {
         if (!editForm.fullName?.trim()) return toast.error('Vui lòng nhập họ và tên');
+        if (/\d/.test(editForm.fullName)) return toast.error('Họ tên không được chứa chữ số');
         if (!/^(\+84|0)\d{9,10}$/.test(editForm.phone?.trim() || '')) return toast.error('Số điện thoại Việt Nam không hợp lệ');
         if (editForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email.trim())) return toast.error('Email không hợp lệ');
         if (!editForm.gender) return toast.error('Vui lòng chọn giới tính');
@@ -194,7 +195,10 @@ export default function StaffProfilePage() {
                 },
                 body: JSON.stringify(editForm)
             });
-            if (!res.ok) throw new Error('Cập nhật hồ sơ thất bại');
+            if (!res.ok) {
+                const data = await res.json().catch(() => null);
+                throw new Error(data?.message || data?.error || 'Cập nhật hồ sơ thất bại');
+            }
             const updatedProfile = await res.json();
 
             const professionalRes = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/me/professional`, {
@@ -208,7 +212,10 @@ export default function StaffProfilePage() {
                     university: editForm.university?.trim() || null
                 })
             });
-            if (!professionalRes.ok) throw new Error('Cập nhật học vị và trường đào tạo thất bại');
+            if (!professionalRes.ok) {
+                const data = await professionalRes.json().catch(() => null);
+                throw new Error(data?.message || data?.error || 'Cập nhật học vị và trường đào tạo thất bại');
+            }
             const updatedStaff = await professionalRes.json();
 
             setProfile(prev => ({
@@ -308,7 +315,7 @@ export default function StaffProfilePage() {
                             <div>
                                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><UserCircle className="w-3.5 h-3.5"/> Họ & Tên</label>
                                 {editing ? (
-                                    <input value={editForm.fullName} onChange={e => setEditForm(p => ({...p, fullName: e.target.value}))} className={inputCls} placeholder="Nhập họ tên" />
+                                    <input value={editForm.fullName} onChange={e => setEditForm(p => ({...p, fullName: e.target.value.replace(/\d/g, '')}))} className={inputCls} placeholder="Nhập họ tên" />
                                 ) : (
                                     <div className="px-4 py-2.5 bg-white border border-gray-100 rounded-lg text-gray-800 text-sm">
                                         {profile?.profile?.fullName || 'Chưa cập nhật'}

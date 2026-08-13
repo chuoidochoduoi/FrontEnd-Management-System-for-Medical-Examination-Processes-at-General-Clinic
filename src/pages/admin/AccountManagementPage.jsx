@@ -1,7 +1,7 @@
 // src/pages/admin/AccountManagementPage.jsx
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, X, Eye, EyeOff } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { toast } from "react-toastify";
 import AdminLayout from "@/components/layout/AdminLayout";
 import ConfirmModal from "@/components/ui/ConfirmModal";
@@ -30,7 +30,7 @@ function Pagination({ page, total, pageSize, onChange }) {
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
       <p className="text-xs text-gray-400">
-        Hiển thị {from}-{to} trên tổng số {total} bệnh nhân
+        Hiển thị {from}-{to} trên tổng số {total} bản ghi
       </p>
       <div className="flex items-center gap-1">
         {pages.map((p, i) =>
@@ -53,17 +53,6 @@ function Pagination({ page, total, pageSize, onChange }) {
           ),
         )}
       </div>
-    </div>
-  );
-}
-
-/* ── Password cell (always hidden) ── */
-function PasswordCell() {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm tracking-widest text-gray-400">
-        {"•".repeat(8)}
-      </span>
     </div>
   );
 }
@@ -169,6 +158,11 @@ function AddStaffModal({ onClose, onSubmit, t }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const overlayRef = useRef(null);
+  useEffect(() => {
+    if (!error) return;
+    toast.error(error);
+    setError("");
+  }, [error]);
 
   const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
@@ -177,6 +171,7 @@ function AddStaffModal({ onClose, onSubmit, t }) {
       setError("Vui lòng nhập đầy đủ các trường bắt buộc (Tên đăng nhập, Mật khẩu, Vai trò, Họ tên, SĐT, Giới tính, Ngày sinh).");
       return;
     }
+    if (/\d/.test(form.fullName)) return setError('Họ tên không được chứa chữ số.');
     if (!/^[a-zA-Z0-9._-]{4,50}$/.test(form.username)) return setError('Tên đăng nhập phải có 4-50 ký tự và không chứa khoảng trắng.');
     if (form.password.length < 8) return setError('Mật khẩu phải có ít nhất 8 ký tự.');
     if (!/^(\+84|0)\d{9,10}$/.test(form.phone)) return setError('Số điện thoại Việt Nam không hợp lệ.');
@@ -364,7 +359,7 @@ function AddStaffModal({ onClose, onSubmit, t }) {
                     <input
                       type={type}
                       value={form[key]}
-                      onChange={(e) => set(key, e.target.value)}
+                      onChange={(e) => set(key, key === 'fullName' ? e.target.value.replace(/\d/g, '') : e.target.value)}
                       className={inputCls}
                     />
                   )}
@@ -412,8 +407,6 @@ function AddStaffModal({ onClose, onSubmit, t }) {
 
         </div>
 
-        {error && <p className="text-red-500 text-xs px-7 pb-3">{error}</p>}
-
         {/* Footer */}
         <div className="flex justify-end gap-3 px-7 py-5 border-t border-gray-100">
           <button
@@ -446,6 +439,11 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const overlayRef = useRef(null);
+  useEffect(() => {
+    if (!error) return;
+    toast.error(error);
+    setError("");
+  }, [error]);
 
   useEffect(() => {
     staffHook.fetchStaffByAccountId(account.accountId)
@@ -484,6 +482,7 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
       setError("Vui lòng nhập đầy đủ các trường bắt buộc (Vai trò, Họ tên, SĐT, Giới tính, Ngày sinh).");
       return;
     }
+    if (/\d/.test(form.fullName)) return setError('Họ tên không được chứa chữ số.');
     if (!/^(\+84|0)\d{9,10}$/.test(form.phone)) return setError('Số điện thoại Việt Nam không hợp lệ.');
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return setError('Email không hợp lệ.');
     if (password && password.length < 6) return setError('Mật khẩu mới phải có ít nhất 6 ký tự.');
@@ -654,7 +653,7 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
                     <input
                       type={type}
                       value={form[key]}
-                      onChange={(e) => set(key, e.target.value)}
+                      onChange={(e) => set(key, key === 'fullName' ? e.target.value.replace(/\d/g, '') : e.target.value)}
                       className={inputCls}
                     />
                   )}
@@ -701,8 +700,6 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
           </div>
         </div>
 
-        {error && <p className="text-red-500 text-xs px-7 pb-3 flex-shrink-0">{error}</p>}
-
         {/* Footer */}
         <div className="flex justify-end gap-3 px-7 py-5 border-t border-gray-100 flex-shrink-0">
           <button
@@ -710,110 +707,6 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
             className="px-5 h-9 text-sm text-gray-600 hover:text-gray-900 transition-colors"
           >
             {t("accountManagement.addStaffModal.cancel")}
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="px-6 h-9 bg-gray-900 hover:bg-gray-700 disabled:opacity-60 text-white text-sm font-medium rounded-xl transition-colors"
-          >
-            {submitting ? "Đang xử lý..." : "Cập nhật"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Modal: Cập nhật tài khoản ── */
-function UpdateAccountModal({ account, onClose, onSubmit, resetPassword, t }) {
-  const [username, setUsername] = useState(account?.username ?? "");
-  const [password, setPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const overlayRef = useRef(null);
-
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    setError("");
-    try {
-      if (password) {
-        await resetPassword(account.accountId, password);
-      }
-      await onSubmit(account.accountId, {
-        username: username,
-      });
-      onClose();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const inputCls =
-    "w-full border-0 border-b border-gray-200 outline-none text-sm text-gray-800 py-1.5 focus:border-gray-600 bg-transparent";
-  const labelCls =
-    "block text-xs font-semibold text-gray-500 tracking-wide mb-1.5";
-
-  return (
-    <div
-      ref={overlayRef}
-      onClick={(e) => e.target === overlayRef.current && onClose()}
-      className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4"
-    >
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl">
-        <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100">
-          <div>
-            <h2 className="text-xs font-bold text-gray-900 tracking-widest">
-              Cập nhật tài khoản
-            </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Mã: {account?.code}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-300 hover:text-gray-600 transition-colors"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="px-7 py-6">
-          <p className="text-xs font-bold text-gray-800 tracking-widest mb-5">
-            ■ Thông tin tài khoản
-          </p>
-          <div className="grid grid-cols-2 gap-8">
-            <div>
-              <label className={labelCls}>
-                Tài khoản đăng nhập (Không thể sửa)
-              </label>
-              <input
-                value={username}
-                disabled
-                className={inputCls + " cursor-not-allowed opacity-70"}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Mật khẩu mới (bỏ trống nếu không đổi)</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Nhập mật khẩu mới"
-                className={inputCls + " placeholder:text-gray-300"}
-              />
-            </div>
-          </div>
-          {error && <p className="text-red-500 text-xs mt-4">{error}</p>}
-        </div>
-
-        <div className="flex justify-end gap-3 px-7 py-5 border-t border-gray-100">
-          <button
-            onClick={onClose}
-            className="px-5 h-9 text-sm text-gray-500 hover:text-gray-800 transition-colors"
-          >
-            Hủy
           </button>
           <button
             onClick={handleSubmit}
@@ -960,17 +853,17 @@ export default function AccountManagementPage() {
               </div>
             </div>
 
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[860px]">
               <thead className="border-b border-gray-100">
                 <tr>
                   {[
-                    t("accountManagement.staff.table.code"),
-                    t("accountManagement.staff.table.nameAndDept"),
-                    t("accountManagement.staff.table.loginAccount"),
-                    t("accountManagement.staff.table.password"),
-                    t("accountManagement.staff.table.role"),
+                    "Mã nhân sự",
+                    "Họ và tên",
+                    "Tên đăng nhập",
+                    "Vai trò",
                     "Trạng thái",
-                    t("accountManagement.staff.table.actions"),
+                    "Thao tác",
                   ].map((col) => (
                     <th key={col} className={thCls}>
                       {col}
@@ -1027,15 +920,12 @@ export default function AccountManagementPage() {
                         </p>
                       </td>
                       <td className={tdCls}>{s.username}</td>
-                      <td className={tdCls}>
-                        <PasswordCell />
-                      </td>
                       <td className={tdCls + " text-gray-400"}>
                         {s.systemRole ? systemRoleMap[s.systemRole] || s.systemRole : s.role}
                       </td>
                       <td className={tdCls}>
                         <span className={`px-2 py-1 rounded text-xs font-medium ${s.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                          {s.isActive ? "Hoạt động" : "Bị khoá"}
+                          {s.isActive ? "Hoạt động" : "Đã khóa"}
                         </span>
                       </td>
                       <td className={tdCls}>
@@ -1060,6 +950,7 @@ export default function AccountManagementPage() {
                   ))}
               </tbody>
             </table>
+            </div>
 
             <Pagination
               page={staffHook.page + 1}
@@ -1104,17 +995,16 @@ export default function AccountManagementPage() {
               </select>
             </div>
 
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px]">
               <thead className="border-b border-gray-100">
                 <tr>
                   {[
-                    t("accountManagement.patients.table.code"),
-                    t("accountManagement.patients.table.nameAndAddress"),
-                    t("accountManagement.patients.table.loginAccount"),
-                    t("accountManagement.patients.table.password"),
-                    t("accountManagement.patients.table.personalInfo"),
+                    "Mã tài khoản",
+                    "Khách hàng",
+                    "Tên đăng nhập",
                     "Trạng thái",
-                    t("accountManagement.patients.table.actions"),
+                    "Thao tác",
                   ].map((col) => (
                     <th key={col} className={thCls}>
                       {col}
@@ -1126,7 +1016,7 @@ export default function AccountManagementPage() {
                 {patientHook.loading && (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={5}
                       className="text-center py-12 text-sm text-gray-400"
                     >
                       Đang tải...
@@ -1136,7 +1026,7 @@ export default function AccountManagementPage() {
                 {patientHook.error && (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={5}
                       className="text-center py-12 text-sm text-red-500"
                     >
                       {patientHook.error}
@@ -1149,7 +1039,7 @@ export default function AccountManagementPage() {
                   patientHook.patients.length === 0 && (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={5}
                         className="text-center py-12 text-sm text-gray-400"
                       >
                         Không có dữ liệu
@@ -1176,29 +1066,17 @@ export default function AccountManagementPage() {
                       </td>
                       <td className={tdCls}>{p.username}</td>
                       <td className={tdCls}>
-                        <PasswordCell />
-                      </td>
-                      <td className={tdCls + " text-gray-400"}>{p.role}</td>
-                      <td className={tdCls}>
                         <span className={`px-2 py-1 rounded text-xs font-medium ${p.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                          {p.isActive ? "Hoạt động" : "Bị khoá"}
+                          {p.isActive ? "Hoạt động" : "Đã khóa"}
                         </span>
                       </td>
                       <td className={tdCls}>
-                        <div className="flex flex-col gap-0.5">
-                          <button
-                            onClick={() => setEditAccount({ ...p, type: 'patient' })}
-                            className="text-sm font-semibold text-gray-800 hover:text-primary-500 text-left transition-colors"
-                          >
-                            Chỉnh sửa
-                          </button>
+                        <div className="flex items-center">
                           <button
                             onClick={() => setConfirmLock({ id: p.accountId, type: 'patient', isActive: p.isActive })}
                             className="text-sm text-gray-400 hover:text-red-500 text-left transition-colors"
                           >
-                            {p.isActive
-                              ? t("accountManagement.patients.actions.lock")
-                              : t("accountManagement.patients.actions.unlock")}
+                            {p.isActive ? "Khóa" : "Mở khóa"}
                           </button>
                         </div>
                       </td>
@@ -1206,6 +1084,7 @@ export default function AccountManagementPage() {
                   ))}
               </tbody>
             </table>
+            </div>
 
             <Pagination
               page={patientHook.page + 1}
@@ -1236,26 +1115,13 @@ export default function AccountManagementPage() {
           }}
         />
       )}
-      {editAccount && (
-        editAccount.type === 'staff' ? (
-          <UpdateStaffModal
-            t={t}
-            account={editAccount}
-            staffHook={staffHook}
-            onClose={() => setEditAccount(null)}
-          />
-        ) : (
-          <UpdateAccountModal
-            t={t}
-            account={editAccount}
-            onClose={() => setEditAccount(null)}
-            resetPassword={patientHook.resetPassword}
-            onSubmit={async (id, payload) => {
-              await patientHook.updatePatient(id, payload);
-              toast.success('Cập nhật tài khoản thành công!');
-            }}
-          />
-        )
+      {editAccount?.type === 'staff' && (
+        <UpdateStaffModal
+          t={t}
+          account={editAccount}
+          staffHook={staffHook}
+          onClose={() => setEditAccount(null)}
+        />
       )}
       
       <ConfirmModal 

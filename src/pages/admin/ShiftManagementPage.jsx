@@ -78,14 +78,22 @@ export default function ShiftManagementPage() {
         } catch (error) { toast.error(error.message); setDeleting(null); }
     };
 
-    const visibleItems = useMemo(() => items
-        .filter(item => !search.trim() || item.name?.toLowerCase().includes(search.trim().toLowerCase()))
-        .sort((a, b) => {
-            if (sort === 'startTime-asc') return (a.startTime || '').localeCompare(b.startTime || '');
-            if (sort === 'startTime-desc') return (b.startTime || '').localeCompare(a.startTime || '');
-            const result = (a.name || '').localeCompare(b.name || '', i18n.language);
+    const visibleItems = useMemo(() => {
+        const keyword = search.trim().toLocaleLowerCase(i18n.language);
+        const toMinutes = value => {
+            const [hour = 0, minute = 0] = String(value || '').split(':').map(Number);
+            return hour * 60 + minute;
+        };
+        const filtered = items.filter(item => !keyword
+            || item.name?.toLocaleLowerCase(i18n.language).includes(keyword));
+
+        return [...filtered].sort((a, b) => {
+            if (sort === 'startTime-asc') return toMinutes(a.startTime) - toMinutes(b.startTime);
+            if (sort === 'startTime-desc') return toMinutes(b.startTime) - toMinutes(a.startTime);
+            const result = (a.name || '').localeCompare(b.name || '', i18n.language, { sensitivity: 'base' });
             return sort === 'name-desc' ? -result : result;
-        }), [items, search, sort, i18n.language]);
+        });
+    }, [items, search, sort, i18n.language]);
 
     return <AdminLayout>
         <div className="px-10 py-8 space-y-8 max-w-7xl mx-auto">

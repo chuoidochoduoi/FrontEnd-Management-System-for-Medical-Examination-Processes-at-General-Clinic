@@ -4,7 +4,7 @@
   "add": "Add shift",
   "searchLabel": "Search shifts",
   "searchPlaceholder": "Search by shift name...",
-  "sortLabel": "Sort by",
+  "sortLabel": "Sort list",
   "sort": {
     "startAsc": "Start time (Early - Late)",
     "startDesc": "Start time (Late - Early)",

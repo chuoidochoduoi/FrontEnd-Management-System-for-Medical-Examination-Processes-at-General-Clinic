@@ -46,7 +46,8 @@ export default function CapabilityManagementPage() {
     };
     const remove = async () => {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/service-capabilities/${deleting.capabilityId}`, { method: 'DELETE', headers: authHeaders() });
-        if (!response.ok) toast.error('Không thể xóa năng lực đang được sử dụng');
+        const data = await response.json().catch(() => null);
+        if (!response.ok) toast.error(data?.message || 'Không thể xóa danh mục kỹ thuật đang được sử dụng');
         else { toast.success('Xóa năng lực thành công'); load(); }
         setDeleting(null);
     };
@@ -58,6 +59,6 @@ export default function CapabilityManagementPage() {
             {visible.map(item => <div key={item.capabilityId} className="grid grid-cols-[180px_1fr_2fr_100px_100px] px-6 py-4 border-t text-sm items-center"><span className="font-mono">{item.code}</span><span className="font-medium">{item.name}</span><span className="text-gray-500">{item.description || '—'}</span><span>{item.active ? 'Hoạt động' : 'Đã khóa'}</span><div className="flex gap-3"><button onClick={() => open(item)}><Pencil size={15}/></button><button className="text-red-500" onClick={() => setDeleting(item)}><Trash2 size={15}/></button></div></div>)}
         </div>
         {editing && <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center"><div className="bg-white rounded-2xl w-full max-w-lg"><div className="p-5 border-b flex justify-between"><b>{editing.capabilityId ? 'Sửa năng lực' : 'Thêm năng lực'}</b><button onClick={() => setEditing(null)}><X size={18}/></button></div><div className="p-6 space-y-4"><input value={form.code} onChange={e => setForm(p => ({...p,code:e.target.value}))} className="w-full h-10 px-3 border rounded-lg" placeholder="Mã, ví dụ: HEMATOLOGY"/><input value={form.name} onChange={e => setForm(p => ({...p,name:e.target.value}))} className="w-full h-10 px-3 border rounded-lg" placeholder="Tên năng lực"/><textarea value={form.description} onChange={e => setForm(p => ({...p,description:e.target.value}))} className="w-full p-3 border rounded-lg" placeholder="Mô tả"/><label className="flex gap-2 text-sm"><input type="checkbox" checked={form.active} onChange={e => setForm(p => ({...p,active:e.target.checked}))}/>Đang hoạt động</label></div><div className="p-5 border-t flex justify-end gap-3"><button onClick={() => setEditing(null)}>Hủy</button><button onClick={save} className="h-9 px-5 bg-gray-900 text-white rounded-lg">Lưu</button></div></div></div>}
-        <ConfirmModal isOpen={!!deleting} onClose={() => setDeleting(null)} onConfirm={remove} title="Xóa năng lực" message={`Xóa “${deleting?.name || ''}”?`} confirmText="Xóa" isDanger/>
+        <ConfirmModal isOpen={!!deleting} onClose={() => setDeleting(null)} onConfirm={remove} title="Xóa năng lực" message={`Xóa “${deleting?.name || ''}”? Nếu đang được gắn với dịch vụ, phòng hoặc nhân sự, hệ thống sẽ yêu cầu chuyển sang ngừng hoạt động.`} confirmText="Xóa" isDanger/>
     </div></AdminLayout>;
 }

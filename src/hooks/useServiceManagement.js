@@ -69,8 +69,6 @@ export function useServiceManagement() {
                 departmentId: s.departmentId || '',
                 departmentName: s.departmentName || '',
                 workflowPriority: s.workflowPriority ?? 1,
-                requiresDoctorOrder: s.requiresDoctorOrder === true,
-                requiresReturnToDoctor: s.requiresReturnToDoctor === true,
                 requiresSpecimen: s.requiresSpecimen === true,
                 minimumAge: s.minimumAge ?? 0,
                 maximumAge: s.maximumAge ?? 120,
@@ -106,7 +104,10 @@ export function useServiceManagement() {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services/${id}`, {
             method: 'DELETE', headers: bearer(),
         });
-        if (!res.ok) throw new Error(t('serviceManagement.errors.deleteFailed'));
+        if (!res.ok) {
+            const data = await res.json().catch(() => null);
+            throw new Error(data?.message || data?.error || t('serviceManagement.errors.deleteFailed'));
+        }
         fetchServices();
     };
 
@@ -127,8 +128,6 @@ export function useServiceManagement() {
             price: payload.price,
             requiredSpecializationId: apiType === 'EXAMINATION' ? payload.specialtyId : null,
             workflowPriority: Number(payload.workflowPriority ?? 1),
-            requiresDoctorOrder: payload.requiresDoctorOrder === true,
-            requiresReturnToDoctor: payload.requiresReturnToDoctor === true,
             requiresSpecimen: payload.requiresSpecimen === true,
             minimumAge: Number(payload.minimumAge),
             maximumAge: Number(payload.maximumAge),
@@ -161,11 +160,12 @@ export function useServiceManagement() {
         // Include fields if provided (for EditModal)
         if (payload.name) body.name = payload.name;
         if (apiType) body.departmentType = apiType;
-        if (payload.price) body.price = payload.price;
+        // Giá 0 vẫn là một giá trị hợp lệ và phải được gửi lên backend.
+        if (payload.price !== undefined && payload.price !== null && payload.price !== '') {
+            body.price = Number(payload.price);
+        }
         if (payload.specialtyId !== undefined) body.requiredSpecializationId = apiType === 'EXAMINATION' ? payload.specialtyId : null;
         if (payload.workflowPriority !== undefined) body.workflowPriority = Number(payload.workflowPriority);
-        if (payload.requiresDoctorOrder !== undefined) body.requiresDoctorOrder = payload.requiresDoctorOrder;
-        if (payload.requiresReturnToDoctor !== undefined) body.requiresReturnToDoctor = payload.requiresReturnToDoctor;
         if (payload.requiresSpecimen !== undefined) body.requiresSpecimen = payload.requiresSpecimen;
         if (payload.minimumAge !== undefined) body.minimumAge = Number(payload.minimumAge);
         if (payload.maximumAge !== undefined) body.maximumAge = Number(payload.maximumAge);

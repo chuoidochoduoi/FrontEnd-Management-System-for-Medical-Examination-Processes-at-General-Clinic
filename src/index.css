@@ -76,28 +76,22 @@ body {
   border: 1px solid rgba(226, 232, 240, 0.8) !important;
 }
 
-.Toastify__toast-theme--light.Toastify__toast--success {
+/* Mọi thông báo dùng chung một mẫu xanh ở góc phải. Loại thông báo chỉ còn
+   quyết định nội dung, không làm giao diện thay đổi giữa success/error/info. */
+.Toastify__toast-theme--light.Toastify__toast--success,
+.Toastify__toast-theme--light.Toastify__toast--error,
+.Toastify__toast-theme--light.Toastify__toast--warning,
+.Toastify__toast-theme--light.Toastify__toast--info,
+.Toastify__toast-theme--light.Toastify__toast--default {
   background: #f0fdfa !important;
   color: #0f766e !important;
   border-color: #ccfbf1 !important;
 }
-.Toastify__toast-theme--light.Toastify__toast--success .Toastify__progress-bar {
+.Toastify__toast-theme--light .Toastify__progress-bar {
   background: #14b8a6 !important;
 }
-.Toastify__toast-theme--light.Toastify__toast--success svg {
+.Toastify__toast-theme--light .Toastify__toast-icon svg {
   fill: #0d9488 !important;
-}
-
-.Toastify__toast-theme--light.Toastify__toast--error {
-  background: #fff1f2 !important;
-  color: #be123c !important;
-  border-color: #ffe4e6 !important;
-}
-.Toastify__toast-theme--light.Toastify__toast--error .Toastify__progress-bar {
-  background: #e11d48 !important;
-}
-.Toastify__toast-theme--light.Toastify__toast--error svg {
-  fill: #e11d48 !important;
 }
 
 .Toastify__toast-body {

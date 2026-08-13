@@ -194,10 +194,13 @@ export function useRoomManagement() {
     };
 
     const deleteRoom = async (id) => {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/departments/admin/${id}`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/departments/${id}`, {
             method: 'DELETE', headers: bearer(),
         });
-        if (!res.ok) throw new Error(t('roomManagement.errors.saveFailed'));
+        if (!res.ok) {
+            const data = await res.json().catch(() => null);
+            throw new Error(data?.message || data?.error || t('roomManagement.errors.saveFailed'));
+        }
         fetchRooms();
     };
 
@@ -214,7 +217,10 @@ export function useRoomManagement() {
             headers: { 'Content-Type': 'application/json', ...bearer() },
             body: JSON.stringify({ status: apiStatus }),
         });
-        if (!res.ok) throw new Error(t('roomManagement.errors.saveFailed'));
+        if (!res.ok) {
+            const data = await res.json().catch(() => null);
+            throw new Error(data?.message || data?.error || t('roomManagement.errors.saveFailed'));
+        }
         fetchRooms();
         toast.success('Cập nhật trạng thái phòng thành công!');
     };

@@ -196,7 +196,7 @@ export default function ReceptionistSupportPage() {
                                     const isBot = msg.senderType === 'BOT';
                                     return (
                                         <div key={msg.messageId || idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
+                                            <div className={`max-w-[70%] break-words whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
                                                 isMe 
                                                 ? 'bg-primary-600 text-white rounded-br-none' 
                                                 : isBot
@@ -221,6 +221,7 @@ export default function ReceptionistSupportPage() {
                                         placeholder="Nhập tin nhắn để trả lời khách..." 
                                         className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-5 py-3 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all placeholder:text-gray-400"
                                         disabled={activeSession.status === 'CLOSED'}
+                                        maxLength={200}
                                     />
                                     <button 
                                         type="submit" 

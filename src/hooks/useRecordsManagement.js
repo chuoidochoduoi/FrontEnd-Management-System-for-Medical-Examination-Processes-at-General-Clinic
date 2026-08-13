@@ -5,6 +5,13 @@ const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key)
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
 const PAGE_SIZE = 7;
 
+const BT_MAP_TO_ENUM = {
+    'A+': 'A_POSITIVE', 'A-': 'A_NEGATIVE',
+    'B+': 'B_POSITIVE', 'B-': 'B_NEGATIVE',
+    'O+': 'O_POSITIVE', 'O-': 'O_NEGATIVE',
+    'AB+': 'AB_POSITIVE', 'AB-': 'AB_NEGATIVE',
+};
+
 export function useRecordsManagement() {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -19,7 +26,7 @@ export function useRecordsManagement() {
             if (search) params.append('search', search);
             if (gender && gender !== 'All') params.append('gender', gender);
             if (age && age !== 'All') params.append('age', age);
-            if (bloodType && bloodType !== 'All') params.append('bloodType', bloodType);
+            if (bloodType && bloodType !== 'All') params.append('bloodType', BT_MAP_TO_ENUM[bloodType] || bloodType);
             params.append('page', page - 1);
             params.append('size', PAGE_SIZE);
 

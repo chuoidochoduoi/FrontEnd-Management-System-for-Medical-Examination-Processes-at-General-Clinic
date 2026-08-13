@@ -27,7 +27,7 @@ const mapAppointment = (appt) => {
         gender,
         address: appt.guestAddress || '',
         status,
-        timeSlot: appt.timeSlot || '',
+        timeSlot: appt.shiftName || '',
         scheduledAt: appt.scheduledAt || '',
         services: appt.services || [],
         ...appt, // Include original fields for backward compatibility
@@ -71,7 +71,21 @@ export function useCheckIn() {
             // Ensure data is always an array (handle paginated response with 'content' or { data: [...] } response)
             const appointmentsArray = Array.isArray(data) ? data : (data?.content ?? data?.data ?? []);
             // Map API response to component format
-            const mappedAppointments = appointmentsArray.map(mapAppointment).filter(Boolean);
+            let mappedAppointments = appointmentsArray.map(mapAppointment).filter(Boolean);
+            
+            // Sắp xếp "Chờ check-in" và "Check-in" lên đầu
+            mappedAppointments.sort((a, b) => {
+                const statusOrder = {
+                    'pending': 1,
+                    'checked_in': 2,
+                    'rescheduled': 3,
+                    'cancelled': 4,
+                };
+                const orderA = statusOrder[a.status] || 99;
+                const orderB = statusOrder[b.status] || 99;
+                return orderA - orderB;
+            });
+
             setAppointments(mappedAppointments);
         } catch (err) {
             setError(err.message || 'Có lỗi xảy ra.');

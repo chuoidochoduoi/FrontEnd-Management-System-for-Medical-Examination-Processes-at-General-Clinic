@@ -19,6 +19,7 @@ export const ROUTES = {
     RECEPTIONIST_APPOINTMENT_DETAIL: '/receptionist/appointments/:id',
     RECEPTIONIST_CHECKIN:       '/receptionist/check-in',
     RECEPTIONIST_CREATE_TICKET: '/receptionist/create-ticket',
+    RECEPTIONIST_VISITS:        '/receptionist/visits',
     RECEPTIONIST_RECORDS:       '/receptionist/records',
     RECEPTIONIST_PATIENT_DETAIL: '/receptionist/patients/:id',
     RECEPTIONIST_PATIENT_VISIT_DETAIL: '/receptionist/patients/:id/visits/:visitId',

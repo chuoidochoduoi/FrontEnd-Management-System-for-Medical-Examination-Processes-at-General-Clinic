@@ -13,6 +13,7 @@ export function useAppointments() {
     const [params, setParams] = useState({
         code: '',
         status: '',
+        date: '',
         page: 0
     });
 
@@ -25,6 +26,10 @@ export function useAppointments() {
                 page: String(params.page),
                 size: String(PAGE_SIZE)
             });
+            if (params.date) {
+                queryParams.set('from', `${params.date}T00:00:00`);
+                queryParams.set('to', `${params.date}T23:59:59`);
+            }
             const res = await api.get(`/api/v1/appointments/my?${queryParams}`);
             const data = res.data;
             return {

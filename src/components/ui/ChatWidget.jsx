@@ -249,7 +249,7 @@ export default function ChatWidget() {
                             const isCustomer = msg.senderType === 'CUSTOMER';
                             return (
                                 <div key={msg.messageId || idx} className={`flex ${isCustomer ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
+                                    <div className={`max-w-[80%] break-words whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
                                         isCustomer 
                                         ? 'bg-primary-600 text-white rounded-br-none' 
                                         : 'bg-white border border-gray-100 text-gray-800 rounded-bl-none'
@@ -296,6 +296,7 @@ export default function ChatWidget() {
                                         placeholder={status === 'WAITING_FOR_AGENT' ? 'Đang chờ lễ tân...' : 'Nhập tin nhắn...'} 
                                         className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all placeholder:text-gray-400"
                                         disabled={status === 'WAITING_FOR_AGENT' || status === 'CLOSED'}
+                                        maxLength={200}
                                     />
                                     <button 
                                         type="submit" 

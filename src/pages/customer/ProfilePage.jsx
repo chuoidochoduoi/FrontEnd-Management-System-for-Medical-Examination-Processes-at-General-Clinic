@@ -7,7 +7,7 @@ import CustomerLayout from '@/components/layout/CustomerLayout';
 import { useProfile } from '@/hooks/useProfile';
 
 const STATUS_STYLE = {
-    DONE:     'text-gray-800 font-semibold text-xs tracking-wide',
+    DONE: 'text-gray-800 font-semibold text-xs tracking-wide',
     UPCOMING: 'text-primary-500 font-semibold text-xs tracking-wide',
 };
 
@@ -19,7 +19,7 @@ const capitalizeWords = (str) => {
 const DateDropdowns = ({ value, onChange, className }) => {
     const parts = (value || '').split('-');
     const year = parts[0] || '';
-    const month = parts[1] ? String(parseInt(parts[1], 10)) : ''; 
+    const month = parts[1] ? String(parseInt(parts[1], 10)) : '';
     const day = parts[2] ? String(parseInt(parts[2], 10)) : '';
 
     const handleUpdate = (y, m, d) => {
@@ -33,7 +33,7 @@ const DateDropdowns = ({ value, onChange, className }) => {
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 120 }, (_, i) => currentYear - i);
     const months = Array.from({ length: 12 }, (_, i) => i + 1);
-    
+
     let daysInMonth = 31;
     if (month) {
         const m = parseInt(month, 10);
@@ -70,16 +70,16 @@ export default function ProfilePage() {
     const [onboardingErrors, setOnboardingErrors] = useState({});
 
     // Editable fields
-    const [fullName,   setFullName]   = useState('');
-    const [dob,        setDob]        = useState('');
-    const [gender,     setGender]     = useState('');
-    const [phone,      setPhone]      = useState('');
-    const [email,      setEmail]      = useState('');
-    const [address,    setAddress]    = useState('');
-    const [bloodType,  setBloodType]  = useState('');
-    const [height,     setHeight]     = useState('');
-    const [weight,     setWeight]     = useState('');
-    const [allergies,  setAllergies]  = useState([]);
+    const [fullName, setFullName] = useState('');
+    const [dob, setDob] = useState('');
+    const [gender, setGender] = useState('');
+    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
+    const [address, setAddress] = useState('');
+    const [bloodType, setBloodType] = useState('');
+    const [height, setHeight] = useState('');
+    const [weight, setWeight] = useState('');
+    const [allergies, setAllergies] = useState([]);
 
     // BHYT (bảo hiểm y tế) — READ-ONLY cho khách hàng
     // Chỉ có lễ tân mới được nhập/sửa BHYT qua luồng check-in.
@@ -98,17 +98,17 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (!profile) return;
-        setFullName(profile.fullName       ?? '');
+        setFullName(profile.fullName ?? '');
         setDob(formatDateForInput(profile.dateOfBirth));
-        setGender((profile.gender         ?? '').toUpperCase());
-        setPhone(profile.phone           ?? '');
-        setEmail(profile.email           ?? '');
-        setAddress(profile.address       ?? '');
-        setBloodType((profile.bloodType  ?? '').toUpperCase());
+        setGender((profile.gender ?? '').toUpperCase());
+        setPhone(profile.phone ?? '');
+        setEmail(profile.email ?? '');
+        setAddress(profile.address ?? '');
+        setBloodType((profile.bloodType ?? '').toUpperCase());
         setBhytCode(profile.insuranceId ?? '');
-        setHeight(profile.height         ?? '');
-        setWeight(profile.weight         ?? '');
-        setAllergies(profile.allergies   ?? []);
+        setHeight(profile.height ?? '');
+        setWeight(profile.weight ?? '');
+        setAllergies(profile.allergies ?? []);
     }, [profile]);
 
     const handleSave = async () => {
@@ -117,13 +117,13 @@ export default function ProfilePage() {
             toast.error(validationError);
             return;
         }
-        const ok = await saveProfile({ 
-            fullName, 
-            dateOfBirth: dob, 
-            gender: gender || null, 
-            phone, 
-            email: email || null, 
-            address: address || null, 
+        const ok = await saveProfile({
+            fullName,
+            dateOfBirth: dob,
+            gender: gender || null,
+            phone,
+            email: email || null,
+            address: address || null,
             bloodType: bloodType || null,
             insuranceId: bhytCode || null,
             height: height ? Number(height) : null,
@@ -140,17 +140,17 @@ export default function ProfilePage() {
 
     const handleCancel = () => {
         if (!profile) return;
-        setFullName(profile.fullName     ?? '');
+        setFullName(profile.fullName ?? '');
         setDob(formatDateForInput(profile.dateOfBirth));
-        setGender((profile.gender         ?? '').toUpperCase());
-        setPhone(profile.phone           ?? '');
-        setEmail(profile.email           ?? '');
-        setAddress(profile.address       ?? '');
-        setBloodType((profile.bloodType  ?? '').toUpperCase());
+        setGender((profile.gender ?? '').toUpperCase());
+        setPhone(profile.phone ?? '');
+        setEmail(profile.email ?? '');
+        setAddress(profile.address ?? '');
+        setBloodType((profile.bloodType ?? '').toUpperCase());
         setBhytCode(profile.insuranceId ?? '');
-        setHeight(profile.height         ?? '');
-        setWeight(profile.weight         ?? '');
-        setAllergies(profile.allergies   ?? []);
+        setHeight(profile.height ?? '');
+        setWeight(profile.weight ?? '');
+        setAllergies(profile.allergies ?? []);
         setEditing(false);
     };
 
@@ -165,9 +165,9 @@ export default function ProfilePage() {
     const genderLabel = (val) => {
         if (!val) return '—';
         const map = {
-            MALE:   t('profile.personalInfo.genderOptions.male'),
+            MALE: t('profile.personalInfo.genderOptions.male'),
             FEMALE: t('profile.personalInfo.genderOptions.female'),
-            OTHER:  t('profile.personalInfo.genderOptions.other'),
+            OTHER: t('profile.personalInfo.genderOptions.other'),
         };
         return map[val] || val || '—';
     };
@@ -225,17 +225,17 @@ export default function ProfilePage() {
         if (!fullName.trim()) errs.fullName = 'Vui lòng nhập họ và tên';
         if (!dob || dob.length !== 10) errs.dob = 'Vui lòng chọn đầy đủ ngày sinh';
         if (!gender) errs.gender = 'Vui lòng chọn giới tính';
-        
+
         const hasPhone = phone && phone.trim() !== '';
         const hasEmail = email && email.trim() !== '';
-        
+
         if (!hasPhone && !hasEmail) {
             errs.contact = 'Vui lòng cung cấp số điện thoại hoặc email';
         }
-        
+
         if (hasPhone && !/^(\+84|0)\d{9,10}$/.test(phone.trim())) errs.phone = 'Số điện thoại Việt Nam không hợp lệ';
         if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'Email không hợp lệ';
-        
+
         if (address && address.length > 255) errs.address = 'Địa chỉ không được vượt quá 255 ký tự';
         setOnboardingErrors(errs);
         if (Object.keys(errs).length > 0) toast.error(Object.values(errs)[0]);
@@ -246,14 +246,14 @@ export default function ProfilePage() {
         if (!fullName.trim() || fullName.trim().length < 2) return 'Họ tên phải có ít nhất 2 ký tự';
         if (!dob || Number.isNaN(new Date(dob).getTime()) || new Date(dob) >= new Date()) return 'Ngày sinh phải là ngày hợp lệ trong quá khứ';
         if (!gender) return 'Vui lòng chọn giới tính';
-        
+
         const hasPhone = phone && phone.trim() !== '';
         const hasEmail = email && email.trim() !== '';
-        
+
         if (!hasPhone && !hasEmail) return 'Vui lòng cung cấp số điện thoại hoặc email';
         if (hasPhone && !/^(\+84|0)\d{9,10}$/.test(phone.trim())) return 'Số điện thoại Việt Nam không hợp lệ';
         if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Email không hợp lệ';
-        
+
         if (address && address.trim().length > 255) return 'Địa chỉ không được vượt quá 255 ký tự';
         return '';
     };
@@ -261,14 +261,14 @@ export default function ProfilePage() {
     const handleOnboardingSave = async () => {
         if (!validateOnboarding()) return;
         setOnboardingSaving(true);
-        const ok = await saveProfile({ 
-            fullName, 
-            dateOfBirth: dob, 
-            gender: gender || null, 
-            phone, 
-            email: email || null, 
-            address: address || null, 
-            bloodType: bloodType || null, 
+        const ok = await saveProfile({
+            fullName,
+            dateOfBirth: dob,
+            gender: gender || null,
+            phone,
+            email: email || null,
+            address: address || null,
+            bloodType: bloodType || null,
             insuranceId: bhytCode || null,
             height: height ? Number(height) : null,
             weight: weight ? Number(weight) : null,
@@ -283,10 +283,9 @@ export default function ProfilePage() {
     // ── Onboarding Screen ──
     if (isNewProfile) {
         const onboardInputCls = (field) =>
-            `w-full h-12 px-4 text-sm border rounded-xl outline-none transition-all duration-200 ${
-                onboardingErrors[field]
-                    ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-50 bg-red-50/30'
-                    : 'border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-50 bg-white'
+            `w-full h-12 px-4 text-sm border rounded-xl outline-none transition-all duration-200 ${onboardingErrors[field]
+                ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-50 bg-red-50/30'
+                : 'border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-50 bg-white'
             }`;
 
         return (
@@ -319,8 +318,9 @@ export default function ProfilePage() {
                                     </label>
                                     <input
                                         type="text"
+                                        maxLength={50}
                                         value={fullName}
-                                        onChange={e => { setFullName(capitalizeWords(e.target.value)); setOnboardingErrors(p => ({...p, fullName: ''})); }}
+                                        onChange={e => { setFullName(capitalizeWords(e.target.value)); setOnboardingErrors(p => ({ ...p, fullName: '' })); }}
                                         placeholder="Nhập họ và tên đầy đủ"
                                         className={onboardInputCls('fullName')}
                                     />
@@ -335,7 +335,7 @@ export default function ProfilePage() {
                                     </label>
                                     <DateDropdowns
                                         value={dob}
-                                        onChange={val => { setDob(val); setOnboardingErrors(p => ({...p, dob: ''})); }}
+                                        onChange={val => { setDob(val); setOnboardingErrors(p => ({ ...p, dob: '' })); }}
                                         className={onboardInputCls('dob') + ' bg-white px-2'}
                                     />
                                     {onboardingErrors.dob && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{onboardingErrors.dob}</p>}
@@ -349,7 +349,7 @@ export default function ProfilePage() {
                                     </label>
                                     <select
                                         value={gender}
-                                        onChange={e => { setGender(e.target.value); setOnboardingErrors(p => ({...p, gender: ''})); }}
+                                        onChange={e => { setGender(e.target.value); setOnboardingErrors(p => ({ ...p, gender: '' })); }}
                                         className={onboardInputCls('gender') + ' bg-white'}
                                     >
                                         <option value="">Chọn giới tính</option>
@@ -417,8 +417,9 @@ export default function ProfilePage() {
                                         </label>
                                         <input
                                             type="email"
+                                            maxLength={50}
                                             value={email}
-                                            onChange={e => { setEmail(e.target.value); setOnboardingErrors(p => ({...p, email: ''})); }}
+                                            onChange={e => { setEmail(e.target.value); setOnboardingErrors(p => ({ ...p, email: '' })); }}
                                             placeholder="example@email.com"
                                             className={onboardInputCls('email')}
                                         />
@@ -432,8 +433,9 @@ export default function ProfilePage() {
                                         </label>
                                         <input
                                             type="tel"
+                                            maxLength={20}
                                             value={phone}
-                                            onChange={e => { setPhone(e.target.value); setOnboardingErrors(p => ({...p, phone: ''})); }}
+                                            onChange={e => { setPhone(e.target.value); setOnboardingErrors(p => ({ ...p, phone: '' })); }}
                                             placeholder="Nhập số điện thoại"
                                             className={onboardInputCls('phone')}
                                         />
@@ -449,8 +451,9 @@ export default function ProfilePage() {
                                     </label>
                                     <input
                                         type="text"
+                                        maxLength={255}
                                         value={address}
-                                        onChange={e => { setAddress(e.target.value); setOnboardingErrors(p => ({...p, address: ''})); }}
+                                        onChange={e => { setAddress(e.target.value); setOnboardingErrors(p => ({ ...p, address: '' })); }}
                                         placeholder="Nhập địa chỉ hiện tại"
                                         className={onboardInputCls('address')}
                                     />
@@ -542,7 +545,7 @@ export default function ProfilePage() {
                 const token = localStorage.getItem('token') || sessionStorage.getItem('token');
                 const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/me/password`, {
                     method: 'PUT',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
@@ -571,11 +574,11 @@ export default function ProfilePage() {
 
                     <div className="space-y-4">
                         <input type="password" placeholder="Mật khẩu hiện tại" value={oldPass} onChange={e => setOldPass(e.target.value)}
-                               className="w-full h-10 px-3 text-sm border border-gray-300 rounded-md outline-none focus:border-primary-500" />
+                            className="w-full h-10 px-3 text-sm border border-gray-300 rounded-md outline-none focus:border-primary-500" />
                         <input type="password" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" value={newPass} onChange={e => setNewPass(e.target.value)}
-                               className="w-full h-10 px-3 text-sm border border-gray-300 rounded-md outline-none focus:border-primary-500" />
+                            className="w-full h-10 px-3 text-sm border border-gray-300 rounded-md outline-none focus:border-primary-500" />
                         <input type="password" placeholder="Xác nhận mật khẩu mới" value={confirmPass} onChange={e => setConfirmPass(e.target.value)}
-                               className="w-full h-10 px-3 text-sm border border-gray-300 rounded-md outline-none focus:border-primary-500" />
+                            className="w-full h-10 px-3 text-sm border border-gray-300 rounded-md outline-none focus:border-primary-500" />
                         <div className="flex gap-3">
                             <button onClick={() => setShowPasswordModal(false)} className="flex-1 h-10 border text-gray-600 rounded-md text-sm font-medium">Hủy</button>
                             <button onClick={handleChangePass} disabled={isSubmitting} className="flex-1 h-10 bg-primary-500 text-white rounded-md text-sm font-medium disabled:opacity-60">
@@ -593,7 +596,7 @@ export default function ProfilePage() {
             <div className="space-y-5">
                 <div className="flex items-center justify-between">
                     <h1 className="text-lg font-semibold text-gray-900">{t('profile.pageTitle')}</h1>
-                    <button 
+                    <button
                         onClick={() => setShowPasswordModal(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-sm font-semibold transition-all shadow-sm"
                     >
@@ -650,7 +653,7 @@ export default function ProfilePage() {
                                         <span>{t('profile.personalInfo.fullName')}</span>
                                     </div>
                                     {editing
-                                        ? <input type="text" value={fullName} onChange={e => setFullName(capitalizeWords(e.target.value))} className={inputCls} />
+                                        ? <input type="text" maxLength={50} value={fullName} onChange={e => setFullName(capitalizeWords(e.target.value))} className={inputCls} />
                                         : <p className={fieldValue}>{fullName || '—'}</p>}
                                 </div>
                                 {/* Ngày sinh */}
@@ -686,7 +689,7 @@ export default function ProfilePage() {
                                         <span>{t('profile.personalInfo.phone')}</span>
                                     </div>
                                     {editing
-                                        ? <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className={inputCls} />
+                                        ? <input type="tel" maxLength={20} value={phone} onChange={e => setPhone(e.target.value)} className={inputCls} />
                                         : <p className={fieldValue}>{phone || '—'}</p>}
                                 </div>
                                 {/* Email */}
@@ -696,7 +699,7 @@ export default function ProfilePage() {
                                         <span>{t('profile.personalInfo.email')}</span>
                                     </div>
                                     {editing
-                                        ? <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputCls} />
+                                        ? <input type="email" maxLength={50} value={email} onChange={e => setEmail(e.target.value)} className={inputCls} />
                                         : <p className={fieldValue}>{email || '—'}</p>}
                                 </div>
                                 {/* Địa chỉ — full width */}
@@ -706,7 +709,7 @@ export default function ProfilePage() {
                                         <span>{t('profile.personalInfo.address')}</span>
                                     </div>
                                     {editing
-                                        ? <input type="text" value={address} onChange={e => setAddress(e.target.value)} className={inputCls} />
+                                        ? <input type="text" maxLength={255} value={address} onChange={e => setAddress(e.target.value)} className={inputCls} />
                                         : <p className={fieldValue}>{address || '—'}</p>}
                                 </div>
                                 {/* Nhóm máu */}
@@ -772,13 +775,12 @@ export default function ProfilePage() {
                                                 </div>
                                             </div>
                                             <div>
-                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
-                                                    (appt.status || '').toUpperCase() === 'UPCOMING' || (appt.status || '').toUpperCase() === 'CHECKED_IN'
-                                                        ? 'bg-blue-50 text-blue-600 border border-blue-100'
-                                                        : (appt.status || '').toUpperCase() === 'CANCELLED'
-                                                            ? 'bg-red-50 text-red-600 border border-red-100'
-                                                            : 'bg-green-50 text-green-600 border border-green-100'
-                                                }`}>
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${(appt.status || '').toUpperCase() === 'UPCOMING' || (appt.status || '').toUpperCase() === 'CHECKED_IN'
+                                                    ? 'bg-blue-50 text-blue-600 border border-blue-100'
+                                                    : (appt.status || '').toUpperCase() === 'CANCELLED'
+                                                        ? 'bg-red-50 text-red-600 border border-red-100'
+                                                        : 'bg-green-50 text-green-600 border border-green-100'
+                                                    }`}>
                                                     {(appt.status || '').toUpperCase() === 'UPCOMING' || (appt.status || '').toUpperCase() === 'CHECKED_IN'
                                                         ? t('profile.appointments.statusUpcoming')
                                                         : (appt.status || '').toUpperCase() === 'CANCELLED'

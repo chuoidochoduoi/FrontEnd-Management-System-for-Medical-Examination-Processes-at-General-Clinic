@@ -10,16 +10,16 @@ import { ROUTES } from '@/constants/routes';
 const STATUS_STYLE = {
     // Status values are mapped to lowercase in hook
     'pending':       'bg-green-100 text-green-700',
-    'confirmed':     'bg-blue-100 text-blue-700',
+    'checked_in':    'bg-blue-100 text-blue-700',
     'cancelled':     'bg-red-100 text-red-700',
-    'completed':     'bg-gray-100 text-gray-500',
+    'rescheduled':   'bg-gray-100 text-gray-500',
 };
 
 const STATUS_LABEL = {
     'pending': 'Chờ Check-in',
-    'confirmed': 'Đã xác nhận',
+    'checked_in': 'Đã Check-in',
     'cancelled': 'Đã hủy',
-    'completed': 'Hoàn thành',
+    'rescheduled': 'Đổi lịch',
 };
 
 const SLOT_STYLE = {
@@ -110,9 +110,7 @@ export default function CheckInPage() {
                         >
                             <option value="">Tất cả</option>
                             <option value="PENDING">Chờ Check-in</option>
-                            <option value="CONFIRMED">Đã xác nhận</option>
-                            <option value="CANCELLED">Đã hủy</option>
-                            <option value="COMPLETED">Hoàn thành</option>
+                            <option value="CHECKED_IN">Đã Check-in</option>
                         </select>
                     </div>
 

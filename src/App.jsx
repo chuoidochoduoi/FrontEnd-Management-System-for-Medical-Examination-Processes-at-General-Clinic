@@ -17,6 +17,7 @@ import CustomerAppointmentDetailPage from '@/pages/customer/AppointmentDetailPag
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import LandingPage from '@/pages/public/LandingPage';
 import CreateTicketPage from '@/pages/receptionist/CreateTicketPage';
+import VisitManagementPage from '@/pages/receptionist/VisitManagementPage';
 import InvoiceListPage from '@/pages/cashier/InvoiceListPage';
 import InvoiceDetailPage from '@/pages/cashier/InvoiceDetailPage';
 import InvoicePrintPage from '@/pages/cashier/InvoicePrintPage';
@@ -38,7 +39,7 @@ import RoomManagementPage from '@/pages/admin/RoomManagementPage';
 import SpecializationManagementPage from '@/pages/admin/SpecializationManagementPage';
 import CapabilityManagementPage from '@/pages/admin/CapabilityManagementPage';
 import AuditLogManagementPage from '@/pages/admin/AuditLogManagementPage';
-import ShiftManagementPage from '@/pages/owner/ShiftManagementPage';
+import ShiftManagementPage from '@/pages/admin/ShiftManagementPage';
 import SchedulePage from '@/pages/owner/SchedulePage';
 import ReportPage from '@/pages/owner/ReportPage';
 import MySchedulePage from '@/pages/staff/MySchedulePage';
@@ -134,6 +135,11 @@ function App() {
         <Route path={ROUTES.RECEPTIONIST_CREATE_TICKET} element={
           <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
             <CreateTicketPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.RECEPTIONIST_VISITS} element={
+          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+            <VisitManagementPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_FOLLOW_UPS} element={

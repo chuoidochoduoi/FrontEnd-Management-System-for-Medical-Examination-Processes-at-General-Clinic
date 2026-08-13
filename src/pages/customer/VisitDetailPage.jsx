@@ -1013,6 +1013,7 @@ export default function VisitDetailPage() {
                                         }
                                         placeholder="Nhận xét của bạn..."
                                         rows={4}
+                                        maxLength={500}
                                         className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 pb-8 text-sm outline-none transition placeholder:text-gray-400 focus:border-gray-400"
                                     />
 

@@ -220,6 +220,7 @@ export default function AppointmentPage() {
                                         </label>
                                         <input
                                             type="text"
+                                            maxLength={50}
                                             value={profile ? profile.fullName : fullName}
                                             onChange={e => {
                                                 setFullName(e.target.value);
@@ -240,6 +241,7 @@ export default function AppointmentPage() {
                                             </label>
                                             <input
                                                 type="tel"
+                                                maxLength={20}
                                                 value={profile ? profile.phone : phone}
                                                 onChange={e => {
                                                     setPhone(e.target.value);
@@ -298,6 +300,7 @@ export default function AppointmentPage() {
                                         </label>
                                         <input
                                             type="text"
+                                            maxLength={255}
                                             value={profile ? profile.address : address}
                                             onChange={e => {
                                                 setAddress(e.target.value);

@@ -403,10 +403,9 @@ export default function CreateTicketPage() {
                     type !==
                     'EXAMINATION' &&
                     type !==
-                    'PARACLINICAL' &&
-                    type !== 'OTHER'
+                    'PARACLINICAL'
                 ) {
-                    type = 'OTHER';
+                    return result;
                 }
 
                 if (!result[type]) {
@@ -419,7 +418,10 @@ export default function CreateTicketPage() {
 
                 return result;
             },
-            {}
+            {
+                EXAMINATION: [],
+                PARACLINICAL: [],
+            }
         );
 
     const orderedGroups =
@@ -516,15 +518,7 @@ export default function CreateTicketPage() {
             }
         }
 
-        if (
-            address.length > 255
-        ) {
-            setValidationError(
-                'Địa chỉ không được vượt quá 255 ký tự'
-            );
 
-            return;
-        }
 
         if (
             selectedServiceIds.length ===
@@ -705,6 +699,7 @@ export default function CreateTicketPage() {
 
                                             <input
                                                 type="text"
+                                                maxLength={50}
                                                 value={
                                                     fullName
                                                 }
@@ -747,6 +742,7 @@ export default function CreateTicketPage() {
 
                                                 <input
                                                     type="tel"
+                                                    maxLength={20}
                                                     value={
                                                         phone
                                                     }
@@ -1008,9 +1004,7 @@ export default function CreateTicketPage() {
                                                     Cận lâm sàng
                                                 </option>
 
-                                                <option value="OTHER">
-                                                    Dịch vụ khác
-                                                </option>
+
                                             </select>
                                         </div>
                                     </div>
@@ -1072,85 +1066,91 @@ export default function CreateTicketPage() {
 
                                                             <div className="h-[272px] divide-y divide-gray-200 overflow-y-auto overflow-x-hidden px-4 pr-2 custom-scrollbar">
 
-                                                                {servicesGroup.map(
-                                                                    (
-                                                                        service
-                                                                    ) => {
-                                                                        const checked =
-                                                                            selectedServiceIds.includes(
-                                                                                service.id
-                                                                            );
-
-                                                                        return (
-                                                                            <label
-                                                                                key={
+                                                                {servicesGroup.length === 0 ? (
+                                                                    <div className="flex h-full items-center justify-center">
+                                                                        <span className="text-sm text-gray-400">Trống</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    servicesGroup.map(
+                                                                        (
+                                                                            service
+                                                                        ) => {
+                                                                            const checked =
+                                                                                selectedServiceIds.includes(
                                                                                     service.id
-                                                                                }
-                                                                                className={`flex min-h-[64px] cursor-pointer items-start gap-3 py-3 transition ${
-                                                                                    checked
-                                                                                        ? 'bg-primary-50/50'
-                                                                                        : 'hover:bg-gray-100/50'
-                                                                                }`}
-                                                                            >
+                                                                                );
 
-                                                                                {/* CHECKBOX */}
-
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    checked={
+                                                                            return (
+                                                                                <label
+                                                                                    key={
+                                                                                        service.id
+                                                                                    }
+                                                                                    className={`flex min-h-[64px] cursor-pointer items-start gap-3 py-3 transition ${
                                                                                         checked
-                                                                                    }
-                                                                                    onChange={() =>
-                                                                                        toggleService(
-                                                                                            service
-                                                                                        )
-                                                                                    }
-                                                                                    className="mt-0.5 h-4 w-4 shrink-0 accent-gray-900"
-                                                                                />
+                                                                                            ? 'bg-primary-50/50'
+                                                                                            : 'hover:bg-gray-100/50'
+                                                                                    }`}
+                                                                                >
 
-                                                                                {/* INFO */}
+                                                                                    {/* CHECKBOX */}
 
-                                                                                <div className="min-w-0 flex-1">
-
-                                                                                    <p className="text-sm font-medium leading-snug text-gray-800">
-                                                                                        {
-                                                                                            service.name
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={
+                                                                                            checked
                                                                                         }
-                                                                                    </p>
+                                                                                        onChange={() =>
+                                                                                            toggleService(
+                                                                                                service
+                                                                                            )
+                                                                                        }
+                                                                                        className="mt-0.5 h-4 w-4 shrink-0 accent-gray-900"
+                                                                                    />
 
-                                                                                    {service.description && (
-                                                                                        <p className="mt-1 truncate text-xs text-gray-400">
+                                                                                    {/* INFO */}
+
+                                                                                    <div className="min-w-0 flex-1">
+
+                                                                                        <p className="text-sm font-medium leading-snug text-gray-800">
                                                                                             {
-                                                                                                service.description
+                                                                                                service.name
                                                                                             }
                                                                                         </p>
-                                                                                    )}
 
-                                                                                    {type ===
-                                                                                        'PARACLINICAL' &&
-                                                                                        service.capabilityName && (
-                                                                                            <p className="mt-1 truncate text-[11px] text-gray-500">
-                                                                                                Năng lực:{' '}
+                                                                                        {service.description && (
+                                                                                            <p className="mt-1 truncate text-xs text-gray-400">
                                                                                                 {
-                                                                                                    service.capabilityName
+                                                                                                    service.description
                                                                                                 }
                                                                                             </p>
                                                                                         )}
-                                                                                </div>
 
-                                                                                {/* PRICE */}
+                                                                                        {type ===
+                                                                                            'PARACLINICAL' &&
+                                                                                            service.capabilityName && (
+                                                                                                <p className="mt-1 truncate text-[11px] text-gray-500">
+                                                                                                    Năng lực:{' '}
+                                                                                                    {
+                                                                                                        service.capabilityName
+                                                                                                    }
+                                                                                                </p>
+                                                                                            )}
+                                                                                    </div>
 
-                                                                                <div className="shrink-0 pl-2 text-right">
+                                                                                    {/* PRICE */}
 
-                                                                                    <p className="text-sm font-semibold text-gray-900">
-                                                                                        {fmt(
-                                                                                            service.price
-                                                                                        )}
-                                                                                    </p>
-                                                                                </div>
-                                                                            </label>
-                                                                        );
-                                                                    }
+                                                                                    <div className="shrink-0 pl-2 text-right">
+
+                                                                                        <p className="text-sm font-semibold text-gray-900">
+                                                                                            {fmt(
+                                                                                                service.price
+                                                                                            )}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </label>
+                                                                            );
+                                                                        }
+                                                                    )
                                                                 )}
                                                             </div>
                                                         </div>

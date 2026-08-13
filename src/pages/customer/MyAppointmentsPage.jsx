@@ -234,6 +234,11 @@ export default function MyAppointmentsPage() {
         setStatus,
     ] = useState('');
 
+    const [
+        date,
+        setDate,
+    ] = useState('');
+
     /* =====================================================
        STATUS CONFIG
     ===================================================== */
@@ -283,6 +288,7 @@ export default function MyAppointmentsPage() {
     const handleFilter = () => {
         fetchAppointments({
             status,
+            date,
             page: 0,
         });
     };
@@ -373,7 +379,20 @@ export default function MyAppointmentsPage() {
 
                 <div className="rounded-2xl border border-gray-200 bg-white p-5">
 
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_260px]">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_1fr_260px]">
+
+                        {/* DATE FILTER */}
+                        <div>
+                            <label className={labelCls}>
+                                {t('myAppointments.filter.date', 'Ngày hẹn')}
+                            </label>
+                            <input
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                className={inputCls}
+                            />
+                        </div>
 
                         {/* STATUS */}
 

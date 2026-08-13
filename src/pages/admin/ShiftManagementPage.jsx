@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Calendar, CalendarClock, Check, Clock, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
-import OwnerLayout from '@/components/layout/OwnerLayout';
+import AdminLayout from '@/components/layout/AdminLayout';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const get = key => localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -87,7 +87,7 @@ export default function ShiftManagementPage() {
             return sort === 'name-desc' ? -result : result;
         }), [items, search, sort, i18n.language]);
 
-    return <OwnerLayout>
+    return <AdminLayout>
         <div className="px-10 py-8 space-y-8 max-w-7xl mx-auto">
             <section className="flex justify-between items-start bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-4">
@@ -135,5 +135,5 @@ export default function ShiftManagementPage() {
 
             <ConfirmModal isOpen={Boolean(deleting)} onClose={() => setDeleting(null)} onConfirm={remove} title={t('deleteModal.title')} message={t('deleteModal.message', { name: deleting?.name || '' })} confirmText={t('deleteModal.confirm')} isDanger />
         </div>
-    </OwnerLayout>;
+    </AdminLayout>;
 }

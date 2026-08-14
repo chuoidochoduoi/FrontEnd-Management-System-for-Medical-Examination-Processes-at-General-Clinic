@@ -130,6 +130,19 @@ export default function CustomerAppointmentPage() {
                 );
             }
 
+            if (service.departmentType === 'EXAMINATION') {
+                const previousExamination = prev.find(
+                    item => item.departmentType === 'EXAMINATION'
+                );
+                if (previousExamination) {
+                    toast.info('Mỗi lịch hẹn chỉ được chọn một dịch vụ khám bệnh. Hệ thống đã thay dịch vụ khám đã chọn.');
+                }
+                return [
+                    ...prev.filter(item => item.departmentType !== 'EXAMINATION'),
+                    service
+                ];
+            }
+
             return [
                 ...prev,
                 service
@@ -251,6 +264,10 @@ export default function CustomerAppointmentPage() {
             toast.error(
                 'Vui lòng chọn ít nhất một dịch vụ.'
             );
+            return;
+        }
+        if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
+            toast.error('Mỗi lịch hẹn chỉ được chọn một dịch vụ khám bệnh.');
             return;
         }
 

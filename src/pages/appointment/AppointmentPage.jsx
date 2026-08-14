@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { useAppointment } from '@/hooks/useAppointment';
 import { useProfile } from '@/hooks/useProfile';
 import AppointmentConfirmModal from '@/components/ui/AppointmentConfirmModal';
@@ -81,16 +82,30 @@ export default function AppointmentPage() {
     const handleBack = () => setCurrentStep(prev => Math.max(prev - 1, profile ? 2 : 1));
 
     const toggleService = (service) => {
-        setSelectedServices(prev =>
-            prev.find(s => s.id === service.id)
-                ? prev.filter(s => s.id !== service.id)
-                : [...prev, service]
-        );
+        setSelectedServices(prev => {
+            if (prev.find(s => s.id === service.id)) {
+                return prev.filter(s => s.id !== service.id);
+            }
+            if (service.departmentType === 'EXAMINATION') {
+                if (prev.some(item => item.departmentType === 'EXAMINATION')) {
+                    toast.info('Mỗi lịch hẹn chỉ được chọn một dịch vụ khám bệnh. Dịch vụ khám cũ đã được thay thế.');
+                }
+                return [
+                    ...prev.filter(item => item.departmentType !== 'EXAMINATION'),
+                    service
+                ];
+            }
+            return [...prev, service];
+        });
     };
 
     const totalCost = selectedServices.reduce((sum, s) => sum + (s.price ?? 0), 0);
 
     const handleSubmit = () => {
+        if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
+            toast.error('Mỗi lịch hẹn chỉ được chọn một dịch vụ khám bệnh.');
+            return;
+        }
         // Hiện modal xác nhận thay vì gửi ngay
         setShowConfirmModal(true);
     };

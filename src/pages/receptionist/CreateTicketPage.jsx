@@ -296,19 +296,25 @@ export default function CreateTicketPage() {
         service
     ) => {
         setSelectedServiceIds(
-            (previous) =>
-                previous.includes(
-                    service.id
-                )
-                    ? previous.filter(
+            (previous) => {
+                if (previous.includes(service.id)) {
+                    return previous.filter(
                         (id) =>
                             id !==
                             service.id
-                    )
-                    : [
-                        ...previous,
-                        service.id,
-                    ]
+                    );
+                }
+                if (service.departmentType === 'EXAMINATION') {
+                    const examinationIds = new Set(
+                        services.filter(item => item.departmentType === 'EXAMINATION').map(item => item.id)
+                    );
+                    if (previous.some(id => examinationIds.has(id))) {
+                        toast.info('Mỗi lượt chỉ được chọn một dịch vụ khám bệnh. Dịch vụ khám cũ đã được thay thế.');
+                    }
+                    return [...previous.filter(id => !examinationIds.has(id)), service.id];
+                }
+                return [...previous, service.id];
+            }
         );
 
         setValidationError('');
@@ -530,6 +536,10 @@ export default function CreateTicketPage() {
                 )
             );
 
+            return;
+        }
+        if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
+            setValidationError('Mỗi lượt khám chỉ được chọn một dịch vụ khám bệnh.');
             return;
         }
 

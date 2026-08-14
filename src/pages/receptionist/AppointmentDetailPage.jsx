@@ -548,19 +548,26 @@ export default function AppointmentDetailPage() {
     const toggleService =
         serviceId => {
             setSelectedServiceIds(
-                prev =>
-                    prev.includes(
-                        serviceId
-                    )
-                        ? prev.filter(
+                prev => {
+                    if (prev.includes(serviceId)) {
+                        return prev.filter(
                             currentId =>
                                 currentId !==
                                 serviceId
-                        )
-                        : [
-                            ...prev,
-                            serviceId
-                        ]
+                        );
+                    }
+                    const selectedService = allServices.find(service => service.id === serviceId);
+                    if (selectedService?.departmentType === 'EXAMINATION') {
+                        const examinationIds = new Set(
+                            allServices.filter(service => service.departmentType === 'EXAMINATION').map(service => service.id)
+                        );
+                        if (prev.some(id => examinationIds.has(id))) {
+                            toast.info('Mỗi lượt chỉ được chọn một dịch vụ khám bệnh. Dịch vụ khám cũ đã được thay thế.');
+                        }
+                        return [...prev.filter(id => !examinationIds.has(id)), serviceId];
+                    }
+                    return [...prev, serviceId];
+                }
             );
         };
 
@@ -619,6 +626,9 @@ export default function AppointmentDetailPage() {
             selectedServiceIds.length === 0
         ) {
             return 'Vui lòng chọn ít nhất một dịch vụ.';
+        }
+        if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
+            return 'Mỗi lượt khám chỉ được chọn một dịch vụ khám bệnh.';
         }
 
         if (!date) {

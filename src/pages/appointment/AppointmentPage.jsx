@@ -24,6 +24,20 @@ const calculateAge = (dob) => {
     return age;
 };
 
+const toLocalDateInputValue = date => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const getTomorrowDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setHours(0, 0, 0, 0);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return toLocalDateInputValue(tomorrow);
+};
+
 export default function AppointmentPage() {
     const { t } = useTranslation('appointment');
     const { t: tCommon } = useTranslation('common');
@@ -69,7 +83,6 @@ export default function AppointmentPage() {
             }
             if (!age || age < 1 || age > 120) errors.age = 'Vui lòng nhập tuổi hợp lệ';
             if (!gender) errors.gender = 'Vui lòng chọn giới tính';
-            if (!address.trim()) errors.address = 'Vui lòng nhập địa chỉ';
             
             if (Object.keys(errors).length > 0) {
                 setStep1Errors(errors);
@@ -88,7 +101,7 @@ export default function AppointmentPage() {
             }
             if (service.departmentType === 'EXAMINATION') {
                 if (prev.some(item => item.departmentType === 'EXAMINATION')) {
-                    toast.info('Mỗi lịch hẹn chỉ được chọn một dịch vụ khám bệnh. Dịch vụ khám cũ đã được thay thế.');
+                    toast.info(t('workflow.singleExaminationReplaced'));
                 }
                 return [
                     ...prev.filter(item => item.departmentType !== 'EXAMINATION'),
@@ -102,8 +115,12 @@ export default function AppointmentPage() {
     const totalCost = selectedServices.reduce((sum, s) => sum + (s.price ?? 0), 0);
 
     const handleSubmit = () => {
+        if (!date || date < getTomorrowDate()) {
+            toast.warning('Lịch hẹn chỉ được đặt sớm nhất từ ngày mai.');
+            return;
+        }
         if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
-            toast.error('Mỗi lịch hẹn chỉ được chọn một dịch vụ khám bệnh.');
+            toast.error(t('workflow.singleExaminationOnly'));
             return;
         }
         // Hiện modal xác nhận thay vì gửi ngay
@@ -453,8 +470,11 @@ export default function AppointmentPage() {
                                         <input
                                             type="date"
                                             value={date}
-                                            min={new Date().toISOString().split('T')[0]}
-                                            onChange={e => setDate(e.target.value)}
+                                            min={getTomorrowDate()}
+                                            onChange={e => {
+                                                setDate(e.target.value);
+                                                setTimeSlot('');
+                                            }}
                                             className="w-full h-10 px-3 text-sm border border-gray-300 rounded-md outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50"
                                         />
                                     </div>

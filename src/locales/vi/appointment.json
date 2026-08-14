@@ -62,7 +62,9 @@
     "note": "Vui lòng mang theo CMND/CCCD và thẻ BHYT (nếu có). Nhân viên y tế tại quầy tiếp đón sẽ liên hệ hoặc phát phiếu khám chính thức khi bạn đến viện.",
     "back": "Quay lại chỉnh sửa",
     "confirm": "Xác nhận đặt lịch"
+  },
+  "workflow": {
+    "singleExaminationReplaced": "Mỗi lịch hẹn chỉ được chọn một dịch vụ khám bệnh. Dịch vụ khám cũ đã được thay thế.",
+    "singleExaminationOnly": "Mỗi lịch hẹn chỉ được chọn một dịch vụ khám bệnh."
   }
-
-
 }

@@ -3,7 +3,6 @@ import { useRef, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { User, Calendar, FileText, Settings, LogOut } from 'lucide-react';
-import { useLanguage } from '@/hooks/useLanguage';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
 import AppPreferencesMenu from '@/components/ui/AppPreferencesMenu';
@@ -61,7 +60,6 @@ function useAuth() {
 
 export default function Navbar() {
     const { t } = useTranslation('common');
-    const { currentLanguage, changeLanguage, languages } = useLanguage();
     const { isLoggedIn, role, systemRole, username, displayRole, logout } = useAuth();
     const navigate = useNavigate();
 
@@ -100,7 +98,6 @@ export default function Navbar() {
             </Link>
 
             <div className="flex gap-7">
-                <Link to="#" className="text-sm text-gray-500 hover:text-primary-500 transition-colors">{t('nav.appointment')}</Link>
                 <Link to="#" className="text-sm text-gray-500 hover:text-primary-500 transition-colors">{t('nav.doctors')}</Link>
                 <Link to="#" className="text-sm text-gray-500 hover:text-primary-500 transition-colors">{t('nav.pricing')}</Link>
                 <Link to="#" className="text-sm text-gray-500 hover:text-primary-500 transition-colors">{t('nav.guide')}</Link>
@@ -109,19 +106,6 @@ export default function Navbar() {
 
             <div className="flex items-center gap-2">
                 <AppPreferencesMenu />
-                {/* Chọn ngôn ngữ */}
-                <div className="hidden">
-                    {languages.map(lang => (
-                        <button
-                            key={lang.code}
-                            onClick={() => changeLanguage(lang.code)}
-                            className={`text-lg px-1 rounded transition-opacity ${currentLanguage === lang.code ? 'opacity-100' : 'opacity-40 hover:opacity-70'}`}
-                        >
-                            {lang.flag}
-                        </button>
-                    ))}
-                </div>
-
                 {isLoggedIn ? (
                     <div className="flex items-center gap-3">
                         <NotificationBell />

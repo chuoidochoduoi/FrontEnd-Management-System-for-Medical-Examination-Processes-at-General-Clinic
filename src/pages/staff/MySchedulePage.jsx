@@ -115,10 +115,6 @@ export default function MySchedulePage() {
                             <div className="w-3 h-3 rounded bg-primary-500" />
                             <span className="text-xs text-gray-500">{t('scheduleManagement.myShift')}</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-3 h-3 rounded bg-gray-100 border border-gray-200" />
-                            <span className="text-xs text-gray-500">{t('scheduleManagement.colleague')}</span>
-                        </div>
                     </div>
                 </div>
 

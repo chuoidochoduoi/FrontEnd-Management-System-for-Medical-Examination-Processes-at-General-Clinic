@@ -7,7 +7,6 @@ import {
   Stethoscope,
   Microscope,
   Activity,
-  Pill,
   Clock,
   ShieldCheck,
   Award,
@@ -38,7 +37,7 @@ const LandingPage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const services = [Stethoscope, Microscope, Activity, Pill].map((icon, index) => ({
+  const services = [Stethoscope, Microscope, Activity].map((icon, index) => ({
     icon, title: t(`services.items.${index}.title`), desc: t(`services.items.${index}.desc`),
   }));
 
@@ -65,7 +64,7 @@ const LandingPage = () => {
     {
       name: "BS. Lê Hoàng Yến",
       specialty: t('doctors.profiles.3.specialty'), desc: t('doctors.profiles.3.desc'),
-      image: "https://images.unsplash.com/photo-1594824432258-0050b1a0d314?q=80&w=800&auto=format&fit=crop"
+      image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?q=80&w=800&auto=format&fit=crop"
     }
   ];
 
@@ -89,7 +88,6 @@ const LandingPage = () => {
             <div className="hidden md:flex items-center gap-6 xl:gap-8">
               <button onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} className="text-xs font-semibold tracking-wider uppercase text-slate-500 hover:text-slate-900 transition-colors whitespace-nowrap">{t('nav.home')}</button>
               <a href="#about" className="text-xs font-semibold tracking-wider uppercase text-slate-500 hover:text-slate-900 transition-colors whitespace-nowrap">{t('nav.about')}</a>
-              <button onClick={() => navigate('/appointment')} className="text-xs font-semibold tracking-wider uppercase text-slate-500 hover:text-slate-900 transition-colors whitespace-nowrap">{t('nav.appointment')}</button>
               <a href="#process" className="text-xs font-semibold tracking-wider uppercase text-slate-500 hover:text-slate-900 transition-colors whitespace-nowrap">{t('nav.process')}</a>
               <a href="#doctors" className="text-xs font-semibold tracking-wider uppercase text-slate-500 hover:text-slate-900 transition-colors whitespace-nowrap">{t('nav.doctors')}</a>
               <a href="#pricing" className="text-xs font-semibold tracking-wider uppercase text-slate-500 hover:text-slate-900 transition-colors whitespace-nowrap">{t('nav.pricing')}</a>
@@ -132,7 +130,6 @@ const LandingPage = () => {
       <div className={`fixed inset-0 z-40 bg-white transition-transform duration-500 ease-in-out transform ${mobileMenuOpen ? 'translate-y-0' : '-translate-y-full'} flex flex-col items-center justify-center gap-6 md:hidden`}>
         <button onClick={() => { setMobileMenuOpen(false); window.scrollTo({top: 0, behavior: 'smooth'}); }} className="text-lg font-semibold tracking-[0.1em] uppercase text-slate-900">{t('nav.home')}</button>
         <a href="#about" onClick={() => setMobileMenuOpen(false)} className="text-lg font-semibold tracking-[0.1em] uppercase text-slate-900">{t('nav.about')}</a>
-        <button onClick={() => { setMobileMenuOpen(false); navigate('/appointment'); }} className="text-lg font-semibold tracking-[0.1em] uppercase text-slate-900">{t('nav.appointment')}</button>
         <a href="#process" onClick={() => setMobileMenuOpen(false)} className="text-lg font-semibold tracking-[0.1em] uppercase text-slate-900">{t('nav.process')}</a>
         <a href="#doctors" onClick={() => setMobileMenuOpen(false)} className="text-lg font-semibold tracking-[0.1em] uppercase text-slate-900">{t('nav.doctors')}</a>
         <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="text-lg font-semibold tracking-[0.1em] uppercase text-slate-900">{t('nav.pricing')}</a>
@@ -252,7 +249,7 @@ const LandingPage = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-x-12 gap-y-16">
+          <div className="grid md:grid-cols-3 gap-x-8 gap-y-16">
             {services.map((service, index) => (
               <div key={index} className="group relative">
                 <div className="flex gap-8 items-start">
@@ -374,6 +371,10 @@ const LandingPage = () => {
                   <img 
                     src={doc.image} 
                     alt={doc.name} 
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=800&auto=format&fit=crop';
+                    }}
                     className="w-full h-full object-cover object-top filter grayscale-[10%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -389,11 +390,6 @@ const LandingPage = () => {
             ))}
           </div>
 
-          <div className="mt-16 text-center">
-             <button className="text-sm font-bold tracking-widest uppercase text-slate-600 hover:text-primary-600 transition-colors border-b-2 border-transparent hover:border-primary-600 pb-1">
-               {t('doctors.viewAll')}
-             </button>
-          </div>
         </div>
       </section>
 
@@ -472,7 +468,7 @@ const LandingPage = () => {
       <footer id="contact" className="bg-slate-50 pt-24 pb-12 border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-16 mb-20">
-            <div className="md:col-span-5">
+            <div className="md:col-span-7">
               <div className="flex items-center gap-3 mb-8">
                 <img src={logoUrl} alt="CareS" className="w-8 h-8 rounded-md object-contain" />
                 <span className="text-lg font-bold text-slate-900 tracking-widest uppercase">CareS</span>
@@ -481,7 +477,7 @@ const LandingPage = () => {
                 {t('footer.description')}
               </p>
               <div className="flex gap-4">
-                <a href="#" className="w-10 h-10 border border-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-colors">
+                <a href="https://www.facebook.com/profile.php?id=61593125259676" target="_blank" rel="noreferrer" aria-label="Facebook CareS" className="w-10 h-10 border border-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-colors">
                   <span className="text-sm font-bold">F</span>
                 </a>
                 <a href="#" className="w-10 h-10 border border-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-colors">
@@ -490,7 +486,7 @@ const LandingPage = () => {
               </div>
             </div>
             
-            <div className="md:col-span-3">
+            <div className="md:col-span-5">
               <h4 className="text-xs font-semibold tracking-[0.2em] uppercase text-slate-900 mb-8">{t('footer.contact')}</h4>
               <ul className="space-y-6 text-slate-500 font-light">
                 <li className="flex gap-4">
@@ -504,31 +500,10 @@ const LandingPage = () => {
               </ul>
             </div>
 
-            <div className="md:col-span-4">
-              <h4 className="text-xs font-semibold tracking-[0.2em] uppercase text-slate-900 mb-8">{t('footer.hours')}</h4>
-              <ul className="space-y-4 text-slate-500 font-light">
-                <li className="flex justify-between border-b border-slate-200 pb-4">
-                  <span>{t('footer.weekdays')}</span>
-                  <span className="text-slate-900">07:00 - 20:00</span>
-                </li>
-                <li className="flex justify-between border-b border-slate-200 pb-4">
-                  <span>{t('footer.saturday')}</span>
-                  <span className="text-slate-900">07:30 - 17:00</span>
-                </li>
-                <li className="flex justify-between pt-2">
-                  <span>{t('footer.holiday')}</span>
-                  <span className="text-primary-600 font-medium">{t('footer.priority')}</span>
-                </li>
-              </ul>
-            </div>
           </div>
           
           <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-slate-200 text-xs text-slate-400 tracking-wider">
             <p>&copy; {new Date().getFullYear()} CareS - {t('footer.copyright')}</p>
-            <div className="flex gap-6 mt-4 md:mt-0">
-              <a href="#" className="hover:text-slate-900 transition-colors">{t('footer.terms')}</a>
-              <a href="#" className="hover:text-slate-900 transition-colors">{t('footer.privacy')}</a>
-            </div>
           </div>
         </div>
       </footer>

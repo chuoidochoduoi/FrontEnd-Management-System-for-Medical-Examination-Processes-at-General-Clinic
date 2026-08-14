@@ -60,6 +60,7 @@ import PatientJourneyPage from '@/pages/staff/PatientJourneyPage';
 import WaitingRoomPage from '@/pages/customer/WaitingRoomPage';
 import GuestJourneyPage from '@/pages/guest/GuestJourneyPage';
 import ManagerStaffPage from '@/pages/owner/ManagerStaffPage';
+import ManagerPatientsPage from '@/pages/owner/ManagerPatientsPage';
 import {ROUTES} from "@/constants/routes.js";
 
 
@@ -258,6 +259,7 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path={ROUTES.MANAGER_STAFF} element={<ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><ManagerStaffPage /></ProtectedRoute>} />
+        <Route path={ROUTES.MANAGER_PATIENTS} element={<ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><ManagerPatientsPage /></ProtectedRoute>} />
 //        <Route path={ROUTES.OWNER_ATTENDANCE} element={<ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><AttendanceManagementPage /></ProtectedRoute>} />
 //        <Route path={ROUTES.OWNER_ATTENDANCE_KIOSK} element={<ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><AttendanceKioskPage /></ProtectedRoute>} />
 //        <Route path={ROUTES.STAFF_ATTENDANCE} element={<ProtectedRoute allowedRoles={['RECEPTIONIST','CASHIER','DOCTOR','GENERAL_DOCTOR','SPECIALIST_DOCTOR','NURSE','CLINIC_MANAGER']}><AttendancePage /></ProtectedRoute>} />

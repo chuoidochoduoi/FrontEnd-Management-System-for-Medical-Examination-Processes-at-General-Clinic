@@ -59,6 +59,12 @@ export default function RegisterPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [formError, setFormError] = useState('');
+    const [phoneAvailability, setPhoneAvailability] = useState({
+        checking: false,
+        checked: false,
+        exists: false,
+        registered: false
+    });
 
     const intervalRef = useRef(null);
 
@@ -115,6 +121,43 @@ export default function RegisterPage() {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
     };
 
+    // Kiểm tra trùng số điện thoại ngay sau khi người dùng nhập xong.
+    useEffect(() => {
+        if (registerMethod !== 'phone' || !isValidPhone(identifier)) {
+            setPhoneAvailability({ checking: false, checked: false, exists: false, registered: false });
+            return undefined;
+        }
+
+        const controller = new AbortController();
+        setPhoneAvailability(current => ({ ...current, checking: true, checked: false }));
+        const timer = setTimeout(async () => {
+            try {
+                const params = new URLSearchParams({ identifier: identifier.trim() });
+                const response = await fetch(
+                    `${import.meta.env.VITE_API_URL}/api/auth/registration-availability?${params}`,
+                    { signal: controller.signal }
+                );
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data?.message || 'Không thể kiểm tra số điện thoại.');
+                setPhoneAvailability({
+                    checking: false,
+                    checked: true,
+                    exists: Boolean(data?.exists ?? data?.data?.exists),
+                    registered: Boolean(data?.registered ?? data?.data?.registered)
+                });
+            } catch (checkError) {
+                if (checkError.name !== 'AbortError') {
+                    setPhoneAvailability({ checking: false, checked: false, exists: false, registered: false });
+                }
+            }
+        }, 500);
+
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [identifier, registerMethod]);
+
     // =========================================================
     // BƯỚC 1 - GỬI OTP
     // =========================================================
@@ -139,6 +182,11 @@ export default function RegisterPage() {
 
         if (registerMethod === 'email' && !isValidEmail(value)) {
             setFormError('Email không hợp lệ.');
+            return;
+        }
+
+        if (registerMethod === 'phone' && phoneAvailability.registered) {
+            setFormError('Số điện thoại đã được liên kết với một tài khoản.');
             return;
         }
 
@@ -554,6 +602,19 @@ export default function RegisterPage() {
 
                                         </div>
 
+                                        {registerMethod === 'phone' && phoneAvailability.checking && (
+                                            <p className="mt-2 text-xs font-medium text-slate-500">Đang kiểm tra số điện thoại...</p>
+                                        )}
+                                        {registerMethod === 'phone' && phoneAvailability.checked && phoneAvailability.registered && (
+                                            <p className="mt-2 text-xs font-medium text-red-600">Số điện thoại đã được liên kết với một tài khoản.</p>
+                                        )}
+                                        {registerMethod === 'phone' && phoneAvailability.checked && phoneAvailability.exists && !phoneAvailability.registered && (
+                                            <p className="mt-2 text-xs font-medium text-emerald-600">Đã tìm thấy hồ sơ khám cũ. Lịch sử sẽ được nối vào tài khoản mới.</p>
+                                        )}
+                                        {registerMethod === 'phone' && phoneAvailability.checked && !phoneAvailability.exists && (
+                                            <p className="mt-2 text-xs font-medium text-emerald-600">Số điện thoại có thể đăng ký.</p>
+                                        )}
+
                                     </div>
 
                                     {(formError || error) && (
@@ -575,6 +636,8 @@ export default function RegisterPage() {
                                         onClick={handleSendOtp}
                                         disabled={
                                             loadingSendOtp ||
+                                            phoneAvailability.checking ||
+                                            phoneAvailability.registered ||
                                             !identifier.trim()
                                         }
                                         className="group relative w-full h-14 mt-6 bg-primary-600 hover:bg-primary-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl overflow-hidden transition-all duration-300 shadow-[0_10px_20px_-10px_rgba(0,0,0,0.2)] hover:shadow-[0_20px_30px_-10px_rgba(0,0,0,0.3)] disabled:shadow-none"
@@ -794,10 +857,6 @@ export default function RegisterPage() {
 
                                                 <option value="FEMALE">
                                                     Nữ
-                                                </option>
-
-                                                <option value="OTHER">
-                                                    Khác
                                                 </option>
 
                                             </select>

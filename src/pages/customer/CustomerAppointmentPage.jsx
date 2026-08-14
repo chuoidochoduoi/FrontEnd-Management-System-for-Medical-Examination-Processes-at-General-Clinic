@@ -135,7 +135,7 @@ export default function CustomerAppointmentPage() {
                     item => item.departmentType === 'EXAMINATION'
                 );
                 if (previousExamination) {
-                    toast.info('Mỗi lịch hẹn chỉ được chọn một dịch vụ khám bệnh. Hệ thống đã thay dịch vụ khám đã chọn.');
+                    toast.info(t('workflow.singleExaminationReplaced'));
                 }
                 return [
                     ...prev.filter(item => item.departmentType !== 'EXAMINATION'),
@@ -267,7 +267,7 @@ export default function CustomerAppointmentPage() {
             return;
         }
         if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
-            toast.error('Mỗi lịch hẹn chỉ được chọn một dịch vụ khám bệnh.');
+            toast.error(t('workflow.singleExaminationOnly'));
             return;
         }
 

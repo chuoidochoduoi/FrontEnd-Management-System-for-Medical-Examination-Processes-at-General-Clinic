@@ -1,5 +1,5 @@
 // src/hooks/useSchedule.js
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 
@@ -15,6 +15,9 @@ export function useSchedule() {
     const [staff,      setStaff]      = useState([]);   // [{ id, name, role: 'BS'|'YT' }]
     const [weekStart,  setWeekStart]  = useState('');
     const [loading,    setLoading]    = useState(false);
+    const [copying,    setCopying]    = useState(false);
+    const [assigningKeys, setAssigningKeys] = useState(() => new Set());
+    const assigningKeysRef = useRef(new Set());
     const [error,      setError]      = useState('');
 
     const fetchSchedule = useCallback(async (week) => {
@@ -26,9 +29,12 @@ export function useSchedule() {
             );
             if (!res.ok) throw new Error(t('scheduleManagement.errors.loadFailed'));
             const data = await res.json();
-            setSchedule(data.schedule ?? {});
+            const normalizePerson = person => ({ ...person, id: person.id ?? person.staffId });
+            setSchedule(Object.fromEntries(Object.entries(data.schedule ?? {}).map(
+                ([key, people]) => [key, (people ?? []).map(normalizePerson)]
+            )));
             setShifts(data.shifts ?? []);
-            setStaff(data.staff ?? []);
+            setStaff((data.staff ?? []).map(normalizePerson));
             setWeekStart(week);
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
@@ -36,29 +42,44 @@ export function useSchedule() {
 
     // Gán / bỏ nhân sự vào 1 ô (shiftId + dayKey)
     const assignStaff = async (shiftId, dayKey, staffId, add) => {
+        const assignmentKey = `${shiftId}|${dayKey}|${staffId}`;
+        if (assigningKeysRef.current.has(assignmentKey)) return;
+        assigningKeysRef.current.add(assignmentKey);
+        setAssigningKeys(previous => new Set(previous).add(assignmentKey));
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/clinic-manager/schedules/assign`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...bearer() },
                 body: JSON.stringify({ week: weekStart, shiftId, dayKey, staffId, action: add ? 'add' : 'remove' }),
             });
-            if (!res.ok) throw new Error(t('scheduleManagement.errors.saveFailed'));
+            const responseData = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(responseData?.message || t('scheduleManagement.errors.saveFailed'));
             const cellKey = `${shiftId}_${dayKey}`;
             setSchedule(prev => {
                 const cell = prev[cellKey] ?? [];
+                const exists = cell.some(person => (person.id ?? person.staffId) === staffId);
+                const selectedStaff = staff.find(person => (person.id ?? person.staffId) === staffId);
                 return {
                     ...prev,
                     [cellKey]: add
-                        ? [...cell, staff.find(s => s.id === staffId)].filter(Boolean)
-                        : cell.filter(s => s.id !== staffId),
+                        ? (exists || !selectedStaff ? cell : [...cell, { ...selectedStaff, id: staffId }])
+                        : cell.filter(person => (person.id ?? person.staffId) !== staffId),
                 };
             });
             toast.success(add ? 'Phân công nhân sự thành công!' : 'Gỡ nhân sự khỏi ca thành công!');
-        } catch { setError(t('scheduleManagement.errors.saveFailed')); toast.error(t('scheduleManagement.errors.saveFailed')); }
+        } catch (requestError) { setError(requestError.message); toast.error(requestError.message); }
+        finally {
+            assigningKeysRef.current.delete(assignmentKey);
+            setAssigningKeys(previous => {
+                const next = new Set(previous); next.delete(assignmentKey); return next;
+            });
+        }
     };
 
     // Sao chép tuần trước
     const copyLastWeek = async () => {
+        if (copying || !weekStart) return;
+        setCopying(true);
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/clinic-manager/schedules/copy`, {
                 method: 'POST',
@@ -70,6 +91,7 @@ export function useSchedule() {
             setSchedule(data.schedule ?? {});
             toast.success('Sao chép lịch tuần trước thành công!');
         } catch (err) { setError(err.message); toast.error(err.message); }
+        finally { setCopying(false); }
     };
 
     // Lấy danh sách nhân sự cho lịch
@@ -110,5 +132,5 @@ export function useSchedule() {
         }
     };
 
-    return { schedule, shifts, staff, weekStart, loading, error, fetchSchedule, assignStaff, copyLastWeek, saveShifts, fetchStaffList };
+    return { schedule, shifts, staff, weekStart, loading, copying, assigning: assigningKeys.size > 0, error, fetchSchedule, assignStaff, copyLastWeek, saveShifts, fetchStaffList };
 }

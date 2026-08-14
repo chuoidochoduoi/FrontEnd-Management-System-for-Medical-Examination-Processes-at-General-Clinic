@@ -309,7 +309,7 @@ export default function CreateTicketPage() {
                         services.filter(item => item.departmentType === 'EXAMINATION').map(item => item.id)
                     );
                     if (previous.some(id => examinationIds.has(id))) {
-                        toast.info('Mỗi lượt chỉ được chọn một dịch vụ khám bệnh. Dịch vụ khám cũ đã được thay thế.');
+                        toast.info(t('workflow.singleExaminationReplaced'));
                     }
                     return [...previous.filter(id => !examinationIds.has(id)), service.id];
                 }
@@ -539,7 +539,7 @@ export default function CreateTicketPage() {
             return;
         }
         if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
-            setValidationError('Mỗi lượt khám chỉ được chọn một dịch vụ khám bệnh.');
+            setValidationError(t('workflow.singleExaminationOnly'));
             return;
         }
 

@@ -37,6 +37,8 @@ import viShiftManagement from './locales/vi/shiftManagement.json';
 import enShiftManagement from './locales/en/shiftManagement.json';
 import viOperations from './locales/vi/operations.json';
 import enOperations from './locales/en/operations.json';
+import viManagerPatients from './locales/vi/managerPatients.json';
+import enManagerPatients from './locales/en/managerPatients.json';
 import createEnglishResource from './locales/createEnglishResource';
 
 // Thêm page mới thì import thêm ở đây, ví dụ:
@@ -47,6 +49,8 @@ i18n
     .use(LanguageDetector)
     .use(initReactI18next)
     .init({
+        // Tạm khóa giao diện ở tiếng Việt cho đến khi chức năng đa ngôn ngữ ổn định.
+        lng: 'vi',
         fallbackLng: 'vi',
         supportedLngs: ['vi', 'en'],
         load: 'languageOnly',
@@ -61,13 +65,25 @@ i18n
                 customer: viCustomer,
                 createTicketConfirmModal: viCreateTicketConfirmModal,
                 cashier: viCashier,
-                queue: viQueue, doctor: viDoctor, lab: viLab, admin: viAdmin, services: viServices, rooms: viRooms, schedule: viSchedule, report: viReport, payment: viPayment, medicalHistory: viMedicalHistory, departments: viDepartments, settings: viSettings, landing: viLanding, shiftManagement: viShiftManagement, operations: viOperations
+                queue: viQueue, doctor: viDoctor, lab: viLab, admin: viAdmin, services: viServices, rooms: viRooms, schedule: viSchedule, report: viReport, payment: viPayment, medicalHistory: viMedicalHistory, departments: viDepartments, settings: viSettings, landing: viLanding, shiftManagement: viShiftManagement, operations: viOperations, managerPatients: viManagerPatients
             },
             en: {
                 common: enCommon,
                 auth:   enAuth,
-                appointment: createEnglishResource(viAppointment),
-                receptionist: createEnglishResource(viReceptionist),
+                appointment: {
+                    ...createEnglishResource(viAppointment),
+                    workflow: {
+                        singleExaminationReplaced: 'Only one examination service can be selected per appointment. The previous examination service was replaced.',
+                        singleExaminationOnly: 'Only one examination service can be selected per appointment.'
+                    }
+                },
+                receptionist: {
+                    ...createEnglishResource(viReceptionist),
+                    workflow: {
+                        singleExaminationReplaced: 'Only one examination service can be selected per visit. The previous examination service was replaced.',
+                        singleExaminationOnly: 'Only one examination service can be selected per visit.'
+                    }
+                },
                 customer: createEnglishResource(viCustomer),
                 createTicketConfirmModal: createEnglishResource(viCreateTicketConfirmModal),
                 cashier: createEnglishResource(viCashier),
@@ -81,13 +97,13 @@ i18n
                 schedule: enSchedule,
                 report: createEnglishResource(viReport),
                 departments: createEnglishResource(viDepartments),
-                settings: enSettings, landing: enLanding, shiftManagement: enShiftManagement, operations: enOperations
+                settings: enSettings, landing: enLanding, shiftManagement: enShiftManagement, operations: enOperations, managerPatients: enManagerPatients
             },
         },
         interpolation: { escapeValue: false },
         detection: {
-            order: ['localStorage', 'navigator'],
-            caches: ['localStorage'],
+            order: [],
+            caches: [],
             lookupLocalStorage: 'app_lang',
         },
     });

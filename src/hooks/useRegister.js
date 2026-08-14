@@ -33,7 +33,7 @@ export function useRegister() {
 
         try {
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/auth/send-otp`,
+                `${import.meta.env.VITE_API_URL}/api/auth/send-register-otp`,
                 {
                     method: 'POST',
                     headers: {
@@ -189,6 +189,10 @@ export function useRegister() {
 
         if (!password) {
             return 'Vui lòng nhập mật khẩu.';
+        }
+
+        if (!['MALE', 'FEMALE'].includes(profileData.gender)) {
+            return 'Giới tính chỉ được chọn Nam hoặc Nữ.';
         }
 
         if (password.length < 8) {

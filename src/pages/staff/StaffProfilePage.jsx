@@ -179,8 +179,6 @@ export default function StaffProfilePage() {
     const handleSaveProfile = async () => {
         if (!editForm.fullName?.trim()) return toast.error('Vui lòng nhập họ và tên');
         if (/\d/.test(editForm.fullName)) return toast.error('Họ tên không được chứa chữ số');
-        if (!/^(\+84|0)\d{9,10}$/.test(editForm.phone?.trim() || '')) return toast.error('Số điện thoại Việt Nam không hợp lệ');
-        if (editForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email.trim())) return toast.error('Email không hợp lệ');
         if (!editForm.gender) return toast.error('Vui lòng chọn giới tính');
         if (!editForm.dateOfBirth || new Date(editForm.dateOfBirth) >= new Date()) return toast.error('Ngày sinh phải là ngày hợp lệ trong quá khứ');
         if (editForm.address?.length > 255) return toast.error('Địa chỉ không được vượt quá 255 ký tự');
@@ -193,7 +191,12 @@ export default function StaffProfilePage() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(editForm)
+                body: JSON.stringify({
+                    fullName: editForm.fullName,
+                    dateOfBirth: editForm.dateOfBirth,
+                    gender: editForm.gender,
+                    address: editForm.address
+                })
             });
             if (!res.ok) {
                 const data = await res.json().catch(() => null);
@@ -324,23 +327,17 @@ export default function StaffProfilePage() {
                             </div>
                             <div>
                                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5"/> Số Điện Thoại</label>
-                                {editing ? (
-                                    <input value={editForm.phone} onChange={e => setEditForm(p => ({...p, phone: e.target.value}))} className={inputCls} placeholder="Số điện thoại" />
-                                ) : (
-                                    <div className="px-4 py-2.5 bg-white border border-gray-100 rounded-lg text-gray-800 text-sm">
-                                        {profile?.profile?.phone || 'Chưa cập nhật'}
-                                    </div>
-                                )}
+                                <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-gray-700 text-sm">
+                                    {profile?.profile?.phone || 'Chưa cập nhật'}
+                                </div>
+                                {editing && <p className="mt-1 text-xs text-amber-600">Thông tin liên hệ không thể sửa tại hồ sơ cá nhân.</p>}
                             </div>
                             <div>
                                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5"/> Email</label>
-                                {editing ? (
-                                    <input value={editForm.email} onChange={e => setEditForm(p => ({...p, email: e.target.value}))} className={inputCls} placeholder="Email" />
-                                ) : (
-                                    <div className="px-4 py-2.5 bg-white border border-gray-100 rounded-lg text-gray-800 text-sm">
-                                        {profile?.profile?.email || 'Chưa cập nhật'}
-                                    </div>
-                                )}
+                                <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-gray-700 text-sm">
+                                    {profile?.profile?.email || 'Chưa cập nhật'}
+                                </div>
+                                {editing && <p className="mt-1 text-xs text-amber-600">Thông tin liên hệ không thể sửa tại hồ sơ cá nhân.</p>}
                             </div>
                             <div>
                                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><Users className="w-3.5 h-3.5"/> Giới Tính</label>

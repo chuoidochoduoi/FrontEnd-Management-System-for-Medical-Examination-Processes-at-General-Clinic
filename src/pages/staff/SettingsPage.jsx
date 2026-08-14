@@ -28,7 +28,7 @@ export default function SettingsPage() {
     // Các state cấu hình
     const [settings, setSettings] = useState({
         theme: localStorage.getItem('app_theme') || 'light',
-        language: localStorage.getItem('app_lang') || 'vi',
+        language: 'vi',
         notifications: localStorage.getItem('app_notifications') !== 'false',
         sound: localStorage.getItem('app_sound') !== 'false',
         compact: localStorage.getItem('app_compact') === 'true',
@@ -114,7 +114,7 @@ export default function SettingsPage() {
                                 </div>
 
                                 {/* Language */}
-                                <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                                <div className="hidden">
                                     <div>
                                         <p className="font-medium text-gray-800 text-sm">{t('language')}</p>
                                         <p className="text-xs text-gray-500">{t('languageHint')}</p>

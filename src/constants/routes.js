@@ -70,6 +70,7 @@ export const ROUTES = {
     OWNER_ATTENDANCE_KIOSK: '/owner/attendance-kiosk',
     STAFF_ATTENDANCE: '/staff/attendance',
     MANAGER_STAFF: '/manager/staff',
+    MANAGER_PATIENTS: '/manager/patients',
 
     STAFF_SCHEDULE: '/staff/schedule',
     STAFF_PROFILE: '/staff/profile',

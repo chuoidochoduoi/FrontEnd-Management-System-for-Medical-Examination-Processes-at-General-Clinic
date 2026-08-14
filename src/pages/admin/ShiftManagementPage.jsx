@@ -21,7 +21,6 @@ export default function ShiftManagementPage() {
     const [form, setForm] = useState({ name: '', startTime: '', endTime: '', isActive: true });
     const [saving, setSaving] = useState(false);
     const [search, setSearch] = useState('');
-    const [sort, setSort] = useState('startTime-asc');
 
     const load = async () => {
         setLoading(true);
@@ -80,20 +79,9 @@ export default function ShiftManagementPage() {
 
     const visibleItems = useMemo(() => {
         const keyword = search.trim().toLocaleLowerCase(i18n.language);
-        const toMinutes = value => {
-            const [hour = 0, minute = 0] = String(value || '').split(':').map(Number);
-            return hour * 60 + minute;
-        };
-        const filtered = items.filter(item => !keyword
+        return items.filter(item => !keyword
             || item.name?.toLocaleLowerCase(i18n.language).includes(keyword));
-
-        return [...filtered].sort((a, b) => {
-            if (sort === 'startTime-asc') return toMinutes(a.startTime) - toMinutes(b.startTime);
-            if (sort === 'startTime-desc') return toMinutes(b.startTime) - toMinutes(a.startTime);
-            const result = (a.name || '').localeCompare(b.name || '', i18n.language, { sensitivity: 'base' });
-            return sort === 'name-desc' ? -result : result;
-        });
-    }, [items, search, sort, i18n.language]);
+    }, [items, search, i18n.language]);
 
     return <AdminLayout>
         <div className="px-10 py-8 space-y-8 max-w-7xl mx-auto">
@@ -105,17 +93,11 @@ export default function ShiftManagementPage() {
                 <button onClick={openCreate} className="h-10 px-5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl text-sm flex items-center gap-2"><Plus size={18} />{t('add')}</button>
             </section>
 
-            <section className="bg-white border border-gray-200 rounded-2xl p-5 flex gap-4 shadow-sm items-end">
+            <section className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
                 <div className="flex-1"><label className="block text-xs font-medium text-gray-500 mb-2">{t('searchLabel')}</label><div className="relative">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input value={search} onChange={e => setSearch(e.target.value)} className="w-full h-10 pl-10 pr-4 border border-gray-200 rounded-xl text-sm outline-none" placeholder={t('searchPlaceholder')} />
                 </div></div>
-                <div className="w-56"><label className="block text-xs font-medium text-gray-500 mb-2">{t('sortLabel')}</label>
-                    <select value={sort} onChange={e => setSort(e.target.value)} className="w-full h-10 px-4 border border-gray-200 rounded-xl text-sm bg-white outline-none">
-                        <option value="startTime-asc">{t('sort.startAsc')}</option><option value="startTime-desc">{t('sort.startDesc')}</option>
-                        <option value="name-asc">{t('sort.nameAsc')}</option><option value="name-desc">{t('sort.nameDesc')}</option>
-                    </select>
-                </div>
             </section>
 
             <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">

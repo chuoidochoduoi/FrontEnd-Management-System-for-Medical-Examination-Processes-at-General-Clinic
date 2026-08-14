@@ -194,5 +194,9 @@
       "submitFailed": "Tạo phiếu thất bại. Vui lòng thử lại.",
       "unknown": "Có lỗi xảy ra."
     }
+  },
+  "workflow": {
+    "singleExaminationReplaced": "Mỗi lượt chỉ được chọn một dịch vụ khám bệnh. Dịch vụ khám cũ đã được thay thế.",
+    "singleExaminationOnly": "Mỗi lượt khám chỉ được chọn một dịch vụ khám bệnh."
   }
 }

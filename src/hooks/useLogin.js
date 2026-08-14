@@ -27,7 +27,19 @@ export function useLogin() {
             const data = await res.json();
             // data = { accessToken, refreshToken, tokenType, expiresIn, account: { accountId, username, role, systemRole } }
 
-            const storage = remember ? localStorage : sessionStorage;
+            if (remember) {
+                localStorage.setItem('rememberedLogin', JSON.stringify({
+                    identifier: identifier.trim(),
+                    password,
+                }));
+            } else {
+                localStorage.removeItem('rememberedLogin');
+            }
+
+            // Thông tin xác thực vẫn chỉ tồn tại trong phiên; dữ liệu ghi nhớ được quản lý riêng.
+            ['token', 'refreshToken', 'role', 'username', 'accountId', 'systemRole', 'staffId']
+                .forEach((key) => localStorage.removeItem(key));
+            const storage = sessionStorage;
             storage.setItem('token',          data.accessToken);
             storage.setItem('refreshToken',   data.refreshToken);
             storage.setItem('role',           data.account.role);           // CUSTOMER | STAFF
@@ -67,7 +79,11 @@ export function useLogin() {
                 navigate(ROUTES.PROFILE);
             }
         } catch (err) {
-            setError(err.message || 'Có lỗi xảy ra');
+            const isNetworkError = err instanceof TypeError
+                || /failed to fetch|networkerror|load failed/i.test(err?.message || '');
+            setError(isNetworkError
+                ? 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.'
+                : (err.message || 'Có lỗi xảy ra'));
         } finally {
             setLoading(false);
         }

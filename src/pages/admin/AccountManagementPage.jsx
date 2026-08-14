@@ -134,6 +134,10 @@ const isValidPastDate = value => {
     && date.getDate() === day && date < new Date();
 };
 
+const normalizePhone = value => (value || '').trim().replace(/[\s.-]/g, '');
+const VIETNAM_MOBILE_REGEX = /^(?:0|\+84)[35789]\d{8}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+
 /* ── Modal: Thêm nhân sự ── */
 function AddStaffModal({ onClose, onSubmit, t }) {
   const { specializations } = useSpecializations();
@@ -157,6 +161,7 @@ function AddStaffModal({ onClose, onSubmit, t }) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const overlayRef = useRef(null);
   useEffect(() => {
     if (!error) return;
@@ -164,9 +169,28 @@ function AddStaffModal({ onClose, onSubmit, t }) {
     setError("");
   }, [error]);
 
-  const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
+  const set = (k, v) => {
+    setForm((prev) => ({ ...prev, [k]: v }));
+    setFieldErrors((prev) => prev[k] ? { ...prev, [k]: "" } : prev);
+  };
 
   const handleSubmit = async () => {
+    const normalizedPhone = normalizePhone(form.phone);
+    const normalizedEmail = (form.email || '').trim().toLowerCase();
+    const contactErrors = {};
+    if (!normalizedPhone) {
+      contactErrors.phone = 'Vui lòng nhập số điện thoại.';
+    } else if (!VIETNAM_MOBILE_REGEX.test(normalizedPhone)) {
+      contactErrors.phone = 'Số điện thoại phải gồm 10 số và đúng đầu số di động Việt Nam.';
+    }
+    if (!normalizedEmail) {
+      contactErrors.email = 'Vui lòng nhập email.';
+    } else if (!EMAIL_REGEX.test(normalizedEmail)) {
+      contactErrors.email = 'Email không đúng định dạng, ví dụ: ten@gmail.com.';
+    }
+    setFieldErrors(contactErrors);
+    if (Object.keys(contactErrors).length > 0) return;
+
     if (!form.username || !form.password || !form.systemRole || !form.fullName || !form.phone || !form.gender || !form.dateOfBirth) {
       setError("Vui lòng nhập đầy đủ các trường bắt buộc (Tên đăng nhập, Mật khẩu, Vai trò, Họ tên, SĐT, Giới tính, Ngày sinh).");
       return;
@@ -184,6 +208,8 @@ function AddStaffModal({ onClose, onSubmit, t }) {
     try {
       const created = await onSubmit({
         ...form,
+        phone: normalizedPhone,
+        email: normalizedEmail,
         highestDegree: form.highestDegree?.trim() || null,
         university: form.university?.trim() || null,
         licenseNumber: form.licenseNumber?.trim() || null,
@@ -208,7 +234,7 @@ function AddStaffModal({ onClose, onSubmit, t }) {
   };
 
   const inputCls =
-    "w-full border-0 border-b border-gray-200 outline-none text-sm text-gray-800 py-1.5 focus:border-gray-600 bg-transparent transition-colors";
+    "w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2.5 outline-none text-sm text-gray-900 caret-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:bg-white focus:ring-2 focus:ring-primary-100 transition-colors";
   const labelCls = "block text-xs text-gray-400 mb-1";
 
   return (
@@ -331,8 +357,13 @@ function AddStaffModal({ onClose, onSubmit, t }) {
                 {
                   key: "phone",
                   label: t("accountManagement.addStaffModal.fields.phone"),
+                  type: "tel",
                 },
-                { key: "email", label: t("accountManagement.addStaffModal.fields.email") },
+                {
+                  key: "email",
+                  label: t("accountManagement.addStaffModal.fields.email"),
+                  type: "email",
+                },
                 { key: "dateOfBirth", label: "Ngày sinh", type: "date" },
                 {
                   key: "gender",
@@ -363,8 +394,11 @@ function AddStaffModal({ onClose, onSubmit, t }) {
                       type={type}
                       value={form[key]}
                       onChange={(e) => set(key, key === 'fullName' ? e.target.value.replace(/\d/g, '') : e.target.value)}
-                      className={inputCls}
+                      className={`${inputCls} ${fieldErrors[key] ? '!border-red-500 focus:!border-red-500 focus:!ring-red-100' : ''}`}
                     />
+                  )}
+                  {fieldErrors[key] && (
+                    <p className="mt-1.5 text-xs font-medium text-red-600">{fieldErrors[key]}</p>
                   )}
                 </div>
               ))}
@@ -524,7 +558,7 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
   };
 
   const inputCls =
-    "w-full border-0 border-b border-gray-200 outline-none text-sm text-gray-800 py-1.5 focus:border-gray-600 bg-transparent";
+    "w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2.5 outline-none text-sm text-gray-900 caret-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:bg-white focus:ring-2 focus:ring-primary-100 transition-colors";
   const labelCls =
     "block text-xs font-semibold text-gray-500 tracking-wide mb-1.5";
 

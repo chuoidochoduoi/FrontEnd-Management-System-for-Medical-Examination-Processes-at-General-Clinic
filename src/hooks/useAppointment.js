@@ -7,6 +7,16 @@ import { validateAppointment } from '@/validators/appointmentValidator';
 const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
 
+const getMinimumAppointmentDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setHours(0, 0, 0, 0);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const day = String(tomorrow.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const buildScheduledAt = (date, shiftId, shifts) => {
     if (!date || !shiftId) return null;
     const [year, month, day] = date.split('-');
@@ -132,6 +142,11 @@ export function useAppointment() {
 
     const book = async (formData) => {
         setError('');
+
+        if (formData.date && formData.date < getMinimumAppointmentDate()) {
+            setError('Lịch hẹn chỉ được đặt sớm nhất từ ngày mai.');
+            return;
+        }
 
         // Validate date/timeSlot để tính scheduledAt
         if (!formData.date) return setError('Vui lòng chọn ngày khám.');

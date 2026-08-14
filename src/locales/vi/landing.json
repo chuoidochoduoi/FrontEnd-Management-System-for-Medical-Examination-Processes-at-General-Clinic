@@ -6,8 +6,7 @@
   "services": { "eyebrow": "Danh mục dịch vụ", "title": "Dịch vụ y tế", "titleBold": "Tinh hoa", "description": "Mỗi dịch vụ tại CareS đều được đầu tư bài bản về nhân lực và hệ thống công nghệ xét nghiệm, mang đến sự an tâm tuyệt đối cho khách hàng.", "other": "Dịch vụ khác", "empty": "Bảng giá chi tiết các dịch vụ khám chữa bệnh đang được cập nhật...", "items": [
     { "title": "Khám bệnh đa khoa", "desc": "Đội ngũ bác sĩ tận tâm với nhiều năm kinh nghiệm, khám tổng quát và tư vấn phác đồ điều trị hiệu quả." },
     { "title": "Xét nghiệm công nghệ cao", "desc": "Trang bị hệ thống xét nghiệm tự động, đạt chuẩn quốc tế, mang lại kết quả nhanh chóng và chính xác." },
-    { "title": "Chẩn đoán hình ảnh", "desc": "Hệ thống X-quang, siêu âm kỹ thuật số thế hệ mới giúp tầm soát và phát hiện sớm các bệnh lý." },
-    { "title": "Dược phẩm chuẩn quốc tế", "desc": "Nhà thuốc đạt chuẩn GPP, cung cấp dược phẩm nguồn gốc rõ ràng với sự tư vấn chuyên sâu." }
+    { "title": "Chẩn đoán hình ảnh", "desc": "Hệ thống X-quang, siêu âm kỹ thuật số thế hệ mới giúp tầm soát và phát hiện sớm các bệnh lý." }
   ]},
   "about": { "imageAlt": "Không gian phòng khám hiện đại", "pioneer": "Tiên phong", "pioneerText": "Ứng dụng hệ thống quản lý khám bệnh thế hệ mới, tái định nghĩa trải nghiệm khám chữa bệnh tại Việt Nam.", "eyebrow": "Sự khác biệt", "title": "Sự tinh tế trong", "titleBold": "Từng trải nghiệm", "description": "Chúng tôi hiểu rằng thời gian và sự thoải mái của bạn là vô giá. Tại CareS, sự lộn xộn và chờ đợi mệt mỏi được thay thế bằng quy trình số hóa toàn diện, chuyên nghiệp và tĩnh lặng.", "features": [
     { "title": "Tối ưu thời gian", "desc": "Hệ thống xếp hàng thông minh loại bỏ thời gian chờ đợi không cần thiết." },
@@ -27,6 +26,6 @@
     { "specialty": "Khám nội tổng hợp", "desc": "Giàu kinh nghiệm trong chẩn đoán và điều trị bệnh lý nội khoa mạn tính." }
   ]},
   "pricing": { "eyebrow": "Bảng giá dịch vụ", "title": "Chi phí", "titleBold": "Minh bạch", "description": "Dịch vụ y tế chất lượng cao với chi phí hợp lý, rõ ràng và không có phí ẩn." },
-  "cta": { "title": "Trải nghiệm sự khác biệt", "title2": "của dịch vụ y tế", "titleBold": "Cao cấp", "description": "Đội ngũ chuyên gia luôn sẵn sàng đồng hành cùng sức khỏe của bạn.", "button": "Liên hệ đặt lịch hẹn" },
-  "footer": { "description": "Nơi công nghệ tiên tiến và chuyên môn y học hàng đầu hội tụ để mang đến dịch vụ chăm sóc sức khỏe chất lượng.", "contact": "Liên hệ", "address": "Số 1, Đường Lê Thái Tổ, TP Từ Sơn, Bắc Ninh", "hours": "Giờ đón khách", "weekdays": "Thứ 2 - Thứ 6", "saturday": "Thứ 7", "holiday": "Chủ nhật / Ngày lễ", "priority": "Khám theo yêu cầu ưu tiên", "copyright": "Phòng khám đa khoa. Bảo lưu mọi quyền.", "terms": "Điều khoản", "privacy": "Bảo mật" }
+  "cta": { "title": "Trải nghiệm sự khác biệt", "title2": "của dịch vụ y tế", "titleBold": "Cao cấp", "description": "Đội ngũ chuyên gia luôn sẵn sàng đồng hành cùng sức khỏe của bạn.", "button": "Đăng ký ngay" },
+  "footer": { "description": "Nơi công nghệ tiên tiến và chuyên môn y học hàng đầu hội tụ để mang đến dịch vụ chăm sóc sức khỏe chất lượng.", "contact": "Liên hệ", "address": "Khu Công nghệ cao Hoà Lạc, Hà Nội", "copyright": "Phòng khám đa khoa. Bảo lưu mọi quyền." }
 }

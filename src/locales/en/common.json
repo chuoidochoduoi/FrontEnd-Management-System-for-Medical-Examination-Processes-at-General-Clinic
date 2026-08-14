@@ -25,6 +25,7 @@
     "feedback": "Feedback",
     "patientFlow": "Patient flow",
     "staff": "Staff",
+    "patients": "Patients",
     "specialties": "Specialties",
     "capabilities": "Procedure catalog",
     "auditLogs": "Audit logs"

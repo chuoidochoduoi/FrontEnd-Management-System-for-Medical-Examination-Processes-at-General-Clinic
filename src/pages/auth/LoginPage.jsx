@@ -8,13 +8,24 @@ import { ROUTES } from '@/constants/routes';
 import { ArrowRight, ShieldCheck, Phone, Lock, Eye, EyeOff, Activity } from 'lucide-react';
 import logoUrl from '@/assets/logo.jpg';
 
+const REMEMBERED_LOGIN_KEY = 'rememberedLogin';
+
+const getRememberedLogin = () => {
+	try {
+		return JSON.parse(localStorage.getItem(REMEMBERED_LOGIN_KEY)) || {};
+	} catch {
+		localStorage.removeItem(REMEMBERED_LOGIN_KEY);
+		return {};
+	}
+};
+
 export default function LoginPage() {
 	const { t } = useTranslation('auth');
 	const { t: tCommon } = useTranslation('common');
 
-	const [identifier, setIdentifier] = useState('');
-	const [password, setPassword]     = useState('');
-	const [remember, setRemember]     = useState(false);
+	const [identifier, setIdentifier] = useState(() => getRememberedLogin().identifier || '');
+	const [password, setPassword]     = useState(() => getRememberedLogin().password || '');
+	const [remember, setRemember]     = useState(() => Boolean(localStorage.getItem(REMEMBERED_LOGIN_KEY)));
 	const [showForgot, setShowForgot] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -279,7 +290,11 @@ export default function LoginPage() {
                                     type="checkbox"
                                     name="remember"
                                     checked={remember}
-                                    onChange={e => setRemember(e.target.checked)}
+                                    onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        setRemember(checked);
+                                        if (!checked) localStorage.removeItem(REMEMBERED_LOGIN_KEY);
+                                    }}
                                     className="hidden"
                                 />
                                 <span className="text-sm text-slate-600 font-medium select-none group-hover:text-slate-900 transition-colors">

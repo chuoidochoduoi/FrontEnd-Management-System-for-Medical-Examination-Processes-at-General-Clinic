@@ -53,7 +53,7 @@ function Modal({ title, subtitle, onClose, children, footer, wide = false }) {
 }
 
 /* ── Assign Staff Modal ── */
-function AssignModal({ shiftName, dayLabel, selectedIds, staff, onToggle, onClose, t }) {
+function AssignModal({ shiftName, dayLabel, selectedIds, staff, assigning, onToggle, onClose, t }) {
     const [query, setQuery] = useState('');
     const doctors = staff.filter(s => s.role === 'BS');
     const nurses  = staff.filter(s => s.role === 'YT');
@@ -91,13 +91,13 @@ function AssignModal({ shiftName, dayLabel, selectedIds, staff, onToggle, onClos
                             return (
                                 <div key={s.id || i} className="flex items-center justify-between py-2.5 border-b border-gray-50">
                                     <p className="text-sm text-gray-800">{s.name}</p>
-                                    <button onClick={() => onToggle(s.id, !selected)}
+                                    <button disabled={assigning} onClick={() => onToggle(s.id, !selected)}
                                             className={`px-3 h-7 text-xs font-medium rounded-lg transition-colors ${
                                                 selected
                                                     ? 'bg-gray-900 text-white'
                                                     : 'border border-gray-300 text-gray-600 hover:border-gray-500'
-                                            }`}>
-                                        {selected ? t('scheduleManagement.assignModal.selectedBtn') : t('scheduleManagement.assignModal.selectBtn')}
+                                            } disabled:cursor-not-allowed disabled:opacity-50`}>
+                                        {selected ? t('scheduleManagement.assignModal.removeBtn') : t('scheduleManagement.assignModal.selectBtn')}
                                     </button>
                                 </div>
                             );
@@ -116,13 +116,13 @@ function AssignModal({ shiftName, dayLabel, selectedIds, staff, onToggle, onClos
                             return (
                                 <div key={s.id || i} className="flex items-center justify-between py-2.5 border-b border-gray-50">
                                     <p className="text-sm text-gray-800">{s.name}</p>
-                                    <button onClick={() => onToggle(s.id, !selected)}
+                                    <button disabled={assigning} onClick={() => onToggle(s.id, !selected)}
                                             className={`px-3 h-7 text-xs font-medium rounded-lg transition-colors ${
                                                 selected
                                                     ? 'bg-gray-900 text-white'
                                                     : 'border border-gray-300 text-gray-600 hover:border-gray-500'
-                                            }`}>
-                                        {selected ? t('scheduleManagement.assignModal.selectedBtn') : t('scheduleManagement.assignModal.selectBtn')}
+                                            } disabled:cursor-not-allowed disabled:opacity-50`}>
+                                        {selected ? t('scheduleManagement.assignModal.removeBtn') : t('scheduleManagement.assignModal.selectBtn')}
                                     </button>
                                 </div>
                             );
@@ -141,13 +141,13 @@ function AssignModal({ shiftName, dayLabel, selectedIds, staff, onToggle, onClos
                             return (
                                 <div key={s.id || i} className="flex items-center justify-between py-2.5 border-b border-gray-50">
                                     <p className="text-sm text-gray-800">{s.name}</p>
-                                    <button onClick={() => onToggle(s.id, !selected)}
+                                    <button disabled={assigning} onClick={() => onToggle(s.id, !selected)}
                                             className={`px-3 h-7 text-xs font-medium rounded-lg transition-colors ${
                                                 selected
                                                     ? 'bg-gray-900 text-white'
                                                     : 'border border-gray-300 text-gray-600 hover:border-gray-500'
-                                            }`}>
-                                        {selected ? t('scheduleManagement.assignModal.selectedBtn') : t('scheduleManagement.assignModal.selectBtn')}
+                                            } disabled:cursor-not-allowed disabled:opacity-50`}>
+                                        {selected ? t('scheduleManagement.assignModal.removeBtn') : t('scheduleManagement.assignModal.selectBtn')}
                                     </button>
                                 </div>
                             );
@@ -166,13 +166,13 @@ function AssignModal({ shiftName, dayLabel, selectedIds, staff, onToggle, onClos
                             return (
                                 <div key={s.id || i} className="flex items-center justify-between py-2.5 border-b border-gray-50">
                                     <p className="text-sm text-gray-800">{s.name}</p>
-                                    <button onClick={() => onToggle(s.id, !selected)}
+                                    <button disabled={assigning} onClick={() => onToggle(s.id, !selected)}
                                             className={`px-3 h-7 text-xs font-medium rounded-lg transition-colors ${
                                                 selected
                                                     ? 'bg-gray-900 text-white'
                                                     : 'border border-gray-300 text-gray-600 hover:border-gray-500'
-                                            }`}>
-                                        {selected ? t('scheduleManagement.assignModal.selectedBtn') : t('scheduleManagement.assignModal.selectBtn')}
+                                            } disabled:cursor-not-allowed disabled:opacity-50`}>
+                                        {selected ? t('scheduleManagement.assignModal.removeBtn') : t('scheduleManagement.assignModal.selectBtn')}
                                     </button>
                                 </div>
                             );
@@ -187,7 +187,7 @@ function AssignModal({ shiftName, dayLabel, selectedIds, staff, onToggle, onClos
 /* ── Main Page ── */
 export default function SchedulePage() {
     const { t } = useTranslation('schedule');
-    const { schedule, shifts, staff, weekStart, loading, error, fetchSchedule, assignStaff, copyLastWeek, saveShifts, fetchStaffList } = useSchedule();
+    const { schedule, shifts, staff, weekStart, loading, copying, assigning, error, fetchSchedule, assignStaff, copyLastWeek, saveShifts, fetchStaffList } = useSchedule();
 
     const [monday,         setMonday]         = useState(() => getMonday());
     const [assignCell,     setAssignCell]     = useState(null); // { shiftId, dayKey, shiftName, dayLabel }
@@ -229,9 +229,9 @@ export default function SchedulePage() {
                         <button onClick={nextWeek} className="text-gray-400 hover:text-gray-700 transition-colors"><ChevronRight size={15}/></button>
                     </div>
 
-                    {!readOnly && <button onClick={copyLastWeek}
-                            className="h-10 px-4 border border-gray-200 rounded-xl text-sm text-gray-700 hover:border-gray-400 transition-colors whitespace-nowrap ml-auto">
-                        {t('scheduleManagement.copyLastWeek')}
+                    {!readOnly && <button onClick={copyLastWeek} disabled={copying || loading}
+                            className="h-10 px-4 border border-gray-200 rounded-xl text-sm text-gray-700 hover:border-gray-400 transition-colors whitespace-nowrap ml-auto disabled:cursor-not-allowed disabled:opacity-60">
+                        {copying ? t('scheduleManagement.loading') : t('scheduleManagement.copyLastWeek')}
                     </button>}
                 </div>
 
@@ -273,7 +273,19 @@ export default function SchedulePage() {
                                                     {people.map((p, pi) => (
                                                         <div key={p.id || pi}
                                                              className="text-xs text-gray-800 bg-gray-50 rounded px-2 py-1 flex items-center justify-between gap-1">
-                                                            <span>{p.name} <span className="text-gray-400">({p.role})</span></span>
+                                                            <span className="min-w-0 truncate">{p.name} <span className="text-gray-400">({p.role})</span></span>
+                                                            {!readOnly && (
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={assigning}
+                                                                    onClick={() => assignStaff(shift.id, dk, p.id, false)}
+                                                                    title={t('scheduleManagement.assignModal.removeBtn')}
+                                                                    aria-label={`${t('scheduleManagement.assignModal.removeBtn')} ${p.name}`}
+                                                                    className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                                                                >
+                                                                    <X size={13} />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     ))}
                                                     {!readOnly && <button
@@ -306,6 +318,7 @@ export default function SchedulePage() {
                     dayLabel={assignCell.dayLabel}
                     selectedIds={getSelectedIds(assignCell.shiftId, assignCell.dayKey)}
                     staff={staff}
+                    assigning={assigning}
                     onToggle={handleToggle}
                     onClose={() => setAssignCell(null)}
                 />

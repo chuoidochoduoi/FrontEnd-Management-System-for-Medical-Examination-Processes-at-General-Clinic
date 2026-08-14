@@ -76,23 +76,45 @@ body {
   border: 1px solid rgba(226, 232, 240, 0.8) !important;
 }
 
-/* Mọi thông báo dùng chung một mẫu xanh ở góc phải. Loại thông báo chỉ còn
-   quyết định nội dung, không làm giao diện thay đổi giữa success/error/info. */
-.Toastify__toast-theme--light.Toastify__toast--success,
-.Toastify__toast-theme--light.Toastify__toast--error,
-.Toastify__toast-theme--light.Toastify__toast--warning,
-.Toastify__toast-theme--light.Toastify__toast--info,
-.Toastify__toast-theme--light.Toastify__toast--default {
+/* Màu thông báo theo ngữ nghĩa: thành công, lỗi, cảnh báo và thông tin. */
+.Toastify__toast-theme--light.Toastify__toast--success {
   background: #f0fdfa !important;
   color: #0f766e !important;
   border-color: #ccfbf1 !important;
 }
-.Toastify__toast-theme--light .Toastify__progress-bar {
+.Toastify__toast--success .Toastify__progress-bar {
   background: #14b8a6 !important;
 }
-.Toastify__toast-theme--light .Toastify__toast-icon svg {
+.Toastify__toast--success .Toastify__toast-icon svg {
   fill: #0d9488 !important;
 }
+
+.Toastify__toast-theme--light.Toastify__toast--error {
+  background: #fef2f2 !important;
+  color: #b91c1c !important;
+  border-color: #fecaca !important;
+}
+.Toastify__toast--error .Toastify__progress-bar { background: #ef4444 !important; }
+.Toastify__toast--error .Toastify__toast-icon svg { fill: #dc2626 !important; }
+
+.Toastify__toast-theme--light.Toastify__toast--warning {
+  background: #fffbeb !important;
+  color: #a16207 !important;
+  border-color: #fde68a !important;
+}
+.Toastify__toast--warning .Toastify__progress-bar { background: #f59e0b !important; }
+.Toastify__toast--warning .Toastify__toast-icon svg { fill: #d97706 !important; }
+
+.Toastify__toast-theme--light.Toastify__toast--info,
+.Toastify__toast-theme--light.Toastify__toast--default {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border-color: #bfdbfe !important;
+}
+.Toastify__toast--info .Toastify__progress-bar,
+.Toastify__toast--default .Toastify__progress-bar { background: #3b82f6 !important; }
+.Toastify__toast--info .Toastify__toast-icon svg,
+.Toastify__toast--default .Toastify__toast-icon svg { fill: #2563eb !important; }
 
 .Toastify__toast-body {
   margin: 0 !important;

@@ -121,8 +121,6 @@ export default function ProfilePage() {
             fullName,
             dateOfBirth: dob,
             gender: gender || null,
-            phone,
-            email: email || null,
             address: address || null,
             bloodType: bloodType || null,
             insuranceId: bhytCode || null,
@@ -227,16 +225,6 @@ export default function ProfilePage() {
         if (!dob || dob.length !== 10) errs.dob = 'Vui lòng chọn đầy đủ ngày sinh';
         if (!gender) errs.gender = 'Vui lòng chọn giới tính';
 
-        const hasPhone = phone && phone.trim() !== '';
-        const hasEmail = email && email.trim() !== '';
-
-        if (!hasPhone && !hasEmail) {
-            errs.contact = 'Vui lòng cung cấp số điện thoại hoặc email';
-        }
-
-        if (hasPhone && !/^(\+84|0)\d{9,10}$/.test(phone.trim())) errs.phone = 'Số điện thoại Việt Nam không hợp lệ';
-        if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'Email không hợp lệ';
-
         if (address && address.length > 255) errs.address = 'Địa chỉ không được vượt quá 255 ký tự';
         setOnboardingErrors(errs);
         if (Object.keys(errs).length > 0) toast.error(Object.values(errs)[0]);
@@ -249,13 +237,6 @@ export default function ProfilePage() {
         if (!dob || Number.isNaN(new Date(dob).getTime()) || new Date(dob) >= new Date()) return 'Ngày sinh phải là ngày hợp lệ trong quá khứ';
         if (!gender) return 'Vui lòng chọn giới tính';
 
-        const hasPhone = phone && phone.trim() !== '';
-        const hasEmail = email && email.trim() !== '';
-
-        if (!hasPhone && !hasEmail) return 'Vui lòng cung cấp số điện thoại hoặc email';
-        if (hasPhone && !/^(\+84|0)\d{9,10}$/.test(phone.trim())) return 'Số điện thoại Việt Nam không hợp lệ';
-        if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Email không hợp lệ';
-
         if (address && address.trim().length > 255) return 'Địa chỉ không được vượt quá 255 ký tự';
         return '';
     };
@@ -267,8 +248,6 @@ export default function ProfilePage() {
             fullName,
             dateOfBirth: dob,
             gender: gender || null,
-            phone,
-            email: email || null,
             address: address || null,
             bloodType: bloodType || null,
             insuranceId: bhytCode || null,
@@ -410,38 +389,9 @@ export default function ProfilePage() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                {/* HIỂN THỊ PHƯƠNG THỨC LIÊN HỆ CÒN LẠI */}
-                                {!profile?.email ? (
-                                    <div className="md:col-span-2">
-                                        <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
-                                            <Mail className="w-3.5 h-3.5 text-gray-400" />
-                                            Email
-                                        </label>
-                                        <input
-                                            type="email"
-                                            maxLength={50}
-                                            value={email}
-                                            onChange={e => { setEmail(e.target.value); setOnboardingErrors(p => ({ ...p, email: '' })); }}
-                                            placeholder="example@email.com"
-                                            className={onboardInputCls('email')}
-                                        />
-                                        {onboardingErrors.email && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{onboardingErrors.email}</p>}
-                                    </div>
-                                ) : !profile?.phone ? (
-                                    <div className="md:col-span-2">
-                                        <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
-                                            <Phone className="w-3.5 h-3.5 text-gray-400" />
-                                            Số điện thoại
-                                        </label>
-                                        <input
-                                            type="tel"
-                                            maxLength={20}
-                                            value={phone}
-                                            onChange={e => { setPhone(e.target.value); setOnboardingErrors(p => ({ ...p, phone: '' })); }}
-                                            placeholder="Nhập số điện thoại"
-                                            className={onboardInputCls('phone')}
-                                        />
-                                        {onboardingErrors.phone && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{onboardingErrors.phone}</p>}
+                                {!profile?.email || !profile?.phone ? (
+                                    <div className="md:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                                        Nếu cần bổ sung hoặc thay đổi số điện thoại/email, vui lòng liên hệ lễ tân để bảo đảm lịch sử khám được giữ đúng hồ sơ.
                                     </div>
                                 ) : null}
 
@@ -690,9 +640,8 @@ export default function ProfilePage() {
                                         <Phone className="w-3.5 h-3.5 text-primary-400" />
                                         <span>{t('profile.personalInfo.phone')}</span>
                                     </div>
-                                    {editing
-                                        ? <input type="tel" maxLength={20} value={phone} onChange={e => setPhone(e.target.value)} className={inputCls} />
-                                        : <p className={fieldValue}>{phone || '—'}</p>}
+                                    <p className={fieldValue}>{phone || '—'}</p>
+                                    {editing && <p className="mt-1 text-xs text-amber-600">Liên hệ lễ tân để thay đổi số điện thoại.</p>}
                                 </div>
                                 {/* Email */}
                                 <div className="md:col-span-2">
@@ -700,9 +649,8 @@ export default function ProfilePage() {
                                         <Mail className="w-3.5 h-3.5 text-primary-400" />
                                         <span>{t('profile.personalInfo.email')}</span>
                                     </div>
-                                    {editing
-                                        ? <input type="email" maxLength={50} value={email} onChange={e => setEmail(e.target.value)} className={inputCls} />
-                                        : <p className={fieldValue}>{email || '—'}</p>}
+                                    <p className={fieldValue}>{email || '—'}</p>
+                                    {editing && <p className="mt-1 text-xs text-amber-600">Liên hệ lễ tân để thay đổi email.</p>}
                                 </div>
                                 {/* Địa chỉ — full width */}
                                 <div className="md:col-span-2">

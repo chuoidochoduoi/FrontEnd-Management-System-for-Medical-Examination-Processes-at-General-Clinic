@@ -562,7 +562,7 @@ export default function AppointmentDetailPage() {
                             allServices.filter(service => service.departmentType === 'EXAMINATION').map(service => service.id)
                         );
                         if (prev.some(id => examinationIds.has(id))) {
-                            toast.info('Mỗi lượt chỉ được chọn một dịch vụ khám bệnh. Dịch vụ khám cũ đã được thay thế.');
+                            toast.info(t('workflow.singleExaminationReplaced'));
                         }
                         return [...prev.filter(id => !examinationIds.has(id)), serviceId];
                     }
@@ -628,7 +628,7 @@ export default function AppointmentDetailPage() {
             return 'Vui lòng chọn ít nhất một dịch vụ.';
         }
         if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
-            return 'Mỗi lượt khám chỉ được chọn một dịch vụ khám bệnh.';
+            return t('workflow.singleExaminationOnly');
         }
 
         if (!date) {

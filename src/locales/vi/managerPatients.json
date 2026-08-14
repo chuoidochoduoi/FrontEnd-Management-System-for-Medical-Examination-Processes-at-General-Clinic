@@ -1,0 +1,21 @@
+{
+  "title": "Bệnh nhân",
+  "subtitle": "Tra cứu thông tin cá nhân của bệnh nhân tại phòng khám.",
+  "searchPlaceholder": "Tìm theo mã, họ tên hoặc số điện thoại...",
+  "allGenders": "Tất cả giới tính",
+  "allAges": "Tất cả độ tuổi",
+  "filter": "Lọc",
+  "loading": "Đang tải...",
+  "empty": "Không có bệnh nhân phù hợp.",
+  "loadFailed": "Không thể tải danh sách bệnh nhân.",
+  "columns": { "code": "Mã bệnh nhân", "name": "Họ và tên", "birth": "Ngày sinh", "gender": "Giới tính", "birthGender": "Ngày sinh / Giới tính", "phone": "Số điện thoại", "email": "Email", "address": "Địa chỉ", "actions": "Thao tác" },
+  "detail": "Chi tiết bệnh nhân",
+  "viewDetail": "Xem chi tiết",
+  "close": "Đóng",
+  "bloodType": "Nhóm máu",
+  "male": "Nam",
+  "female": "Nữ",
+  "previous": "Trước",
+  "next": "Sau",
+  "showing": "Hiển thị {{from}}–{{to}} / {{total}}"
+}

@@ -719,6 +719,63 @@ export default function ExaminationPage() {
     ] = useState([]);
 
     const [
+        visitTestRequests,
+        setVisitTestRequests,
+    ] = useState([]);
+
+    useEffect(() => {
+        const visitId = examination?.visitId;
+        if (!visitId) {
+            setVisitTestRequests([]);
+            return undefined;
+        }
+
+        const controller = new AbortController();
+        const loadVisitTestRequests = async () => {
+            try {
+                const apiBase =
+                    import.meta.env.VITE_API_URL || 'http://localhost:8080';
+                const response = await fetch(
+                    `${apiBase}/api/v1/test-requests/visit/${visitId}`,
+                    {
+                        headers: authHeader(),
+                        signal: controller.signal,
+                    }
+                );
+                if (!response.ok) {
+                    throw new Error('Không thể tải các chỉ định cận lâm sàng của lượt khám.');
+                }
+                const body = await response.json();
+                const data = body.data ?? body.result ?? body;
+                setVisitTestRequests(Array.isArray(data) ? data : []);
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    setVisitTestRequests([]);
+                }
+            }
+        };
+
+        loadVisitTestRequests();
+        return () => controller.abort();
+    }, [examination?.visitId]);
+
+    const activeVisitTestRequests = visitTestRequests.filter(
+        (request) => request.status !== 'CANCELLED'
+    );
+    const visitTestRequestByServiceId = new Map(
+        activeVisitTestRequests.map((request) => [request.serviceId, request])
+    );
+    const unavailableLabServiceIds = new Set(
+        activeVisitTestRequests
+            .filter(
+                (request) =>
+                    request.linkedToExamination || request.status === 'COMPLETED'
+            )
+            .map((request) => request.serviceId)
+            .filter(Boolean)
+    );
+
+    const [
         recordVersion,
         setRecordVersion,
     ] = useState(null);
@@ -2907,7 +2964,10 @@ export default function ExaminationPage() {
                                                     );
 
                                                 if (
-                                                    service
+                                                    service &&
+                                                    !unavailableLabServiceIds.has(
+                                                        service.serviceId
+                                                    )
                                                 ) {
                                                     labOrders.add(
                                                         {
@@ -2941,10 +3001,29 @@ export default function ExaminationPage() {
                                                         value={
                                                             service.serviceId
                                                         }
+                                                        disabled={
+                                                            unavailableLabServiceIds.has(
+                                                                service.serviceId
+                                                            )
+                                                        }
                                                     >
                                                         {
                                                             service.name
                                                         }
+                                                        {(() => {
+                                                            const existing =
+                                                                visitTestRequestByServiceId.get(
+                                                                    service.serviceId
+                                                                );
+                                                            if (!existing) return '';
+                                                            if (existing.status === 'COMPLETED') {
+                                                                return ' (Đã có kết quả)';
+                                                            }
+                                                            if (existing.linkedToExamination) {
+                                                                return ' (Đã được bác sĩ chỉ định)';
+                                                            }
+                                                            return ' (Đã đặt trước - dùng cho ca khám này)';
+                                                        })()}
                                                     </option>
                                                 )
                                             )}
@@ -3235,21 +3314,6 @@ export default function ExaminationPage() {
                         : tDoctor(
                             'examination.actions.draft'
                         )}
-                </button>
-
-                <button
-                    type="button"
-                    onClick={() =>
-                        window.print()
-                    }
-                    disabled={
-                        completing
-                    }
-                    className="h-10 min-w-[100px] rounded-xl bg-gray-200 px-7 text-sm font-semibold text-gray-700 transition hover:bg-gray-300 disabled:opacity-50"
-                >
-                    {tDoctor(
-                        'examination.actions.print'
-                    )}
                 </button>
 
                 {!isNurse && (

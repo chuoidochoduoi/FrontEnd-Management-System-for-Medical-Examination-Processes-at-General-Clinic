@@ -85,7 +85,10 @@ export function useStaffList() {
 
     const fetchStaffByAccountId = async (accountId) => {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/account/${accountId}`, { headers: bearer() });
-        if (!res.ok) throw new Error("Không thể tải thông tin nhân sự");
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.message || data.error || "Không thể tải thông tin nhân sự");
+        }
         return await res.json();
     };
 

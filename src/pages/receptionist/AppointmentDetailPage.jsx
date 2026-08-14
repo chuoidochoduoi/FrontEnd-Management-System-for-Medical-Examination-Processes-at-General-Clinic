@@ -9,7 +9,6 @@ import {
     UserRound,
     CalendarDays,
     Stethoscope,
-    Save,
     LogIn
 } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -1656,18 +1655,6 @@ export default function AppointmentDetailPage() {
                         </div>
 
                         <div className="flex items-center gap-3">
-
-                            {isEditable && (
-                                <button
-                                    type="button"
-                                    onClick={handleSaveClick}
-                                    disabled={saving || checkingIn}
-                                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 transition hover:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    <Save size={15} />
-                                    {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-                                </button>
-                            )}
 
                             {canCheckIn && (
                                 <button

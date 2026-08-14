@@ -60,13 +60,13 @@ export default function CustomerLayout({ children }) {
         }`;
 
     return (
-        <div className="flex h-screen bg-[#F5F5F7] font-jakarta overflow-hidden relative z-0 selection:bg-black selection:text-white">
+        <div className="flex h-screen bg-[#F5F5F7] font-jakarta overflow-hidden relative z-0 selection:bg-black selection:text-white print:block print:h-auto print:overflow-visible print:bg-white">
 
             {/* Minimalist Background Element (Optional, keeping it clean) */}
             <div className="absolute top-0 right-0 w-[50vw] h-full bg-white/40 -z-10"></div>
 
             {/* ── Sidebar ── */}
-            <aside className="w-64 bg-white/80 backdrop-blur-2xl border-r border-gray-200/60 flex flex-col shrink-0 relative z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+            <aside className="w-64 bg-white/80 backdrop-blur-2xl border-r border-gray-200/60 flex flex-col shrink-0 relative z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)] print:hidden">
                 {/* Logo */}
                 <div className="px-6 py-6 border-b border-gray-100">
                     <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
@@ -114,12 +114,12 @@ export default function CustomerLayout({ children }) {
 
             {/* ── Main ── */}
             <div className="flex-1 flex flex-col overflow-hidden relative z-10">
-                <header className="absolute top-4 right-8 z-20 bg-white/80 backdrop-blur shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100">
+                <header className="absolute top-4 right-8 z-20 bg-white/80 backdrop-blur shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100 print:hidden">
                     <AppPreferencesMenu />
                     <NotificationBell />
                 </header>
                 {/* Page content */}
-                <main className="flex-1 overflow-hidden flex flex-col p-8 pt-16 lg:p-10 lg:pt-16">
+                <main className="flex-1 overflow-hidden flex flex-col p-8 pt-16 lg:p-10 lg:pt-16 print:block print:overflow-visible print:p-0">
                     <motion.div
                         key={location.pathname}
                         initial={{ opacity: 0, y: 15 }}
@@ -131,7 +131,7 @@ export default function CustomerLayout({ children }) {
                     </motion.div>
                 </main>
             </div>
-            <ChatWidget />
+            <div className="print:hidden"><ChatWidget /></div>
         </div>
     );
 }

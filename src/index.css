@@ -185,4 +185,12 @@ html[data-density='compact'] .density-card { padding: .75rem !important; }
 
 @media print {
   html.dark body, html.dark #root { background: white !important; color: black !important; }
+  html.dark #receipt-print-area,
+  html.dark #appointment-print-area,
+  html.dark .prescription-sheet,
+  html.dark .record-sheet { background: white !important; color: black !important; }
+  html.dark #receipt-print-area *,
+  html.dark #appointment-print-area *,
+  html.dark .prescription-sheet *,
+  html.dark .record-sheet * { color: black !important; border-color: #334155 !important; }
 }

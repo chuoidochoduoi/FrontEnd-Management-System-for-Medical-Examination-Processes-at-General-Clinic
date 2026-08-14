@@ -58,6 +58,7 @@ import AttendanceKioskPage from '@/pages/owner/AttendanceKioskPage';
 import AttendanceManagementPage from '@/pages/owner/AttendanceManagementPage';
 import PatientJourneyPage from '@/pages/staff/PatientJourneyPage';
 import WaitingRoomPage from '@/pages/customer/WaitingRoomPage';
+import GuestJourneyPage from '@/pages/guest/GuestJourneyPage';
 import ManagerStaffPage from '@/pages/owner/ManagerStaffPage';
 import {ROUTES} from "@/constants/routes.js";
 
@@ -70,6 +71,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<LoginRegister />} />
         <Route path={ROUTES.APPOINTMENT} element={<AppointmentPage />} />
+        <Route path={ROUTES.GUEST_JOURNEY} element={<GuestJourneyPage />} />
 
         {/* CUSTOMER routes - bệnh nhân */}
         <Route path={ROUTES.CUSTOMER_APPOINTMENT} element={

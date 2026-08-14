@@ -18,6 +18,15 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use((response) => {
     return response;
 }, (error) => {
+    if (!error.response) {
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            error.message = 'Thiết bị đang mất kết nối Internet. Vui lòng kiểm tra mạng và thử lại.';
+        } else if (error.code === 'ECONNABORTED') {
+            error.message = 'Kết nối quá thời gian. Vui lòng thử lại.';
+        } else {
+            error.message = 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.';
+        }
+    }
     if (error.response && error.response.status === 401) {
         // Token expired or unauthorized
         localStorage.removeItem('token');

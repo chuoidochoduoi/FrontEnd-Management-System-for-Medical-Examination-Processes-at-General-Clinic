@@ -378,7 +378,11 @@ export default function AppointmentDetailPage() {
                     MAIN CARD
                 ================================================= */}
 
-                <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                <div id="appointment-print-area" className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                    <div className="hidden border-b-2 border-gray-900 px-6 py-5 text-center print:block">
+                        <p className="text-lg font-bold uppercase">CareS - Phòng khám đa khoa</p>
+                        <h1 className="mt-2 text-2xl font-bold uppercase">Phiếu hẹn khám</h1>
+                    </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-[0.95fr_1.15fr_0.95fr]">
 
@@ -695,6 +699,15 @@ export default function AppointmentDetailPage() {
                     );
                 }}
             />
+            <style>{`
+                @media print {
+                    @page { size: A4 portrait; margin: 12mm; }
+                    body * { visibility: hidden !important; }
+                    #appointment-print-area, #appointment-print-area * { visibility: visible !important; }
+                    #appointment-print-area { position: absolute; inset: 0; width: 100%; margin: 0; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+                    #appointment-print-area button { display: none !important; }
+                }
+            `}</style>
         </PatientLayout>
     );
 }

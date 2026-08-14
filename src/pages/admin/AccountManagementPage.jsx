@@ -283,6 +283,9 @@ function AddStaffModal({ onClose, onSubmit, t }) {
                   ) : (
                     <input
                       type={type}
+                      name={key === 'username' ? 'new-staff-username' : key === 'password' ? 'new-staff-password' : key}
+                      autoComplete={key === 'password' ? 'new-password' : key === 'username' ? 'off' : undefined}
+                      data-lpignore={key === 'username' || key === 'password' ? 'true' : undefined}
                       value={form[key]}
                       onChange={(e) => set(key, e.target.value)}
                       className={inputCls}
@@ -564,6 +567,9 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
               <div>
                 <label className={labelCls}>Tài khoản đăng nhập (Không thể sửa)</label>
                 <input
+                  name="staff-update-username"
+                  autoComplete="off"
+                  data-lpignore="true"
                   value={form.username}
                   disabled
                   className={inputCls + " cursor-not-allowed opacity-70"}
@@ -573,6 +579,9 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
                 <label className={labelCls}>Mật khẩu mới (bỏ trống nếu không đổi)</label>
                 <input
                   type="password"
+                  name="staff-new-password"
+                  autoComplete="new-password"
+                  data-lpignore="true"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Nhập mật khẩu mới"
@@ -845,8 +854,18 @@ export default function AccountManagementPage() {
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"
                 />
                 <input
+                  type="search"
+                  name="staff-directory-search"
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  disabled={showAddStaff || !!editAccount || !!confirmLock}
                   value={staffSearch}
-                  onChange={(e) => handleStaffSearch(e.target.value)}
+                  onChange={(e) => {
+                    if (!showAddStaff && !editAccount && !confirmLock) {
+                      handleStaffSearch(e.target.value);
+                    }
+                  }}
                   placeholder={t("accountManagement.staff.searchPlaceholder")}
                   className="w-full h-10 pl-9 pr-4 text-sm outline-none bg-transparent placeholder:text-gray-300"
                 />
@@ -931,6 +950,7 @@ export default function AccountManagementPage() {
                       <td className={tdCls}>
                         <div className="flex flex-col gap-0.5">
                           <button
+                            type="button"
                             onClick={() => setEditAccount({ ...s, type: 'staff' })}
                             className="text-sm font-semibold text-gray-800 hover:text-primary-500 text-left transition-colors"
                           >
@@ -974,8 +994,18 @@ export default function AccountManagementPage() {
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"
                 />
                 <input
+                  type="search"
+                  name="patient-directory-search"
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  disabled={showAddStaff || !!editAccount || !!confirmLock}
                   value={patientSearch}
-                  onChange={(e) => handlePatientSearch(e.target.value)}
+                  onChange={(e) => {
+                    if (!showAddStaff && !editAccount && !confirmLock) {
+                      handlePatientSearch(e.target.value);
+                    }
+                  }}
                   placeholder={t(
                     "accountManagement.patients.searchPlaceholder",
                   )}

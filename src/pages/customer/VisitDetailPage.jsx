@@ -1461,14 +1461,21 @@ export default function VisitDetailPage() {
                                 quả PDF
                             </p>
 
-                            <button
-                                onClick={
-                                    closePdfPreview
-                                }
-                                className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-white"
-                            >
-                                <X size={17} />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => window.open(previewPdf, '_blank', 'noopener,noreferrer')}
+                                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700"
+                                >
+                                    <Printer size={16} /> Mở để in
+                                </button>
+                                <button
+                                    onClick={closePdfPreview}
+                                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-white"
+                                >
+                                    <X size={17} />
+                                </button>
+                            </div>
                         </div>
 
                         <iframe

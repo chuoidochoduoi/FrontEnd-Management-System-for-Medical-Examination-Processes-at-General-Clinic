@@ -66,7 +66,7 @@ export default function CashierLayout({ children }) {
         }`;
 
     return (
-        <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden">
+        <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden print:block print:h-auto print:overflow-visible print:bg-white">
             {/* Sidebar */}
             <aside className="w-44 bg-white border-r border-gray-200 flex flex-col shrink-0 print:hidden">
                 <SidebarBrand />
@@ -105,11 +105,11 @@ export default function CashierLayout({ children }) {
             </aside>
 
             <div className="flex-1 flex flex-col overflow-hidden relative">
-                <header className="absolute top-4 right-8 z-10 bg-white shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100">
+                <header className="absolute top-4 right-8 z-10 bg-white shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100 print:hidden">
                     <AppPreferencesMenu />
                     <NotificationBell />
                 </header>
-                <main className="flex-1 overflow-y-auto p-8 pt-16">
+                <main className="flex-1 overflow-y-auto p-8 pt-16 print:overflow-visible print:p-0">
                     {children}
                 </main>
             </div>

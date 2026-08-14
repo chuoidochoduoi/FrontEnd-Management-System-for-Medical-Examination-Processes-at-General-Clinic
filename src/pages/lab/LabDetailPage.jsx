@@ -189,7 +189,7 @@ function FileUpload({
                                 >
                                     <Eye size={15} />
 
-                                    Xem
+                                    Xem / in PDF
                                 </button>
                             )}
 

@@ -3,6 +3,7 @@ export const ROUTES = {
     LOGIN: '/login',
     REGISTER: '/register',
     APPOINTMENT: '/appointment',
+    GUEST_JOURNEY: '/guest/journey',
     CUSTOMER_APPOINTMENT: '/customer/appointment',
     WAITING_ROOM: '/customer/waiting-room',
     EXAMINATION: '/doctor/examination/:visitId',

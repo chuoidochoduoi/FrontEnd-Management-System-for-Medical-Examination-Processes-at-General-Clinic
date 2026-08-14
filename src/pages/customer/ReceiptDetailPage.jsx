@@ -687,11 +687,18 @@ export default function ReceiptDetailPage() {
                 <style>
                     {`
                         @media print {
+                            @page { size: A4 portrait; margin: 10mm; }
                             body {
                                 background: white !important;
                             }
 
+                            body * { visibility: hidden !important; }
+
+                            #receipt-paper, #receipt-paper * { visibility: visible !important; }
+
                             #receipt-paper {
+                                position: absolute !important;
+                                inset: 0 !important;
                                 width: 100% !important;
                                 max-width: none !important;
                                 margin: 0 !important;
@@ -702,10 +709,6 @@ export default function ReceiptDetailPage() {
                                 font-size: 11px;
                             }
 
-                            @page {
-                                size: A4 landscape;
-                                margin: 10mm;
-                            }
                         }
                     `}
                 </style>

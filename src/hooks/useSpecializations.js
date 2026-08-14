@@ -15,7 +15,9 @@ export function useSpecializations() {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/specializations?page=0&size=200`, { headers: bearer() });
             if (!res.ok) throw new Error('Cannot load specializations');
             const data = await res.json();
-            setSpecializations(Array.isArray(data.content) ? data.content : []);
+            setSpecializations(Array.isArray(data.content)
+                ? data.content.filter((item) => item.active !== false)
+                : []);
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
     }, []);

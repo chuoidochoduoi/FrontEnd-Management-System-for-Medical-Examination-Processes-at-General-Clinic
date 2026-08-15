@@ -10,10 +10,7 @@ export default function PatientUpdateModal({ patient, onClose, onUpdateSuccess }
         dateOfBirth: patient.dateOfBirth ? patient.dateOfBirth.split('T')[0] : '',
         gender: patient.gender || 'MALE',
         bloodType: patient.bloodType || 'UNKNOWN',
-        address: patient.address || '',
-        height: patient.height || '',
-        weight: patient.weight || '',
-        allergies: patient.allergies || ''
+        address: patient.address || ''
     });
     const [saving, setSaving] = useState(false);
 

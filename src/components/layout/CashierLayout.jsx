@@ -104,7 +104,7 @@ export default function CashierLayout({ children }) {
                 </div>
             </aside>
 
-            <div className="flex-1 flex flex-col overflow-hidden relative">
+            <div className="flex-1 flex flex-col overflow-hidden relative print:block print:overflow-visible">
                 <header className="absolute top-4 right-8 z-10 bg-white shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100 print:hidden">
                     <AppPreferencesMenu />
                     <NotificationBell />

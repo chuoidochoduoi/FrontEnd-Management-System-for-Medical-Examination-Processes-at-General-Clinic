@@ -76,7 +76,7 @@ export default function InvoicePrintPage() {
         <div className="mx-auto max-w-[210mm] px-4 py-6 print:p-0">
             <div className="mb-5 flex items-center justify-between print:hidden">
                 <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 rounded-lg border bg-white px-4 py-2 text-sm"><ChevronLeft size={16}/>Quay lại</button>
-                <button onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white"><Printer size={16}/>In phiếu thu</button>
+                <button onClick={() => { window.print(); return false; }} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white"><Printer size={16}/>In phiếu thu</button>
             </div>
 
             <article id="receipt-print-area" className="receipt-paper bg-white px-[12mm] py-[10mm] text-[12px] leading-relaxed text-slate-950 shadow-lg print:shadow-none">
@@ -84,11 +84,11 @@ export default function InvoicePrintPage() {
                     <div>
                         <p className="text-lg font-black uppercase tracking-wide">CareS</p>
                         <p className="font-bold uppercase">Phòng khám đa khoa</p>
-                        <p className="mt-1 text-[10px]">Địa chỉ: ....................................</p>
-                        <p className="text-[10px]">Điện thoại: .................................</p>
+                        <p className="mt-1 text-[10px]">Địa chỉ: Khu Công nghệ cao Hoà Lạc, Hà Nội</p>
+                        <p className="text-[10px]">Điện thoại: 1900 1234</p>
                     </div>
                     <div className="text-center">
-                        <h1 className="text-2xl font-black uppercase">Phiếu thu</h1>
+                        <h1 style={{ fontFamily: 'Arial, sans-serif' }} className="text-2xl font-black uppercase">Phiếu thu</h1>
                         <p className="mt-1">Ngày lập: {dateTime(paidAt)}</p>
                     </div>
                     <div className="text-right text-[11px]">

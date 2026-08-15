@@ -89,6 +89,10 @@ export default function OwnerLayout({ children }) {
                 </nav>
 
                 <div className="px-2 py-3 border-t border-gray-100 space-y-0.5">
+                    <NavLink to={ROUTES.PROFILE} className={linkClass}>
+                        <UserRound size={15} className="shrink-0" />
+                        {t('sidebar.profile') || 'Hồ sơ cá nhân'}
+                    </NavLink>
                     <NavLink to={ROUTES.SETTINGS} className={linkClass}>
                         <Settings size={15} className="shrink-0" />
                         {t('sidebar.settings')}

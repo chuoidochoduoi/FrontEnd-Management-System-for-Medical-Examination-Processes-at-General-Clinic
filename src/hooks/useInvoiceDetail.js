@@ -120,6 +120,8 @@ export function useInvoiceDetail(invoiceId) {
         `${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}/print`, '_blank'
     );
 
+    const [generatingQR, setGeneratingQR] = useState(false);
+
     const checkQRPayment = async () => {
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}`, {
@@ -136,8 +138,37 @@ export function useInvoiceDetail(invoiceId) {
         }
     };
 
+    const generateQRPayment = async () => {
+        const paymentWindow = window.open('about:blank', '_blank');
+        
+        setGeneratingQR(true);
+        setError('');
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}/payos`, {
+                method: 'POST',
+                headers: bearer()
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Không thể tạo link thanh toán.');
+            
+            toast.success('Đã tạo link thanh toán QR');
+            
+            if (data.paymentLink && paymentWindow) {
+                paymentWindow.location.href = data.paymentLink;
+            } else if (paymentWindow) {
+                paymentWindow.close();
+            }
+        } catch (err) {
+            if (paymentWindow) paymentWindow.close();
+            setError(err.message || 'Không thể tạo link thanh toán.');
+            toast.error(err.message || 'Không thể tạo link thanh toán.');
+        } finally {
+            setGeneratingQR(false);
+        }
+    };
+
     return {
-        invoice, insurances, loading, confirming, applyingInsurance, error,
-        confirmPayment, applyInsurance, printReceipt, checkQRPayment
+        invoice, insurances, loading, confirming, applyingInsurance, generatingQR, error,
+        confirmPayment, applyInsurance, printReceipt, checkQRPayment, generateQRPayment
     };
 }

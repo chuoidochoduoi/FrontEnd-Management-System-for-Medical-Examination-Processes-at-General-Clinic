@@ -156,8 +156,8 @@ export default function ReceptionistSupportPage() {
                                         <div className="flex items-center justify-between mt-1">
                                             <div className="flex items-center gap-1.5">
                                                 <span className={`w-2 h-2 rounded-full ${s.status === 'WAITING_FOR_AGENT' ? 'bg-orange-400 animate-pulse' : s.status === 'IN_PROGRESS' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                                                <p className="text-xs text-gray-500 truncate">
-                                                    {s.status === 'WAITING_FOR_AGENT' ? 'Đang chờ lễ tân' : s.status === 'IN_PROGRESS' ? 'Đang xử lý' : 'Đã kết thúc'}
+                                                <p className="text-xs font-mono text-gray-500 truncate">
+                                                    {s.patientCode}
                                                 </p>
                                             </div>
                                             {s.updatedAt && <p className="text-[10px] text-gray-400">{new Date(s.updatedAt).toLocaleDateString('vi-VN')}</p>}
@@ -177,7 +177,7 @@ export default function ReceptionistSupportPage() {
                             <div className="bg-white p-5 border-b border-gray-100 flex justify-between items-center shadow-sm z-10">
                                 <div>
                                     <h3 className="font-bold text-gray-900">{activeSession.customerName}</h3>
-                                    <p className="text-xs text-gray-500 mt-0.5">Trạng thái: {activeSession.status}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">Mã BN: <span className="font-mono font-medium">{activeSession.patientCode}</span></p>
                                 </div>
                                 {activeSession.status !== 'CLOSED' && (
                                     <button

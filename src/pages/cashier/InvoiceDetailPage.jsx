@@ -3,7 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import CashierLayout from '@/components/layout/CashierLayout';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import { useInvoiceDetail } from '@/hooks/useInvoiceDetail';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import { ROUTES } from '@/constants/routes';
 
 /* ── helpers ── */
@@ -33,16 +35,24 @@ export default function InvoiceDetailPage() {
     const navigate = useNavigate();
     const { t }  = useTranslation('cashier');
     const {
-        invoice, insurances, loading, confirming, applyingInsurance, error,
-        confirmPayment, applyInsurance, checkQRPayment
+        invoice, insurances, loading, confirming, applyingInsurance, generatingQR, error,
+        confirmPayment, applyInsurance, checkQRPayment, generateQRPayment
     } =
         useInvoiceDetail(id);
     const [selectedInsuranceId, setSelectedInsuranceId] = useState('');
     const [bhytCode, setBhytCode] = useState('');
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
     useEffect(() => {
         if (invoice?.bhytCode) setBhytCode(invoice.bhytCode);
     }, [invoice?.bhytCode]);
+
+    // Lắng nghe sự kiện thanh toán thành công qua Webhook
+    useWebSocket('/topic/cashier-invoices', null, (message) => {
+        if (message === 'INVOICE_UPDATED') {
+            checkQRPayment(); // Tự động load lại nếu có thay đổi
+        }
+    });
 
     const handleApplyInsurance = () => {
         if (!selectedInsuranceId || !bhytCode.trim()) return;
@@ -272,17 +282,18 @@ export default function InvoiceDetailPage() {
                         {invoice?.status === 'pending' && (
                             <>
                                 <button
-                                    onClick={confirmPayment}
+                                    onClick={() => setIsConfirmModalOpen(true)}
                                     disabled={confirming}
                                     className="px-6 h-10 bg-gray-900 hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl transition-colors"
                                 >
                                     {confirming ? t('invoiceDetail.actions.confirming') : t('invoiceDetail.actions.confirm')}
                                 </button>
                                 <button
-                                    onClick={checkQRPayment}
-                                    className="px-6 h-10 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors"
+                                    onClick={generateQRPayment}
+                                    disabled={generatingQR}
+                                    className="px-6 h-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl transition-colors"
                                 >
-                                    Thanh toán QR
+                                    {generatingQR ? 'Đang tạo QR...' : 'Thanh toán QR'}
                                 </button>
                             </>
                         )}
@@ -297,6 +308,19 @@ export default function InvoiceDetailPage() {
                     </div>
                 </div>
             </div>
+
+            <ConfirmModal
+                isOpen={isConfirmModalOpen}
+                onClose={() => setIsConfirmModalOpen(false)}
+                onConfirm={() => {
+                    setIsConfirmModalOpen(false);
+                    confirmPayment();
+                }}
+                title="Xác nhận thanh toán tiền mặt"
+                message="Bạn có chắc chắn đã nhận đủ tiền mặt từ bệnh nhân và muốn hoàn tất thanh toán cho hóa đơn này?"
+                confirmText="Xác nhận đã thu tiền"
+                isDanger={false}
+            />
         </CashierLayout>
     );
 }

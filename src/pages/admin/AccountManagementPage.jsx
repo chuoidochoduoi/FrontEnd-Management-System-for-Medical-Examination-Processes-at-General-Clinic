@@ -982,23 +982,25 @@ export default function AccountManagementPage() {
                         </span>
                       </td>
                       <td className={tdCls}>
-                        <div className="flex flex-col gap-0.5">
-                          <button
-                            type="button"
-                            onClick={() => setEditAccount({ ...s, type: 'staff' })}
-                            className="text-sm font-semibold text-gray-800 hover:text-primary-500 text-left transition-colors"
-                          >
-                            Chỉnh sửa
-                          </button>
-                          <button
-                            onClick={() => setConfirmLock({ id: s.accountId, type: 'staff', isActive: s.isActive })}
-                            className="text-sm text-gray-400 hover:text-red-500 text-left transition-colors"
-                          >
-                            {s.isActive
-                              ? t("accountManagement.staff.actions.lock")
-                              : t("accountManagement.staff.actions.unlock")}
-                          </button>
-                        </div>
+                        {s.systemRole !== "ADMIN" && s.systemRole !== "CLINIC_MANAGER" && (
+                          <div className="flex flex-col gap-0.5">
+                            <button
+                              type="button"
+                              onClick={() => setEditAccount({ ...s, type: 'staff' })}
+                              className="text-sm font-semibold text-gray-800 hover:text-primary-500 text-left transition-colors"
+                            >
+                              Chỉnh sửa
+                            </button>
+                            <button
+                              onClick={() => setConfirmLock({ id: s.accountId, type: 'staff', isActive: s.isActive })}
+                              className="text-sm text-gray-400 hover:text-red-500 text-left transition-colors"
+                            >
+                              {s.isActive
+                                ? t("accountManagement.staff.actions.lock")
+                                : t("accountManagement.staff.actions.unlock")}
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}

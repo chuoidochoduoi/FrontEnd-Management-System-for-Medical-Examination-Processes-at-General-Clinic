@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Building2, Tag, Users, LogOut, Settings, LayoutDashboard, Activity, Stethoscope, Wrench, Clock } from 'lucide-react';
+import { Building2, Tag, Users, LogOut, Settings, LayoutDashboard, Activity, Stethoscope, Wrench, Clock, UserRound } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
 import SidebarBrand from './SidebarBrand';
@@ -91,6 +91,10 @@ export default function AdminLayout({ children }) {
                 </nav>
 
                 <div className="px-2 py-3 border-t border-gray-100 space-y-0.5">
+                    <NavLink to={ROUTES.STAFF_PROFILE} className={linkClass}>
+                        <UserRound size={15} className="shrink-0" />
+                        {tCommon('sidebar.profile') || 'Hồ sơ cá nhân'}
+                    </NavLink>
                     <NavLink to={ROUTES.SETTINGS} className={linkClass}>
                         <Settings size={15} className="shrink-0" />
                         {tCommon('sidebar.settings')}

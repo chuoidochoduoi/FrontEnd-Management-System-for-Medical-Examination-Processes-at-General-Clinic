@@ -175,7 +175,7 @@ export default function RecordsManagementPage() {
                                     Xem chi tiết
                                 </button>
                                 <button
-                                    onClick={() => navigate(`${ROUTES.RECEPTIONIST_CREATE_TICKET}?phone=${rec.phone}`)}
+                                    onClick={() => navigate(`${ROUTES.RECEPTIONIST_CREATE_TICKET}?customerId=${rec.id}&phone=${rec.phone || ''}`)}
                                     className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors"
                                 >
                                     📋 Tạo phiếu khám

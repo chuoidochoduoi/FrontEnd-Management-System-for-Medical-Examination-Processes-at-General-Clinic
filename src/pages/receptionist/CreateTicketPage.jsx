@@ -168,18 +168,38 @@ export default function CreateTicketPage() {
     ========================================================= */
 
     useEffect(() => {
-        const queryPhone =
-            searchParams.get('phone');
-
-        const queryCustomerId =
-            searchParams.get(
-                'customerId'
-            );
+        const queryPhone = searchParams.get('phone');
+        const queryCustomerId = searchParams.get('customerId');
 
         if (queryCustomerId) {
-            setCustomerId(
-                queryCustomerId
-            );
+            setCustomerId(queryCustomerId);
+            // Fetch directly by customerId
+            fetch(
+                `${import.meta.env.VITE_API_URL}/api/receptionist/records/customers/${queryCustomerId}`,
+                { headers: { Authorization: `Bearer ${getToken()}` } }
+            )
+            .then(async (response) => {
+                if (!response.ok) throw new Error('Không thể tải hồ sơ bệnh nhân');
+                return response.json();
+            })
+            .then((data) => {
+                const patient = data?.data || data;
+                if (!patient) return;
+                
+                setFullName(patient.fullName || '');
+                setPhone(patient.phone || '');
+                if (patient.dateOfBirth) setDob(patient.dateOfBirth.split('T')[0]);
+                if (patient.gender) {
+                    const normalizedGender = patient.gender.toLowerCase();
+                    setGender(normalizedGender === 'male' || normalizedGender === 'female' ? normalizedGender : 'other');
+                }
+                setAddress(patient.address || '');
+            })
+            .catch(error => {
+                console.error(error);
+                toast.error('Không thể tải thông tin bệnh nhân tái khám');
+            });
+            return; // Skip phone fetch since we already fetched by ID
         }
 
         if (!queryPhone) {
@@ -187,104 +207,33 @@ export default function CreateTicketPage() {
         }
 
         fetch(
-            `${
-                import.meta.env
-                    .VITE_API_URL
-            }/api/receptionist/records/search-by-phone?phone=${encodeURIComponent(
-                queryPhone
-            )}`,
-            {
-                headers: {
-                    Authorization: `Bearer ${getToken()}`,
-                },
-            }
+            `${import.meta.env.VITE_API_URL}/api/receptionist/records/search-by-phone?phone=${encodeURIComponent(queryPhone)}`,
+            { headers: { Authorization: `Bearer ${getToken()}` } }
         )
             .then(async (response) => {
-                if (!response.ok) {
-                    throw new Error(
-                        'Không thể tải hồ sơ bệnh nhân'
-                    );
-                }
-
+                if (!response.ok) throw new Error('Không thể tải hồ sơ bệnh nhân');
                 return response.json();
             })
             .then((data) => {
-                const patients =
-                    Array.isArray(data)
-                        ? data
-                        : data?.data ||
-                        data?.content ||
-                        [];
-
-                if (
-                    patients.length ===
-                    0
-                ) {
-                    toast.error(
-                        'Không tìm thấy hồ sơ bệnh nhân theo số điện thoại'
-                    );
-
+                const patients = Array.isArray(data) ? data : data?.data || data?.content || [];
+                if (patients.length === 0) {
+                    toast.error('Không tìm thấy hồ sơ bệnh nhân theo số điện thoại');
                     return;
                 }
-
-                const patient =
-                    patients.find(
-                        (item) =>
-                            item.customerId ===
-                            queryCustomerId
-                    ) || patients[0];
-
-                if (
-                    patient.customerId
-                ) {
-                    setCustomerId(
-                        patient.customerId
-                    );
-                }
-
-                setFullName(
-                    patient.fullName ||
-                    ''
-                );
-
-                setPhone(
-                    patient.phone || ''
-                );
-
-                if (
-                    patient.dateOfBirth
-                ) {
-                    setDob(
-                        patient.dateOfBirth.split(
-                            'T'
-                        )[0]
-                    );
-                }
-
+                const patient = patients.find(item => item.customerId === queryCustomerId) || patients[0];
+                if (patient.customerId) setCustomerId(patient.customerId);
+                setFullName(patient.fullName || '');
+                setPhone(patient.phone || '');
+                if (patient.dateOfBirth) setDob(patient.dateOfBirth.split('T')[0]);
                 if (patient.gender) {
-                    const normalizedGender =
-                        patient.gender.toLowerCase();
-
-                    setGender(
-                        normalizedGender ===
-                        'male' ||
-                        normalizedGender ===
-                        'female'
-                            ? normalizedGender
-                            : 'other'
-                    );
+                    const normalizedGender = patient.gender.toLowerCase();
+                    setGender(normalizedGender === 'male' || normalizedGender === 'female' ? normalizedGender : 'other');
                 }
-
-                setAddress(
-                    patient.address || ''
-                );
+                setAddress(patient.address || '');
             })
             .catch((error) => {
                 console.error(error);
-
-                toast.error(
-                    'Không thể tải thông tin bệnh nhân tái khám'
-                );
+                toast.error('Không thể tải thông tin bệnh nhân tái khám');
             });
     }, [searchParams]);
 

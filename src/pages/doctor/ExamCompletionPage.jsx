@@ -47,8 +47,8 @@ export default function ExamCompletionPage() {
 
                 <section className="flex flex-wrap justify-end gap-3 rounded-2xl border border-gray-200 bg-white p-5">
                     <button onClick={() => navigate(ROUTES.DOCTOR_ROOMS)} className="flex h-10 items-center gap-2 rounded-xl border border-gray-200 px-5 text-sm"><ArrowLeft size={16}/> Về danh sách phòng</button>
-                    {medicines.length > 0 && <button onClick={() => go(ROUTES.DOCTOR_PRESCRIPTION_PREVIEW)} className="flex h-10 items-center gap-2 rounded-xl border border-primary-500 px-5 text-sm font-semibold text-primary-600"><Pill size={16}/> Xem và in đơn thuốc</button>}
-                    <button onClick={() => go(ROUTES.DOCTOR_MEDICAL_RECORD_PRINT)} className="flex h-10 items-center gap-2 rounded-xl bg-gray-900 px-5 text-sm font-semibold text-white"><FileText size={16}/> Xem và in bệnh án</button>
+                    {!data.waitingForTests && medicines.length > 0 && <button onClick={() => go(ROUTES.DOCTOR_PRESCRIPTION_PREVIEW)} className="flex h-10 items-center gap-2 rounded-xl border border-primary-500 px-5 text-sm font-semibold text-primary-600"><Pill size={16}/> Xem và in đơn thuốc</button>}
+                    {!data.waitingForTests && <button onClick={() => go(ROUTES.DOCTOR_MEDICAL_RECORD_PRINT)} className="flex h-10 items-center gap-2 rounded-xl bg-gray-900 px-5 text-sm font-semibold text-white"><FileText size={16}/> Xem và in bệnh án</button>}
                 </section>
             </div>
         </div>

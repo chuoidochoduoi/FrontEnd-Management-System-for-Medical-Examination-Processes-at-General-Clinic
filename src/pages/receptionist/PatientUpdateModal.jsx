@@ -27,7 +27,7 @@ export default function PatientUpdateModal({ patient, onClose, onUpdateSuccess }
         setSaving(true);
         try {
             const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/customers/${patient.id || patient.profileId}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/customers/${patient.customerId || patient.id || patient.profileId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

@@ -607,13 +607,12 @@ export default function MyAppointmentsPage() {
                                     );
 
                                     isPast =
-                                        appointmentDate <=
+                                        appointmentDate <
                                         today;
                                 }
 
                                 const isActive =
-                                    normalizedStatus ===
-                                    'upcoming' &&
+                                    (normalizedStatus === 'scheduled' || normalizedStatus === 'pending' || normalizedStatus === 'rescheduled') &&
                                     !isPast;
 
                                 const isDone =

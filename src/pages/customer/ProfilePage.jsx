@@ -725,13 +725,13 @@ export default function ProfilePage() {
                                                 </div>
                                             </div>
                                             <div>
-                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${(appt.status || '').toUpperCase() === 'UPCOMING' || (appt.status || '').toUpperCase() === 'CHECKED_IN'
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${['PENDING', 'SCHEDULED', 'RESCHEDULED', 'CHECKED_IN'].includes((appt.status || '').toUpperCase())
                                                     ? 'bg-blue-50 text-blue-600 border border-blue-100'
                                                     : (appt.status || '').toUpperCase() === 'CANCELLED'
                                                         ? 'bg-red-50 text-red-600 border border-red-100'
                                                         : 'bg-green-50 text-green-600 border border-green-100'
                                                     }`}>
-                                                    {(appt.status || '').toUpperCase() === 'UPCOMING' || (appt.status || '').toUpperCase() === 'CHECKED_IN'
+                                                    {['PENDING', 'SCHEDULED', 'RESCHEDULED', 'CHECKED_IN'].includes((appt.status || '').toUpperCase())
                                                         ? t('profile.appointments.statusUpcoming')
                                                         : (appt.status || '').toUpperCase() === 'CANCELLED'
                                                             ? t('profile.appointments.statusCancelled')

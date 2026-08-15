@@ -73,6 +73,7 @@ const statusClass = (status) => {
     switch (normalizeStatus(status)) {
         case 'scheduled':
         case 'pending':
+        case 'rescheduled':
             return 'border-gray-300 bg-gray-50 text-gray-700';
 
         case 'completed':
@@ -186,16 +187,13 @@ export default function AppointmentDetailPage() {
             0
         );
 
-        if (
-            appointmentDate <=
-            today
-        ) {
+        if (appointmentDate < today) {
             isPast = true;
         }
     }
 
     const isActive =
-        (normStatus === 'scheduled' || normStatus === 'pending') &&
+        (normStatus === 'scheduled' || normStatus === 'pending' || normStatus === 'rescheduled') &&
         !isPast;
 
     const weekday =

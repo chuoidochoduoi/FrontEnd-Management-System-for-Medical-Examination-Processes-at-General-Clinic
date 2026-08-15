@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Edit2 } from 'lucide-react';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { ROUTES } from '@/constants/routes';
+import PatientUpdateModal from './PatientUpdateModal';
 
 const token = () => localStorage.getItem('token') || sessionStorage.getItem('token');
 const value = (data) => data || '-';
@@ -14,30 +15,32 @@ export default function PatientDetailPage() {
     const [visits, setVisits] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [showUpdateModal, setShowUpdateModal] = useState(false);
+
+    const load = async () => {
+        setLoading(true); setError('');
+        try {
+            const headers = { Authorization: `Bearer ${token()}` };
+            const [patientRes, visitsRes] = await Promise.all([
+                fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/customers/${id}`, { headers }),
+                fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/customers/${id}/visits?page=0&size=100&sort=createdAt,desc`, { headers }),
+            ]);
+            if (!patientRes.ok || !visitsRes.ok) throw new Error('Không thể tải hồ sơ bệnh nhân.');
+            const patientData = await patientRes.json();
+            const visitData = await visitsRes.json();
+            const rows = visitData.items ?? visitData.content ?? (Array.isArray(visitData) ? visitData : []);
+            setPatient(patientData);
+            setVisits(Array.from(new Map(rows.map(item => [item.visitId || item.id, item])).values()));
+        } catch (e) { setError(e.message); }
+        finally { setLoading(false); }
+    };
 
     useEffect(() => {
-        const load = async () => {
-            setLoading(true); setError('');
-            try {
-                const headers = { Authorization: `Bearer ${token()}` };
-                const [patientRes, visitsRes] = await Promise.all([
-                    fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/customers/${id}`, { headers }),
-                    fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/customers/${id}/visits?page=0&size=100&sort=createdAt,desc`, { headers }),
-                ]);
-                if (!patientRes.ok || !visitsRes.ok) throw new Error('Không thể tải hồ sơ bệnh nhân.');
-                const patientData = await patientRes.json();
-                const visitData = await visitsRes.json();
-                const rows = visitData.items ?? visitData.content ?? (Array.isArray(visitData) ? visitData : []);
-                setPatient(patientData);
-                setVisits(Array.from(new Map(rows.map(item => [item.visitId || item.id, item])).values()));
-            } catch (e) { setError(e.message); }
-            finally { setLoading(false); }
-        };
         load();
     }, [id]);
 
     return <ReceptionistLayout><div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex items-center justify-between"><div><h1 className="text-xl font-bold text-gray-900">Chi tiết bệnh nhân</h1><p className="mt-1 text-sm text-gray-400">Thông tin cá nhân và các lượt khám trước đây.</p></div><button onClick={() => navigate(ROUTES.RECEPTIONIST_RECORDS)} className="flex items-center gap-2 text-sm text-gray-500"><ArrowLeft size={16}/> Quay lại</button></div>
+        <div className="flex items-center justify-between"><div><h1 className="text-xl font-bold text-gray-900">Chi tiết bệnh nhân</h1><p className="mt-1 text-sm text-gray-400">Thông tin cá nhân và các lượt khám trước đây.</p></div><div className="flex items-center gap-3"><button onClick={() => setShowUpdateModal(true)} className="flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"><Edit2 size={16} />Cập nhật</button><button onClick={() => navigate(ROUTES.RECEPTIONIST_RECORDS)} className="flex items-center gap-2 text-sm text-gray-500"><ArrowLeft size={16}/> Quay lại</button></div></div>
         {loading && <p className="py-16 text-center text-sm text-gray-400">Đang tải...</p>}
         {error && <p className="py-16 text-center text-sm text-red-500">{error}</p>}
         {patient && <>
@@ -50,5 +53,16 @@ export default function PatientDetailPage() {
                 </button>)}
             </section>
         </>}
+
+        {showUpdateModal && patient && (
+            <PatientUpdateModal 
+                patient={patient} 
+                onClose={() => setShowUpdateModal(false)} 
+                onUpdateSuccess={() => {
+                    setShowUpdateModal(false);
+                    load();
+                }} 
+            />
+        )}
     </div></ReceptionistLayout>;
 }

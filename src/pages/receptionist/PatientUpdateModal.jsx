@@ -106,25 +106,9 @@ export default function PatientUpdateModal({ patient, onClose, onUpdateSuccess }
                                     <option value="AB_MINUS">AB-</option>
                                 </select>
                             </div>
-                            
-                            <div className="col-span-2 sm:col-span-1">
-                                <label className="mb-1 block text-xs font-medium text-gray-700">Chiều cao (cm)</label>
-                                <input type="number" name="height" value={formData.height} onChange={handleChange} className="h-10 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none transition focus:border-gray-900 focus:ring-1 focus:ring-gray-900" />
-                            </div>
-
-                            <div className="col-span-2 sm:col-span-1">
-                                <label className="mb-1 block text-xs font-medium text-gray-700">Cân nặng (kg)</label>
-                                <input type="number" name="weight" value={formData.weight} onChange={handleChange} className="h-10 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none transition focus:border-gray-900 focus:ring-1 focus:ring-gray-900" />
-                            </div>
-
                             <div className="col-span-2">
                                 <label className="mb-1 block text-xs font-medium text-gray-700">Địa chỉ</label>
                                 <input type="text" name="address" value={formData.address} onChange={handleChange} className="h-10 w-full rounded-xl border border-gray-200 px-3 text-sm outline-none transition focus:border-gray-900 focus:ring-1 focus:ring-gray-900" />
-                            </div>
-
-                            <div className="col-span-2">
-                                <label className="mb-1 block text-xs font-medium text-gray-700">Dị ứng</label>
-                                <textarea name="allergies" value={formData.allergies} onChange={handleChange} rows="2" className="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-gray-900 focus:ring-1 focus:ring-gray-900" />
                             </div>
                         </div>
                     </div>

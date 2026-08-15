@@ -229,8 +229,8 @@ export default function AppointmentDetailPage() {
     ).toUpperCase();
 
     const canCheckIn =
-        currentStatus === 'PENDING';
-    const isEditable = currentStatus === 'PENDING';
+        currentStatus === 'PENDING' || currentStatus === 'RESCHEDULED';
+    const isEditable = currentStatus === 'PENDING' || currentStatus === 'RESCHEDULED';
 
     // =========================================================
     // FETCH SHIFTS
@@ -1665,6 +1665,16 @@ export default function AppointmentDetailPage() {
                         </div>
 
                         <div className="flex items-center gap-3">
+                            {isEditable && (
+                                <button
+                                    type="button"
+                                    onClick={handleSaveClick}
+                                    disabled={saving || checkingIn}
+                                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-7 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                                </button>
+                            )}
 
                             {canCheckIn && (
                                 <button

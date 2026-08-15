@@ -70,10 +70,9 @@ const getWeekday = (dateString) => {
 };
 
 const statusClass = (status) => {
-    switch (
-        normalizeStatus(status)
-        ) {
-        case 'upcoming':
+    switch (normalizeStatus(status)) {
+        case 'scheduled':
+        case 'pending':
             return 'border-gray-300 bg-gray-50 text-gray-700';
 
         case 'completed':
@@ -196,8 +195,7 @@ export default function AppointmentDetailPage() {
     }
 
     const isActive =
-        normStatus ===
-        'upcoming' &&
+        (normStatus === 'scheduled' || normStatus === 'pending') &&
         !isPast;
 
     const weekday =

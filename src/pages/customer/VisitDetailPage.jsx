@@ -11,6 +11,7 @@ import {
     FlaskConical,
     HeartPulse,
     Printer,
+    RotateCcw,
     Star,
     Stethoscope,
     X,
@@ -19,6 +20,7 @@ import {
 import PatientLayout from '@/components/layout/CustomerLayout';
 import { useVisitDetail } from '@/hooks/useMedicalHistory';
 import { ROUTES } from '@/constants/routes';
+import PatientAllergyBanner from '@/components/clinical/PatientAllergyBanner';
 
 /* =========================================================
    HELPERS
@@ -266,6 +268,12 @@ function TestItem({
                                 ? formatDateTime(test.createdAt)
                                 : '-'}
                     </p>
+
+                    {test?.orderingServiceName && (
+                        <p className="mt-1 truncate text-[10px] text-primary-600">
+                            Từ phiếu: {test.orderingServiceName}
+                        </p>
+                    )}
 
                     <span
                         className={`mt-1 inline-flex rounded border px-1.5 py-0.5 text-[9px] font-medium ${cfg.cls}`}
@@ -545,7 +553,21 @@ function TestDetail({
             <div className="p-5">
 
                 {/* INFO */}
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-5">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-6">
+                    <div>
+                        <p className="mb-1 text-xs text-gray-400">
+                            Phiếu khám chỉ định
+                        </p>
+
+                        <p className="text-sm font-medium text-gray-800">
+                            {test.orderingServiceName || 'Dịch vụ đặt trực tiếp'}
+                        </p>
+
+                        {test.orderingRecordCode && (
+                            <p className="mt-1 text-xs text-gray-400">{test.orderingRecordCode}</p>
+                        )}
+                    </div>
+
                     <div>
                         <p className="mb-1 text-xs text-gray-400">
                             Phòng thực hiện
@@ -658,6 +680,10 @@ function TestDetail({
                     </div>
                 )}
 
+                {test?.attachments?.length > 0 && <div className="mt-5 flex flex-wrap gap-2">
+                    {test.attachments.map(attachment => <button key={attachment.attachmentId} type="button" onClick={() => onOpenPdf(attachment.url)} className="inline-flex items-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-3 py-2 text-sm font-medium text-primary-700"><FileText size={15}/>{attachment.originalName || 'Xem tệp kết quả'}</button>)}
+                </div>}
+
                 {/* PDF */}
                 {test.pdfUrl && (
                     <div className="mt-5">
@@ -669,7 +695,7 @@ function TestDetail({
                             className="inline-flex h-10 items-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-medium text-white transition hover:bg-gray-700"
                         >
                             <FileText size={16} />
-                            Xem trước phiếu kết quả PDF
+                            Tải phiếu kết quả
                         </button>
                     </div>
                 )}
@@ -738,6 +764,16 @@ export default function VisitDetailPage() {
     const selectedTest =
         tests[activeTest] ?? null;
 
+    const sameDayReferencedResults = (visit?.sameDayReferencedResults ?? []).map(item => ({
+        ...item,
+        id: item.testRequestId,
+        name: item.serviceName,
+        status: 'COMPLETED',
+        departmentName: item.performingDepartmentName,
+        performedBy: item.verifiedByName,
+        performedAt: item.verifiedAt,
+    }));
+
     useEffect(() => {
         if (activeExam >= examinations.length) {
             setActiveExam(0);
@@ -768,6 +804,48 @@ export default function VisitDetailPage() {
         return Array.from(names);
     }, [examinations, tests]);
 
+    const journeySteps = useMemo(() => {
+        const steps = [];
+        const linkedTestIds = new Set();
+        examinations.forEach((exam) => {
+            steps.push({
+                key: `exam-${exam.recordId}`,
+                type: 'EXAMINATION',
+                title: exam.serviceName || 'Khám bệnh',
+                subtitle: exam.doctorName ? `BS. ${exam.doctorName}` : 'Khám bệnh',
+            });
+            const linkedTests = tests.filter(
+                test => String(test.orderingRecordId || '') === String(exam.recordId)
+            );
+            linkedTests.forEach((test) => {
+                linkedTestIds.add(test.id || test.testRequestId);
+                steps.push({
+                    key: `test-${test.id || test.testRequestId}`,
+                    type: 'PARACLINICAL',
+                    title: test.name || 'Cận lâm sàng',
+                    subtitle: test.departmentName || 'Phòng cận lâm sàng',
+                });
+            });
+            if (linkedTests.length > 0) {
+                steps.push({
+                    key: `return-${exam.recordId}`,
+                    type: 'RETURN',
+                    title: `Quay lại ${exam.serviceName || 'phòng khám'}`,
+                    subtitle: 'Bác sĩ xem kết quả và kết luận',
+                });
+            }
+        });
+        tests.filter(test => !linkedTestIds.has(test.id || test.testRequestId)).forEach((test) => {
+            steps.push({
+                key: `standalone-${test.id || test.testRequestId}`,
+                type: 'PARACLINICAL',
+                title: test.name || 'Cận lâm sàng',
+                subtitle: test.departmentName || 'Dịch vụ đặt trực tiếp',
+            });
+        });
+        return steps;
+    }, [examinations, tests]);
+
     // Trang chi tiet phai tuan theo trang thai tong hop tu backend, thay vi
     // tu suy doan tu PDF (PDF co the da tai len khi yeu cau chua duoc ky xong).
     const completed = visit?.status === 'COMPLETED';
@@ -776,7 +854,7 @@ export default function VisitDetailPage() {
        PDF
     ===================================================== */
 
-    const openPdfPreview = async (url) => {
+    const openPdfPreview = (url) => {
         try {
             const fullUrl =
                 url.startsWith('http')
@@ -791,29 +869,11 @@ export default function VisitDetailPage() {
                 localStorage.getItem('token') ||
                 sessionStorage.getItem('token');
 
-            const response = await fetch(
-                fullUrl,
-                {
-                    headers: token
-                        ? {
-                            Authorization: `Bearer ${token}`,
-                        }
-                        : {},
-                }
-            );
+            const separator = fullUrl.includes('?') ? '&' : '?';
+            const authUrl = token ? `${fullUrl}${separator}token=${token}` : fullUrl;
 
-            if (!response.ok) {
-                throw new Error(
-                    'Không thể mở phiếu kết quả PDF'
-                );
-            }
-
-            const blob =
-                await response.blob();
-
-            setPreviewPdf(
-                URL.createObjectURL(blob)
-            );
+            // Mở trực tiếp trong tab mới
+            window.open(authUrl, '_blank', 'noopener,noreferrer');
         } catch (err) {
             console.error(err);
             toast.error(err?.message || 'Không thể mở phiếu kết quả PDF');
@@ -1102,6 +1162,7 @@ export default function VisitDetailPage() {
                         )}
                     </div>
                 </div>
+
             </div>
         );
     };
@@ -1175,7 +1236,7 @@ export default function VisitDetailPage() {
                                     fullName: visit?.patientName, dateOfBirth: visit?.patientDateOfBirth,
                                     gender: visit?.patientGender, phone: visit?.patientPhone, address: visit?.patientAddress,
                                 }, serviceName: selectedExam.serviceName, completedAt: selectedExam.completedAt,
-                                    departmentName: selectedExam.departmentName } }
+                                    departmentName: selectedExam.departmentName, patientAllergies: visit?.patientAllergies } }
                             )}
                             className="inline-flex h-10 items-center gap-2 rounded-xl bg-gray-900 px-5 text-sm font-medium text-white transition hover:bg-gray-700"
                         >
@@ -1243,6 +1304,37 @@ export default function VisitDetailPage() {
                         value={doctors.length}
                     />
                 </div>
+
+                <PatientAllergyBanner value={visit?.patientAllergies} currentLabel className="mb-5"/>
+
+                {journeySteps.length > 0 && (
+                    <section className="mb-5 rounded-xl border border-gray-200 bg-white p-4">
+                        <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">
+                            Hành trình của lượt khám
+                        </h2>
+                        <div className="flex gap-3 overflow-x-auto pb-1">
+                            {journeySteps.map((step, index) => {
+                                const Icon = step.type === 'EXAMINATION'
+                                    ? Stethoscope
+                                    : step.type === 'RETURN'
+                                        ? RotateCcw
+                                        : FlaskConical;
+                                return (
+                                    <div key={step.key} className="flex shrink-0 items-center gap-3">
+                                        {index > 0 && <ChevronRight size={16} className="text-gray-300"/>}
+                                        <div className="min-w-[190px] rounded-xl border border-gray-100 bg-gray-50 p-3">
+                                            <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-primary-50 text-primary-600">
+                                                <Icon size={16}/>
+                                            </div>
+                                            <p className="text-sm font-semibold text-gray-900">{step.title}</p>
+                                            <p className="mt-1 text-xs text-gray-400">{step.subtitle}</p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
+                )}
 
                 {/* =================================================
                     EXAMINATION SECTION
@@ -1404,6 +1496,27 @@ export default function VisitDetailPage() {
                     />
                 </div>
 
+                {sameDayReferencedResults.length > 0 && (
+                    <section className="mt-5 space-y-4 rounded-xl border border-blue-200 bg-blue-50 p-5">
+                        <div>
+                            <h2 className="text-sm font-bold text-blue-900">
+                                Kết quả cận lâm sàng tham chiếu cùng ngày
+                            </h2>
+                            <p className="mt-1 text-xs text-blue-700">
+                                Các kết quả này thuộc lượt khám khác và không được thực hiện hoặc thanh toán lại trong lượt hiện tại.
+                            </p>
+                        </div>
+                        {sameDayReferencedResults.map(item => (
+                            <div key={item.testRequestId}>
+                                <div className="mb-2 text-xs font-medium text-blue-800">
+                                    Nguồn: {item.sourceVisitCode} · {item.sourceExaminationServiceName || 'Lượt khám trước'}
+                                </div>
+                                <TestDetail test={item} onOpenPdf={openPdfPreview} />
+                            </div>
+                        ))}
+                    </section>
+                )}
+
                 {/* =================================================
                     RATING
                 ================================================= */}
@@ -1447,45 +1560,7 @@ export default function VisitDetailPage() {
 
             {showRating && <RatingModal />}
 
-            {/* =================================================
-                PDF PREVIEW
-            ================================================= */}
 
-            {previewPdf && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 md:p-8">
-                    <div className="flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-
-                        <div className="flex items-center justify-between border-b px-5 py-3">
-                            <p className="font-semibold text-gray-900">
-                                Xem trước phiếu kết
-                                quả PDF
-                            </p>
-
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => window.open(previewPdf, '_blank', 'noopener,noreferrer')}
-                                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700"
-                                >
-                                    <Printer size={16} /> Mở để in
-                                </button>
-                                <button
-                                    onClick={closePdfPreview}
-                                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-white"
-                                >
-                                    <X size={17} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <iframe
-                            title="Phiếu kết quả PDF"
-                            src={previewPdf}
-                            className="w-full flex-1 bg-gray-100"
-                        />
-                    </div>
-                </div>
-            )}
 
             <style>
                 {`

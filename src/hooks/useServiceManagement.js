@@ -155,6 +155,23 @@ export function useServiceManagement() {
 
         const apiType = payload.type;
 
+        // Dịch vụ đã hoạt động là dữ liệu vận hành: chỉ gửi trường giá.
+        // Trạng thái được thay đổi bằng endpoint publish/deactivate riêng.
+        if (payload.priceOnly === true) {
+            const body = { price: Number(payload.price) };
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services/${id}`, {
+                method: 'PUT',
+                headers: { ...bearer(), 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => null);
+                throw new Error(data?.message || 'Cập nhật giá dịch vụ thất bại');
+            }
+            fetchServices();
+            return;
+        }
+
         const body = {};
 
         // Include fields if provided (for EditModal)

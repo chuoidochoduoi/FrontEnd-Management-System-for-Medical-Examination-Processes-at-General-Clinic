@@ -1,6 +1,6 @@
 // src/pages/customer/CustomerAppointmentPage.jsx
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
@@ -9,6 +9,7 @@ import CustomerLayout from '@/components/layout/CustomerLayout';
 import { useAppointment } from '@/hooks/useAppointment';
 import { useProfile } from '@/hooks/useProfile';
 import AppointmentConfirmModal from '@/components/ui/AppointmentConfirmModal';
+import ServiceSelectionCard, { groupServicesBySpecialty } from '@/components/appointment/ServiceSelectionCard';
 import { ROUTES } from '@/constants/routes';
 
 const formatVND = amount =>
@@ -55,7 +56,8 @@ export default function CustomerAppointmentPage() {
         loading: booking,
         error,
         shifts,
-        shiftLoading
+        shiftLoading,
+        fetchShifts
     } = useAppointment();
 
     const { profile } = useProfile();
@@ -107,6 +109,18 @@ export default function CustomerAppointmentPage() {
             initialState.initialShiftId || ''
         );
 
+    const selectedServiceKey = useMemo(
+        () => selectedServices.map(service => service.id).sort().join(','),
+        [selectedServices]
+    );
+
+    useEffect(() => {
+        setShiftId('');
+        fetchShifts(date, selectedServiceKey ? selectedServiceKey.split(',') : []);
+        // fetchShifts is intentionally driven only by the booking selection.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [date, selectedServiceKey]);
+
     const [
         showConfirmModal,
         setShowConfirmModal
@@ -131,15 +145,9 @@ export default function CustomerAppointmentPage() {
             }
 
             if (service.departmentType === 'EXAMINATION') {
-                const previousExamination = prev.find(
-                    item => item.departmentType === 'EXAMINATION'
-                );
-                if (previousExamination) {
-                    toast.info(t('workflow.singleExaminationReplaced'));
-                }
                 return [
                     ...prev.filter(item => item.departmentType !== 'EXAMINATION'),
-                    service
+                    service,
                 ];
             }
 
@@ -267,7 +275,7 @@ export default function CustomerAppointmentPage() {
             return;
         }
         if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
-            toast.error(t('workflow.singleExaminationOnly'));
+            toast.error('Mỗi lượt khám chỉ được chọn 1 dịch vụ khám bệnh.');
             return;
         }
 
@@ -511,68 +519,8 @@ export default function CustomerAppointmentPage() {
 
                                 <div className="space-y-8">
 
-                                    {Object.entries(
-                                        services.reduce(
-                                            (
-                                                acc,
-                                                service
-                                            ) => {
-
-                                                const department =
-                                                    service.departmentType ===
-                                                    'EXAMINATION'
-                                                        ? 'EXAMINATION'
-                                                        : 'PARACLINICAL';
-
-                                                if (
-                                                    !acc[
-                                                        department
-                                                        ]
-                                                ) {
-                                                    acc[
-                                                        department
-                                                        ] = [];
-                                                }
-
-                                                acc[
-                                                    department
-                                                    ].push(
-                                                    service
-                                                );
-
-                                                return acc;
-
-                                            },
-                                            {}
-                                        )
-                                    )
-                                        .sort(
-                                            (
-                                                [a],
-                                                [b]
-                                            ) => {
-                                                if (
-                                                    a ===
-                                                    'EXAMINATION'
-                                                ) {
-                                                    return -1;
-                                                }
-
-                                                if (
-                                                    b ===
-                                                    'EXAMINATION'
-                                                ) {
-                                                    return 1;
-                                                }
-
-                                                return 0;
-                                            }
-                                        )
-                                        .map(
-                                            ([
-                                                 department,
-                                                 deptServices
-                                             ]) => (
+                                    {groupServicesBySpecialty(services).map(
+                                        ([department, deptServices]) => (
 
                                                 <div
                                                     key={
@@ -585,11 +533,7 @@ export default function CustomerAppointmentPage() {
 
                                                         <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 whitespace-nowrap">
 
-                                                            {department ===
-                                                            'EXAMINATION'
-                                                                ? 'Khám bệnh'
-                                                                : 'Cận lâm sàng'
-                                                            }
+                                                            {department}
 
                                                         </h3>
 
@@ -598,7 +542,7 @@ export default function CustomerAppointmentPage() {
                                                     </div>
 
                                                     {/* SERVICES */}
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2">
 
                                                         {deptServices.map(
                                                             service => {
@@ -617,124 +561,13 @@ export default function CustomerAppointmentPage() {
 
                                                                 return (
 
-                                                                    <button
-                                                                        key={
-                                                                            service.id
-                                                                        }
-                                                                        type="button"
-                                                                        disabled={
-                                                                            !eligibility.eligible
-                                                                        }
-                                                                        onClick={() => {
-                                                                            if (
-                                                                                eligibility.eligible
-                                                                            ) {
-                                                                                toggleService(
-                                                                                    service
-                                                                                );
-                                                                            }
-                                                                        }}
-                                                                        className={`
-                                                                            text-left
-                                                                            min-h-[142px]
-                                                                            p-5
-                                                                            rounded-2xl
-                                                                            border
-                                                                            transition-all
-                                                                            duration-200
-                                                                            ${
-                                                                            !eligibility.eligible
-                                                                                ? 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed'
-                                                                                : checked
-                                                                                    ? 'bg-primary-50 border-primary-500 ring-1 ring-primary-500 shadow-sm'
-                                                                                    : 'bg-white border-slate-200 hover:border-slate-400 hover:shadow-sm'
-                                                                        }
-                                                                        `}
-                                                                    >
-
-                                                                        <div className="flex items-start gap-4 h-full">
-
-                                                                            {/* CHECKBOX */}
-                                                                            <div
-                                                                                className={`
-                                                                                    mt-0.5
-                                                                                    w-5
-                                                                                    h-5
-                                                                                    rounded-md
-                                                                                    border
-                                                                                    shrink-0
-                                                                                    flex
-                                                                                    items-center
-                                                                                    justify-center
-                                                                                    ${
-                                                                                    checked
-                                                                                        ? 'bg-primary-600 border-primary-600 text-white'
-                                                                                        : 'border-slate-300 bg-white'
-                                                                                }
-                                                                                `}
-                                                                            >
-                                                                                {checked &&
-                                                                                    '✓'
-                                                                                }
-                                                                            </div>
-
-                                                                            {/* CONTENT */}
-                                                                            <div className="flex-1 flex flex-col h-full min-w-0">
-
-                                                                                <p className="text-[15px] font-semibold text-slate-900 leading-snug">
-                                                                                    {
-                                                                                        service.name
-                                                                                    }
-                                                                                </p>
-
-                                                                                {service.capabilityName && (
-                                                                                    <p className="text-xs text-slate-400 mt-1 line-clamp-1">
-                                                                                        {
-                                                                                            service.capabilityName
-                                                                                        }
-                                                                                    </p>
-                                                                                )}
-
-                                                                                {service.description && (
-                                                                                    <p className="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">
-                                                                                        {
-                                                                                            service.description
-                                                                                        }
-                                                                                    </p>
-                                                                                )}
-
-                                                                                {!eligibility.eligible && (
-                                                                                    <p className="text-xs text-red-500 mt-2">
-                                                                                        {
-                                                                                            eligibility.reason
-                                                                                        }
-                                                                                    </p>
-                                                                                )}
-
-                                                                                <div className="mt-auto pt-3 flex items-center justify-between gap-3">
-
-                                                                                    <span className="text-sm font-bold text-primary-700">
-                                                                                        {formatVND(
-                                                                                            service.price
-                                                                                        )}
-                                                                                    </span>
-
-                                                                                    {service.durationMinutes && (
-                                                                                        <span className="text-[11px] text-slate-400">
-                                                                                            {
-                                                                                                service.durationMinutes
-                                                                                            }{' '}
-                                                                                            phút
-                                                                                        </span>
-                                                                                    )}
-
-                                                                                </div>
-
-                                                                            </div>
-
-                                                                        </div>
-
-                                                                    </button>
+                                                                    <ServiceSelectionCard
+                                                                        key={service.id}
+                                                                        service={service}
+                                                                        selected={checked}
+                                                                        onToggle={toggleService}
+                                                                        eligibility={eligibility}
+                                                                    />
 
                                                                 );
 
@@ -791,11 +624,7 @@ export default function CustomerAppointmentPage() {
                                         type="date"
                                         value={date}
                                         min={
-                                            new Date()
-                                                .toISOString()
-                                                .split(
-                                                    'T'
-                                                )[0]
+                                            (() => { const value = new Date(); value.setDate(value.getDate() + 1); return value.toISOString().split('T')[0]; })()
                                         }
                                         onChange={e =>
                                             setDate(
@@ -857,7 +686,8 @@ export default function CustomerAppointmentPage() {
                                                                 shift.id
                                                             }
                                                             type="button"
-                                                            onClick={() =>
+                                                            disabled={!shift.available}
+                                                            onClick={() => shift.available &&
                                                                 setShiftId(
                                                                     shift.id
                                                                 )
@@ -873,6 +703,8 @@ export default function CustomerAppointmentPage() {
                                                                 ${
                                                                 active
                                                                     ? 'bg-slate-950 text-white border-slate-950 shadow-md'
+                                                                    : !shift.available
+                                                                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-75'
                                                                     : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
                                                             }
                                                             `}
@@ -883,6 +715,10 @@ export default function CustomerAppointmentPage() {
                                                                     shift.name
                                                                 }
                                                             </p>
+
+                                                            {!shift.available && <p className="mt-1 text-[11px] font-medium text-amber-700">No available schedule</p>}
+
+                                                            {shift.timeSource === 'SPECIAL' && <p className="mt-1 text-[11px] font-medium text-blue-600">Special working hours</p>}
 
                                                             <p
                                                                 className={`
@@ -941,7 +777,7 @@ export default function CustomerAppointmentPage() {
                                             {selectedServices.length ===
                                             0
                                                 ? 'Chưa chọn dịch vụ'
-                                                : `${selectedServices.length} dịch vụ đã chọn`
+                                                : `${selectedServices.length} dịch vụ đã chọn · ${selectedServices.filter(service => service.departmentType === 'EXAMINATION').length}/1 dịch vụ khám`
                                             }
 
                                         </p>

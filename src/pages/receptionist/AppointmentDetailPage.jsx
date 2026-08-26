@@ -136,6 +136,8 @@ export default function AppointmentDetailPage() {
         setSelectedServiceIds
     ] = useState([]);
 
+    const [sameDayResults, setSameDayResults] = useState([]);
+
     const [date, setDate] =
         useState('');
 
@@ -174,6 +176,30 @@ export default function AppointmentDetailPage() {
             ),
         [shifts, timeSlot]
     );
+
+    useEffect(() => {
+        if (!appointment?.customerId) {
+            setSameDayResults([]);
+            return undefined;
+        }
+        const controller = new AbortController();
+        fetch(`${import.meta.env.VITE_API_URL}/api/v1/customer-visits/customers/${appointment.customerId}/same-day-paraclinical-results`, {
+            headers: { Authorization: `Bearer ${getToken()}` },
+            signal: controller.signal,
+        })
+            .then(async response => response.ok ? response.json() : [])
+            .then(body => {
+                const results = body?.data ?? body?.result ?? body ?? [];
+                const normalized = Array.isArray(results) ? results : [];
+                setSameDayResults(normalized);
+                const completedIds = new Set(normalized.map(item => item.serviceId));
+                setSelectedServiceIds(previous => previous.filter(serviceId => !completedIds.has(serviceId)));
+            })
+            .catch(error => {
+                if (error.name !== 'AbortError') setSameDayResults([]);
+            });
+        return () => controller.abort();
+    }, [appointment?.customerId]);
 
     const servicesToShow =
         allServices.length > 0
@@ -230,7 +256,7 @@ export default function AppointmentDetailPage() {
 
     const canCheckIn =
         currentStatus === 'PENDING' || currentStatus === 'RESCHEDULED';
-    const isEditable = currentStatus === 'PENDING' || currentStatus === 'RESCHEDULED';
+    const isEditable = ['PENDING', 'CONFIRMED', 'RESCHEDULED'].includes(currentStatus);
 
     // =========================================================
     // FETCH SHIFTS
@@ -482,7 +508,8 @@ export default function AppointmentDetailPage() {
                 try {
                     const res =
                         await fetch(
-                            `${import.meta.env.VITE_API_URL}/api/v1/medical-services/available?size=1000`
+                            `${import.meta.env.VITE_API_URL}/api/v1/medical-services?status=ACTIVE&size=1000`,
+                            { headers: { Authorization: `Bearer ${getToken()}` } }
                         );
 
                     if (!res.ok) {
@@ -510,6 +537,9 @@ export default function AppointmentDetailPage() {
                                     service.serviceId ||
                                     service.id,
 
+                                code:
+                                    service.serviceCode,
+
                                 name:
                                 service.name,
 
@@ -521,6 +551,9 @@ export default function AppointmentDetailPage() {
 
                                 departmentType:
                                 service.departmentType,
+
+                                workflowPriority:
+                                    service.workflowPriority ?? 1,
 
                                 capabilityName:
                                     service
@@ -547,6 +580,10 @@ export default function AppointmentDetailPage() {
     // =========================================================
     const toggleService =
         serviceId => {
+            if (sameDayResults.some(result => result.serviceId === serviceId)) {
+                toast.warn('Dịch vụ này đã có kết quả được ký trong ngày và không cần mua lại.');
+                return;
+            }
             setSelectedServiceIds(
                 prev => {
                     if (prev.includes(serviceId)) {
@@ -561,10 +598,10 @@ export default function AppointmentDetailPage() {
                         const examinationIds = new Set(
                             allServices.filter(service => service.departmentType === 'EXAMINATION').map(service => service.id)
                         );
-                        if (prev.some(id => examinationIds.has(id))) {
-                            toast.info(t('workflow.singleExaminationReplaced'));
-                        }
-                        return [...prev.filter(id => !examinationIds.has(id)), serviceId];
+                        return [
+                            ...prev.filter(id => !examinationIds.has(id)),
+                            serviceId,
+                        ];
                     }
                     return [...prev, serviceId];
                 }
@@ -628,7 +665,7 @@ export default function AppointmentDetailPage() {
             return 'Vui lòng chọn ít nhất một dịch vụ.';
         }
         if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
-            return t('workflow.singleExaminationOnly');
+            return 'Mỗi lượt khám chỉ được chọn 1 dịch vụ khám bệnh.';
         }
 
         if (!date) {
@@ -1537,6 +1574,9 @@ export default function AppointmentDetailPage() {
                                                                                 selectedServiceIds.includes(
                                                                                     service.id
                                                                                 );
+                                                                            const completedToday = sameDayResults.some(
+                                                                                result => result.serviceId === service.id
+                                                                            );
 
                                                                             return (
                                                                                 <label
@@ -1544,7 +1584,7 @@ export default function AppointmentDetailPage() {
                                                                                         service.id
                                                                                     }
                                                                                     className={`flex min-h-[64px] items-start gap-3 py-3 transition ${
-                                                                                        isEditable ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'
+                                                                                        isEditable && !completedToday ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'
                                                                                     } ${
                                                                                         checked
                                                                                             ? 'bg-primary-50/50'
@@ -1553,7 +1593,7 @@ export default function AppointmentDetailPage() {
                                                                                 >
                                                                                     <input
                                                                                         type="checkbox"
-                                                                                        disabled={!isEditable}
+                                                                                        disabled={!isEditable || completedToday}
                                                                                         checked={
                                                                                             checked
                                                                                         }
@@ -1572,6 +1612,12 @@ export default function AppointmentDetailPage() {
                                                                                                 service.name
                                                                                             }
                                                                                         </p>
+
+                                                                                        {completedToday && (
+                                                                                            <p className="mt-1 text-[11px] font-medium text-blue-700">
+                                                                                                Đã có kết quả hôm nay · Không thu lại
+                                                                                            </p>
+                                                                                        )}
 
                                                                                         {service.description && (
                                                                                             <p className="mt-1 truncate text-xs text-gray-400">
@@ -1618,9 +1664,7 @@ export default function AppointmentDetailPage() {
                                                 </p>
 
                                                 <p className="mt-0.5 text-sm font-semibold text-gray-800">
-                                                    {
-                                                        selectedServiceIds.length
-                                                    }
+                                                    {selectedServiceIds.length} ({selectedServices.filter(service => service.departmentType === 'EXAMINATION').length}/1 khám)
                                                 </p>
                                             </div>
 

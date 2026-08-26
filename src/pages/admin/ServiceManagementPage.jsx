@@ -200,6 +200,8 @@ function EditModal({
             service.status ?? 'draft',
     });
 
+    const isActive = service.status === 'active';
+
     const [submitting, setSubmitting] =
         useState(false);
 
@@ -217,6 +219,23 @@ function EditModal({
         }));
 
     const handleSubmit = async () => {
+        if (isActive) {
+            if (form.price === '' || Number(form.price) < 0) {
+                return setError('Giá dịch vụ phải lớn hơn hoặc bằng 0');
+            }
+            setSubmitting(true);
+            setError('');
+            try {
+                await onSubmit(service.id, { price: form.price, priceOnly: true });
+                onClose();
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setSubmitting(false);
+            }
+            return;
+        }
+
         if (!form.name.trim()) {
             return setError(
                 'Vui lòng nhập tên dịch vụ'
@@ -311,6 +330,36 @@ function EditModal({
             }
         >
             <div className="space-y-5">
+
+                {isActive ? (
+                    <section className="space-y-5">
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                            <p className="text-sm font-semibold text-amber-800">
+                                Dịch vụ đang hoạt động
+                            </p>
+                            <p className="mt-1 text-xs leading-relaxed text-amber-700">
+                                Để bảo toàn dữ liệu vận hành, dịch vụ đã hoạt động chỉ được thay đổi giá niêm yết.
+                                Các cấu hình khác đã được khóa.
+                            </p>
+                        </div>
+
+                        <div className="max-w-md">
+                            <label className={labelCls}>Giá niêm yết mới (VNĐ)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={form.price}
+                                onChange={(e) => setField('price', e.target.value)}
+                                className={inputCls}
+                                autoFocus
+                            />
+                            <p className="mt-2 text-xs text-gray-400">
+                                Giá mới chỉ áp dụng cho hóa đơn hoặc chỉ định được tạo sau khi cập nhật.
+                            </p>
+                        </div>
+                    </section>
+                ) : (
+                    <>
 
                 {/* BASIC */}
 
@@ -738,6 +787,9 @@ function EditModal({
                         ))}
                     </select>
                 </div>
+
+                    </>
+                )}
 
             </div>
         </Modal>

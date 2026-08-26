@@ -7,6 +7,7 @@ import 'react-toastify/dist/ReactToastify.css'
 import LoginPage from './pages/auth/LoginPage.jsx'
 import LoginRegister from './pages/auth/RegisterPage.jsx'
 import AppointmentPage from '@/pages/appointment/AppointmentPage';
+
 import CustomerAppointmentPage from '@/pages/customer/CustomerAppointmentPage';
 import CheckInPage from '@/pages/receptionist/CheckInPage';
 import AppointmentDetailPage from '@/pages/receptionist/AppointmentDetailPage';
@@ -15,6 +16,10 @@ import MyAppointmentsPage from '@/pages/customer/MyAppointmentsPage';
 import CustomerAppointmentDetailPage from '@/pages/customer/AppointmentDetailPage';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import LandingPage from '@/pages/public/LandingPage';
+import ContactPage from '@/pages/public/ContactPage';
+import AboutPage from '@/pages/public/AboutPage';
+import TermsPage from '@/pages/public/TermsPage';
+import PrivacyPage from '@/pages/public/PrivacyPage';
 import CreateTicketPage from '@/pages/receptionist/CreateTicketPage';
 import VisitManagementPage from '@/pages/receptionist/VisitManagementPage';
 import InvoiceListPage from '@/pages/cashier/InvoiceListPage';
@@ -26,6 +31,7 @@ import ExamCompletionPage from '@/pages/doctor/ExamCompletionPage';
 import MedicalRecordPrintPage from '@/pages/doctor/MedicalRecordPrintPage';
 import ReceptionistSupportPage from '@/pages/receptionist/ReceptionistSupportPage';
 import FollowUpListPage from '@/pages/receptionist/FollowUpListPage';
+import ContactRequestManagementPage from '@/pages/receptionist/ContactRequestManagementPage';
 import DoctorDepartmentPage from '@/pages/doctor/DoctorDepartmentPage';
 import RoomListPage from '@/pages/doctor/RoomListPage';
 import LabRequestListPage from '@/pages/lab/LabRequestListPage.jsx';
@@ -35,9 +41,9 @@ import LabDetailPage from '@/pages/lab/LabDetailPage';
 import AccountManagementPage from '@/pages/admin/AccountManagementPage';
 import ServiceManagementPage from '@/pages/admin/ServiceManagementPage';
 import RoomManagementPage from '@/pages/admin/RoomManagementPage';
-import SpecializationManagementPage from '@/pages/admin/SpecializationManagementPage';
 import CapabilityManagementPage from '@/pages/admin/CapabilityManagementPage';
 import AuditLogManagementPage from '@/pages/admin/AuditLogManagementPage';
+import PublicAnnouncementManagementPage from '@/pages/admin/PublicAnnouncementManagementPage';
 import ShiftManagementPage from '@/pages/admin/ShiftManagementPage';
 import SchedulePage from '@/pages/owner/SchedulePage';
 import ReportPage from '@/pages/owner/ReportPage';
@@ -61,6 +67,7 @@ import WaitingRoomPage from '@/pages/customer/WaitingRoomPage';
 import GuestJourneyPage from '@/pages/guest/GuestJourneyPage';
 import ManagerStaffPage from '@/pages/owner/ManagerStaffPage';
 import ManagerPatientsPage from '@/pages/owner/ManagerPatientsPage';
+import ClinicalFormTemplatePage from '@/pages/owner/ClinicalFormTemplatePage';
 import {ROUTES} from "@/constants/routes.js";
 
 
@@ -69,6 +76,10 @@ function App() {
     <>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<LoginRegister />} />
         <Route path={ROUTES.APPOINTMENT} element={<AppointmentPage />} />
@@ -119,51 +130,56 @@ function App() {
         {/* Routes cho nhân viên - dựa trên systemRole */}
         {/* RECEPTIONIST - lễ tân */}
         <Route path={ROUTES.RECEPTIONIST_CHECKIN} element={
-          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CLINIC_MANAGER']}>
             <CheckInPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_APPOINTMENT_DETAIL} element={
-          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}>
+          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'CLINIC_MANAGER']}>
             <AppointmentDetailPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_CREATE_TICKET} element={
-          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CLINIC_MANAGER']}>
             <CreateTicketPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_VISITS} element={
-          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CLINIC_MANAGER']}>
             <VisitManagementPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_FOLLOW_UPS} element={
-          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CLINIC_MANAGER']}>
             <FollowUpListPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_SUPPORT} element={
-          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CLINIC_MANAGER']}>
             <ReceptionistSupportPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.RECEPTIONIST_CONTACT_REQUESTS} element={
+          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CLINIC_MANAGER']}>
+            <ContactRequestManagementPage />
           </ProtectedRoute>
         } />
 
         {/* CASHIER - thu ngân */}
         <Route path={ROUTES.CASHIER_INVOICES} element={
-          <ProtectedRoute allowedRoles={['CASHIER']}>
+          <ProtectedRoute allowedRoles={['CASHIER', 'CLINIC_MANAGER']}>
             <InvoiceListPage />
           </ProtectedRoute>
         } />
 
         <Route path={ROUTES.CASHIER_INVOICE_DETAIL}>
           <Route index element={
-            <ProtectedRoute allowedRoles={['CASHIER']}>
+            <ProtectedRoute allowedRoles={['CASHIER', 'CLINIC_MANAGER']}>
               <InvoiceDetailPage />
             </ProtectedRoute>
           } />
           <Route path="print" element={
-            <ProtectedRoute allowedRoles={['CASHIER']}>
+            <ProtectedRoute allowedRoles={['CASHIER', 'CLINIC_MANAGER']}>
               <InvoicePrintPage />
             </ProtectedRoute>
           } />
@@ -171,12 +187,12 @@ function App() {
 
         {/* DOCTOR + NURSE - bác sĩ/y tá */}
         <Route path={ROUTES.DOCTOR_ROOMS} element={
-          <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'CLINIC_MANAGER']}>
+          <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}>
             <RoomListPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.DOCTOR_DEPARTMENTS} element={
-          <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'CLINIC_MANAGER']}>
+          <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}>
             <DoctorDepartmentPage />
           </ProtectedRoute>
         } />
@@ -195,7 +211,7 @@ function App() {
         <Route path={ROUTES.WAITING_ROOM} element={<ProtectedRoute allowedRoles={['CUSTOMER']}><WaitingRoomPage /></ProtectedRoute>} />
         <Route path={ROUTES.PATIENT_JOURNEYS} element={<ProtectedRoute allowedRoles={['RECEPTIONIST','CLINIC_MANAGER']}><PatientJourneyPage /></ProtectedRoute>} />
         <Route path={ROUTES.DOCTOR_FEEDBACKS} element={<ProtectedRoute allowedRoles={['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR']}><FeedbackPage /></ProtectedRoute>} />
-        <Route path={ROUTES.RECEPTIONIST_FEEDBACKS} element={<ProtectedRoute allowedRoles={['RECEPTIONIST']}><FeedbackPage /></ProtectedRoute>} />
+        <Route path={ROUTES.RECEPTIONIST_FEEDBACKS} element={<ProtectedRoute allowedRoles={['RECEPTIONIST', 'CLINIC_MANAGER']}><FeedbackPage /></ProtectedRoute>} />
 
         {/* LAB - xét nghiệm (NURSE có thể truy cập) */}
         <Route path={ROUTES.DOCTOR_LAB} element={
@@ -209,30 +225,39 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path={ROUTES.ADMIN_ACCOUNTS} element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
+          <ProtectedRoute allowedRoles={['ADMIN', 'CLINIC_MANAGER']}>
             <AccountManagementPage />
           </ProtectedRoute>
         } />
 
         <Route path={ROUTES.ADMIN_ROOMS} element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
+          <ProtectedRoute allowedRoles={['ADMIN', 'CLINIC_MANAGER']}>
             <RoomManagementPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.ADMIN_AUDIT_LOGS} element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
+          <ProtectedRoute allowedRoles={['ADMIN', 'CLINIC_MANAGER']}>
             <AuditLogManagementPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.ADMIN_SHIFTS} element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
+          <ProtectedRoute allowedRoles={['ADMIN', 'CLINIC_MANAGER']}>
             <ShiftManagementPage />
           </ProtectedRoute>
         } />
+        <Route path={ROUTES.ADMIN_PUBLIC_ANNOUNCEMENTS} element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'CLINIC_MANAGER']}>
+            <PublicAnnouncementManagementPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.CLINICAL_FORM_TEMPLATES} element={
+          <ProtectedRoute allowedRoles={['CLINIC_MANAGER']}>
+            <ClinicalFormTemplatePage />
+          </ProtectedRoute>
+        } />
 
-        <Route path={ROUTES.ADMIN_SERVICES} element={<ServiceManagementPage />} />
-        <Route path={ROUTES.ADMIN_SPECIALIZATIONS} element={<ProtectedRoute allowedRoles={['ADMIN']}><SpecializationManagementPage /></ProtectedRoute>} />
-        <Route path={ROUTES.ADMIN_CAPABILITIES} element={<ProtectedRoute allowedRoles={['ADMIN']}><CapabilityManagementPage /></ProtectedRoute>} />
+        <Route path={ROUTES.ADMIN_SERVICES} element={<ProtectedRoute allowedRoles={['ADMIN', 'CLINIC_MANAGER']}><ServiceManagementPage /></ProtectedRoute>} />
+        <Route path={ROUTES.ADMIN_CAPABILITIES} element={<ProtectedRoute allowedRoles={['ADMIN', 'CLINIC_MANAGER']}><CapabilityManagementPage /></ProtectedRoute>} />
         <Route path={ROUTES.OWNER_SCHEDULE} element={
           <ProtectedRoute allowedRoles={['CLINIC_MANAGER']}>
             <SchedulePage />
@@ -249,12 +274,12 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path={ROUTES.ROOM_QUEUE_DISPLAY} element={
-          <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'RECEPTIONIST', 'ADMIN']}>
+          <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'RECEPTIONIST', 'ADMIN', 'CLINIC_MANAGER']}>
             <RoomQueueDisplayPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.ALL_QUEUE_DISPLAY} element={
-          <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'RECEPTIONIST', 'ADMIN']}>
+          <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'RECEPTIONIST', 'ADMIN', 'CLINIC_MANAGER']}>
             <RoomQueueDisplayPage />
           </ProtectedRoute>
         } />
@@ -281,22 +306,22 @@ function App() {
         </ProtectedRoute>
       } />
         <Route path={ROUTES.RECEPTIONIST_RECORDS} element={
-          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CLINIC_MANAGER']}>
             <RecordsManagementPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_PATIENT_DETAIL} element={
-          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CLINIC_MANAGER']}>
             <PatientDetailPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_PATIENT_VISIT_DETAIL} element={
-          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CLINIC_MANAGER']}>
             <PatientVisitDetailPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_RECORD_DETAIL} element={
-          <ProtectedRoute allowedRoles={['RECEPTIONIST']}>
+          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CLINIC_MANAGER']}>
             <RecordDetailPage />
           </ProtectedRoute>
         } />

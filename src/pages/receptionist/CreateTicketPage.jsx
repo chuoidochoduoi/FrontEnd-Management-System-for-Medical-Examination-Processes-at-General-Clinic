@@ -4,8 +4,13 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
+    ChevronDown,
+    FileText,
+    Info,
     RotateCcw,
     Search,
+    UserCheck,
+    X,
 } from 'lucide-react';
 
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
@@ -24,10 +29,31 @@ const fmt = (value) =>
         )}đ`
         : '—';
 
-const DEPARTMENT_TYPE_LABELS = {
-    EXAMINATION: 'Khám bệnh',
-    PARACLINICAL: 'Cận lâm sàng',
-    OTHER: 'Dịch vụ khác',
+const EXAM_GROUPS = ['Nội khoa', 'Ngoại khoa', 'Nhi khoa', 'Sản phụ khoa', 'Da liễu', 'Khám bệnh khác'];
+const PARACLINICAL_GROUPS = ['Xét nghiệm', 'Chẩn đoán hình ảnh', 'Cận lâm sàng khác'];
+
+const normalizeText = (value = '') => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const normalizePhone = (value = '') => {
+    const digits = value.replace(/\D/g, '');
+    return digits.startsWith('84') ? `0${digits.slice(2)}` : digits;
+};
+
+const serviceGroup = (service) => {
+    if (service.departmentType === 'EXAMINATION') {
+        const name = normalizeText(service.specializationName || service.department);
+        if (name.includes('noi khoa')) return 'Nội khoa';
+        if (name.includes('ngoai khoa')) return 'Ngoại khoa';
+        if (name.includes('nhi khoa')) return 'Nhi khoa';
+        if (name.includes('san') || name.includes('phu khoa')) return 'Sản phụ khoa';
+        if (name.includes('da lieu')) return 'Da liễu';
+        return 'Khám bệnh khác';
+    }
+    const detail = normalizeText(`${service.department} ${service.capabilityName} ${service.name}`);
+    if (/(x-quang|x quang|sieu am|ecg|dien tim|chan doan hinh anh)/.test(detail)) {
+        return 'Chẩn đoán hình ảnh';
+    }
+    if (/(xet nghiem|huyet hoc|sinh hoa|nuoc tieu|test nhanh|crp)/.test(detail)) return 'Xét nghiệm';
+    return 'Cận lâm sàng khác';
 };
 
 const inputCls =
@@ -35,6 +61,13 @@ const inputCls =
 
 const labelCls =
     'block text-xs text-gray-500 mb-1.5';
+
+const BLOOD_TYPES = [
+    ['A_POSITIVE', 'A+'], ['A_NEGATIVE', 'A-'],
+    ['B_POSITIVE', 'B+'], ['B_NEGATIVE', 'B-'],
+    ['AB_POSITIVE', 'AB+'], ['AB_NEGATIVE', 'AB-'],
+    ['O_POSITIVE', 'O+'], ['O_NEGATIVE', 'O-'],
+];
 
 const toGenderEnum = (gender) => {
     if (!gender) return null;
@@ -100,10 +133,8 @@ export default function CreateTicketPage() {
         setSearchTerm,
     ] = useState('');
 
-    const [
-        departmentType,
-        setDepartmentType,
-    ] = useState('');
+    const [activeServiceTab, setActiveServiceTab] = useState('EXAMINATION');
+    const [expandedGroups, setExpandedGroups] = useState({});
 
     /* =========================================================
        MODAL
@@ -148,10 +179,39 @@ export default function CreateTicketPage() {
         setAddress,
     ] = useState('');
 
+    const [email, setEmail] = useState('');
+    const [bloodType, setBloodType] = useState('');
+    const [allergyStatus, setAllergyStatus] = useState('UNVERIFIED');
+    const [allergies, setAllergies] = useState([]);
+    const [allergyInput, setAllergyInput] = useState('');
+    const [patientCode, setPatientCode] = useState('');
+    const [resolvingPhone, setResolvingPhone] = useState(false);
+    const [phoneLookupDone, setPhoneLookupDone] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState({});
+
+    useEffect(() => {
+        if (!submitError) return;
+        const message = submitError.toLowerCase();
+        if (message.includes('số điện thoại')) {
+            setFieldErrors(previous => ({ ...previous, phone: submitError }));
+            document.getElementById('patient-phone')?.focus();
+        } else if (message.includes('email')) {
+            setFieldErrors(previous => ({ ...previous, email: submitError }));
+            document.getElementById('patient-email')?.focus();
+        }
+    }, [submitError]);
+
+    const patientInputClass = (field) => `${inputCls} ${fieldErrors[field] ? 'border-red-400 bg-red-50/40 focus:border-red-500 focus:ring-red-100' : ''}`;
+
     const [
         reason,
         setReason,
     ] = useState('');
+
+    const [sameDayResults, setSameDayResults] = useState([]);
+    const [loadingSameDayResults, setLoadingSameDayResults] = useState(false);
+    const [sameDayExaminations, setSameDayExaminations] = useState([]);
+    const [loadingSameDayExaminations, setLoadingSameDayExaminations] = useState(false);
 
     /* =========================================================
        TOKEN
@@ -162,6 +222,146 @@ export default function CreateTicketPage() {
         sessionStorage.getItem(
             'token'
         );
+
+    const applyPatientData = (patient) => {
+        if (!patient) return;
+        setCustomerId(patient.customerId || null);
+        setPatientCode(patient.patientCode || '');
+        setFullName(patient.fullName || '');
+        setPhone(patient.phone || '');
+        setEmail(patient.email || '');
+        setDob(patient.dateOfBirth ? patient.dateOfBirth.split('T')[0] : '');
+        if (patient.gender) {
+            const normalizedGender = patient.gender.toLowerCase();
+            setGender(normalizedGender === 'male' || normalizedGender === 'female' ? normalizedGender : 'male');
+        }
+        setAddress(patient.address || '');
+        setBloodType(patient.bloodType || '');
+        setAllergyStatus(patient.allergyStatus || 'UNVERIFIED');
+        setAllergies(Array.isArray(patient.allergies) ? patient.allergies : []);
+        setAllergyInput('');
+        setPhoneLookupDone(true);
+    };
+
+    const fetchPatientDetail = async (id, signal) => {
+        const response = await fetch(
+            `${import.meta.env.VITE_API_URL}/api/receptionist/records/customers/${id}`,
+            { headers: { Authorization: `Bearer ${getToken()}` }, signal }
+        );
+        if (!response.ok) throw new Error('Không thể tải đầy đủ hồ sơ bệnh nhân');
+        const body = await response.json();
+        return body?.data || body;
+    };
+
+    const openSameDayAttachment = async (url) => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}${url}`, {
+                headers: { Authorization: `Bearer ${getToken()}` },
+            });
+            if (!response.ok) throw new Error('Không thể mở tệp kết quả');
+            const blobUrl = URL.createObjectURL(await response.blob());
+            window.open(blobUrl, '_blank', 'noopener,noreferrer');
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        } catch (error) {
+            toast.error(error.message || 'Không thể mở tệp kết quả');
+        }
+    };
+
+    useEffect(() => {
+        if (!customerId) {
+            setSameDayResults([]);
+            return undefined;
+        }
+        const controller = new AbortController();
+        setLoadingSameDayResults(true);
+        fetch(`${import.meta.env.VITE_API_URL}/api/v1/customer-visits/customers/${customerId}/same-day-paraclinical-results`, {
+            headers: { Authorization: `Bearer ${getToken()}` },
+            signal: controller.signal,
+        })
+            .then(async response => {
+                if (!response.ok) throw new Error('Không thể tải kết quả cận lâm sàng trong ngày');
+                return response.json();
+            })
+            .then(body => {
+                const results = body?.data ?? body?.result ?? body ?? [];
+                const normalized = Array.isArray(results) ? results : [];
+                setSameDayResults(normalized);
+                const completedIds = new Set(normalized.map(item => item.serviceId));
+                setSelectedServiceIds(previous => previous.filter(id => !completedIds.has(id)));
+            })
+            .catch(error => {
+                if (error.name !== 'AbortError') setSameDayResults([]);
+            })
+            .finally(() => setLoadingSameDayResults(false));
+        return () => controller.abort();
+    }, [customerId]);
+
+    useEffect(() => {
+        if (!customerId) {
+            setSameDayExaminations([]);
+            return undefined;
+        }
+        const controller = new AbortController();
+        setLoadingSameDayExaminations(true);
+        fetch(`${import.meta.env.VITE_API_URL}/api/v1/customer-visits/customers/${customerId}/same-day-examination-services`, {
+            headers: { Authorization: `Bearer ${getToken()}` },
+            signal: controller.signal,
+        })
+            .then(async response => {
+                if (!response.ok) throw new Error('Không thể tải dịch vụ khám đã đăng ký trong ngày');
+                return response.json();
+            })
+            .then(body => {
+                const items = body?.data ?? body?.result ?? body ?? [];
+                const normalized = Array.isArray(items) ? items : [];
+                setSameDayExaminations(normalized);
+                const lockedIds = new Set(normalized.filter(item => item.locked).map(item => item.serviceId));
+                setSelectedServiceIds(previous => previous.filter(id => !lockedIds.has(id)));
+            })
+            .catch(error => {
+                if (error.name !== 'AbortError') setSameDayExaminations([]);
+            })
+            .finally(() => setLoadingSameDayExaminations(false));
+        return () => controller.abort();
+    }, [customerId]);
+
+    useEffect(() => {
+        if (customerId) return undefined;
+        const normalizedPhone = phone.trim();
+        if (!/^(\+84|0)\d{9,10}$/.test(normalizedPhone)) {
+            setPhoneLookupDone(false);
+            setResolvingPhone(false);
+            return undefined;
+        }
+        const controller = new AbortController();
+        setResolvingPhone(true);
+        setPhoneLookupDone(false);
+        const timer = setTimeout(() => {
+            fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/search-by-phone?phone=${encodeURIComponent(normalizedPhone)}`, {
+                headers: { Authorization: `Bearer ${getToken()}` },
+                signal: controller.signal,
+            })
+                .then(response => response.ok ? response.json() : [])
+                .then(async body => {
+                    const patients = Array.isArray(body) ? body : body?.data || body?.content || [];
+                    const patient = patients.find(item => normalizePhone(item.phone) === normalizePhone(normalizedPhone));
+                    if (patient?.customerId) applyPatientData(await fetchPatientDetail(patient.customerId, controller.signal));
+                    else if (patient) applyPatientData(patient);
+                    else setPhoneLookupDone(true);
+                })
+                .catch(error => {
+                    if (error.name !== 'AbortError') {
+                        setCustomerId(null);
+                        setPhoneLookupDone(true);
+                    }
+                })
+                .finally(() => setResolvingPhone(false));
+        }, 450);
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [phone, customerId]);
 
     /* =========================================================
        AUTOFILL PATIENT FROM URL
@@ -182,19 +382,7 @@ export default function CreateTicketPage() {
                 if (!response.ok) throw new Error('Không thể tải hồ sơ bệnh nhân');
                 return response.json();
             })
-            .then((data) => {
-                const patient = data?.data || data;
-                if (!patient) return;
-                
-                setFullName(patient.fullName || '');
-                setPhone(patient.phone || '');
-                if (patient.dateOfBirth) setDob(patient.dateOfBirth.split('T')[0]);
-                if (patient.gender) {
-                    const normalizedGender = patient.gender.toLowerCase();
-                    setGender(normalizedGender === 'male' || normalizedGender === 'female' ? normalizedGender : 'other');
-                }
-                setAddress(patient.address || '');
-            })
+            .then((data) => applyPatientData(data?.data || data))
             .catch(error => {
                 console.error(error);
                 toast.error('Không thể tải thông tin bệnh nhân tái khám');
@@ -221,15 +409,10 @@ export default function CreateTicketPage() {
                     return;
                 }
                 const patient = patients.find(item => item.customerId === queryCustomerId) || patients[0];
-                if (patient.customerId) setCustomerId(patient.customerId);
-                setFullName(patient.fullName || '');
-                setPhone(patient.phone || '');
-                if (patient.dateOfBirth) setDob(patient.dateOfBirth.split('T')[0]);
-                if (patient.gender) {
-                    const normalizedGender = patient.gender.toLowerCase();
-                    setGender(normalizedGender === 'male' || normalizedGender === 'female' ? normalizedGender : 'other');
+                if (patient.customerId) {
+                    return fetchPatientDetail(patient.customerId).then(applyPatientData);
                 }
-                setAddress(patient.address || '');
+                applyPatientData(patient);
             })
             .catch((error) => {
                 console.error(error);
@@ -244,6 +427,15 @@ export default function CreateTicketPage() {
     const toggleService = (
         service
     ) => {
+        const sameDayExam = sameDayExaminations.find(item => item.serviceId === service.id && item.locked);
+        if (sameDayExam) {
+            toast.warn(sameDayExam.reason || 'Dịch vụ khám này đã được đăng ký trong ngày hôm nay.');
+            return;
+        }
+        if (sameDayResults.some(result => result.serviceId === service.id)) {
+            toast.warn('Dịch vụ này đã có kết quả được ký trong ngày và không cần mua lại.');
+            return;
+        }
         setSelectedServiceIds(
             (previous) => {
                 if (previous.includes(service.id)) {
@@ -257,10 +449,14 @@ export default function CreateTicketPage() {
                     const examinationIds = new Set(
                         services.filter(item => item.departmentType === 'EXAMINATION').map(item => item.id)
                     );
-                    if (previous.some(id => examinationIds.has(id))) {
-                        toast.info(t('workflow.singleExaminationReplaced'));
+                    const replaced = previous.some(id => examinationIds.has(id));
+                    if (replaced) {
+                        setTimeout(() => toast.info('Mỗi phiếu chỉ có một dịch vụ khám. Dịch vụ khám trước đã được thay thế.'), 0);
                     }
-                    return [...previous.filter(id => !examinationIds.has(id)), service.id];
+                    return [
+                        ...previous.filter(id => !examinationIds.has(id)),
+                        service.id,
+                    ];
                 }
                 return [...previous, service.id];
             }
@@ -329,10 +525,7 @@ export default function CreateTicketPage() {
                             keyword
                         );
 
-                const matchDepartmentType =
-                    !departmentType ||
-                    service.departmentType ===
-                    departmentType;
+                const matchDepartmentType = service.departmentType === activeServiceTab;
 
                 return (
                     matchSearch &&
@@ -345,55 +538,16 @@ export default function CreateTicketPage() {
        GROUP SERVICE
     ========================================================= */
 
-    const groupedServices =
-        filteredServices.reduce(
-            (
-                result,
-                service
-            ) => {
-                let type =
-                    service.departmentType;
+    const groupOrder = activeServiceTab === 'EXAMINATION' ? EXAM_GROUPS : PARACLINICAL_GROUPS;
+    const orderedGroups = groupOrder
+        .map(groupName => [groupName, filteredServices.filter(service => serviceGroup(service) === groupName)])
+        .filter(([, items]) => items.length > 0);
 
-                if (
-                    type !==
-                    'EXAMINATION' &&
-                    type !==
-                    'PARACLINICAL'
-                ) {
-                    return result;
-                }
-
-                if (!result[type]) {
-                    result[type] = [];
-                }
-
-                result[type].push(
-                    service
-                );
-
-                return result;
-            },
-            {
-                EXAMINATION: [],
-                PARACLINICAL: [],
-            }
-        );
-
-    const orderedGroups =
-        Object.entries(
-            groupedServices
-        ).sort(([a], [b]) => {
-            const order = {
-                EXAMINATION: 1,
-                PARACLINICAL: 2,
-                OTHER: 3,
-            };
-
-            return (
-                (order[a] || 99) -
-                (order[b] || 99)
-            );
-        });
+    useEffect(() => {
+        if (orderedGroups.length === 0) return;
+        const firstGroup = orderedGroups[0][0];
+        setExpandedGroups(previous => ({ ...previous, [activeServiceTab]: previous[activeServiceTab] || firstGroup }));
+    }, [activeServiceTab, searchTerm, orderedGroups.map(([name]) => name).join('|')]);
 
     /* =========================================================
        RESET
@@ -402,7 +556,8 @@ export default function CreateTicketPage() {
     const handleReset = () => {
         setSelectedServiceIds([]);
         setSearchTerm('');
-        setDepartmentType('');
+        setActiveServiceTab('EXAMINATION');
+        setExpandedGroups({});
 
         setCustomerId(null);
 
@@ -411,9 +566,55 @@ export default function CreateTicketPage() {
         setDob('');
         setGender('male');
         setAddress('');
+        setEmail('');
+        setBloodType('');
+        setAllergyStatus('UNVERIFIED');
+        setAllergies([]);
+        setAllergyInput('');
+        setPatientCode('');
+        setPhoneLookupDone(false);
+        setResolvingPhone(false);
         setReason('');
 
         setValidationError('');
+        setFieldErrors({});
+    };
+
+    const handleChooseDifferentPatient = () => {
+        setCustomerId(null);
+        setPatientCode('');
+        setFullName('');
+        setPhone('');
+        setEmail('');
+        setDob('');
+        setGender('male');
+        setAddress('');
+        setBloodType('');
+        setAllergyStatus('UNVERIFIED');
+        setAllergies([]);
+        setAllergyInput('');
+        setPhoneLookupDone(false);
+        setFieldErrors({});
+        setSameDayResults([]);
+        setSameDayExaminations([]);
+    };
+
+    const addAllergy = () => {
+        const value = allergyInput.trim().replace(/\s+/g, ' ');
+        if (!value) return;
+        if (value.length > 100) {
+            setFieldErrors(previous => ({ ...previous, allergies: 'Mỗi dị ứng không được vượt quá 100 ký tự' }));
+            return;
+        }
+        if (allergies.length >= 20) {
+            setFieldErrors(previous => ({ ...previous, allergies: 'Chỉ được nhập tối đa 20 dị ứng' }));
+            return;
+        }
+        if (!allergies.some(item => item.toLowerCase() === value.toLowerCase())) {
+            setAllergies(previous => [...previous, value]);
+        }
+        setAllergyInput('');
+        setFieldErrors(previous => ({ ...previous, allergies: undefined }));
     };
 
     /* =========================================================
@@ -422,73 +623,31 @@ export default function CreateTicketPage() {
 
     const handleSubmit = () => {
         setValidationError('');
-
-        if (!fullName.trim()) {
-            setValidationError(
-                t(
-                    'validation.fullNameRequired'
-                )
-            );
-
+        if (resolvingPhone) {
+            setFieldErrors(previous => ({ ...previous, phone: 'Vui lòng chờ hệ thống đối chiếu số điện thoại' }));
+            document.getElementById('patient-phone')?.focus();
             return;
         }
-
-        if (!phone.trim()) {
-            setValidationError(
-                t(
-                    'validation.phoneRequired'
-                )
-            );
-
-            return;
-        }
-
-        if (
-            !/^(\+84|0)\d{9,10}$/.test(
-                phone.trim()
-            )
-        ) {
-            setValidationError(
-                'Số điện thoại Việt Nam không hợp lệ'
-            );
-
-            return;
-        }
-
-        if (dob) {
-            const birthDate =
-                new Date(dob);
-
-            const today =
-                new Date();
-
-            if (
-                birthDate >= today
-            ) {
-                setValidationError(
-                    'Ngày sinh phải là ngày trong quá khứ'
-                );
-
-                return;
-            }
-        }
-
-
-
-        if (
-            selectedServiceIds.length ===
-            0
-        ) {
-            setValidationError(
-                t(
-                    'validation.serviceRequired'
-                )
-            );
-
-            return;
-        }
+        const errors = {};
+        const normalizedName = fullName.trim().replace(/\s+/g, ' ');
+        if (!normalizedName) errors.fullName = t('validation.fullNameRequired');
+        else if (normalizedName.length < 2 || normalizedName.length > 100) errors.fullName = 'Họ tên phải có từ 2 đến 100 ký tự';
+        else if (/\d/.test(normalizedName)) errors.fullName = 'Họ tên không được chứa chữ số';
+        if (!phone.trim()) errors.phone = t('validation.phoneRequired');
+        else if (!/^(\+84|0)\d{9,10}$/.test(phone.trim())) errors.phone = 'Số điện thoại Việt Nam không hợp lệ';
+        if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.email = 'Email không hợp lệ';
+        if (dob && new Date(dob) >= new Date(new Date().toDateString())) errors.dob = 'Ngày sinh phải là ngày trong quá khứ';
+        if (address.length > 255) errors.address = 'Địa chỉ không được vượt quá 255 ký tự';
+        if (allergyStatus === 'REPORTED' && allergies.length === 0) errors.allergies = 'Vui lòng nhập ít nhất một dị ứng';
+        if (selectedServiceIds.length === 0) errors.services = t('validation.serviceRequired');
         if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
-            setValidationError(t('workflow.singleExaminationOnly'));
+            errors.services = 'Mỗi lượt khám chỉ được chọn 1 dịch vụ khám bệnh.';
+        }
+        setFieldErrors(errors);
+        const firstField = Object.keys(errors)[0];
+        if (firstField) {
+            if (firstField === 'services') setValidationError(errors[firstField]);
+            setTimeout(() => document.getElementById(`patient-${firstField}`)?.focus(), 0);
             return;
         }
 
@@ -552,6 +711,11 @@ export default function CreateTicketPage() {
                 toGenderEnum(
                     gender
                 ),
+            guestEmail: email.trim() || null,
+            guestBloodType: bloodType || null,
+            allergyStatus,
+            guestAllergies: allergyStatus === 'REPORTED' ? allergies : [],
+            updatePatientProfile: true,
         });
 
         setShowConfirmModal(
@@ -643,6 +807,25 @@ export default function CreateTicketPage() {
 
                                     <div className="space-y-4 p-5">
 
+                                        {(customerId || phoneLookupDone || resolvingPhone) && (
+                                            <div className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 ${customerId ? 'border-emerald-200 bg-emerald-50' : 'border-blue-100 bg-blue-50'}`}>
+                                                <div className="flex min-w-0 items-center gap-2">
+                                                    <UserCheck size={17} className={customerId ? 'text-emerald-600' : 'text-blue-500'} />
+                                                    <div className="min-w-0">
+                                                        <p className={`text-xs font-semibold ${customerId ? 'text-emerald-800' : 'text-blue-800'}`}>
+                                                            {resolvingPhone ? 'Đang đối chiếu hồ sơ...' : customerId ? 'Đã tìm thấy hồ sơ bệnh nhân' : 'Bệnh nhân mới'}
+                                                        </p>
+                                                        {customerId && <p className="mt-0.5 text-[11px] text-emerald-700">{patientCode || customerId}</p>}
+                                                    </div>
+                                                </div>
+                                                {customerId && (
+                                                    <button type="button" onClick={handleChooseDifferentPatient} className="shrink-0 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900">
+                                                        Chọn bệnh nhân khác
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+
                                         {/* FULL NAME */}
 
                                         <div>
@@ -657,8 +840,9 @@ export default function CreateTicketPage() {
                                             </label>
 
                                             <input
+                                                id="patient-fullName"
                                                 type="text"
-                                                maxLength={50}
+                                                maxLength={100}
                                                 value={
                                                     fullName
                                                 }
@@ -674,14 +858,14 @@ export default function CreateTicketPage() {
                                                     setValidationError(
                                                         ''
                                                     );
+                                                    setFieldErrors(previous => ({ ...previous, fullName: undefined }));
                                                 }}
                                                 placeholder={t(
                                                     'createTicket.patientInfo.fullNamePlaceholder'
                                                 )}
-                                                className={
-                                                    inputCls
-                                                }
+                                                className={patientInputClass('fullName')}
                                             />
+                                            {fieldErrors.fullName && <p className="mt-1 text-xs text-red-500">{fieldErrors.fullName}</p>}
                                         </div>
 
                                         {/* PHONE + DOB */}
@@ -700,6 +884,7 @@ export default function CreateTicketPage() {
                                                 </label>
 
                                                 <input
+                                                    id="patient-phone"
                                                     type="tel"
                                                     maxLength={20}
                                                     value={
@@ -708,23 +893,22 @@ export default function CreateTicketPage() {
                                                     onChange={(
                                                         event
                                                     ) => {
-                                                        setPhone(
-                                                            event
-                                                                .target
-                                                                .value
-                                                        );
-
-                                                        setValidationError(
+                                                    setPhone(
+                                                        event
+                                                            .target
+                                                            .value
+                                                    );
+                                                    setValidationError(
                                                             ''
                                                         );
+                                                    setFieldErrors(previous => ({ ...previous, phone: undefined }));
                                                     }}
                                                     placeholder={t(
                                                         'createTicket.patientInfo.phonePlaceholder'
                                                     )}
-                                                    className={
-                                                        inputCls
-                                                    }
+                                                    className={patientInputClass('phone')}
                                                 />
+                                                {fieldErrors.phone && <p className="mt-1 text-xs text-red-500">{fieldErrors.phone}</p>}
                                             </div>
 
                                             <div>
@@ -735,6 +919,7 @@ export default function CreateTicketPage() {
                                                 </label>
 
                                                 <input
+                                                    id="patient-dob"
                                                     type="date"
                                                     max={new Date().toLocaleDateString(
                                                         'en-CA'
@@ -744,18 +929,36 @@ export default function CreateTicketPage() {
                                                     }
                                                     onChange={(
                                                         event
-                                                    ) =>
+                                                    ) => {
                                                         setDob(
                                                             event
                                                                 .target
                                                                 .value
-                                                        )
+                                                        );
+                                                        setFieldErrors(previous => ({ ...previous, dob: undefined }));
                                                     }
-                                                    className={
-                                                        inputCls
                                                     }
+                                                    className={patientInputClass('dob')}
                                                 />
+                                                {fieldErrors.dob && <p className="mt-1 text-xs text-red-500">{fieldErrors.dob}</p>}
                                             </div>
+                                        </div>
+
+                                        <div>
+                                            <label className={labelCls}>Email</label>
+                                            <input
+                                                id="patient-email"
+                                                type="email"
+                                                maxLength={255}
+                                                value={email}
+                                                onChange={(event) => {
+                                                    setEmail(event.target.value);
+                                                    setFieldErrors(previous => ({ ...previous, email: undefined }));
+                                                }}
+                                                placeholder="Ví dụ: nguyenthianh@example.com"
+                                                className={patientInputClass('email')}
+                                            />
+                                            {fieldErrors.email && <p className="mt-1 text-xs text-red-500">{fieldErrors.email}</p>}
                                         </div>
 
                                         {/* GENDER + ADDRESS */}
@@ -818,34 +1021,84 @@ export default function CreateTicketPage() {
                                             </div>
 
                                             <div>
-                                                <label className={labelCls}>
-                                                    {t(
-                                                        'createTicket.patientInfo.address'
-                                                    )}
-                                                </label>
-
-                                                <input
-                                                    type="text"
-                                                    value={
-                                                        address
-                                                    }
-                                                    onChange={(
-                                                        event
-                                                    ) =>
-                                                        setAddress(
-                                                            event
-                                                                .target
-                                                                .value
-                                                        )
-                                                    }
-                                                    placeholder={t(
-                                                        'createTicket.patientInfo.addressPlaceholder'
-                                                    )}
-                                                    className={
-                                                        inputCls
-                                                    }
-                                                />
+                                                <label className={labelCls}>Nhóm máu</label>
+                                                <select id="patient-bloodType" value={bloodType} onChange={(event) => setBloodType(event.target.value)} className={inputCls}>
+                                                    <option value="">Chưa xác định</option>
+                                                    {BLOOD_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                                                </select>
                                             </div>
+                                        </div>
+
+                                        <div>
+                                            <label className={labelCls}>{t('createTicket.patientInfo.address')}</label>
+                                            <input
+                                                id="patient-address"
+                                                type="text"
+                                                maxLength={255}
+                                                value={address}
+                                                onChange={(event) => {
+                                                    setAddress(event.target.value);
+                                                    setFieldErrors(previous => ({ ...previous, address: undefined }));
+                                                }}
+                                                placeholder={t('createTicket.patientInfo.addressPlaceholder')}
+                                                className={patientInputClass('address')}
+                                            />
+                                            {fieldErrors.address && <p className="mt-1 text-xs text-red-500">{fieldErrors.address}</p>}
+                                        </div>
+
+                                        <div id="patient-allergies" tabIndex={-1} className={`rounded-xl border p-3 ${fieldErrors.allergies ? 'border-red-400 bg-red-50/40' : 'border-gray-200'}`}>
+                                            <label className="block text-xs font-semibold text-gray-700">Thông tin dị ứng</label>
+                                            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                                {[
+                                                    ['UNVERIFIED', 'Chưa xác minh'],
+                                                    ['NONE_REPORTED', 'Không ghi nhận'],
+                                                    ['REPORTED', 'Có dị ứng'],
+                                                ].map(([value, label]) => (
+                                                    <button
+                                                        key={value}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setAllergyStatus(value);
+                                                            if (value !== 'REPORTED') setAllergyInput('');
+                                                            setFieldErrors(previous => ({ ...previous, allergies: undefined }));
+                                                        }}
+                                                        className={`rounded-lg border px-2 py-2 text-xs font-medium transition ${allergyStatus === value ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'}`}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            {allergyStatus === 'REPORTED' && (
+                                                <div className="mt-3">
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            value={allergyInput}
+                                                            maxLength={100}
+                                                            onChange={(event) => setAllergyInput(event.target.value)}
+                                                            onKeyDown={(event) => {
+                                                                if (event.key === 'Enter') {
+                                                                    event.preventDefault();
+                                                                    addAllergy();
+                                                                }
+                                                            }}
+                                                            placeholder="Nhập dị ứng rồi nhấn Enter"
+                                                            className="h-9 min-w-0 flex-1 rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-gray-400"
+                                                        />
+                                                        <button type="button" onClick={addAllergy} className="rounded-lg border border-gray-300 px-3 text-xs font-semibold text-gray-700">Thêm</button>
+                                                    </div>
+                                                    {allergies.length > 0 && (
+                                                        <div className="mt-2 flex flex-wrap gap-2">
+                                                            {allergies.map(item => (
+                                                                <span key={item.toLowerCase()} className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
+                                                                    {item}
+                                                                    <button type="button" onClick={() => setAllergies(previous => previous.filter(value => value !== item))} aria-label={`Xóa ${item}`}><X size={12}/></button>
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                            {fieldErrors.allergies && <p className="mt-1 text-xs text-red-500">{fieldErrors.allergies}</p>}
                                         </div>
 
                                         {/* NOTE */}
@@ -902,9 +1155,9 @@ export default function CreateTicketPage() {
                                                 )}
                                         </div>
 
-                                        {/* SEARCH + FILTER */}
+                                        {/* SEARCH + SERVICE TABS */}
 
-                                        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_190px]">
+                                        <div className="mt-4 space-y-3">
 
                                             <div className="relative">
 
@@ -934,43 +1187,75 @@ export default function CreateTicketPage() {
                                                 />
                                             </div>
 
-                                            <select
-                                                value={
-                                                    departmentType
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    setDepartmentType(
-                                                        event
-                                                            .target
-                                                            .value
-                                                    )
-                                                }
-                                                className={
-                                                    inputCls
-                                                }
-                                            >
-                                                <option value="">
-                                                    Tất cả loại dịch vụ
-                                                </option>
-
-                                                <option value="EXAMINATION">
-                                                    Khám bệnh
-                                                </option>
-
-                                                <option value="PARACLINICAL">
-                                                    Cận lâm sàng
-                                                </option>
-
-
-                                            </select>
+                                            <div className="grid grid-cols-2 rounded-xl bg-gray-100 p-1">
+                                                {[
+                                                    ['EXAMINATION', 'Khám bệnh'],
+                                                    ['PARACLINICAL', 'Cận lâm sàng'],
+                                                ].map(([type, label]) => {
+                                                    const count = services.filter(service => service.departmentType === type).length;
+                                                    return (
+                                                        <button
+                                                            key={type}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setActiveServiceTab(type);
+                                                                setSearchTerm('');
+                                                            }}
+                                                            className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${activeServiceTab === type ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                                                        >
+                                                            {label} · {count}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
+
+                                        {activeServiceTab === 'EXAMINATION' && (
+                                            <div className="mt-3 flex gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-xs leading-5 text-blue-800">
+                                                <Info size={16} className="mt-0.5 shrink-0" />
+                                                <p><strong>Lưu ý:</strong> Mỗi phiếu chỉ được chọn tối đa 01 dịch vụ khám bệnh. Bệnh nhân có thể tạo phiếu mới cho dịch vụ khám khác, nhưng không thể đăng ký lại dịch vụ khám đã chọn trong cùng ngày.</p>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* =================================================
                                         SERVICE LIST
                                     ================================================= */}
+
+                                    {customerId && (loadingSameDayResults || sameDayResults.length > 0) && (
+                                        <div className="mx-5 mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                                            <p className="text-sm font-semibold text-blue-900">
+                                                Kết quả cận lâm sàng đã thực hiện hôm nay
+                                            </p>
+                                            {loadingSameDayResults ? (
+                                                <p className="mt-1 text-xs text-blue-700">Đang tải kết quả...</p>
+                                            ) : (
+                                                <div className="mt-2 space-y-2">
+                                                    {sameDayResults.map(result => (
+                                                        <div key={result.testRequestId} className="rounded-lg border border-blue-100 bg-white px-3 py-2">
+                                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                                                <span className="text-xs font-semibold text-slate-800">{result.serviceName}</span>
+                                                                <span className="text-[11px] font-medium text-blue-700">Đã có kết quả · Không thu lại</span>
+                                                            </div>
+                                                            <p className="mt-1 text-[11px] text-slate-500">
+                                                                {result.sourceVisitCode} · {result.performingDepartmentName || 'Phòng cận lâm sàng'}
+                                                            </p>
+                                                            {result.conclusion && <p className="mt-1 text-xs text-slate-700">{result.conclusion}</p>}
+                                                            {result.attachments?.length > 0 && (
+                                                                <div className="mt-2 flex flex-wrap gap-2">
+                                                                    {result.attachments.map(file => (
+                                                                        <button key={file.attachmentId} type="button" onClick={() => openSameDayAttachment(file.url)} className="inline-flex items-center gap-1.5 rounded-md border border-blue-200 px-2 py-1 text-[11px] font-medium text-blue-700">
+                                                                            <FileText size={12}/>{file.originalName || 'Xem tệp'}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div className="flex-1 min-h-0 p-5">
 
@@ -983,137 +1268,66 @@ export default function CreateTicketPage() {
                                                     )}
                                                 </p>
                                             </div>
-                                        ) : orderedGroups.length >
-                                        0 ? (
-                                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-
-                                                {orderedGroups.map(
-                                                    ([
-                                                         type,
-                                                         servicesGroup,
-                                                     ]) => (
-                                                        <div
-                                                            key={
-                                                                type
-                                                            }
-                                                            className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-gray-200 bg-gray-50/60"
-                                                        >
-
-                                                            {/* GROUP HEADER */}
-
-                                                            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-
-                                                                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                                                                    {DEPARTMENT_TYPE_LABELS[
-                                                                            type
-                                                                            ] ||
-                                                                        type}
-                                                                </h3>
-
-                                                                <span className="text-[11px] text-gray-400">
-                                                                    {
-                                                                        servicesGroup.length
-                                                                    }{' '}
-                                                                    dịch vụ
-                                                                </span>
-                                                            </div>
-
-                                                            {/* =================================================
-                                                                FIXED HEIGHT SERVICE LIST
-                                                                khoảng 4 item
-                                                            ================================================= */}
-
-                                                            <div className="h-[272px] divide-y divide-gray-200 overflow-y-auto overflow-x-hidden px-4 pr-2 custom-scrollbar">
-
-                                                                {servicesGroup.length === 0 ? (
-                                                                    <div className="flex h-full items-center justify-center">
-                                                                        <span className="text-sm text-gray-400">Trống</span>
-                                                                    </div>
-                                                                ) : (
-                                                                    servicesGroup.map(
-                                                                        (
-                                                                            service
-                                                                        ) => {
-                                                                            const checked =
-                                                                                selectedServiceIds.includes(
-                                                                                    service.id
-                                                                                );
-
-                                                                            return (
-                                                                                <label
-                                                                                    key={
-                                                                                        service.id
-                                                                                    }
-                                                                                    className={`flex min-h-[64px] cursor-pointer items-start gap-3 py-3 transition ${
-                                                                                        checked
-                                                                                            ? 'bg-primary-50/50'
-                                                                                            : 'hover:bg-gray-100/50'
-                                                                                    }`}
-                                                                                >
-
-                                                                                    {/* CHECKBOX */}
-
-                                                                                    <input
-                                                                                        type="checkbox"
-                                                                                        checked={
-                                                                                            checked
-                                                                                        }
-                                                                                        onChange={() =>
-                                                                                            toggleService(
-                                                                                                service
-                                                                                            )
-                                                                                        }
-                                                                                        className="mt-0.5 h-4 w-4 shrink-0 accent-gray-900"
-                                                                                    />
-
-                                                                                    {/* INFO */}
-
-                                                                                    <div className="min-w-0 flex-1">
-
-                                                                                        <p className="text-sm font-medium leading-snug text-gray-800">
-                                                                                            {
-                                                                                                service.name
-                                                                                            }
+                                        ) : orderedGroups.length > 0 ? (
+                                            <div className="max-h-[390px] space-y-3 overflow-y-auto pr-1 custom-scrollbar">
+                                                {orderedGroups.map(([groupName, servicesGroup]) => {
+                                                    const open = expandedGroups[activeServiceTab] === groupName;
+                                                    return (
+                                                        <section key={groupName} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setExpandedGroups(previous => ({
+                                                                    ...previous,
+                                                                    [activeServiceTab]: open ? null : groupName,
+                                                                }))}
+                                                                className="flex w-full items-center justify-between bg-gray-50 px-4 py-3 text-left"
+                                                            >
+                                                                <span className="text-sm font-bold text-gray-700">{groupName} · {servicesGroup.length} dịch vụ</span>
+                                                                <ChevronDown size={16} className={`text-gray-400 transition ${open ? 'rotate-180' : ''}`} />
+                                                            </button>
+                                                            {open && (
+                                                                <div className="divide-y divide-gray-100 px-4">
+                                                                    {servicesGroup.map(service => {
+                                                                        const checked = selectedServiceIds.includes(service.id);
+                                                                        const completedToday = sameDayResults.some(result => result.serviceId === service.id);
+                                                                        const registeredToday = sameDayExaminations.find(item => item.serviceId === service.id && item.locked);
+                                                                        const disabled = completedToday || !!registeredToday;
+                                                                        return (
+                                                                            <label key={service.id} className={`flex min-h-[68px] items-start gap-3 py-3 transition ${disabled ? 'cursor-not-allowed bg-gray-50 opacity-70' : 'cursor-pointer hover:bg-gray-50'} ${checked ? 'bg-primary-50/50' : ''}`}>
+                                                                                <input
+                                                                                    type={activeServiceTab === 'EXAMINATION' ? 'radio' : 'checkbox'}
+                                                                                    name={activeServiceTab === 'EXAMINATION' ? 'examination-service' : undefined}
+                                                                                    checked={checked}
+                                                                                    disabled={disabled}
+                                                                                    onChange={() => toggleService(service)}
+                                                                                    className="mt-1 h-4 w-4 shrink-0 accent-gray-900"
+                                                                                />
+                                                                                <div className="min-w-0 flex-1">
+                                                                                    <p className="text-sm font-semibold text-gray-800">{service.name}</p>
+                                                                                    {registeredToday && (
+                                                                                        <p className="mt-1 text-[11px] font-semibold text-amber-700">
+                                                                                            {registeredToday.reason || `Đã đăng ký hôm nay · ${registeredToday.visitCode}`}
                                                                                         </p>
-
-                                                                                        {service.description && (
-                                                                                            <p className="mt-1 truncate text-xs text-gray-400">
-                                                                                                {
-                                                                                                    service.description
-                                                                                                }
-                                                                                            </p>
-                                                                                        )}
-
-                                                                                        {type ===
-                                                                                            'PARACLINICAL' &&
-                                                                                            service.capabilityName && (
-                                                                                                <p className="mt-1 truncate text-[11px] text-gray-500">
-                                                                                                    Năng lực:{' '}
-                                                                                                    {
-                                                                                                        service.capabilityName
-                                                                                                    }
-                                                                                                </p>
-                                                                                            )}
-                                                                                    </div>
-
-                                                                                    {/* PRICE */}
-
-                                                                                    <div className="shrink-0 pl-2 text-right">
-
-                                                                                        <p className="text-sm font-semibold text-gray-900">
-                                                                                            {fmt(
-                                                                                                service.price
-                                                                                            )}
-                                                                                        </p>
-                                                                                    </div>
-                                                                                </label>
-                                                                            );
-                                                                        }
-                                                                    )
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )
+                                                                                    )}
+                                                                                    {completedToday && (
+                                                                                        <p className="mt-1 text-[11px] font-semibold text-blue-700">Đã có kết quả hôm nay · Không cần mua lại</p>
+                                                                                    )}
+                                                                                    {service.description && <p className="mt-1 line-clamp-2 text-xs text-gray-400">{service.description}</p>}
+                                                                                    {activeServiceTab === 'PARACLINICAL' && service.capabilityName && (
+                                                                                        <p className="mt-1 text-[11px] text-gray-500">Năng lực: {service.capabilityName}</p>
+                                                                                    )}
+                                                                                </div>
+                                                                                <p className="shrink-0 pl-2 text-sm font-bold text-gray-900">{fmt(service.price)}</p>
+                                                                            </label>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </section>
+                                                    );
+                                                })}
+                                                {loadingSameDayExaminations && activeServiceTab === 'EXAMINATION' && (
+                                                    <p className="text-xs text-gray-400">Đang kiểm tra dịch vụ đã đăng ký hôm nay...</p>
                                                 )}
                                             </div>
                                         ) : (
@@ -1193,15 +1407,12 @@ export default function CreateTicketPage() {
 
                             <div className="hidden border-r border-gray-200 pr-6 sm:block">
 
-                                <p className="text-xs text-gray-400">
-                                    Dịch vụ đã chọn
-                                </p>
-
-                                <p className="mt-0.5 text-sm font-semibold text-gray-800">
-                                    {
-                                        selectedServiceIds.length
-                                    }
-                                </p>
+                                <p className="text-xs text-gray-400">Dịch vụ đã chọn</p>
+                                <div className="mt-0.5 flex flex-wrap gap-x-4 text-sm font-semibold text-gray-800">
+                                    <span>Khám bệnh: {selectedServices.filter(service => service.departmentType === 'EXAMINATION').length}/1</span>
+                                    <span>Cận lâm sàng: {selectedServices.filter(service => service.departmentType === 'PARACLINICAL').length}</span>
+                                    <span>Tổng: {selectedServiceIds.length}</span>
+                                </div>
                             </div>
 
                             <div>
@@ -1223,11 +1434,13 @@ export default function CreateTicketPage() {
                                 handleSubmit
                             }
                             disabled={
-                                submitting
+                                submitting || resolvingPhone
                             }
                             className="h-10 shrink-0 rounded-xl bg-gray-900 px-7 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            {submitting
+                            {resolvingPhone
+                                ? 'Đang đối chiếu số điện thoại...'
+                                : submitting
                                 ? t(
                                     'createTicket.submitting'
                                 )
@@ -1248,6 +1461,8 @@ export default function CreateTicketPage() {
                             fullName,
 
                             phone,
+
+                            email,
 
                             age: dob
                                 ? new Date().getFullYear() -
@@ -1272,6 +1487,12 @@ export default function CreateTicketPage() {
                                         ),
 
                             address,
+
+                            bloodType: BLOOD_TYPES.find(([value]) => value === bloodType)?.[1] || 'Chưa xác định',
+
+                            allergyStatus,
+
+                            allergies,
 
                             total:
                                 fmt(total),

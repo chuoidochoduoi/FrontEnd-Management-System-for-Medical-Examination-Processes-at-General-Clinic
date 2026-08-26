@@ -10,6 +10,7 @@ import { useInProgressPatient } from '@/hooks/useInProgressPatient';
 import { useQueueWaiting } from '@/hooks/useQueueWaiting';
 import { useQueueActions } from '@/hooks/useQueueActions';
 import { useAllDepartments } from '@/hooks/useAllDepartments';
+import { useWebSocket } from '@/hooks/useWebSocket';
 
 import { ROUTES } from '@/constants/routes';
 
@@ -88,6 +89,15 @@ export default function DoctorDepartmentPage() {
     } = useQueueWaiting(
         departmentId,
         queueFilters
+    );
+
+    useWebSocket(
+        departmentId ? `/topic/department-${departmentId}-queue` : null,
+        null,
+        () => {
+            reloadInProgress();
+            reloadWaiting();
+        }
     );
 
     /* =========================================================
@@ -774,6 +784,12 @@ export default function DoctorDepartmentPage() {
                                                                         'Không có mã bệnh nhân'}
                                                                 </p>
 
+                                                                {ticket.patientBusy && (
+                                                                    <p className="mt-1 text-xs font-semibold text-amber-700">
+                                                                        Đang được phục vụ tại {ticket.busyDepartmentName || 'phòng khác'}
+                                                                    </p>
+                                                                )}
+
                                                             </div>
 
                                                         </div>
@@ -831,11 +847,11 @@ export default function DoctorDepartmentPage() {
                                                                             )
                                                                         }
                                                                         disabled={
-                                                                            !!inProgressTicket
+                                                                            !!inProgressTicket || ticket.canCall === false
                                                                         }
                                                                         className="rounded-lg border border-primary-500 px-3 py-1.5 text-xs font-semibold text-primary-600 transition hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-40"
                                                                     >
-                                                                        Gọi bệnh nhân
+                                                                        {ticket.patientBusy ? 'Tạm thời chưa thể gọi' : 'Gọi bệnh nhân'}
                                                                     </button>
 
                                                                     <button
@@ -894,7 +910,7 @@ export default function DoctorDepartmentPage() {
                                                                                 )
                                                                             }
                                                                             disabled={
-                                                                                !!inProgressTicket
+                                                                                !!inProgressTicket || ticket.patientBusy
                                                                             }
                                                                             className="rounded-lg bg-primary-500 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-40"
                                                                         >

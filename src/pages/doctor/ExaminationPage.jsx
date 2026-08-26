@@ -13,6 +13,7 @@ import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { useInProgressPatient } from '@/hooks/useInProgressPatient';
 import { useDiagnosis, useTagSearch } from '@/hooks/useDiagnosis';
 import { useLabServices } from '@/hooks/useLabServices';
+import PatientAllergyBanner from '@/components/clinical/PatientAllergyBanner';
 
 import { toast } from 'react-toastify';
 import { ROUTES } from '@/constants/routes';
@@ -34,6 +35,68 @@ const sectionTitle =
 
 const inputCls =
     'w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-100';
+
+const formatHistoryDate = (date, time) => {
+    if (!date) return 'Chưa ghi nhận thời gian';
+    const value = new Date(`${date}T${time || '00:00'}`);
+    if (Number.isNaN(value.getTime())) return [date, time].filter(Boolean).join(' ');
+    return value.toLocaleString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: time ? '2-digit' : undefined,
+        minute: time ? '2-digit' : undefined,
+    });
+};
+
+const validateVitalSignsForCompletion = ({
+    heartRate,
+    bloodPressure,
+    temperature,
+    height,
+    weight,
+}) => {
+    const errors = {};
+    const heartRateText = String(heartRate ?? '').trim();
+    const bloodPressureText = String(bloodPressure ?? '').trim();
+    const temperatureText = String(temperature ?? '').trim();
+    const heightText = String(height ?? '').trim();
+    const weightText = String(weight ?? '').trim();
+
+    if (!heartRateText) errors.heartRate = 'Vui lòng nhập nhịp tim.';
+    else if (!/^\d+$/.test(heartRateText) || Number(heartRateText) < 30 || Number(heartRateText) > 220)
+        errors.heartRate = 'Nhịp tim phải là số nguyên từ 30 đến 220 BPM.';
+
+    if (!bloodPressureText) errors.bloodPressure = 'Vui lòng nhập huyết áp.';
+    else {
+        const match = bloodPressureText.match(/^(\d{2,3})\s*\/\s*(\d{2,3})$/);
+        if (!match) errors.bloodPressure = 'Nhập huyết áp theo định dạng SYS/DIA, ví dụ 120/80.';
+        else {
+            const systolic = Number(match[1]);
+            const diastolic = Number(match[2]);
+            if (systolic < 60 || systolic > 250)
+                errors.bloodPressure = 'Huyết áp tâm thu phải từ 60 đến 250 mmHg.';
+            else if (diastolic < 40 || diastolic > 150)
+                errors.bloodPressure = 'Huyết áp tâm trương phải từ 40 đến 150 mmHg.';
+            else if (systolic - diastolic < 10)
+                errors.bloodPressure = 'Huyết áp tâm thu phải lớn hơn tâm trương ít nhất 10 mmHg.';
+        }
+    }
+
+    if (!temperatureText) errors.temperature = 'Vui lòng nhập thân nhiệt.';
+    else if (!/^\d+(\.\d)?$/.test(temperatureText) || Number(temperatureText) < 34 || Number(temperatureText) > 43)
+        errors.temperature = 'Thân nhiệt phải từ 34,0 đến 43,0 °C và có tối đa 1 số thập phân.';
+
+    if (!heightText) errors.height = 'Vui lòng nhập chiều cao.';
+    else if (!/^\d+(\.\d+)?$/.test(heightText) || Number(heightText) < 30 || Number(heightText) > 250)
+        errors.height = 'Chiều cao phải từ 30 đến 250 cm.';
+
+    if (!weightText) errors.weight = 'Vui lòng nhập cân nặng.';
+    else if (!/^\d+(\.\d)?$/.test(weightText) || Number(weightText) < 1 || Number(weightText) > 300)
+        errors.weight = 'Cân nặng phải từ 1,0 đến 300,0 kg và có tối đa 1 số thập phân.';
+
+    return errors;
+};
 
 /* =========================================================
    SEARCH DROPDOWN
@@ -366,6 +429,18 @@ export default function ExaminationPage() {
         setWeight,
     ] = useState('');
 
+    const [vitalErrors, setVitalErrors] = useState({});
+
+    const updateVitalValue = (field, setter) => (value) => {
+        setter(value);
+        setVitalErrors((current) => {
+            if (!current[field]) return current;
+            const next = { ...current };
+            delete next[field];
+            return next;
+        });
+    };
+
     const diagnosis =
         useDiagnosis([]);
 
@@ -391,6 +466,66 @@ export default function ExaminationPage() {
         labSelect,
         setLabSelect,
     ] = useState('');
+
+    const [sameDayResults, setSameDayResults] = useState([]);
+    const [loadingSameDayResults, setLoadingSameDayResults] = useState(false);
+
+    useEffect(() => {
+        if (!examination?.recordId) {
+            setSameDayResults([]);
+            return undefined;
+        }
+        const controller = new AbortController();
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+        setLoadingSameDayResults(true);
+        fetch(`${apiBase}/api/doctor/examinations/${examination.recordId}/same-day-paraclinical-results`, {
+            headers: authHeader(),
+            signal: controller.signal,
+        })
+            .then(async response => {
+                if (!response.ok) throw new Error('Không thể tải kết quả cận lâm sàng cùng ngày');
+                return response.json();
+            })
+            .then(body => {
+                const results = body?.data ?? body?.result ?? body ?? [];
+                const normalized = Array.isArray(results) ? results : [];
+                setSameDayResults(normalized);
+                const reusableIds = new Set(normalized.map(item => item.serviceId));
+                labOrders.setSelected(current => current.filter(item => !reusableIds.has(item.id)));
+            })
+            .catch(error => {
+                if (error.name !== 'AbortError') setSameDayResults([]);
+            })
+            .finally(() => setLoadingSameDayResults(false));
+        return () => controller.abort();
+    }, [examination?.recordId]);
+
+    const sameDayResultByServiceId = new Map(
+        sameDayResults.map(result => [result.serviceId, result])
+    );
+
+    const [patientAllergies, setPatientAllergies] = useState({ status: 'UNVERIFIED', items: [] });
+    const [allergyEditorSignal, setAllergyEditorSignal] = useState(0);
+
+    useEffect(() => {
+        if (!examination?.recordId) {
+            setPatientAllergies({ status: 'UNVERIFIED', items: [] });
+            return;
+        }
+        const controller = new AbortController();
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+        fetch(`${apiBase}/api/v1/medical-records/${examination.recordId}/patient-allergies`, {
+            headers: authHeader(), signal: controller.signal,
+        }).then(async response => {
+            if (!response.ok) throw new Error('Không thể tải thông tin dị ứng');
+            return response.json();
+        }).then(setPatientAllergies).catch(error => {
+            if (error.name !== 'AbortError') {
+                setPatientAllergies(examination.patientAllergies || { status: 'UNVERIFIED', items: [] });
+            }
+        });
+        return () => controller.abort();
+    }, [examination?.recordId]);
 
     /* =====================================================
        INITIAL RECORD DATA
@@ -606,6 +741,11 @@ export default function ExaminationPage() {
         rowId,
         medicine
     ) => {
+        if (patientAllergies.status === 'UNVERIFIED') {
+            toast.warning('Vui lòng xác minh dị ứng trước khi kê thuốc.');
+            setAllergyEditorSignal(value => value + 1);
+            return;
+        }
         setPrescriptionItems(
             (items) =>
                 items.map(
@@ -642,6 +782,11 @@ export default function ExaminationPage() {
 
     const addPrescriptionRow =
         () => {
+            if (patientAllergies.status === 'UNVERIFIED') {
+                toast.warning('Vui lòng xác minh dị ứng trước khi kê thuốc.');
+                setAllergyEditorSignal(value => value + 1);
+                return;
+            }
             setPrescriptionItems(
                 (items) => [
                     ...items,
@@ -789,6 +934,12 @@ export default function ExaminationPage() {
         previousRecordDetail,
         setPreviousRecordDetail,
     ] = useState(null);
+
+    const [historyOpen, setHistoryOpen] = useState(false);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyError, setHistoryError] = useState('');
+    const [historyDetailLoading, setHistoryDetailLoading] = useState(false);
+    const [historyDetailError, setHistoryDetailError] = useState('');
 
     /* =====================================================
        FOLLOW UP
@@ -1038,6 +1189,8 @@ export default function ExaminationPage() {
 
         const loadPreviousRecords =
             async () => {
+                setHistoryLoading(true);
+                setHistoryError('');
                 try {
                     const apiBase =
                         import.meta.env
@@ -1070,10 +1223,15 @@ export default function ExaminationPage() {
                         body ??
                         []
                     );
-                } catch {
+                } catch (error) {
                     setPreviousRecords(
                         []
                     );
+                    setHistoryError(
+                        error.message || 'Không thể tải lịch sử khám.'
+                    );
+                } finally {
+                    setHistoryLoading(false);
                 }
             };
 
@@ -1145,21 +1303,21 @@ export default function ExaminationPage() {
     ===================================================== */
 
     const openPreviousRecord =
-        async (recordId) => {
+        async (historyItem) => {
+            const recordId = historyItem?.id ?? historyItem;
+            setHistoryDetailLoading(true);
+            setHistoryDetailError('');
+            setPreviousRecordDetail(null);
             try {
                 const apiBase =
                     import.meta.env
                         .VITE_API_URL ||
                     'http://localhost:8080';
 
-                const response =
-                    await fetch(
-                        `${apiBase}/api/v1/medical-records/${recordId}`,
-                        {
-                            headers:
-                                authHeader(),
-                        }
-                    );
+                const [response, visitResponse] = await Promise.all([
+                    fetch(`${apiBase}/api/v1/medical-records/${recordId}`, { headers: authHeader() }),
+                    fetch(`${apiBase}/api/v1/medical-records/${recordId}/visit-detail`, { headers: authHeader() }),
+                ]);
 
                 if (!response.ok) {
                     throw new Error(
@@ -1169,18 +1327,36 @@ export default function ExaminationPage() {
 
                 const body =
                     await response.json();
+                const visitDetail = visitResponse.ok ? await visitResponse.json() : null;
 
                 setPreviousRecordDetail(
-                    body.data ??
-                    body.result ??
-                    body
+                    { ...(body.data ??
+                        body.result ??
+                        body), visitDetail, historySummary: historyItem }
                 );
             } catch (err) {
-                toast.error(
-                    err.message
-                );
+                setHistoryDetailError(err.message || 'Không thể tải chi tiết bệnh án.');
+            } finally {
+                setHistoryDetailLoading(false);
             }
         };
+
+    const openHistoryAttachment = async (url) => {
+        if (!url) return;
+        try {
+            const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+            const response = await fetch(
+                url.startsWith('http') ? url : `${apiBase}${url}`,
+                { headers: authHeader() }
+            );
+            if (!response.ok) throw new Error('Không thể mở tệp kết quả.');
+            const blobUrl = URL.createObjectURL(await response.blob());
+            window.open(blobUrl, '_blank', 'noopener,noreferrer');
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        } catch (error) {
+            toast.error(error.message || 'Không thể mở tệp kết quả.');
+        }
+    };
 
     /* =====================================================
        CREATE FOLLOW UP
@@ -1602,6 +1778,12 @@ export default function ExaminationPage() {
                 return;
             }
 
+            if (patientAllergies.status === 'UNVERIFIED' && prescriptionItems.some(item => item.name?.trim())) {
+                toast.warning('Vui lòng xác minh dị ứng trước khi lưu đơn thuốc.');
+                setAllergyEditorSignal(value => value + 1);
+                return;
+            }
+
             setSaving(true);
             setError('');
 
@@ -1832,6 +2014,30 @@ export default function ExaminationPage() {
                 return;
             }
 
+            const nextVitalErrors = validateVitalSignsForCompletion({
+                heartRate,
+                bloodPressure,
+                temperature,
+                height,
+                weight,
+            });
+
+            if (Object.keys(nextVitalErrors).length > 0) {
+                setVitalErrors(nextVitalErrors);
+                toast.error('Vui lòng kiểm tra các chỉ số sinh hiệu được đánh dấu đỏ.');
+                const firstInvalidField = Object.keys(nextVitalErrors)[0];
+                window.setTimeout(() => {
+                    document.getElementById(`vital-${firstInvalidField}`)?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                    });
+                    document.getElementById(`vital-${firstInvalidField}`)?.focus();
+                }, 0);
+                return;
+            }
+
+            setVitalErrors({});
+
             const validationError =
                 validateExamination(
                     true
@@ -1876,6 +2082,12 @@ export default function ExaminationPage() {
                     'Mỗi thuốc phải có tên thuốc và số lượng lớn hơn 0.'
                 );
 
+                return;
+            }
+
+            if (patientAllergies.status === 'UNVERIFIED' && enteredMedicines.length > 0) {
+                toast.warning('Vui lòng xác minh dị ứng trước khi hoàn tất hồ sơ có đơn thuốc.');
+                setAllergyEditorSignal(value => value + 1);
                 return;
             }
 
@@ -2048,6 +2260,24 @@ export default function ExaminationPage() {
                     responseBody.result ??
                     responseBody;
 
+                const waitingForTests =
+                    completedRecord.status !== 'COMPLETED';
+
+                if (waitingForTests) {
+                    toast.success(
+                        'Đã lưu chỉ định. Bệnh nhân đang chờ thực hiện cận lâm sàng.'
+                    );
+
+                    navigate(
+                        ROUTES.DOCTOR_DEPARTMENTS.replace(
+                            ':departmentId',
+                            departmentId
+                        ),
+                        { replace: true }
+                    );
+                    return;
+                }
+
                 toast.success(
                     'Hoàn thành khám thành công!'
                 );
@@ -2069,10 +2299,7 @@ export default function ExaminationPage() {
                             completedRecord.completedAt ??
                             new Date().toISOString(),
 
-                        waitingForTests:
-                            labOrders.selected
-                                .length >
-                            0,
+                        waitingForTests: false,
                     };
 
                 sessionStorage.setItem(
@@ -2261,39 +2488,33 @@ export default function ExaminationPage() {
                                             )}
                                         </div>
 
-                                        {previousRecords.length >
-                                            0 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        openPreviousRecord(
-                                                            previousRecords[
-                                                                0
-                                                                ].id
-                                                        )
-                                                    }
-                                                    className="mt-2 text-xs font-medium text-gray-500 underline-offset-2 transition hover:text-gray-900 hover:underline"
-                                                >
-                                                    Xem bệnh án trước (
-                                                    {
-                                                        previousRecords.length
-                                                    }
-                                                    )
-                                                </button>
-                                            )}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setPreviousRecordDetail(null);
+                                                setHistoryDetailError('');
+                                                setHistoryOpen(true);
+                                            }}
+                                            className="mt-2 text-xs font-semibold text-primary-600 underline-offset-2 transition hover:text-primary-800 hover:underline"
+                                        >
+                                            Lịch sử khám ({previousRecords.length})
+                                        </button>
                                     </div>
                                 </div>
 
                                 {/* HEART RATE */}
 
                                 <VitalField
+                                    id="vital-heartRate"
                                     label="Nhịp tim"
                                     unit="BPM"
+                                    range="30–220"
+                                    error={vitalErrors.heartRate}
                                     value={
                                         heartRate
                                     }
                                     onChange={
-                                        setHeartRate
+                                        updateVitalValue('heartRate', setHeartRate)
                                     }
                                     type="number"
                                     placeholder="60"
@@ -2302,13 +2523,16 @@ export default function ExaminationPage() {
                                 {/* BLOOD PRESSURE */}
 
                                 <VitalField
+                                    id="vital-bloodPressure"
                                     label="Huyết áp"
                                     unit="mmHg"
+                                    range="SYS 60–250 / DIA 40–150"
+                                    error={vitalErrors.bloodPressure}
                                     value={
                                         bloodPressure
                                     }
                                     onChange={
-                                        setBloodPressure
+                                        updateVitalValue('bloodPressure', setBloodPressure)
                                     }
                                     placeholder="120/80"
                                 />
@@ -2316,13 +2540,16 @@ export default function ExaminationPage() {
                                 {/* TEMPERATURE */}
 
                                 <VitalField
+                                    id="vital-temperature"
                                     label="Thân nhiệt"
                                     unit="°C"
+                                    range="34,0–43,0"
+                                    error={vitalErrors.temperature}
                                     value={
                                         temperature
                                     }
                                     onChange={
-                                        setTemperature
+                                        updateVitalValue('temperature', setTemperature)
                                     }
                                     type="number"
                                     step="0.1"
@@ -2332,13 +2559,16 @@ export default function ExaminationPage() {
                                 {/* HEIGHT */}
 
                                 <VitalField
+                                    id="vital-height"
                                     label="Chiều cao"
                                     unit="cm"
+                                    range="30–250"
+                                    error={vitalErrors.height}
                                     value={
                                         height
                                     }
                                     onChange={
-                                        setHeight
+                                        updateVitalValue('height', setHeight)
                                     }
                                     type="number"
                                     placeholder="170"
@@ -2347,13 +2577,16 @@ export default function ExaminationPage() {
                                 {/* WEIGHT */}
 
                                 <VitalField
+                                    id="vital-weight"
                                     label="Cân nặng"
                                     unit="kg"
+                                    range="1,0–300,0"
+                                    error={vitalErrors.weight}
                                     value={
                                         weight
                                     }
                                     onChange={
-                                        setWeight
+                                        updateVitalValue('weight', setWeight)
                                     }
                                     type="number"
                                     placeholder="60"
@@ -2361,6 +2594,14 @@ export default function ExaminationPage() {
                             </div>
                         </section>
                     )}
+
+                    <PatientAllergyBanner
+                        recordId={examination.recordId}
+                        value={patientAllergies}
+                        editable
+                        openEditorSignal={allergyEditorSignal}
+                        onChange={setPatientAllergies}
+                    />
 
                     {/* =================================================
                         MAIN 2 COLUMNS
@@ -2967,7 +3208,8 @@ export default function ExaminationPage() {
                                                     service &&
                                                     !unavailableLabServiceIds.has(
                                                         service.serviceId
-                                                    )
+                                                    ) &&
+                                                    !sameDayResultByServiceId.has(service.serviceId)
                                                 ) {
                                                     labOrders.add(
                                                         {
@@ -3004,7 +3246,7 @@ export default function ExaminationPage() {
                                                         disabled={
                                                             unavailableLabServiceIds.has(
                                                                 service.serviceId
-                                                            )
+                                                            ) || sameDayResultByServiceId.has(service.serviceId)
                                                         }
                                                     >
                                                         {
@@ -3024,6 +3266,9 @@ export default function ExaminationPage() {
                                                             }
                                                             return ' (Đã đặt trước - dùng cho ca khám này)';
                                                         })()}
+                                                        {sameDayResultByServiceId.has(service.serviceId)
+                                                            ? ' (Đã có kết quả hôm nay)'
+                                                            : ''}
                                                     </option>
                                                 )
                                             )}
@@ -3055,6 +3300,68 @@ export default function ExaminationPage() {
                                         </div>
                                     )}
 
+                                {(loadingSameDayResults || sameDayResults.length > 0) && (
+                                    <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <p className="text-xs font-semibold text-blue-900">
+                                                Kết quả tham chiếu từ lượt khám khác trong cùng ngày
+                                            </p>
+                                            <span className="text-[10px] font-semibold uppercase tracking-wide text-blue-700">
+                                                Chỉ đọc
+                                            </span>
+                                        </div>
+                                        {loadingSameDayResults ? (
+                                            <p className="mt-2 text-xs text-blue-700">Đang tải kết quả...</p>
+                                        ) : (
+                                            <div className="mt-2 space-y-2">
+                                                {sameDayResults.map(item => (
+                                                    <article key={item.testRequestId} className="rounded-lg border border-blue-100 bg-white p-3">
+                                                        <div className="flex flex-wrap items-start justify-between gap-2">
+                                                            <div>
+                                                                <p className="text-xs font-semibold text-slate-900">{item.serviceName}</p>
+                                                                <p className="mt-0.5 text-[11px] text-slate-500">
+                                                                    {item.sourceVisitCode} · {item.sourceExaminationServiceName || 'Lượt khám trước'}
+                                                                    {item.sourceDoctorName ? ` · ${item.sourceDoctorName}` : ''}
+                                                                </p>
+                                                            </div>
+                                                            <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+                                                                Đã ký
+                                                            </span>
+                                                        </div>
+                                                        {item.results?.length > 0 && (
+                                                            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                                                {item.results.map((result, index) => (
+                                                                    <div key={`${result.name}-${index}`} className="rounded-md bg-slate-50 p-2">
+                                                                        <span className="text-[10px] text-slate-500">
+                                                                            {result.name}{result.referenceRange ? ` · ${result.referenceRange}` : ''}
+                                                                        </span>
+                                                                        <p className="text-xs font-semibold text-slate-800">
+                                                                            {result.result} {result.unit || ''}{' '}
+                                                                            <span className={['HIGH', 'LOW', 'ABNORMAL'].includes(result.assessment) ? 'text-amber-700' : 'text-emerald-700'}>
+                                                                                {result.assessment || ''}
+                                                                            </span>
+                                                                        </p>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                        {item.conclusion && <p className="mt-2 text-xs text-slate-700">{item.conclusion}</p>}
+                                                        {item.attachments?.length > 0 && (
+                                                            <div className="mt-2 flex flex-wrap gap-2">
+                                                                {item.attachments.map(file => (
+                                                                    <button key={file.attachmentId} type="button" onClick={() => openHistoryAttachment(file.url)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-primary-700">
+                                                                        {file.originalName || 'Mở tệp kết quả'}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </article>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 {/* FIXED TEST LIST */}
 
                                 <div className="overflow-hidden rounded-xl border border-gray-200">
@@ -3062,11 +3369,11 @@ export default function ExaminationPage() {
                                     <div className="grid grid-cols-[minmax(0,1fr)_120px_24px] border-b border-gray-100 bg-gray-50 px-3 py-2">
 
                                         <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                                            Tên xét nghiệm
+                                            TĂªn xĂ©t nghiá»‡m
                                         </span>
 
                                         <span className="text-center text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                                            Trạng thái
+                                            Tráº¡ng thĂ¡i
                                         </span>
 
                                         <span />
@@ -3075,53 +3382,43 @@ export default function ExaminationPage() {
                                     <div className="h-[330px] overflow-y-auto">
 
                                         {testRequests.map(
-                                            (
-                                                lab,
-                                                index
-                                            ) => {
-                                                const status =
-                                                    getTestStatus(
-                                                        lab.status
-                                                    );
-
+                                            (lab) => {
+                                                const statusMap = {
+                                                    PENDING: { text: 'Chá» thá»±c hiá»‡n', cls: 'border-amber-200 bg-amber-50 text-amber-700' },
+                                                    IN_PROGRESS: { text: 'Äang thá»±c hiá»‡n', cls: 'border-blue-200 bg-blue-50 text-blue-700' },
+                                                    COMPLETED: { text: 'HoĂ n thĂ nh', cls: 'border-green-200 bg-green-50 text-green-700' },
+                                                    CANCELLED: { text: 'ÄĂ£ há»§y', cls: 'border-red-200 bg-red-50 text-red-700' },
+                                                };
+                                                const status = statusMap[lab.status] || statusMap.PENDING;
                                                 return (
                                                     <button
-                                                        key={
-                                                            lab.testRequestId ??
-                                                            index
-                                                        }
+                                                        key={lab.testRequestId}
                                                         type="button"
                                                         onClick={() =>
                                                             navigate(
                                                                 ROUTES.DOCTOR_LAB_DETAIL.replace(
                                                                     ':id',
                                                                     lab.testRequestId
-                                                                )
+                                                                ),
+                                                                { state: { from: 'examination' } }
                                                             )
                                                         }
                                                         className="grid w-full grid-cols-[minmax(0,1fr)_120px_24px] items-center border-b border-gray-100 px-3 py-3 text-left transition last:border-b-0 hover:bg-gray-50"
                                                     >
                                                         <span className="truncate pr-2 text-xs font-medium text-gray-700">
-                                                            {lab.serviceName ||
-                                                                lab.testRequestId ||
-                                                                '—'}
+                                                            {lab.serviceName || lab.testRequestId || 'â€”'}
                                                         </span>
 
                                                         <span className="flex justify-center">
-
                                                             <span
                                                                 className={`inline-flex whitespace-nowrap rounded-md border px-2 py-1 text-[10px] font-medium ${status.cls}`}
                                                             >
-                                                                {
-                                                                    status.text
-                                                                }
+                                                                {status.text}
                                                             </span>
                                                         </span>
 
                                                         <ChevronRight
-                                                            size={
-                                                                15
-                                                            }
+                                                            size={15}
                                                             className="justify-self-end text-gray-300"
                                                         />
                                                     </button>
@@ -3129,15 +3426,13 @@ export default function ExaminationPage() {
                                             }
                                         )}
 
-                                        {testRequests.length ===
-                                            0 && (
-                                                <div className="flex h-full items-center justify-center px-6 text-center">
-
-                                                    <p className="text-sm text-gray-400">
-                                                        Chưa có xét nghiệm / cận lâm sàng nào.
-                                                    </p>
-                                                </div>
-                                            )}
+                                        {testRequests.length === 0 && (
+                                            <div className="flex h-full items-center justify-center px-6 text-center">
+                                                <p className="text-sm text-gray-400">
+                                                    Chưa có xét nghiệm / cận lâm sàng nào.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -3341,84 +3636,196 @@ export default function ExaminationPage() {
                 PREVIOUS RECORD MODAL
             ================================================= */}
 
-            {previousRecordDetail && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
-
-                    <section className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-
-                        <div className="flex items-start justify-between gap-4">
-
+            {historyOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-3 sm:p-6"
+                    onMouseDown={() => setHistoryOpen(false)}
+                >
+                    <section
+                        className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+                        onMouseDown={(event) => event.stopPropagation()}
+                    >
+                        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
                             <div>
-                                <h2 className="text-lg font-bold text-gray-900">
-                                    Bệnh án trước
+                                <h2 className="text-lg font-bold text-slate-900">
+                                    {previousRecordDetail ? 'Chi tiết bệnh án cũ' : 'Lịch sử khám'}
                                 </h2>
-
-                                <p className="mt-1 text-sm text-gray-500">
-                                    {previousRecordDetail.recordCode ||
-                                        '-'}
+                                <p className="mt-1 text-sm text-slate-500">
+                                    {previousRecordDetail
+                                        ? previousRecordDetail.recordCode || 'Bệnh án đã hoàn tất'
+                                        : `${previousRecords.length} bệnh án đã hoàn tất`}
                                 </p>
                             </div>
-
                             <button
                                 type="button"
-                                onClick={() =>
-                                    setPreviousRecordDetail(
-                                        null
-                                    )
-                                }
-                                className="text-sm text-gray-500 transition hover:text-gray-900"
+                                onClick={() => setHistoryOpen(false)}
+                                className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
                             >
                                 Đóng
                             </button>
+                        </header>
+
+                        <div className="overflow-y-auto p-4 sm:p-6">
+                            {!previousRecordDetail && !historyDetailLoading && !historyDetailError && (
+                                <>
+                                    {historyLoading && (
+                                        <div className="flex min-h-52 items-center justify-center text-sm text-slate-500">
+                                            Đang tải lịch sử khám...
+                                        </div>
+                                    )}
+
+                                    {!historyLoading && historyError && (
+                                        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                            {historyError}
+                                        </div>
+                                    )}
+
+                                    {!historyLoading && !historyError && previousRecords.length === 0 && (
+                                        <div className="flex min-h-52 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 px-6 text-center">
+                                            <p className="font-semibold text-slate-700">Chưa có bệnh án cũ</p>
+                                            <p className="mt-1 text-sm text-slate-500">Bệnh nhân chưa có lượt khám nào đã hoàn tất.</p>
+                                        </div>
+                                    )}
+
+                                    {!historyLoading && previousRecords.length > 0 && (
+                                        <div className="space-y-3">
+                                            {previousRecords.map((record) => (
+                                                <button
+                                                    key={record.id}
+                                                    type="button"
+                                                    onClick={() => openPreviousRecord(record)}
+                                                    className="grid w-full gap-3 rounded-xl border border-slate-200 p-4 text-left transition hover:border-primary-300 hover:bg-primary-50/40 sm:grid-cols-[170px_minmax(0,1fr)_auto] sm:items-center"
+                                                >
+                                                    <div>
+                                                        <p className="text-sm font-bold text-slate-800">
+                                                            {formatHistoryDate(record.date, record.time)}
+                                                        </p>
+                                                        <p className="mt-1 text-xs text-slate-500">{record.doctor || 'Chưa ghi nhận bác sĩ'}</p>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm font-semibold text-slate-800">{record.specialty || 'Khám bệnh'}</p>
+                                                        <p className="mt-1 line-clamp-2 text-xs text-slate-500">{record.diagnosis || 'Chưa ghi nhận chẩn đoán'}</p>
+                                                    </div>
+                                                    <span className="inline-flex w-fit items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                                                        Đã hoàn tất
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {historyDetailLoading && (
+                                <div className="flex min-h-64 items-center justify-center text-sm text-slate-500">
+                                    Đang tải chi tiết bệnh án...
+                                </div>
+                            )}
+
+                            {!historyDetailLoading && historyDetailError && !previousRecordDetail && (
+                                <div className="space-y-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setHistoryDetailError('')}
+                                        className="text-sm font-semibold text-primary-600 hover:text-primary-800"
+                                    >
+                                        ← Quay lại danh sách
+                                    </button>
+                                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                        {historyDetailError}
+                                    </div>
+                                </div>
+                            )}
+
+                            {previousRecordDetail && !historyDetailLoading && (
+                                <div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPreviousRecordDetail(null);
+                                            setHistoryDetailError('');
+                                        }}
+                                        className="mb-4 text-sm font-semibold text-primary-600 hover:text-primary-800"
+                                    >
+                                        ← Quay lại danh sách
+                                    </button>
+
+                                    <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                                        <div><span className="block text-xs text-slate-400">Thời gian khám</span><b>{formatHistoryDate(previousRecordDetail.historySummary?.date, previousRecordDetail.historySummary?.time)}</b></div>
+                                        <div><span className="block text-xs text-slate-400">Dịch vụ</span><b>{previousRecordDetail.visitDetail?.examinations?.find(item => String(item.recordId) === String(previousRecordDetail.recordId))?.serviceName || previousRecordDetail.historySummary?.specialty || 'Khám bệnh'}</b></div>
+                                        <div><span className="block text-xs text-slate-400">Bác sĩ</span><b>{previousRecordDetail.doctorName || previousRecordDetail.historySummary?.doctor || '-'}</b></div>
+                                        <div><span className="block text-xs text-slate-400">Trạng thái</span><b className="text-emerald-700">Đã hoàn tất</b></div>
+                                    </div>
+
+                                    <PatientAllergyBanner
+                                        value={patientAllergies}
+                                        currentLabel
+                                        historicalContext
+                                        className="mt-4"
+                                    />
+
+                                    <section className="mt-4 rounded-xl border border-slate-200 p-4">
+                                        <h3 className="mb-4 text-sm font-bold text-slate-900">Nội dung khám</h3>
+                                        <dl className="grid gap-4 text-sm md:grid-cols-2">
+                                            <div><dt className="text-xs text-slate-400">Triệu chứng và lý do khám</dt><dd className="mt-1 whitespace-pre-wrap text-slate-700">{previousRecordDetail.chiefComplaint || '-'}</dd></div>
+                                            <div><dt className="text-xs text-slate-400">Khám lâm sàng</dt><dd className="mt-1 whitespace-pre-wrap text-slate-700">{previousRecordDetail.clinicalFindings || '-'}</dd></div>
+                                            <div><dt className="text-xs text-slate-400">Chẩn đoán ICD-10</dt><dd className="mt-1 text-slate-700">{previousRecordDetail.icdSelections?.length ? previousRecordDetail.icdSelections.map(item => `${item.code}${item.codeName || item.name ? ` - ${item.codeName || item.name}` : ''}`).join('; ') : previousRecordDetail.diagnosis || '-'}</dd></div>
+                                            <div><dt className="text-xs text-slate-400">Kết luận và hướng điều trị</dt><dd className="mt-1 whitespace-pre-wrap text-slate-700">{previousRecordDetail.conclusion || '-'}</dd></div>
+                                        </dl>
+                                    </section>
+
+                                    <section className="mt-4 rounded-xl border border-slate-200 p-4">
+                                        <h3 className="mb-3 text-sm font-bold text-slate-900">Sinh hiệu</h3>
+                                        {previousRecordDetail.vitalSigns ? (
+                                            <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
+                                                <span>Huyết áp<br/><b>{previousRecordDetail.vitalSigns.bloodPressure || '-'}</b> mmHg</span>
+                                                <span>Nhịp tim<br/><b>{previousRecordDetail.vitalSigns.heartRate ?? '-'}</b> bpm</span>
+                                                <span>Nhiệt độ<br/><b>{previousRecordDetail.vitalSigns.temperature ?? '-'}</b> °C</span>
+                                                <span>Chiều cao<br/><b>{previousRecordDetail.vitalSigns.height ?? '-'}</b> cm</span>
+                                                <span>Cân nặng<br/><b>{previousRecordDetail.vitalSigns.weight ?? '-'}</b> kg</span>
+                                            </div>
+                                        ) : <p className="text-sm text-slate-400">Chưa ghi nhận sinh hiệu.</p>}
+                                    </section>
+
+                                    <section className="mt-4 rounded-xl border border-slate-200 p-4">
+                                        <h3 className="mb-3 text-sm font-bold text-slate-900">Đơn thuốc và lời dặn</h3>
+                                        {previousRecordDetail.prescriptionItems?.length ? (
+                                            <div className="space-y-2">
+                                                {previousRecordDetail.prescriptionItems.map((item, index) => (
+                                                    <div key={item.prescriptionItemId || index} className="rounded-lg bg-slate-50 p-3 text-sm">
+                                                        <b>{item.medicineName}</b> — {item.quantity} {item.unit || ''}
+                                                        <p className="mt-1 text-xs text-slate-500">{item.note || 'Không có hướng dẫn riêng'}{item.frequencyPerDay ? ` · ${item.frequencyPerDay} lần/ngày` : ''}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : <p className="text-sm text-slate-400">Không kê thuốc.</p>}
+                                        <p className="mt-3 whitespace-pre-wrap rounded-lg bg-blue-50 p-3 text-sm text-blue-800">{previousRecordDetail.patientInstruction || previousRecordDetail.prescriptionNote || 'Không có lời dặn.'}</p>
+                                    </section>
+
+                                    <section className="mt-4 rounded-xl border border-slate-200 p-4">
+                                        <h3 className="mb-3 text-sm font-bold text-slate-900">Cận lâm sàng và kết quả</h3>
+                                        {previousRecordDetail.visitDetail?.tests?.length ? (
+                                            <div className="space-y-3">
+                                                {previousRecordDetail.visitDetail.tests.map((item, index) => (
+                                                    <div key={item.testRequestId || index} className="rounded-lg bg-slate-50 p-3 text-sm">
+                                                        <div className="flex flex-wrap items-center justify-between gap-2"><b>{item.name || 'Dịch vụ cận lâm sàng'}</b><span className="text-xs font-semibold text-slate-500">{item.status || '-'}</span></div>
+                                                        {item.results?.length > 0 && <div className="mt-3 grid gap-2 sm:grid-cols-2">{item.results.map((result, resultIndex) => <div key={`${result.name}-${resultIndex}`} className="rounded-md bg-white p-2"><span className="text-xs text-slate-400">{result.name}{result.referenceRange ? ` · ${result.referenceRange}` : ''}</span><p className="font-semibold">{result.result} {result.unit || ''} <span className={['HIGH','LOW','ABNORMAL'].includes(result.assessment) ? 'text-amber-700' : 'text-emerald-700'}>{result.assessment || ''}</span></p></div>)}</div>}
+                                                        <p className="mt-3 whitespace-pre-wrap text-xs text-slate-600">Kết luận: {item.conclusion || '-'}</p>
+                                                        {(item.attachments?.length > 0 || item.pdfUrl) && <div className="mt-3 flex flex-wrap gap-2">{(item.attachments || []).map(file => <button key={file.attachmentId} type="button" onClick={() => openHistoryAttachment(file.url)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-primary-700 hover:border-primary-300">{file.originalName || 'Mở tệp kết quả'}</button>)}{item.pdfUrl && !item.attachments?.length && <button type="button" onClick={() => openHistoryAttachment(item.pdfUrl)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-primary-700 hover:border-primary-300">Mở tệp kết quả</button>}</div>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : <p className="text-sm text-slate-400">Không có chỉ định cận lâm sàng.</p>}
+                                    </section>
+
+                                    <section className="mt-4 rounded-xl border border-slate-200 p-4">
+                                        <h3 className="mb-2 text-sm font-bold text-slate-900">Tái khám</h3>
+                                        <p className="whitespace-pre-wrap text-sm text-slate-700">{previousRecordDetail.followUpNote || 'Không có yêu cầu tái khám.'}</p>
+                                        {previousRecordDetail.followUpDate && <p className="mt-2 text-xs font-semibold text-primary-700">Ngày dự kiến: {new Date(previousRecordDetail.followUpDate).toLocaleDateString('vi-VN')}</p>}
+                                    </section>
+                                </div>
+                            )}
                         </div>
-
-                        <dl className="mt-5 grid grid-cols-1 gap-5 text-sm md:grid-cols-2">
-
-                            <div>
-                                <dt className="text-xs text-gray-400">
-                                    Chẩn đoán
-                                </dt>
-
-                                <dd className="mt-1 font-medium text-gray-800">
-                                    {previousRecordDetail.diagnosis ||
-                                        '-'}
-                                </dd>
-                            </div>
-
-                            <div>
-                                <dt className="text-xs text-gray-400">
-                                    Kết luận
-                                </dt>
-
-                                <dd className="mt-1 font-medium text-gray-800">
-                                    {previousRecordDetail.conclusion ||
-                                        '-'}
-                                </dd>
-                            </div>
-
-                            <div>
-                                <dt className="text-xs text-gray-400">
-                                    Kết quả khám
-                                </dt>
-
-                                <dd className="mt-1 whitespace-pre-wrap text-gray-700">
-                                    {previousRecordDetail.clinicalFindings ||
-                                        '-'}
-                                </dd>
-                            </div>
-
-                            <div>
-                                <dt className="text-xs text-gray-400">
-                                    Hướng điều trị
-                                </dt>
-
-                                <dd className="mt-1 whitespace-pre-wrap text-gray-700">
-                                    {previousRecordDetail.patientInstruction ||
-                                        previousRecordDetail.prescriptionNote ||
-                                        '-'}
-                                </dd>
-                            </div>
-                        </dl>
                     </section>
                 </div>
             )}
@@ -3431,8 +3838,11 @@ export default function ExaminationPage() {
 ========================================================= */
 
 function VitalField({
+                        id,
                         label,
                         unit,
+                        range,
+                        error,
                         value,
                         onChange,
                         type = 'text',
@@ -3440,16 +3850,19 @@ function VitalField({
                         step,
                     }) {
     return (
-        <div className="border-l border-gray-100 pl-4">
+        <div className={`min-w-0 border-l pl-4 ${error ? 'border-red-300' : 'border-gray-100'}`}>
 
-            <p className="text-xs font-medium text-gray-500">
+            <p className={`text-xs font-medium ${error ? 'text-red-700' : 'text-gray-500'}`}>
                 {label}
             </p>
 
             <input
+                id={id}
                 type={type}
                 step={step}
                 value={value}
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? `${id}-error` : `${id}-hint`}
                 onChange={(event) =>
                     onChange(
                         event.target.value
@@ -3458,12 +3871,22 @@ function VitalField({
                 placeholder={
                     placeholder
                 }
-                className="mt-1 h-8 w-full max-w-[95px] border-0 bg-transparent p-0 text-lg font-semibold text-gray-900 outline-none placeholder:text-gray-300"
+                className={`mt-1 h-9 w-full rounded-lg border px-2 text-base font-semibold outline-none transition placeholder:text-gray-300 ${
+                    error
+                        ? 'border-red-500 bg-red-50 text-red-900 focus:border-red-600 focus:ring-2 focus:ring-red-100'
+                        : 'border-gray-200 bg-white text-gray-900 focus:border-primary-400 focus:ring-2 focus:ring-primary-100'
+                }`}
             />
 
-            <p className="mt-0.5 text-[11px] text-gray-400">
-                {unit}
+            <p id={`${id}-hint`} className={`mt-1 text-[10px] leading-4 ${error ? 'text-red-500' : 'text-gray-400'}`}>
+                {range ? `${range} ${unit}` : unit}
             </p>
+
+            {error && (
+                <p id={`${id}-error`} className="mt-1 text-[10px] font-medium leading-4 text-red-600">
+                    {error}
+                </p>
+            )}
         </div>
     );
 }

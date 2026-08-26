@@ -196,7 +196,7 @@
     }
   },
   "workflow": {
-    "singleExaminationReplaced": "Mỗi lượt chỉ được chọn một dịch vụ khám bệnh. Dịch vụ khám cũ đã được thay thế.",
-    "singleExaminationOnly": "Mỗi lượt khám chỉ được chọn một dịch vụ khám bệnh."
+    "singleExaminationReplaced": "Mỗi lượt được chọn tối đa 3 dịch vụ khám bệnh.",
+    "singleExaminationOnly": "Mỗi lượt khám được chọn tối đa 3 dịch vụ khám bệnh."
   }
 }

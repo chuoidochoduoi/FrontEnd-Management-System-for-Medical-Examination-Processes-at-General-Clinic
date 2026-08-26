@@ -10,7 +10,7 @@ import {
     LifeBuoy,
     LogOut,
     Users,
-    CalendarDays, Clock3, MapPinned, MessageSquare,
+    CalendarDays, Clock3, Inbox, MapPinned, MessageSquare,
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
@@ -18,6 +18,8 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { toast } from 'react-toastify';
 import SidebarBrand from './SidebarBrand';
 import AppPreferencesMenu from '@/components/ui/AppPreferencesMenu';
+import OwnerLayout from './OwnerLayout';
+import useContactRequestCount from '@/hooks/useContactRequestCount';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -27,11 +29,12 @@ export default function ReceptionistLayout({ children }) {
     const navigate = useNavigate();
     const location = useLocation();
     const username = get('username') || 'Lễ tân';
-    const staffId = get('staffId');
+    const accountId = get('accountId');
     const systemRole = get('systemRole') || '';
     
     const [staffInfo, setStaffInfo] = useState(null);
     const [hasNewChat, setHasNewChat] = useState(false);
+    const contactRequestCount = useContactRequestCount(systemRole === 'RECEPTIONIST');
 
     useWebSocket('/topic/receptionist-chat', null, (msg) => {
         if (msg === 'NEW_CHAT_REQUEST' || msg === 'NEW_MESSAGE') {
@@ -51,11 +54,14 @@ export default function ReceptionistLayout({ children }) {
     }, [location.pathname]);
 
     useEffect(() => {
-        if (staffId) {
-            fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/${staffId}`, {
+        if (accountId) {
+            fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/account/${accountId}`, {
                 headers: { Authorization: `Bearer ${get('token')}` }
             })
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error('Không thể tải hồ sơ lễ tân');
+                return res.json();
+            })
             .then(data => {
                 if (data.data) {
                     setStaffInfo(data.data);
@@ -65,7 +71,7 @@ export default function ReceptionistLayout({ children }) {
             })
             .catch(err => console.error("Error fetching staff info:", err));
         }
-    }, [staffId]);
+    }, [accountId]);
 
     const getRoleName = () => {
         if (staffInfo && staffInfo.specialization) return staffInfo.specialization.name;
@@ -88,6 +94,7 @@ export default function ReceptionistLayout({ children }) {
         { to: ROUTES.RECEPTIONIST_RECORDS,       icon: FolderOpen,    label: t('sidebar.manageRecords') },
         { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: tCommon('sidebar.patientFlow') },
         { to: ROUTES.RECEPTIONIST_FEEDBACKS,     icon: MessageSquare, label: 'Đánh giá liên quan' },
+        { to: ROUTES.RECEPTIONIST_CONTACT_REQUESTS, icon: Inbox, label: 'Yêu cầu liên hệ', badge: contactRequestCount },
         { to: ROUTES.RECEPTIONIST_SUPPORT,       icon: LifeBuoy,      label: t('sidebar.onlineSupport', { defaultValue: 'Online support' }) },
         { to: ROUTES.STAFF_SCHEDULE,             icon: CalendarDays, label: tCommon('sidebar.mySchedule') },
         { to: ROUTES.STAFF_PROFILE, icon: Users, label: tCommon('sidebar.profile') },
@@ -97,6 +104,10 @@ export default function ReceptionistLayout({ children }) {
         `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
             isActive ? 'bg-primary-50 text-primary-600 font-medium' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
         }`;
+
+    if (systemRole === 'CLINIC_MANAGER') {
+        return <OwnerLayout>{children}</OwnerLayout>;
+    }
 
     return (
         <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden">
@@ -113,7 +124,7 @@ export default function ReceptionistLayout({ children }) {
                 </div>
 
                 <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-                    {mainNav.map(({ to, icon: Icon, label }) => (
+                    {mainNav.map(({ to, icon: Icon, label, badge }) => (
                         <NavLink key={to} to={to} className={linkClass}>
                             <div className="relative">
                                 <Icon size={15} className="shrink-0" />
@@ -124,7 +135,8 @@ export default function ReceptionistLayout({ children }) {
                                     </>
                                 )}
                             </div>
-                            {label}
+                            <span className="min-w-0 flex-1">{label}</span>
+                            {badge > 0 && <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{badge > 99 ? '99+' : badge}</span>}
                         </NavLink>
                     ))}
                 </nav>

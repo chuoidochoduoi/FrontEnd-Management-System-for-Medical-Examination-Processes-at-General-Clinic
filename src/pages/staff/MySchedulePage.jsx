@@ -86,8 +86,8 @@ export default function MySchedulePage() {
                             {t('scheduleManagement.personalWeek', { week: weekLabel })}
                         </p>
                     </div>
-                    {/* My shift count badge */}
-                    <div className="text-right">
+                    {/* My shift count badge (Hidden) */}
+                    <div className="text-right hidden">
                         <p className="text-xs text-gray-400">{t('scheduleManagement.myShiftCount')}</p>
                         <p className="text-2xl font-bold text-primary-500 mt-0.5">{t('scheduleManagement.shiftCount', { count: myShiftCount })}</p>
                     </div>

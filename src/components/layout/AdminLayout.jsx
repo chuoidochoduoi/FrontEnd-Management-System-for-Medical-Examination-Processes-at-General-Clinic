@@ -2,11 +2,12 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Building2, Tag, Users, LogOut, Settings, LayoutDashboard, Activity, Stethoscope, Wrench, Clock, UserRound } from 'lucide-react';
+import { BellRing, Building2, Tag, Users, LogOut, Settings, Activity, Wrench, Clock, UserRound } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
 import SidebarBrand from './SidebarBrand';
 import AppPreferencesMenu from '@/components/ui/AppPreferencesMenu';
+import OwnerLayout from './OwnerLayout';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -55,17 +56,21 @@ export default function AdminLayout({ children }) {
     const mainNav = [
         { to: ROUTES.ADMIN_ROOMS,    icon: Building2, label: t('sidebar.rooms') },
         { to: ROUTES.ADMIN_SERVICES, icon: Tag,       label: t('sidebar.services') },
-        { to: ROUTES.ADMIN_SPECIALIZATIONS, icon: Stethoscope, label: tCommon('sidebar.specialties') },
         { to: ROUTES.ADMIN_CAPABILITIES, icon: Wrench, label: tCommon('sidebar.capabilities') },
         { to: ROUTES.ADMIN_ACCOUNTS, icon: Users,     label: t('sidebar.accounts') },
         { to: ROUTES.ADMIN_SHIFTS, icon: Clock,       label: tCommon('sidebar.shiftConfig') },
         { to: ROUTES.ADMIN_AUDIT_LOGS, icon: Activity, label: tCommon('sidebar.auditLogs') },
+        { to: ROUTES.ADMIN_PUBLIC_ANNOUNCEMENTS, icon: BellRing, label: 'Thông báo công khai' },
     ];
 
     const linkClass = ({ isActive }) =>
         `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
             isActive ? 'bg-primary-50 text-primary-600 font-medium' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
         }`;
+
+    if (systemRole === 'CLINIC_MANAGER') {
+        return <OwnerLayout>{children}</OwnerLayout>;
+    }
 
     return (
         <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden">

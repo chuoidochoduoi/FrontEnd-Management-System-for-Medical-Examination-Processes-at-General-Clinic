@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Eye, Search, UserRound, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import OwnerLayout from '@/components/layout/OwnerLayout';
+import PatientAllergyBanner from '@/components/clinical/PatientAllergyBanner';
+import { ROUTES } from '@/constants/routes';
 
 const PAGE_SIZE = 7;
 const token = () => localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -11,7 +14,7 @@ const formatBloodType = value => ({
     O_POSITIVE: 'O+', O_NEGATIVE: 'O-', AB_POSITIVE: 'AB+', AB_NEGATIVE: 'AB-',
 }[value] || value || '-');
 
-function PatientModal({ patient, onClose, t }) {
+function PatientModal({ patient, onClose, onOpenHistory, t }) {
     if (!patient) return null;
     const gender = patient.gender === 'MALE' ? t('male') : patient.gender === 'FEMALE' ? t('female') : '-';
     const fields = [
@@ -28,14 +31,15 @@ function PatientModal({ patient, onClose, t }) {
             </div>
             <div className="grid grid-cols-1 gap-x-8 gap-y-5 p-6 sm:grid-cols-2">{fields.map(([label, value]) =>
                 <div key={label} className={label === t('columns.address') ? 'min-w-0 sm:col-span-2' : 'min-w-0'}><p className="text-xs text-gray-400">{label}</p><p className="mt-1 break-words [overflow-wrap:anywhere] text-sm font-medium text-gray-800">{value || '-'}</p></div>
-            )}</div>
-            <div className="flex justify-end border-t border-gray-100 px-6 py-4"><button onClick={onClose} className="h-10 rounded-xl bg-gray-900 px-5 text-sm font-medium text-white hover:bg-gray-700">{t('close')}</button></div>
+            )}<div className="sm:col-span-2"><PatientAllergyBanner value={{ status: patient.allergyStatus, items: patient.allergies || [] }} currentLabel/></div></div>
+            <div className="flex justify-end gap-2 border-t border-gray-100 px-6 py-4"><button onClick={onOpenHistory} className="h-10 rounded-xl border border-primary-200 px-5 text-sm font-semibold text-primary-700 hover:bg-primary-50">Xem lịch sử khám</button><button onClick={onClose} className="h-10 rounded-xl bg-gray-900 px-5 text-sm font-medium text-white hover:bg-gray-700">{t('close')}</button></div>
         </div>
     </div>;
 }
 
 export default function ManagerPatientsPage() {
     const { t } = useTranslation('managerPatients');
+    const navigate = useNavigate();
     const [items, setItems] = useState([]); const [total, setTotal] = useState(0); const [page, setPage] = useState(0);
     const [search, setSearch] = useState(''); const [genderFilter, setGenderFilter] = useState(''); const [age, setAge] = useState('');
     const [loading, setLoading] = useState(false); const [error, setError] = useState(''); const [selected, setSelected] = useState(null);
@@ -74,6 +78,6 @@ export default function ManagerPatientsPage() {
                     <td className="px-4 py-3 text-sm font-medium text-gray-700">{patient.patientCode || '-'}</td><td className="max-w-[220px] px-4 py-3 text-sm font-semibold text-gray-900"><span className="block break-words [overflow-wrap:anywhere]">{patient.fullName || '-'}</span></td><td className="px-4 py-3 text-sm text-gray-600"><p>{formatDate(patient.dateOfBirth)}</p><p className="mt-0.5 text-xs text-gray-400">{genderLabel(patient.gender)}</p></td><td className="px-4 py-3 text-sm text-gray-700">{patient.phone || '-'}</td><td className="max-w-[210px] px-4 py-3 text-sm text-gray-600"><span className="block break-words [overflow-wrap:anywhere]">{patient.email || '-'}</span></td><td className="max-w-[240px] px-4 py-3 text-sm text-gray-600"><span className="line-clamp-2 break-words">{patient.address || '-'}</span></td><td className="px-4 py-3 text-right"><button onClick={() => setSelected(patient)} className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"><Eye size={15}/>{t('viewDetail')}</button></td>
                 </tr>)}</tbody></table></div>
             {total > 0 && <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3"><p className="text-xs text-gray-500">{t('showing', { from: page * PAGE_SIZE + 1, to: Math.min((page + 1) * PAGE_SIZE, total), total })}</p><div className="flex items-center gap-2"><button disabled={page === 0 || loading} onClick={() => load(page - 1)} className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-40">{t('previous')}</button><span className="px-2 text-sm text-gray-600">{page + 1}/{totalPages}</span><button disabled={page + 1 >= totalPages || loading} onClick={() => load(page + 1)} className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-40">{t('next')}</button></div></div>}
-        </section><PatientModal patient={selected} onClose={() => setSelected(null)} t={t}/>
+        </section><PatientModal patient={selected} onClose={() => setSelected(null)} onOpenHistory={() => selected && navigate(ROUTES.RECEPTIONIST_PATIENT_DETAIL.replace(':id', selected.customerId))} t={t}/>
     </div></OwnerLayout>;
 }

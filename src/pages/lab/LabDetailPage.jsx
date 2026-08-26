@@ -25,6 +25,8 @@ import {
 import { toast } from 'react-toastify';
 
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
+import DynamicClinicalForm from '@/components/clinical/DynamicClinicalForm';
+import ClinicalDataDisplay from '@/components/clinical/ClinicalDataDisplay';
 import { useLabDetail } from '@/hooks/useLabDetail';
 import { ROUTES } from '@/constants/routes';
 
@@ -96,6 +98,9 @@ function FileUpload({
                         disabled,
                         pdfUrl,
                         fileName,
+                        onOpenPdf,
+                        attachments = [],
+                        onFiles,
                     }) {
     const inputRef = useRef(null);
 
@@ -109,16 +114,11 @@ function FileUpload({
 
         setDragging(false);
 
-        const selectedFile =
-            event.dataTransfer.files?.[0];
-
-        if (selectedFile) {
-            onFile(selectedFile);
-        }
+        const selectedFiles = Array.from(event.dataTransfer.files || []);
+        if (selectedFiles.length) onFiles?.(selectedFiles);
     };
 
-    const hasFile =
-        !!file || !!fileUrl;
+    const hasFile = !!file || !!fileUrl || attachments.length > 0;
 
     return (
         <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -154,6 +154,7 @@ function FileUpload({
 
                                 <p className="truncate text-sm font-semibold text-slate-800">
                                     {file?.name ||
+                                        attachments[0]?.originalName ||
                                         fileName ||
                                         'Phiếu kết quả'}
                                 </p>
@@ -180,16 +181,13 @@ function FileUpload({
                                 <button
                                     type="button"
                                     onClick={() =>
-                                        window.open(
-                                            pdfUrl,
-                                            '_blank'
-                                        )
+                                        onOpenPdf(pdfUrl)
                                     }
                                     className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                                 >
                                     <Eye size={15} />
 
-                                    Xem / in PDF
+                                    Tải phiếu kết quả
                                 </button>
                             )}
 
@@ -290,21 +288,29 @@ function FileUpload({
                 </p>
             )}
 
+            {attachments.length > 0 && (
+                <div className="mt-3 space-y-2">
+                    {attachments.map((attachment) => (
+                        <button key={attachment.attachmentId} type="button"
+                                onClick={() => onOpenPdf(attachment.url)}
+                                className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left text-xs hover:bg-slate-50">
+                            <span className="truncate font-medium text-slate-700">{attachment.originalName}</span>
+                            <span className="shrink-0 text-slate-400">{(attachment.fileSize / 1024 / 1024).toFixed(2)} MB</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+
             <input
                 ref={inputRef}
                 type="file"
                 className="hidden"
-                accept="application/pdf,.pdf"
+                accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp"
+                multiple
                 disabled={disabled}
                 onChange={(event) => {
-                    const selectedFile =
-                        event.target.files?.[0];
-
-                    if (selectedFile) {
-                        onFile(
-                            selectedFile
-                        );
-                    }
+                    const selectedFiles = Array.from(event.target.files || []);
+                    if (selectedFiles.length) onFiles?.(selectedFiles);
                 }}
             />
 
@@ -489,23 +495,12 @@ export default function LabDetailPage() {
         saveDraft,
         save,
         uploadFile,
+        uploadAttachments,
+        cancelRequest,
     } = useLabDetail(id);
 
     const departmentId =
         order?.departmentId;
-
-    const systemRole = (
-        localStorage.getItem(
-            'systemRole'
-        ) ||
-        sessionStorage.getItem(
-            'systemRole'
-        ) ||
-        ''
-    ).toUpperCase();
-
-    const isNurse =
-        systemRole === 'NURSE';
 
     /* =========================================================
        STATE
@@ -526,14 +521,15 @@ export default function LabDetailPage() {
         setSampleStatus,
     ] = useState('');
 
-    const [status, setStatus] =
-        useState('PENDING');
-
     const [notes, setNotes] =
         useState('');
 
+    const [resultData, setResultData] = useState({});
+
     const [file, setFile] =
         useState(null);
+
+    const [attachments, setAttachments] = useState([]);
 
     const [fileUrl, setFileUrl] =
         useState('');
@@ -541,11 +537,6 @@ export default function LabDetailPage() {
     const [
         localPreviewUrl,
         setLocalPreviewUrl,
-    ] = useState('');
-
-    const [
-        cancelReason,
-        setCancelReason,
     ] = useState('');
 
     const [
@@ -568,7 +559,10 @@ export default function LabDetailPage() {
         setConfirmOpen,
     ] = useState(false);
 
+    const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
+
     const [cancelModalOpen, setCancelModalOpen] = useState(false);
+    const [cancelReason, setCancelReason] = useState('');
 
     /* =========================================================
        DATA INIT
@@ -589,22 +583,17 @@ export default function LabDetailPage() {
             order.sampleStatus ?? ''
         );
 
-        setStatus(
-            order.status ??
-            'IN_PROGRESS'
-        );
-
         setNotes(
             order.notes ?? ''
         );
+
+        setResultData(order.resultData ?? order.clinicalForm?.values ?? {});
+        setAttachments(order.attachments ?? []);
 
         setFileUrl(
             order.resultFileUrl ?? ''
         );
 
-        setCancelReason(
-            order.cancelReason ?? ''
-        );
     }, [order]);
 
     /* =========================================================
@@ -675,8 +664,15 @@ export default function LabDetailPage() {
         order?.status ===
         'CANCELLED';
 
+    const permissions = order?.permissions ?? {};
+    const canEditResult = !isFinished && permissions.canEditResult === true;
+    const canUpload = !isFinished && permissions.canUpload === true;
+    const canSign = !isFinished && permissions.canSign === true;
+    const canCancel = !isFinished && permissions.canCancel === true;
+    const isReadOnly = isFinished || !canEditResult;
+
     const isCancelled =
-        status === 'CANCELLED';
+        order?.status === 'CANCELLED';
 
     const currentRequest =
         queueRequests.find(
@@ -733,6 +729,9 @@ export default function LabDetailPage() {
     const handleFile = async (
         selectedFile
     ) => {
+        if (!canUpload) {
+            return toast.error('Bạn không có quyền tải kết quả tại phòng thực hiện này');
+        }
         if (
             selectedFile.type !==
             'application/pdf' &&
@@ -788,6 +787,24 @@ export default function LabDetailPage() {
         }
     };
 
+    const handleFiles = async (selectedFiles) => {
+        if (!canUpload) return toast.error('Bạn không có quyền tải kết quả tại phòng thực hiện này');
+        if (selectedFiles.length + attachments.length > 10) return toast.error('Mỗi kết quả chỉ được tối đa 10 tệp');
+        const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+        if (selectedFiles.some((selected) => !allowed.includes(selected.type) || selected.size > 10 * 1024 * 1024))
+            return toast.error('Chỉ nhận PDF/JPEG/PNG/WebP, tối đa 10 MB mỗi tệp');
+        setUploading(true);
+        try {
+            const saved = await saveDraft(buildPayload());
+            if (!saved) throw new Error('Không thể tạo bản nháp kết quả');
+            const uploaded = await uploadAttachments(selectedFiles);
+            setAttachments((current) => [...current, ...uploaded]);
+            toast.success(`Đã tải ${uploaded.length} tệp`);
+        } catch (uploadError) {
+            toast.error(uploadError.message || 'Không thể tải tệp');
+        } finally { setUploading(false); }
+    };
+
     const handleClearFile = () => {
         if (localPreviewUrl) {
             URL.revokeObjectURL(
@@ -799,13 +816,38 @@ export default function LabDetailPage() {
         setFile(null);
         setFileUrl('');
     };
+    /* =========================================================
+       OPEN SECURE PDF
+    ========================================================= */
+
+    const openSecurePdf = async (url) => {
+        if (!url) return;
+        
+        // Local preview doesn't need auth
+        if (url.startsWith('blob:')) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            const fullUrl = url.startsWith('http') ? url : `${import.meta.env.VITE_API_URL}${url}`;
+            const response = await fetch(fullUrl, { headers: { Authorization: `Bearer ${token}` } });
+            if (!response.ok) throw new Error('Không thể mở tệp kết quả');
+            const blobUrl = URL.createObjectURL(await response.blob());
+            window.open(blobUrl, '_blank', 'noopener,noreferrer');
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        } catch (error) {
+            toast.error(error.message);
+        }
+    };
 
     /* =========================================================
        PAYLOAD
     ========================================================= */
 
     const buildPayload = (
-        targetStatus = status
+        targetStatus = order?.status ?? 'IN_PROGRESS'
     ) => ({
         specimenId,
         status: targetStatus,
@@ -816,11 +858,11 @@ export default function LabDetailPage() {
 
         resultFileUrl: fileUrl,
 
-        cancelReason:
-            targetStatus ===
-            'CANCELLED'
-                ? cancelReason
-                : '',
+        formTemplateVersionId:
+            order?.formTemplateVersionId ?? order?.clinicalForm?.templateVersionId ?? null,
+
+        resultData:
+            order?.clinicalForm ? resultData : null,
     });
 
     /* =========================================================
@@ -829,7 +871,7 @@ export default function LabDetailPage() {
 
     const validateResult = (
         finalize,
-        targetStatus = status
+        targetStatus = order?.status ?? 'IN_PROGRESS'
     ) => {
         if (
             requiresSpecimen &&
@@ -857,14 +899,6 @@ export default function LabDetailPage() {
         }
 
         if (
-            targetStatus ===
-            'CANCELLED' &&
-            !cancelReason.trim()
-        ) {
-            return 'Vui lòng nhập lý do hủy';
-        }
-
-        if (
             finalize &&
             targetStatus ===
             'COMPLETED' &&
@@ -873,14 +907,9 @@ export default function LabDetailPage() {
             return 'Vui lòng nhập kết luận';
         }
 
-        if (
-            finalize &&
-            targetStatus ===
-            'COMPLETED' &&
-            !fileUrl
-        ) {
-            return 'Vui lòng tải phiếu kết quả PDF';
-        }
+        const structuredValues = Object.keys(resultData || {}).filter((key) => key !== '_meta');
+        if (finalize && targetStatus === 'COMPLETED' && !fileUrl && attachments.length === 0 && structuredValues.length === 0)
+            return 'Vui lòng nhập kết quả có cấu trúc hoặc tải tệp kết quả';
 
         return '';
     };
@@ -890,6 +919,9 @@ export default function LabDetailPage() {
     ========================================================= */
 
     const handleSaveDraft = () => {
+        if (!canEditResult) {
+            return toast.error('Bạn chỉ có quyền xem kết quả cận lâm sàng');
+        }
         const message =
             validateResult(false);
 
@@ -909,9 +941,9 @@ export default function LabDetailPage() {
     ========================================================= */
 
     const handleOpenConfirm = () => {
-        if (isNurse) {
+        if (!canSign) {
             return toast.error(
-                'Y tá chỉ được lưu nháp kết quả.'
+                'Chỉ bác sĩ phụ trách phòng thực hiện mới được ký kết quả.'
             );
         }
 
@@ -936,6 +968,10 @@ export default function LabDetailPage() {
 
     const handleConfirmComplete =
         async () => {
+            if (!canSign) {
+                setConfirmOpen(false);
+                return toast.error('Bạn không còn quyền ký kết quả tại phòng này');
+            }
             const message =
                 validateResult(
                     true,
@@ -960,10 +996,6 @@ export default function LabDetailPage() {
             if (!saved) return;
 
             setConfirmOpen(false);
-
-            setStatus(
-                'COMPLETED'
-            );
 
             const next =
                 queueRequests.find(
@@ -1011,32 +1043,20 @@ export default function LabDetailPage() {
             }
         };
 
-    /* =========================================================
-       CANCEL
-    ========================================================= */
-
-    const handleCancelResult =
-        async () => {
-            if (!cancelReason.trim()) {
-                return toast.error(
-                    'Vui lòng nhập lý do hủy'
-                );
-            }
-
-            const saved =
-                await save(
-                    buildPayload(
-                        'CANCELLED'
-                    )
-                );
-
-            if (saved) {
-                setCancelModalOpen(false);
-                toast.success(
-                    'Đã hủy yêu cầu.'
-                );
-            }
-        };
+    const handleCancelRequest = async () => {
+        if (!canCancel) {
+            setCancelModalOpen(false);
+            return toast.error('Chỉ bác sĩ phụ trách phòng thực hiện mới được hủy yêu cầu');
+        }
+        if (!cancelReason.trim()) {
+            return toast.error('Vui lòng nhập lý do hủy');
+        }
+        const cancelled = await cancelRequest(cancelReason);
+        if (cancelled) {
+            setCancelModalOpen(false);
+            setCancelReason('');
+        }
+    };
 
     /* =========================================================
        BACK
@@ -1411,6 +1431,12 @@ export default function LabDetailPage() {
 
                             </div>
 
+                            {!isFinished && !canEditResult && !canSign && !canCancel && (
+                                <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                                    Bạn chỉ có quyền xem kết quả cận lâm sàng. Chỉ nhân sự được phân công tại phòng thực hiện mới có thể cập nhật phiếu.
+                                </div>
+                            )}
+
                             {/* =================================================
                                 SPECIMEN
                             ================================================= */}
@@ -1459,7 +1485,7 @@ export default function LabDetailPage() {
                                                     specimenId
                                                 }
                                                 disabled={
-                                                    isFinished
+                                                    isReadOnly
                                                 }
                                                 onChange={(
                                                     event
@@ -1489,7 +1515,7 @@ export default function LabDetailPage() {
                                                     sampleType
                                                 }
                                                 disabled={
-                                                    isFinished
+                                                    isReadOnly
                                                 }
                                                 onChange={(
                                                     event
@@ -1541,7 +1567,7 @@ export default function LabDetailPage() {
                                                     sampleStatus
                                                 }
                                                 disabled={
-                                                    isFinished
+                                                    isReadOnly
                                                 }
                                                 onChange={(
                                                     event
@@ -1628,6 +1654,26 @@ export default function LabDetailPage() {
 
                             {!isCancelled && (
                                 <div className="mb-4">
+                                    {isReadOnly ? <ClinicalDataDisplay
+                                        clinicalForm={order?.clinicalForm}
+                                        schema={order?.clinicalForm?.schema}
+                                        values={resultData}
+                                        title={order?.clinicalForm?.templateName || order?.clinicalForm?.name || 'Kết quả có cấu trúc'}
+                                    /> : <DynamicClinicalForm
+                                        schema={order?.clinicalForm?.schema}
+                                        value={resultData}
+                                        onChange={setResultData}
+                                        disabled={isReadOnly}
+                                        title={order?.clinicalForm?.templateName || 'Kết quả có cấu trúc'}
+                                        emptyMessage="Dịch vụ này chưa được cấu hình biểu mẫu kết quả"
+                                        patientAge={order?.patientAge}
+                                        patientGender={order?.patientGender}
+                                    />}
+                                </div>
+                            )}
+
+                            {!isCancelled && (
+                                <div className="mb-4">
 
                                     <FileUpload
                                         file={file}
@@ -1650,8 +1696,13 @@ export default function LabDetailPage() {
                                             uploading
                                         }
                                         disabled={
-                                            isFinished
+                                            !canUpload
                                         }
+                                        onOpenPdf={
+                                            openSecurePdf
+                                        }
+                                        attachments={attachments}
+                                        onFiles={handleFiles}
                                     />
 
                                 </div>
@@ -1677,18 +1728,8 @@ export default function LabDetailPage() {
                                     </div>
 
                                     <textarea
-                                        value={
-                                            cancelReason
-                                        }
-                                        onChange={(
-                                            event
-                                        ) =>
-                                            setCancelReason(
-                                                event
-                                                    .target
-                                                    .value
-                                            )
-                                        }
+                                        value={order?.cancelReason ?? ''}
+                                        readOnly
                                         rows={3}
                                         className="w-full resize-none rounded-lg border border-red-200 bg-white px-3 py-2.5 text-sm outline-none"
                                     />
@@ -1722,7 +1763,7 @@ export default function LabDetailPage() {
                                             )
                                         }
                                         disabled={
-                                            isFinished
+                                            isReadOnly
                                         }
                                         placeholder="Nhập kết luận / nhận xét kết quả..."
                                         rows={4}
@@ -1758,68 +1799,41 @@ export default function LabDetailPage() {
                             {!isFinished ? (
                                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
 
-                                    {/* Cancel link */}
-
-                                    {!isNurse ? (
+                                    {canCancel ? (
                                         <button
                                             type="button"
-                                            onClick={() => setCancelModalOpen(true)}
-                                            className="text-xs font-semibold text-red-500 transition hover:text-red-600"
+                                            onClick={() => {
+                                                setCancelReason('');
+                                                setCancelModalOpen(true);
+                                            }}
+                                            className="text-xs font-semibold text-red-600 transition hover:text-red-700"
                                         >
-                                            {status ===
-                                            'CANCELLED'
-                                                ? 'Tiếp tục xử lý'
-                                                : 'Hủy yêu cầu'}
+                                            Hủy yêu cầu
                                         </button>
-                                    ) : (
-                                        <span />
-                                    )}
+                                    ) : <span />}
 
                                     <div className="flex gap-2">
 
-                                        <button
-                                            type="button"
-                                            onClick={
-                                                handleSaveDraft
-                                            }
-                                            disabled={
-                                                saving
-                                            }
-                                            className="h-10 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-                                        >
-                                            Lưu nháp
-                                        </button>
-
-                                        {status ===
-                                        'CANCELLED' &&
-                                        !isNurse ? (
+                                        {canEditResult && (
                                             <button
                                                 type="button"
-                                                onClick={
-                                                    handleCancelResult
-                                                }
-                                                disabled={
-                                                    saving
-                                                }
-                                                className="h-10 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                                                onClick={handleSaveDraft}
+                                                disabled={saving}
+                                                className="h-10 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
                                             >
-                                                Xác nhận hủy
+                                                Lưu nháp
                                             </button>
-                                        ) : (
-                                            !isNurse && (
-                                                <button
-                                                    type="button"
-                                                    onClick={
-                                                        handleOpenConfirm
-                                                    }
-                                                    disabled={
-                                                        saving
-                                                    }
-                                                    className="h-10 rounded-xl bg-primary-600 px-5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:opacity-50"
-                                                >
-                                                    Ký xác nhận & hoàn thành
-                                                </button>
-                                            )
+                                        )}
+
+                                        {canSign && (
+                                            <button
+                                                type="button"
+                                                onClick={handleOpenConfirm}
+                                                disabled={saving}
+                                                className="h-10 rounded-xl bg-primary-600 px-5 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:opacity-50"
+                                            >
+                                                Ký xác nhận & hoàn thành
+                                            </button>
                                         )}
 
                                     </div>
@@ -1870,17 +1884,40 @@ export default function LabDetailPage() {
             />
 
             {cancelModalOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 p-4">
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 p-4">
                     <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
                         <h2 className="text-base font-bold text-slate-900">Hủy yêu cầu cận lâm sàng</h2>
-                        <p className="mt-2 text-sm text-slate-600">Bạn có chắc chắn muốn hủy yêu cầu này?</p>
-                        <label className="mt-4 block text-sm font-medium text-slate-800">Lý do hủy <span className="text-red-600">*</span></label>
-                        <textarea value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} rows={4}
+                        <p className="mt-2 text-sm text-slate-600">
+                            Yêu cầu sẽ dừng xử lý và không thể tiếp tục nhập kết quả. Vui lòng ghi rõ lý do.
+                        </p>
+                        <label className="mt-4 block text-sm font-medium text-slate-800">
+                            Lý do hủy <span className="text-red-600">*</span>
+                        </label>
+                        <textarea
+                            value={cancelReason}
+                            onChange={(event) => setCancelReason(event.target.value)}
+                            rows={4}
+                            maxLength={500}
                             className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-red-400"
-                            placeholder="Nhập lý do hủy..." />
+                            placeholder="Nhập lý do hủy yêu cầu..."
+                        />
                         <div className="mt-5 flex justify-end gap-3">
-                            <button type="button" onClick={() => setCancelModalOpen(false)} className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600">Quay lại</button>
-                            <button type="button" onClick={handleCancelResult} disabled={saving} className="h-10 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white disabled:opacity-50">Xác nhận hủy</button>
+                            <button
+                                type="button"
+                                onClick={() => setCancelModalOpen(false)}
+                                disabled={saving}
+                                className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 disabled:opacity-50"
+                            >
+                                Quay lại
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleCancelRequest}
+                                disabled={saving || !cancelReason.trim()}
+                                className="h-10 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                            >
+                                Xác nhận hủy
+                            </button>
                         </div>
                     </div>
                 </div>

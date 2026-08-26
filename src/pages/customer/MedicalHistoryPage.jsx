@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Activity,
     CalendarDays,
     ChevronLeft,
     ChevronRight,
@@ -57,38 +56,6 @@ const normalize = (value) =>
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .trim();
-
-const normalizeRecordType = (value) => {
-    const type = String(value || '').toUpperCase();
-
-    if (type === 'EXAMINATION') {
-        return 'EXAMINATION';
-    }
-
-    if (
-        type === 'PARACLINICAL' ||
-        type === 'LABORATORY' ||
-        type === 'IMAGING'
-    ) {
-        return 'PARACLINICAL';
-    }
-
-    return type;
-};
-
-const recordTypeLabel = (value) => {
-    const type = normalizeRecordType(value);
-
-    if (type === 'EXAMINATION') {
-        return 'Khám bệnh';
-    }
-
-    if (type === 'PARACLINICAL') {
-        return 'Cận lâm sàng';
-    }
-
-    return value || '-';
-};
 
 const recordStatusLabel = (value) => {
     switch (String(value || '').toUpperCase()) {
@@ -517,6 +484,8 @@ export default function MedicalHistoryPage() {
                                         visit.doctor,
                                         visit.diagnosis,
                                         visit.specialty,
+                                        ...(visit.serviceNames || []),
+                                        ...(visit.doctorNames || []),
                                     ].join(
                                         ' '
                                     )
@@ -534,11 +503,9 @@ export default function MedicalHistoryPage() {
             ) {
                 result =
                     result.filter(
-                        (visit) =>
-                            normalizeRecordType(
-                                visit.specialty
-                            ) ===
-                            appliedFilter.recordType
+                        (visit) => appliedFilter.recordType === 'EXAMINATION'
+                            ? Number(visit.examinationCount || 0) > 0
+                            : Number(visit.testCount || 0) > 0
                     );
             }
 
@@ -1003,7 +970,7 @@ export default function MedicalHistoryPage() {
                         </div>
 
                         <div>
-                            Loại hồ sơ
+                            Dịch vụ trong lượt
                         </div>
 
                         <div>
@@ -1065,11 +1032,6 @@ export default function MedicalHistoryPage() {
                         !error &&
                         displayVisits.map(
                             (visit) => {
-                                const type =
-                                    normalizeRecordType(
-                                        visit.specialty
-                                    );
-
                                 const visitStatus =
                                     visit.status ||
                                     'COMPLETED';
@@ -1118,33 +1080,19 @@ export default function MedicalHistoryPage() {
 
                                         <div>
                                             <p className="mb-1 text-[10px] text-gray-400 lg:hidden">
-                                                Loại hồ sơ
+                                                Dịch vụ trong lượt
                                             </p>
 
-                                            <div className="flex items-center gap-2">
-
-                                                {type ===
-                                                'PARACLINICAL' ? (
-                                                    <Activity
-                                                        size={
-                                                            16
-                                                        }
-                                                        className="text-gray-500"
-                                                    />
-                                                ) : (
-                                                    <Stethoscope
-                                                        size={
-                                                            16
-                                                        }
-                                                        className="text-gray-500"
-                                                    />
-                                                )}
-
-                                                <p className="text-sm font-semibold text-gray-800">
-                                                    {recordTypeLabel(
-                                                        visit.specialty
-                                                    )}
-                                                </p>
+                                            <div className="flex items-start gap-2">
+                                                <Stethoscope size={16} className="mt-0.5 shrink-0 text-gray-500" />
+                                                <div className="min-w-0">
+                                                    <p className="line-clamp-2 text-sm font-semibold text-gray-800">
+                                                        {(visit.serviceNames || []).join(', ') || 'Khám bệnh'}
+                                                    </p>
+                                                    <p className="mt-0.5 text-xs text-gray-400">
+                                                        {visit.examinationCount || 0} phiếu khám · {visit.testCount || 0} kết quả CLS
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
 

@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import ChatWidget from '@/components/ui/ChatWidget';
 import { useTranslation } from 'react-i18next';
+import { getVisibleAnnouncements } from '@/services/publicAnnouncementService';
+import { CLINIC_INFO } from '@/constants/clinicInfo';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -27,6 +29,8 @@ const LandingPage = () => {
   const { t, i18n } = useTranslation('landing');
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [announcements, setAnnouncements] = useState([]);
+  const [dismissedAnnouncements, setDismissedAnnouncements] = useState([]);
   const { services: apiServices, loadingServices } = useAppointment();
 
   useEffect(() => {
@@ -36,6 +40,16 @@ const LandingPage = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    getVisibleAnnouncements()
+      .then(data => setAnnouncements(Array.isArray(data) ? data : []))
+      .catch(() => setAnnouncements([]));
+  }, []);
+
+  const visibleAnnouncements = announcements.filter(
+    item => !dismissedAnnouncements.includes(item.announcementId)
+  );
 
   const services = [Stethoscope, Microscope, Activity].map((icon, index) => ({
     icon, title: t(`services.items.${index}.title`), desc: t(`services.items.${index}.desc`),
@@ -67,6 +81,28 @@ const LandingPage = () => {
       image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?q=80&w=800&auto=format&fit=crop"
     }
   ];
+
+  const staticServices = {
+    "Nội khoa": [
+      { id: 1, name: "Khám nội khoa tổng quát", price: 150000 },
+      { id: 2, name: "Khám tim mạch", price: 200000 },
+      { id: 3, name: "Khám tiêu hóa", price: 180000 }
+    ],
+    "Ngoại khoa": [
+      { id: 4, name: "Khám ngoại khoa cơ bản", price: 150000 },
+      { id: 5, name: "Sơ cứu, băng bó vết thương", price: 100000 }
+    ],
+    "Xét nghiệm": [
+      { id: 6, name: "Xét nghiệm máu cơ bản", price: 120000 },
+      { id: 7, name: "Xét nghiệm sinh hóa máu", price: 250000 },
+      { id: 8, name: "Xét nghiệm nước tiểu", price: 80000 }
+    ],
+    "Chẩn đoán hình ảnh": [
+      { id: 9, name: "Chụp X-Quang ngực thẳng", price: 150000 },
+      { id: 10, name: "Siêu âm ổ bụng", price: 200000 },
+      { id: 11, name: "Siêu âm tuyến giáp", price: 200000 }
+    ]
+  };
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] font-jakarta text-slate-800 selection:bg-slate-900 selection:text-white">
@@ -144,6 +180,35 @@ const LandingPage = () => {
         )}
       </div>
 
+      {/* Public announcements configured by ADMIN/CLINIC_MANAGER */}
+      <div className="bg-white pt-[100px]">
+        {visibleAnnouncements.length > 0 && (
+          <div className="mx-auto max-w-7xl space-y-3 px-6 lg:px-12">
+            {visibleAnnouncements.map(item => (
+              <div key={item.announcementId} className="flex items-start justify-between gap-4 rounded-xl border border-primary-200 bg-primary-50 px-5 py-4 text-primary-800 shadow-sm sm:items-center sm:px-6">
+                <div className="flex min-w-0 items-start gap-4 sm:items-center">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-100">
+                    <Clock className="h-5 w-5 text-primary-600" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-semibold">{item.title}</p>
+                    <p className="mt-1 whitespace-pre-line text-sm font-light leading-relaxed text-primary-700">{item.content}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  aria-label={`Đóng thông báo ${item.title}`}
+                  onClick={() => setDismissedAnnouncements(current => [...current, item.announcementId])}
+                  className="shrink-0 p-2 text-primary-600 transition-colors hover:text-primary-800"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center pt-20 overflow-hidden bg-white">
         {/* Subtle abstract background element */}
@@ -206,30 +271,6 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-20 bg-slate-900 text-white relative">
-        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/clean-gray-paper.png')]"></div>
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-12 divide-x divide-slate-800/50 text-center">
-            <div>
-              <p className="text-5xl font-light text-primary-400 mb-4">15<span className="text-3xl">+</span></p>
-              <p className="text-xs tracking-[0.2em] uppercase text-slate-400">{t('stats.experience')}</p>
-            </div>
-            <div>
-              <p className="text-5xl font-light text-primary-400 mb-4">50<span className="text-3xl">+</span></p>
-              <p className="text-xs tracking-[0.2em] uppercase text-slate-400">{t('stats.experts')}</p>
-            </div>
-            <div>
-              <p className="text-5xl font-light text-primary-400 mb-4">98<span className="text-3xl">%</span></p>
-              <p className="text-xs tracking-[0.2em] uppercase text-slate-400">{t('stats.satisfaction')}</p>
-            </div>
-            <div>
-              <p className="text-5xl font-light text-primary-400 mb-4">4.0</p>
-              <p className="text-xs tracking-[0.2em] uppercase text-slate-400">{t('stats.technology')}</p>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Services Section */}
       <section id="services" className="py-32 bg-[#FAFAFA]">
@@ -406,41 +447,26 @@ const LandingPage = () => {
             <p className="text-slate-500 max-w-2xl mx-auto">{t('pricing.description')}</p>
           </div>
 
-          {loadingServices ? (
-            <div className="flex justify-center py-12">
-               <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-          ) : apiServices.length === 0 ? (
-            <p className="text-slate-500 text-center italic">{t('services.empty')}</p>
-          ) : (
-            <div className="max-w-5xl mx-auto bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-slate-100 overflow-hidden">
-              <div className="max-h-[600px] overflow-y-auto custom-scrollbar p-8 lg:p-12 grid md:grid-cols-2 gap-x-16 gap-y-12">
-                {Object.entries(
-                    apiServices.reduce((acc, service) => {
-                        const dept = service.department || t('services.other');
-                        if (!acc[dept]) acc[dept] = [];
-                        acc[dept].push(service);
-                        return acc;
-                    }, {})
-                ).map(([department, deptServices]) => (
-                  <div key={department}>
-                    <h3 className="text-sm font-bold tracking-widest uppercase text-primary-600 mb-6 border-b border-slate-100 pb-3">
-                      {department}
-                    </h3>
-                    <div className="space-y-4">
-                      {deptServices.map(service => (
-                        <div key={service.id} className="flex justify-between items-center group">
-                          <span className="text-sm font-medium text-slate-700 group-hover:text-primary-700 transition-colors truncate pr-4" title={service.name}>{service.name}</span>
-                          <div className="flex-1 border-b border-dashed border-slate-200 opacity-50 group-hover:border-primary-300 transition-colors"></div>
-                          <span className="text-sm font-bold text-slate-900 pl-4 whitespace-nowrap">{new Intl.NumberFormat(i18n.language === 'en' ? 'en-US' : 'vi-VN').format(service.price)} VND</span>
-                        </div>
-                      ))}
-                    </div>
+          <div className="max-w-5xl mx-auto bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-slate-100 overflow-hidden">
+            <div className="max-h-[600px] overflow-y-auto custom-scrollbar p-8 lg:p-12 grid md:grid-cols-2 gap-x-16 gap-y-12">
+              {Object.entries(staticServices).map(([department, deptServices]) => (
+                <div key={department}>
+                  <h3 className="text-sm font-bold tracking-widest uppercase text-primary-600 mb-6 border-b border-slate-100 pb-3">
+                    {department}
+                  </h3>
+                  <div className="space-y-4">
+                    {deptServices.map(service => (
+                      <div key={service.id} className="flex justify-between items-center group">
+                        <span className="text-sm font-medium text-slate-700 group-hover:text-primary-700 transition-colors truncate pr-4" title={service.name}>{service.name}</span>
+                        <div className="flex-1 border-b border-dashed border-slate-200 opacity-50 group-hover:border-primary-300 transition-colors"></div>
+                        <span className="text-sm font-bold text-slate-900 pl-4 whitespace-nowrap">{new Intl.NumberFormat(i18n.language === 'en' ? 'en-US' : 'vi-VN').format(service.price)} VND</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
         </div>
       </section>
 
@@ -465,43 +491,73 @@ const LandingPage = () => {
       </section>
 
       {/* Footer Minimalist */}
-      <footer id="contact" className="bg-slate-50 pt-24 pb-12 border-t border-slate-200">
+      <footer id="contact" className="bg-slate-900 text-slate-300 pt-24 pb-12 border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-16 mb-20">
-            <div className="md:col-span-7">
+            {/* Branding Column */}
+            <div className="md:col-span-5">
               <div className="flex items-center gap-3 mb-8">
-                <img src={logoUrl} alt="CareS" className="w-8 h-8 rounded-md object-contain" />
-                <span className="text-lg font-bold text-slate-900 tracking-widest uppercase">CareS</span>
+                <img src={logoUrl} alt="CareS" className="w-12 h-12 rounded-md object-contain bg-white p-1" />
+                <div className="flex flex-col">
+                  <span className="text-2xl font-bold text-white tracking-widest uppercase leading-none">CareS</span>
+                  <span className="text-xs text-slate-400 tracking-[0.2em] uppercase mt-1">Phòng khám đa khoa</span>
+                </div>
               </div>
-              <p className="text-slate-500 font-light leading-relaxed max-w-sm mb-10">
-                {t('footer.description')}
+              <p className="text-slate-400 font-light leading-relaxed max-w-sm mb-10">
+                Nền tảng quản lý và cung cấp dịch vụ y tế chất lượng cao – tận tâm chăm sóc sức khỏe cộng đồng.
               </p>
               <div className="flex gap-4">
-                <a href="https://www.facebook.com/profile.php?id=61593125259676" target="_blank" rel="noreferrer" aria-label="Facebook CareS" className="w-10 h-10 border border-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-colors">
-                  <span className="text-sm font-bold">F</span>
+                <a href="#" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-white hover:bg-primary-600 transition-colors">
+                  <span className="text-sm font-bold">f</span>
                 </a>
-                <a href="#" className="w-10 h-10 border border-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-colors">
-                  <span className="text-sm font-bold">In</span>
+                <a href="#" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-white hover:bg-primary-600 transition-colors">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
+                <a href="#" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-white hover:bg-primary-600 transition-colors">
+                  <span className="text-sm font-bold">Zalo</span>
                 </a>
               </div>
             </div>
+
+            {/* Company Links */}
+            <div className="md:col-span-3">
+              <h4 className="text-xs font-semibold tracking-[0.2em] uppercase text-white mb-8">CÔNG TY</h4>
+              <ul className="space-y-4 font-light text-slate-400">
+                <li><a href="/about" className="hover:text-white transition-colors">Về chúng tôi</a></li>
+                <li><a href="/contact" className="hover:text-white transition-colors">Liên hệ</a></li>
+                <li><a href="/terms" className="hover:text-white transition-colors">Điều khoản dịch vụ</a></li>
+                <li><a href="/privacy" className="hover:text-white transition-colors">Chính sách bảo mật</a></li>
+              </ul>
+            </div>
             
-            <div className="md:col-span-5">
-              <h4 className="text-xs font-semibold tracking-[0.2em] uppercase text-slate-900 mb-8">{t('footer.contact')}</h4>
-              <ul className="space-y-6 text-slate-500 font-light">
+            {/* Contact & Hours */}
+            <div className="md:col-span-4">
+              <h4 className="text-xs font-semibold tracking-[0.2em] uppercase text-white mb-8">KẾT NỐI</h4>
+              <ul className="space-y-4 text-slate-400 font-light mb-8">
                 <li className="flex gap-4">
-                  <MapPin className="w-5 h-5 text-slate-400 shrink-0" strokeWidth={1.5} />
-                  <span>{t('footer.address')}</span>
+                  <PhoneCall className="w-5 h-5 text-slate-500 shrink-0" strokeWidth={1.5} />
+                  <span>Hotline/Zalo: {CLINIC_INFO.phone}</span>
                 </li>
-                <li className="flex gap-4 items-center">
-                  <PhoneCall className="w-5 h-5 text-slate-400 shrink-0" strokeWidth={1.5} />
-                  <span>1900 1234</span>
+                <li className="flex gap-4">
+                  <span className="w-5 h-5 text-slate-500 shrink-0 flex items-center justify-center">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                  </span>
+                  <span>Email: {CLINIC_INFO.supportEmail}</span>
                 </li>
+              </ul>
+
+              <h4 className="text-xs font-semibold tracking-[0.2em] uppercase text-white mb-6">GIỜ HOẠT ĐỘNG</h4>
+              <ul className="space-y-2 text-sm text-slate-400 font-light">
+                {CLINIC_INFO.workingShifts.map((shift, index) => (
+                  <li key={shift.label} className={`flex justify-between ${index < CLINIC_INFO.workingShifts.length - 1 ? 'border-b border-slate-800 pb-2' : ''} ${index > 0 ? 'pt-2' : ''}`}>
+                    <span>{shift.label}:</span><span className="text-white">{shift.time}</span>
+                  </li>
+                ))}
+                <li className="text-xs text-primary-400 mt-2">* {CLINIC_INFO.workingDays}; {CLINIC_INFO.closedDays}</li>
               </ul>
             </div>
 
           </div>
-          
           <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-slate-200 text-xs text-slate-400 tracking-wider">
             <p>&copy; {new Date().getFullYear()} CareS - {t('footer.copyright')}</p>
           </div>

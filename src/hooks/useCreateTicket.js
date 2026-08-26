@@ -21,17 +21,22 @@ export function useCreateTicket() {
             setError('');
             try {
                 const resSvc = await fetch(
-                    `${import.meta.env.VITE_API_URL}/api/v1/medical-services/available?size=1000`,
+                    `${import.meta.env.VITE_API_URL}/api/v1/medical-services?status=ACTIVE&size=1000`,
                     { headers: bearer() }
                 );
                 if (!resSvc.ok) throw new Error('Không thể tải danh sách dịch vụ.');
                 const dataSvc = await resSvc.json();
                 const mappedServices = (dataSvc.content || []).map(s => ({
                     id: s.serviceId,
+                    code: s.serviceCode,
                     name: s.name,
                     price: s.price,
                     description: s.description,
                     departmentType: s.departmentType,
+                    department: s.departmentName || '',
+                    specializationName: s.requiredSpecializationName || '',
+                    durationMinutes: s.durationMinutes,
+                    workflowPriority: s.workflowPriority ?? 1,
                     capabilityName: s.requiredCapabilityName || '',
                 }));
                 setServices(mappedServices);

@@ -64,7 +64,7 @@
     "confirm": "Xác nhận đặt lịch"
   },
   "workflow": {
-    "singleExaminationReplaced": "Mỗi lịch hẹn chỉ được chọn một dịch vụ khám bệnh. Dịch vụ khám cũ đã được thay thế.",
-    "singleExaminationOnly": "Mỗi lịch hẹn chỉ được chọn một dịch vụ khám bệnh."
+    "singleExaminationReplaced": "Mỗi lịch hẹn được chọn tối đa 3 dịch vụ khám bệnh.",
+    "singleExaminationOnly": "Mỗi lịch hẹn được chọn tối đa 3 dịch vụ khám bệnh."
   }
 }

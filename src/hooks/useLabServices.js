@@ -16,7 +16,7 @@ export function useLabServices() {
             setLoading(true);
             try {
                 const res = await fetch(
-                    `${import.meta.env.VITE_API_URL}/api/v1/medical-services/available?departmentType=PARACLINICAL&size=1000`,
+                    `${import.meta.env.VITE_API_URL}/api/v1/medical-services?departmentType=PARACLINICAL&status=ACTIVE&size=1000`,
                     { headers: authHeader() }
                 );
                 if (!res.ok) throw new Error(t('examination.errors.loadFailed'));

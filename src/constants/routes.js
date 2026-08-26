@@ -28,6 +28,7 @@ export const ROUTES = {
     RECEPTIONIST_SUPPORT:      '/receptionist/support',
     RECEPTIONIST_FOLLOW_UPS:   '/receptionist/follow-ups',
     RECEPTIONIST_FEEDBACKS:    '/receptionist/feedbacks',
+    RECEPTIONIST_CONTACT_REQUESTS: '/receptionist/contact-requests',
     PATIENT_JOURNEYS: '/staff/patient-journeys',
 
 
@@ -58,10 +59,11 @@ export const ROUTES = {
     ADMIN_ACCOUNTS: '/admin/accounts',
     ADMIN_ROOMS:    '/admin/rooms',
     ADMIN_SERVICES: '/admin/services',
-    ADMIN_SPECIALIZATIONS: '/admin/specializations',
     ADMIN_CAPABILITIES: '/admin/capabilities',
     ADMIN_AUDIT_LOGS: '/admin/audit-logs',
     ADMIN_SHIFTS: '/admin/shifts',
+    ADMIN_PUBLIC_ANNOUNCEMENTS: '/admin/public-announcements',
+    CLINICAL_FORM_TEMPLATES: '/manager/clinical-form-templates',
 
     OWNER_SCHEDULE: '/owner/schedule',
     OWNER_REPORT: '/owner/report',

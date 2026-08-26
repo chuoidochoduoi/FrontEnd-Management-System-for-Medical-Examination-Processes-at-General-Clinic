@@ -7,8 +7,19 @@ export default function CreateTicketConfirmModal({ data, onClose, onConfirm, sub
     const patientRows = [
         { key: t('fullName'), val: data.fullName, bold: true },
         { key: t('phone'), val: data.phone },
+        { key: 'Email', val: data.email },
         { key: t('age'), val: data.age },
         { key: t('gender'), val: data.gender },
+        { key: 'Nhóm máu', val: data.bloodType },
+        { key: 'Địa chỉ', val: data.address },
+        {
+            key: 'Dị ứng',
+            val: data.allergyStatus === 'UNVERIFIED'
+                ? 'Chưa xác minh'
+                : data.allergyStatus === 'NONE_REPORTED'
+                    ? 'Đã xác nhận không ghi nhận dị ứng'
+                    : data.allergies?.join(', '),
+        },
     ];
 
     return (

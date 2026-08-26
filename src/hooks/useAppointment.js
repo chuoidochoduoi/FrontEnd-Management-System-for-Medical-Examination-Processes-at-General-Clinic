@@ -44,7 +44,7 @@ export function useAppointment() {
     const [shifts, setShifts] = useState([]);
     const [shiftLoading, setShiftLoading] = useState(false);
 
-    // Fetch danh sách dịch vụ và cấu hình ca (shifts) khi mount
+    // Fetch danh sách dịch vụ khi mount. Ca khám được tải theo ngày và dịch vụ đã chọn.
     useEffect(() => {
         const fetchServices = async () => {
             setLoadingServices(true);
@@ -58,12 +58,14 @@ export function useAppointment() {
                 // Map API response để component sử dụng được
                 const mappedServices = rawList.map(s => ({
                     id: s.serviceId,
+                    code: s.serviceCode,
                     name: s.name,
                     description: s.description,
                     price: s.price,
                     department: s.departmentName,
                     categoryName: s.categoryName,
                     durationMinutes: s.durationMinutes,
+                    workflowPriority: s.workflowPriority ?? 1,
                     departmentType: s.departmentType,
                     capabilityName: s.requiredCapabilityName || '',
                     minimumAge: s.minimumAge ?? 0,
@@ -82,13 +84,17 @@ export function useAppointment() {
     }, []);
 
     // Fetch cấu hình ca trực (admin cấu hình giờ sáng/chiều) để không hard-code
-    const fetchShifts = async () => {
+    const fetchShifts = async (date, selectedServiceIds = []) => {
+        if (!date) {
+            setShifts([]);
+            return;
+        }
         setShiftLoading(true);
 
         try {
-            const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/v1/shifts/active`
-            );
+            const params = new URLSearchParams({ date });
+            selectedServiceIds.forEach(id => params.append('serviceIds', id));
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/shifts/available?${params}`);
 
             if (!res.ok) {
                 throw new Error(
@@ -112,7 +118,11 @@ export function useAppointment() {
                 id: s.shiftId || s.id,
                 name: s.name,
                 startTime: s.startTime,
-                endTime: s.endTime
+                endTime: s.endTime,
+                available: s.available !== false,
+                timeSource: s.timeSource || 'NORMAL',
+                unavailableReasonCode: s.unavailableReasonCode || null,
+                serviceUnavailableReasons: s.serviceUnavailableReasons || {}
             }));
 
             console.log(
@@ -137,8 +147,6 @@ export function useAppointment() {
             setShiftLoading(false);
         }
     };
-
-    useEffect(() => { fetchShifts(); }, []);
 
     const book = async (formData) => {
         setError('');
@@ -165,6 +173,10 @@ export function useAppointment() {
             const scheduledAt = buildScheduledAt(formData.date, formData.shiftId, shifts);
             if (!scheduledAt) {
                 throw new Error('Ca khám đã chọn không còn khả dụng. Vui lòng tải lại và chọn ca khám khác.');
+            }
+            const selectedShift = shifts.find(s => s.id === formData.shiftId);
+            if (!selectedShift?.available) {
+                throw new Error('Ca khám không có nhân sự đủ điều kiện cho các dịch vụ đã chọn.');
             }
 
             // Xây dựng body request dựa trên trạng thái đăng nhập

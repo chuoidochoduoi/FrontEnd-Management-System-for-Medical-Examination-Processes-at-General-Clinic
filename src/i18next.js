@@ -73,15 +73,15 @@ i18n
                 appointment: {
                     ...createEnglishResource(viAppointment),
                     workflow: {
-                        singleExaminationReplaced: 'Only one examination service can be selected per appointment. The previous examination service was replaced.',
-                        singleExaminationOnly: 'Only one examination service can be selected per appointment.'
+                        singleExaminationReplaced: 'Up to three examination services can be selected per appointment.',
+                        singleExaminationOnly: 'Up to three examination services can be selected per appointment.'
                     }
                 },
                 receptionist: {
                     ...createEnglishResource(viReceptionist),
                     workflow: {
-                        singleExaminationReplaced: 'Only one examination service can be selected per visit. The previous examination service was replaced.',
-                        singleExaminationOnly: 'Only one examination service can be selected per visit.'
+                        singleExaminationReplaced: 'Up to three examination services can be selected per visit.',
+                        singleExaminationOnly: 'Up to three examination services can be selected per visit.'
                     }
                 },
                 customer: createEnglishResource(viCustomer),

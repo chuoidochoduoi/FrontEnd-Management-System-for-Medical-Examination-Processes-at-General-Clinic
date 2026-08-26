@@ -80,6 +80,7 @@ export default function ProfilePage() {
     const [height, setHeight] = useState('');
     const [weight, setWeight] = useState('');
     const [allergies, setAllergies] = useState([]);
+    const [allergyStatus, setAllergyStatus] = useState('UNVERIFIED');
 
     // BHYT (bảo hiểm y tế) — READ-ONLY cho khách hàng
     // Chỉ có lễ tân mới được nhập/sửa BHYT qua luồng check-in.
@@ -109,6 +110,7 @@ export default function ProfilePage() {
         setHeight(profile.height ?? '');
         setWeight(profile.weight ?? '');
         setAllergies(profile.allergies ?? []);
+        setAllergyStatus(profile.allergyStatus ?? ((profile.allergies ?? []).length ? 'REPORTED' : 'UNVERIFIED'));
     }, [profile]);
 
     const handleSave = async () => {
@@ -126,7 +128,7 @@ export default function ProfilePage() {
             insuranceId: bhytCode || null,
             height: height ? Number(height) : null,
             weight: weight ? Number(weight) : null,
-            allergies
+            allergies: allergyStatus === 'UNVERIFIED' ? undefined : allergies
         });
         if (ok) {
             toast.success('Cập nhật hồ sơ thành công!');
@@ -149,6 +151,7 @@ export default function ProfilePage() {
         setHeight(profile.height ?? '');
         setWeight(profile.weight ?? '');
         setAllergies(profile.allergies ?? []);
+        setAllergyStatus(profile.allergyStatus ?? ((profile.allergies ?? []).length ? 'REPORTED' : 'UNVERIFIED'));
         setEditing(false);
     };
 
@@ -253,7 +256,7 @@ export default function ProfilePage() {
             insuranceId: bhytCode || null,
             height: height ? Number(height) : null,
             weight: weight ? Number(weight) : null,
-            allergies
+            allergies: allergyStatus === 'UNVERIFIED' ? undefined : allergies
         });
         setOnboardingSaving(false);
         if (ok) {
@@ -683,6 +686,13 @@ export default function ProfilePage() {
                                             </select>
                                         )
                                         : <p className={fieldValue}>{bloodTypeLabel(bloodType)}</p>}
+                                </div>
+                                <div className="md:col-span-2">
+                                    <div className={fieldLabel}><AlertCircle className="h-3.5 w-3.5 text-amber-500"/><span>Dị ứng</span></div>
+                                    {editing ? <div className="space-y-3 rounded-xl border border-gray-200 p-3">
+                                        <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={allergyStatus === 'NONE_REPORTED'} onChange={event => { if (event.target.checked) { setAllergyStatus('NONE_REPORTED'); setAllergies([]); } else { setAllergyStatus('UNVERIFIED'); } }}/><span>Đã xác nhận chưa ghi nhận dị ứng</span></label>
+                                        {allergyStatus !== 'NONE_REPORTED' && <textarea rows={3} value={allergies.join('\n')} onChange={event => { const values = event.target.value.split(/[,;\n]+/).map(value => value.trim()).filter(Boolean); setAllergies(values); setAllergyStatus(values.length ? 'REPORTED' : 'UNVERIFIED'); }} placeholder="Mỗi dị ứng nhập trên một dòng, ví dụ: Penicillin" className={inputCls + ' h-auto py-2'}/>}
+                                    </div> : allergyStatus === 'REPORTED' ? <div className="flex flex-wrap gap-2">{allergies.map(item => <span key={item} className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">{item}</span>)}</div> : allergyStatus === 'NONE_REPORTED' ? <p className="text-sm font-medium text-emerald-700">Đã xác nhận chưa ghi nhận dị ứng</p> : <p className="text-sm font-medium text-amber-700">Chưa xác minh dị ứng</p>}
                                 </div>
                                 {/* Bảo hiểm y tế — chỉ lễ tân được nhập */}
                                 <div className="md:col-span-2">

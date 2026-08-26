@@ -20,15 +20,22 @@ export function useMedicalHistory() {
         try {
             const params = new URLSearchParams({ search, page: String(page), size: String(PAGE_SIZE) });
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/patient/medical-history?${params}`,
+                `${import.meta.env.VITE_API_URL}/api/patient/medical-history/visits?${params}`,
                 { headers: bearer() }
             );
             if (!res.ok) throw new Error(t('medicalHistory.errors.loadFailed'));
             const data = await res.json();
             const rawItems = data.items ?? data;
-            const uniqueVisits = Array.from(new Map(rawItems.map(item => [item.visitId || item.id, item])).values());
-            setVisits(uniqueVisits);
-            setTotal(data.total ?? data.length);
+            const normalizedVisits = rawItems.map(item => ({
+                ...item,
+                id: item.visitId || item.id,
+                recordCode: item.visitCode,
+                specialty: 'EXAMINATION',
+                doctor: Array.isArray(item.doctorNames) ? item.doctorNames.join(', ') : item.doctor,
+                diagnosis: item.diagnosisSummary || item.diagnosis,
+            }));
+            setVisits(normalizedVisits);
+            setTotal(data.total ?? normalizedVisits.length);
             setPage(page + 1); // Backend 0-based, frontend 1-based
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
@@ -48,7 +55,7 @@ export function useVisitDetail(visitId) {
         setLoading(true); setError('');
         try {
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/patient/medical-history/${visitId}`,
+                `${import.meta.env.VITE_API_URL}/api/patient/medical-history/visits/${visitId}`,
                 { headers: bearer() }
             );
             if (!res.ok) throw new Error(t('visitDetail.errors.loadFailed'));
@@ -67,8 +74,9 @@ export function useVisitDetail(visitId) {
     const rateVisit = async (feedback) => {
         if (!visitId) return false;
         try {
+            const feedbackRecordId = visit?.id || visitId;
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/patient/medical-history/${visitId}/feedback`,
+                `${import.meta.env.VITE_API_URL}/api/patient/medical-history/${feedbackRecordId}/feedback`,
                 { method: 'POST', headers: { ...bearer(), 'Content-Type': 'application/json' }, body: JSON.stringify(feedback) }
             );
             if (!res.ok) throw new Error(t('visitDetail.errors.rateFailed', 'Đánh giá thất bại'));

@@ -7,6 +7,7 @@ import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
 import SidebarBrand from './SidebarBrand';
 import AppPreferencesMenu from '@/components/ui/AppPreferencesMenu';
+import OwnerLayout from './OwnerLayout';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -64,6 +65,10 @@ export default function CashierLayout({ children }) {
         `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
             isActive ? 'bg-primary-50 text-primary-600 font-medium' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
         }`;
+
+    if (systemRole === 'CLINIC_MANAGER') {
+        return <OwnerLayout>{children}</OwnerLayout>;
+    }
 
     return (
         <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden print:block print:h-auto print:overflow-visible print:bg-white">

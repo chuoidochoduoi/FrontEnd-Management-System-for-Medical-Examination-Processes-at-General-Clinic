@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
+import ClinicalDataDisplay from '@/components/clinical/ClinicalDataDisplay';
+import PatientAllergyBanner from '@/components/clinical/PatientAllergyBanner';
 
 const value = input => input === null || input === undefined || input === '' ? '-' : input;
 
@@ -9,16 +11,20 @@ export default function RecordDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [record, setRecord] = useState(null);
+    const [allergies, setAllergies] = useState(null);
     const [error, setError] = useState('');
 
     useEffect(() => {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-records/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        }).then(async response => {
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data.message || 'Không thể tải chi tiết hồ sơ');
+        const headers = { Authorization: `Bearer ${token}` };
+        Promise.all([
+            fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-records/${id}`, { headers }),
+            fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-records/${id}/patient-allergies`, { headers }),
+        ]).then(async ([recordResponse, allergyResponse]) => {
+            const data = await recordResponse.json().catch(() => ({}));
+            if (!recordResponse.ok) throw new Error(data.message || 'Không thể tải chi tiết hồ sơ');
             setRecord(data);
+            if (allergyResponse.ok) setAllergies(await allergyResponse.json());
         }).catch(err => setError(err.message));
     }, [id]);
 
@@ -41,5 +47,9 @@ export default function RecordDetailPage() {
                 {fields.map(([label, content]) => <div key={label} className="border-b border-gray-100 pb-4"><p className="text-xs text-gray-500 mb-1">{label}</p><p className="text-sm text-gray-900 whitespace-pre-wrap">{value(content)}</p></div>)}
             </div>}
         </div>
+        {record && <>
+            <PatientAllergyBanner value={allergies} currentLabel/>
+            <ClinicalDataDisplay clinicalForm={record.clinicalForm} schema={record.clinicalForm?.schema} values={record.clinicalForm?.values || record.specialtyData || {}}/>
+        </>}
     </div></ReceptionistLayout>;
 }

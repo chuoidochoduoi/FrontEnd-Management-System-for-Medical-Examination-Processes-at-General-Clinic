@@ -1,8 +1,10 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, FlaskConical, FileText, Pill, ArrowLeft } from 'lucide-react';
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { ROUTES } from '@/constants/routes';
+import ClinicalDataDisplay from '@/components/clinical/ClinicalDataDisplay';
+import PatientAllergyBanner from '@/components/clinical/PatientAllergyBanner';
 
 const text = value => value || '-';
 
@@ -10,10 +12,18 @@ export default function ExamCompletionPage() {
     const { recordId } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
+    const [allergies, setAllergies] = useState({ status: 'UNVERIFIED', items: [] });
     const data = useMemo(() => {
         if (location.state?.record) return location.state;
         try { return JSON.parse(sessionStorage.getItem(`exam-completion:${recordId}`)); } catch { return null; }
     }, [location.state, recordId]);
+
+    useEffect(() => {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-records/${recordId}/patient-allergies`, {
+            headers: { Authorization: `Bearer ${token}` },
+        }).then(response => response.ok ? response.json() : null).then(value => value && setAllergies(value)).catch(() => {});
+    }, [recordId]);
 
     if (!data?.record) return <MedicalStaffLayout><div className="p-10 text-center text-gray-500">Không tìm thấy thông tin ca khám.</div></MedicalStaffLayout>;
     const { record, patient } = data;
@@ -38,12 +48,31 @@ export default function ExamCompletionPage() {
                     <div><p className="text-xs text-gray-400">Bác sĩ</p><p className="font-semibold">{text(record.doctorConfirmedByName || record.doctorName)}</p></div>
                 </section>
 
+                <PatientAllergyBanner value={allergies} currentLabel/>
+
                 <div className="grid gap-5 lg:grid-cols-2">
                     <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Chẩn đoán</h2>{diagnoses.length ? diagnoses.map(d => <p key={d.code} className="mb-2 rounded-lg bg-gray-50 p-3 text-sm"><b>{d.code}</b> – {d.codeName || d.name}</p>) : <p>-</p>}</section>
                     <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Kết luận và hướng điều trị</h2><p className="whitespace-pre-wrap text-sm text-gray-700">{text(record.conclusion)}</p></section>
                     <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Khám lâm sàng</h2><p className="whitespace-pre-wrap text-sm text-gray-700">{text(record.clinicalFindings)}</p></section>
                     <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Đơn thuốc</h2><p className="text-sm text-gray-700">{medicines.length ? `${medicines.length} loại thuốc đã kê` : 'Không kê thuốc'}</p></section>
                 </div>
+
+                <ClinicalDataDisplay
+                    clinicalForm={record.clinicalForm}
+                    schema={record.clinicalForm?.schema}
+                    values={record.clinicalForm?.values || record.specialtyData || {}}
+                />
+
+                {record.vitalSigns && <section className="rounded-2xl border border-gray-200 bg-white p-6">
+                    <h2 className="mb-4 font-bold">Sinh hiệu</h2>
+                    <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-5">
+                        <span>Huyết áp<br/><b>{text(record.vitalSigns.bloodPressure)}</b></span>
+                        <span>Nhịp tim<br/><b>{text(record.vitalSigns.heartRate)}</b></span>
+                        <span>Nhiệt độ<br/><b>{text(record.vitalSigns.temperature)} °C</b></span>
+                        <span>Chiều cao<br/><b>{text(record.vitalSigns.height)} cm</b></span>
+                        <span>Cân nặng<br/><b>{text(record.vitalSigns.weight)} kg</b></span>
+                    </div>
+                </section>}
 
                 <section className="flex flex-wrap justify-end gap-3 rounded-2xl border border-gray-200 bg-white p-5">
                     <button onClick={() => navigate(ROUTES.DOCTOR_ROOMS)} className="flex h-10 items-center gap-2 rounded-xl border border-gray-200 px-5 text-sm"><ArrowLeft size={16}/> Về danh sách phòng</button>

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
     Activity, BarChart2, Building2, CalendarDays, ClipboardList, FilePlus,
     FileText, FolderOpen, Inbox, LifeBuoy, LogOut, MapPinned, MessageSquare, Settings,
-    Tag, UserRound, Users, Wrench, Clock, BellRing, ListChecks
+    Tag, UserRound, Users, Wrench, Clock, BellRing, ListChecks, MapPin
 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
@@ -67,6 +67,7 @@ export default function OwnerLayout({ children }) {
         { to: ROUTES.ADMIN_CAPABILITIES, icon: Wrench, label: 'Danh mục kỹ thuật' },
         { to: ROUTES.ADMIN_ACCOUNTS, icon: Users, label: 'Quản lý tài khoản' },
         { to: ROUTES.ADMIN_SHIFTS, icon: Clock, label: 'Cấu hình ca' },
+        { to: ROUTES.ADMIN_CLINIC_INFORMATION, icon: MapPin, label: 'Thông tin phòng khám' },
         { to: ROUTES.ADMIN_AUDIT_LOGS, icon: Activity, label: 'Nhật ký hệ thống' },
         { to: ROUTES.ADMIN_PUBLIC_ANNOUNCEMENTS, icon: BellRing, label: 'Thông báo công khai' },
         { to: ROUTES.CLINICAL_FORM_TEMPLATES, icon: ListChecks, label: 'Biểu mẫu chuyên môn' },

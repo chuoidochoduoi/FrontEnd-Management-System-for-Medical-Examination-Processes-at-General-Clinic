@@ -11,7 +11,6 @@ import {
     Lock,
     Hash,
     User,
-    Calendar,
     MapPin
 } from 'lucide-react';
 
@@ -47,6 +46,9 @@ export default function RegisterPage() {
     // =========================================================
     const [fullName, setFullName] = useState('');
     const [dob, setDob] = useState('');
+    const [dobDay, setDobDay] = useState('');
+    const [dobMonth, setDobMonth] = useState('');
+    const [dobYear, setDobYear] = useState('');
     const [gender, setGender] = useState('MALE');
     const [address, setAddress] = useState('');
 
@@ -81,6 +83,30 @@ export default function RegisterPage() {
     useEffect(() => {
         window.scrollTo(0, 0);
     }, []);
+
+    useEffect(() => {
+        if (!dobDay || !dobMonth || !dobYear) {
+            setDob('');
+            return;
+        }
+
+        const maximumDay = new Date(
+            Number(dobYear),
+            Number(dobMonth),
+            0
+        ).getDate();
+
+        if (Number(dobDay) > maximumDay) {
+            setDobDay(String(maximumDay));
+            return;
+        }
+
+        setDob(
+            `${dobYear}-${String(dobMonth).padStart(2, '0')}-${String(
+                dobDay
+            ).padStart(2, '0')}`
+        );
+    }, [dobDay, dobMonth, dobYear]);
 
     // =========================================================
     // COUNTDOWN GỬI LẠI OTP
@@ -391,6 +417,19 @@ export default function RegisterPage() {
         setOtp('');
         setFormError('');
     };
+
+    const currentYear = new Date().getFullYear();
+    const daysInSelectedMonth = dobMonth
+        ? new Date(
+              Number(dobYear || currentYear),
+              Number(dobMonth),
+              0
+          ).getDate()
+        : 31;
+    const birthYears = Array.from(
+        { length: 151 },
+        (_, index) => currentYear - index
+    );
 
     return (
         <div className="font-jakarta selection:bg-primary-900 selection:text-white relative">
@@ -816,21 +855,80 @@ export default function RegisterPage() {
                                                 Ngày sinh
                                             </label>
 
-                                            <div className="relative">
+                                            <div className="grid grid-cols-[0.8fr_0.9fr_1.25fr] gap-2">
+                                                <select
+                                                    aria-label="Ngày sinh"
+                                                    value={dobDay}
+                                                    onChange={e => {
+                                                        setDobDay(e.target.value);
+                                                        setFormError('');
+                                                    }}
+                                                    className="h-12 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-2 text-sm outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50"
+                                                >
+                                                    <option value="">Ngày</option>
+                                                    {Array.from(
+                                                        {
+                                                            length: daysInSelectedMonth
+                                                        },
+                                                        (_, index) =>
+                                                            index + 1
+                                                    ).map(day => (
+                                                        <option
+                                                            key={day}
+                                                            value={day}
+                                                        >
+                                                            {day}
+                                                        </option>
+                                                    ))}
+                                                </select>
 
-                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-
-                                                <input
-                                                    type="date"
-                                                    value={dob}
-                                                    onChange={e =>
-                                                        setDob(
+                                                <select
+                                                    aria-label="Tháng sinh"
+                                                    value={dobMonth}
+                                                    onChange={e => {
+                                                        setDobMonth(
                                                             e.target.value
-                                                        )
-                                                    }
-                                                    className="w-full h-12 pl-11 pr-4 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-50 transition-all"
-                                                />
+                                                        );
+                                                        setFormError('');
+                                                    }}
+                                                    className="h-12 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-2 text-sm outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50"
+                                                >
+                                                    <option value="">Tháng</option>
+                                                    {Array.from(
+                                                        { length: 12 },
+                                                        (_, index) =>
+                                                            index + 1
+                                                    ).map(month => (
+                                                        <option
+                                                            key={month}
+                                                            value={month}
+                                                        >
+                                                            {month}
+                                                        </option>
+                                                    ))}
+                                                </select>
 
+                                                <select
+                                                    aria-label="Năm sinh"
+                                                    value={dobYear}
+                                                    onChange={e => {
+                                                        setDobYear(
+                                                            e.target.value
+                                                        );
+                                                        setFormError('');
+                                                    }}
+                                                    className="h-12 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-2 text-sm outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50"
+                                                >
+                                                    <option value="">Năm</option>
+                                                    {birthYears.map(year => (
+                                                        <option
+                                                            key={year}
+                                                            value={year}
+                                                        >
+                                                            {year}
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             </div>
 
                                         </div>

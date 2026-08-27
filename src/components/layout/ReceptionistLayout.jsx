@@ -20,6 +20,7 @@ import SidebarBrand from './SidebarBrand';
 import AppPreferencesMenu from '@/components/ui/AppPreferencesMenu';
 import OwnerLayout from './OwnerLayout';
 import useContactRequestCount from '@/hooks/useContactRequestCount';
+import useFeedbackCount from '@/hooks/useFeedbackCount';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -35,6 +36,7 @@ export default function ReceptionistLayout({ children }) {
     const [staffInfo, setStaffInfo] = useState(null);
     const [hasNewChat, setHasNewChat] = useState(false);
     const contactRequestCount = useContactRequestCount(systemRole === 'RECEPTIONIST');
+    const feedbackCount = useFeedbackCount(systemRole === 'RECEPTIONIST');
 
     useWebSocket('/topic/receptionist-chat', null, (msg) => {
         if (msg === 'NEW_CHAT_REQUEST' || msg === 'NEW_MESSAGE') {
@@ -93,7 +95,7 @@ export default function ReceptionistLayout({ children }) {
         { to: ROUTES.RECEPTIONIST_VISITS,        icon: ClipboardList, label: 'Quản lý phiếu khám' },
         { to: ROUTES.RECEPTIONIST_RECORDS,       icon: FolderOpen,    label: t('sidebar.manageRecords') },
         { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: tCommon('sidebar.patientFlow') },
-        { to: ROUTES.RECEPTIONIST_FEEDBACKS,     icon: MessageSquare, label: 'Đánh giá liên quan' },
+        { to: ROUTES.RECEPTIONIST_FEEDBACKS,     icon: MessageSquare, label: 'Đánh giá liên quan', badge: feedbackCount },
         { to: ROUTES.RECEPTIONIST_CONTACT_REQUESTS, icon: Inbox, label: 'Yêu cầu liên hệ', badge: contactRequestCount },
         { to: ROUTES.RECEPTIONIST_SUPPORT,       icon: LifeBuoy,      label: t('sidebar.onlineSupport', { defaultValue: 'Online support' }) },
         { to: ROUTES.STAFF_SCHEDULE,             icon: CalendarDays, label: tCommon('sidebar.mySchedule') },

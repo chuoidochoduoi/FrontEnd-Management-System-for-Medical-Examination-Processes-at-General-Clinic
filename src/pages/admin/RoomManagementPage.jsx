@@ -546,11 +546,6 @@ export default function RoomManagementPage() {
         loadStaff();
     }, [fetchDoctors, fetchNurses]);
 
-    // Fetch rooms initially
-    useEffect(() => {
-        fetchRooms();
-    }, [fetchRooms]);
-
     const handleSearch = () => fetchRooms({ search, type: typeFilter, status: statusFilter });
 
     // Filter rooms on frontend (backup if API doesn't filter)

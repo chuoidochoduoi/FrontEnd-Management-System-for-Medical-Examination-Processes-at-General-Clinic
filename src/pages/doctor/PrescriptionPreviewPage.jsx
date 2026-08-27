@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Printer } from 'lucide-react';
+import useClinicInformation from '@/hooks/useClinicInformation';
 
 const display = value => value === null || value === undefined || value === '' ? '-' : value;
 
@@ -8,6 +9,7 @@ export default function PrescriptionPreviewPage() {
     const { recordId } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
+    const { clinicInformation } = useClinicInformation();
     const data = useMemo(() => {
         if (location.state?.record) return location.state;
         try { return JSON.parse(sessionStorage.getItem(`prescription-preview:${recordId}`)); }
@@ -38,9 +40,9 @@ export default function PrescriptionPreviewPage() {
                 <header className="grid grid-cols-[90px_1fr_90px] items-start border-b-2 border-gray-800 pb-4 text-center">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-red-600 text-3xl font-bold text-red-600">+</div>
                     <div>
-                        <p className="text-lg font-bold uppercase">Phòng khám đa khoa</p>
-                        <p className="font-semibold">HỆ THỐNG QUẢN LÝ PHÒNG KHÁM</p>
-                        <p className="text-xs text-gray-600">Điện thoại: - &nbsp; • &nbsp; Địa chỉ: -</p>
+                        <p className="text-lg font-bold uppercase">{clinicInformation.clinicName}</p>
+                        <p className="font-semibold">{clinicInformation.legalName}</p>
+                        <p className="text-xs text-gray-600">Điện thoại: {clinicInformation.phone} &nbsp; • &nbsp; Địa chỉ: {clinicInformation.address}</p>
                     </div>
                     <div className="text-right text-xs"><p>Mã hồ sơ</p><p className="font-bold">{display(recordId?.slice(0, 8).toUpperCase())}</p></div>
                 </header>

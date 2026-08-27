@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Printer } from 'lucide-react';
+import useClinicInformation from '@/hooks/useClinicInformation';
 
 const show = value => value === null || value === undefined || value === '' ? '-' : value;
 const Field = ({ label, children, wide = false }) => <div className={wide ? 'col-span-2' : ''}><span className="font-bold">{label}: </span><span className="whitespace-pre-wrap">{show(children)}</span></div>;
@@ -22,6 +23,7 @@ export default function MedicalRecordPrintPage() {
     const { recordId } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
+    const { clinicInformation } = useClinicInformation();
     const [clinicalForm, setClinicalForm] = useState(null);
     const [allergies, setAllergies] = useState(null);
     const data = useMemo(() => {
@@ -59,7 +61,7 @@ export default function MedicalRecordPrintPage() {
         <article className="record-sheet mx-auto min-h-[297mm] w-[210mm] max-w-[calc(100vw-32px)] bg-white px-[13mm] py-[11mm] text-[12px] leading-relaxed text-gray-900 shadow-lg">
             <header className="grid grid-cols-[70px_1fr_130px] border-b-2 border-gray-900 pb-3">
                 <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-red-600 text-3xl font-bold text-red-600">+</div>
-                <div className="text-center"><p className="text-lg font-bold uppercase">Phòng khám đa khoa</p><p>HỆ THỐNG QUẢN LÝ PHÒNG KHÁM</p><p className="text-[10px]">Địa chỉ: - &nbsp; • &nbsp; Điện thoại: -</p></div>
+                <div className="text-center"><p className="text-lg font-bold uppercase">{clinicInformation.clinicName}</p><p>{clinicInformation.legalName}</p><p className="text-[10px]">Địa chỉ: {clinicInformation.address} &nbsp; • &nbsp; Điện thoại: {clinicInformation.phone}</p></div>
                 <div className="text-right text-[10px]"><p>Mã bệnh án</p><p className="text-xs font-bold">{recordId.slice(0, 8).toUpperCase()}</p></div>
             </header>
             <h1 className="my-4 text-center text-xl font-bold uppercase">Phiếu bệnh án khám ngoại trú</h1>

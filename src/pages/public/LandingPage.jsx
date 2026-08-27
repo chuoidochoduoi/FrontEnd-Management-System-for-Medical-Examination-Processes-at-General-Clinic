@@ -20,7 +20,8 @@ import {
 import ChatWidget from '@/components/ui/ChatWidget';
 import { useTranslation } from 'react-i18next';
 import { getVisibleAnnouncements } from '@/services/publicAnnouncementService';
-import { CLINIC_INFO } from '@/constants/clinicInfo';
+import { usePublicWorkingShifts } from '@/hooks/usePublicWorkingShifts';
+import useClinicInformation from '@/hooks/useClinicInformation';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -31,7 +32,10 @@ const LandingPage = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
   const [dismissedAnnouncements, setDismissedAnnouncements] = useState([]);
+  const [closingAnnouncements, setClosingAnnouncements] = useState([]);
   const { services: apiServices, loadingServices } = useAppointment();
+  const workingShifts = usePublicWorkingShifts();
+  const { clinicInformation } = useClinicInformation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -50,6 +54,16 @@ const LandingPage = () => {
   const visibleAnnouncements = announcements.filter(
     item => !dismissedAnnouncements.includes(item.announcementId)
   );
+
+  const dismissAnnouncement = (announcementId) => {
+    if (closingAnnouncements.includes(announcementId)) return;
+
+    setClosingAnnouncements(current => [...current, announcementId]);
+    window.setTimeout(() => {
+      setDismissedAnnouncements(current => [...current, announcementId]);
+      setClosingAnnouncements(current => current.filter(id => id !== announcementId));
+    }, 250);
+  };
 
   const services = [Stethoscope, Microscope, Activity].map((icon, index) => ({
     icon, title: t(`services.items.${index}.title`), desc: t(`services.items.${index}.desc`),
@@ -113,9 +127,9 @@ const LandingPage = () => {
           <div className="flex justify-between items-center">
             {/* Logo */}
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
-              <img src={logoUrl} alt="CareS" className="w-10 h-10 rounded-md object-contain" />
+              <img src={logoUrl} alt={clinicInformation.clinicName} className="w-10 h-10 rounded-md object-contain" />
               <div className="flex flex-col">
-                <span className="text-xl font-bold text-slate-900 tracking-widest uppercase leading-none">CareS</span>
+                <span className="text-xl font-bold text-slate-900 tracking-widest uppercase leading-none">{clinicInformation.clinicName}</span>
                 <span className="text-[10px] text-slate-500 tracking-[0.3em] uppercase mt-1">{t('brandSubtitle')}</span>
               </div>
             </div>
@@ -181,11 +195,17 @@ const LandingPage = () => {
       </div>
 
       {/* Public announcements configured by ADMIN/CLINIC_MANAGER */}
-      <div className="bg-white pt-[100px]">
-        {visibleAnnouncements.length > 0 && (
-          <div className="mx-auto max-w-7xl space-y-3 px-6 lg:px-12">
+      {visibleAnnouncements.length > 0 && (
+        <div
+          className="pointer-events-none fixed inset-x-0 top-[88px] z-30 px-4 sm:top-[96px] sm:px-6 lg:px-12"
+          aria-live="polite"
+        >
+          <div className="pointer-events-auto mx-auto max-h-[calc(100vh-112px)] max-w-7xl space-y-3 overflow-y-auto overscroll-contain rounded-xl">
             {visibleAnnouncements.map(item => (
-              <div key={item.announcementId} className="flex items-start justify-between gap-4 rounded-xl border border-primary-200 bg-primary-50 px-5 py-4 text-primary-800 shadow-sm sm:items-center sm:px-6">
+              <div
+                key={item.announcementId}
+                className={`animate-fadeIn flex items-start justify-between gap-4 rounded-xl border border-primary-200 bg-primary-50/95 px-4 py-3 text-primary-800 shadow-lg shadow-slate-900/10 backdrop-blur-md transition-all duration-300 sm:items-center sm:px-6 sm:py-4 ${closingAnnouncements.includes(item.announcementId) ? '-translate-y-2 scale-[0.98] opacity-0' : 'translate-y-0 scale-100 opacity-100'}`}
+              >
                 <div className="flex min-w-0 items-start gap-4 sm:items-center">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-100">
                     <Clock className="h-5 w-5 text-primary-600" />
@@ -198,7 +218,7 @@ const LandingPage = () => {
                 <button
                   type="button"
                   aria-label={`Đóng thông báo ${item.title}`}
-                  onClick={() => setDismissedAnnouncements(current => [...current, item.announcementId])}
+                  onClick={() => dismissAnnouncement(item.announcementId)}
                   className="shrink-0 p-2 text-primary-600 transition-colors hover:text-primary-800"
                 >
                   <X className="h-5 w-5" />
@@ -206,8 +226,8 @@ const LandingPage = () => {
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center pt-20 overflow-hidden bg-white">
@@ -497,25 +517,30 @@ const LandingPage = () => {
             {/* Branding Column */}
             <div className="md:col-span-5">
               <div className="flex items-center gap-3 mb-8">
-                <img src={logoUrl} alt="CareS" className="w-12 h-12 rounded-md object-contain bg-white p-1" />
+                <img src={logoUrl} alt={clinicInformation.clinicName} className="w-12 h-12 rounded-md object-contain bg-white p-1" />
                 <div className="flex flex-col">
-                  <span className="text-2xl font-bold text-white tracking-widest uppercase leading-none">CareS</span>
-                  <span className="text-xs text-slate-400 tracking-[0.2em] uppercase mt-1">Phòng khám đa khoa</span>
+                  <span className="text-2xl font-bold text-white tracking-widest uppercase leading-none">{clinicInformation.clinicName}</span>
+                  <span className="text-xs text-slate-400 tracking-[0.12em] uppercase mt-1">{clinicInformation.legalName}</span>
                 </div>
               </div>
               <p className="text-slate-400 font-light leading-relaxed max-w-sm mb-10">
-                Nền tảng quản lý và cung cấp dịch vụ y tế chất lượng cao – tận tâm chăm sóc sức khỏe cộng đồng.
+                {clinicInformation.shortDescription}
               </p>
+              <div className="mb-8 space-y-1 text-xs text-slate-500">
+                <p>{clinicInformation.legalName}</p>
+                <p>Mã số thuế: {clinicInformation.taxCode}</p>
+                {clinicInformation.operatingLicense && <p>Giấy phép hoạt động: {clinicInformation.operatingLicense}</p>}
+              </div>
               <div className="flex gap-4">
-                <a href="#" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-white hover:bg-primary-600 transition-colors">
+                {clinicInformation.facebookUrl && <a href={clinicInformation.facebookUrl} target="_blank" rel="noreferrer" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-white hover:bg-primary-600 transition-colors">
                   <span className="text-sm font-bold">f</span>
-                </a>
-                <a href="#" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-white hover:bg-primary-600 transition-colors">
+                </a>}
+                {clinicInformation.youtubeUrl && <a href={clinicInformation.youtubeUrl} target="_blank" rel="noreferrer" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-white hover:bg-primary-600 transition-colors">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                </a>
-                <a href="#" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-white hover:bg-primary-600 transition-colors">
+                </a>}
+                {clinicInformation.zaloUrl && <a href={clinicInformation.zaloUrl} target="_blank" rel="noreferrer" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-white hover:bg-primary-600 transition-colors">
                   <span className="text-sm font-bold">Zalo</span>
-                </a>
+                </a>}
               </div>
             </div>
 
@@ -536,30 +561,31 @@ const LandingPage = () => {
               <ul className="space-y-4 text-slate-400 font-light mb-8">
                 <li className="flex gap-4">
                   <PhoneCall className="w-5 h-5 text-slate-500 shrink-0" strokeWidth={1.5} />
-                  <span>Hotline/Zalo: {CLINIC_INFO.phone}</span>
+                  <span>Hotline/Zalo: {clinicInformation.phone}</span>
                 </li>
                 <li className="flex gap-4">
                   <span className="w-5 h-5 text-slate-500 shrink-0 flex items-center justify-center">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                   </span>
-                  <span>Email: {CLINIC_INFO.supportEmail}</span>
+                  <span>Email: {clinicInformation.supportEmail}</span>
                 </li>
+                <li className="flex gap-4"><MapPin className="w-5 h-5 text-slate-500 shrink-0" strokeWidth={1.5}/><span>{clinicInformation.address}</span></li>
               </ul>
 
               <h4 className="text-xs font-semibold tracking-[0.2em] uppercase text-white mb-6">GIỜ HOẠT ĐỘNG</h4>
               <ul className="space-y-2 text-sm text-slate-400 font-light">
-                {CLINIC_INFO.workingShifts.map((shift, index) => (
-                  <li key={shift.label} className={`flex justify-between ${index < CLINIC_INFO.workingShifts.length - 1 ? 'border-b border-slate-800 pb-2' : ''} ${index > 0 ? 'pt-2' : ''}`}>
+                {workingShifts.map((shift, index) => (
+                  <li key={shift.label} className={`flex justify-between ${index < workingShifts.length - 1 ? 'border-b border-slate-800 pb-2' : ''} ${index > 0 ? 'pt-2' : ''}`}>
                     <span>{shift.label}:</span><span className="text-white">{shift.time}</span>
                   </li>
                 ))}
-                <li className="text-xs text-primary-400 mt-2">* {CLINIC_INFO.workingDays}; {CLINIC_INFO.closedDays}</li>
+                <li className="text-xs text-primary-400 mt-2">* {clinicInformation.workingDays}; {clinicInformation.closedDays}</li>
               </ul>
             </div>
 
           </div>
           <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-slate-200 text-xs text-slate-400 tracking-wider">
-            <p>&copy; {new Date().getFullYear()} CareS - {t('footer.copyright')}</p>
+            <p>&copy; {new Date().getFullYear()} {clinicInformation.clinicName} - {t('footer.copyright')}</p>
           </div>
         </div>
       </footer>

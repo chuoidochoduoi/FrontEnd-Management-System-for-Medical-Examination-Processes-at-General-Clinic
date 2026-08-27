@@ -426,7 +426,7 @@ export default function DoctorDepartmentPage() {
 
                     <section className="mb-4 w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
 
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr]">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr_auto]">
 
                             {/* SEARCH */}
 
@@ -590,36 +590,35 @@ export default function DoctorDepartmentPage() {
 
                             </div>
 
+                            {/* SCOPE */}
+
+                            <div className="xl:min-w-[168px]">
+
+                                <label className="mb-1 block text-xs font-medium text-slate-500">
+                                    Phạm vi
+                                </label>
+
+                                <select
+                                    value={queueFilters.showAll ? 'ALL' : 'ACTIVE'}
+                                    onChange={(event) =>
+                                        setQueueFilters((value) => ({
+                                            ...value,
+                                            showAll: event.target.value === 'ALL',
+                                        }))
+                                    }
+                                    className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                                >
+                                    <option value="ACTIVE">Đang hoạt động</option>
+                                    <option value="ALL">Tất cả trong ngày</option>
+                                </select>
+
+                            </div>
+
                         </div>
 
                         {/* FILTER BOTTOM */}
 
-                        <div className="mt-3 flex items-center justify-between">
-
-                            <label className="flex items-center gap-2 text-sm text-slate-600">
-
-                                <input
-                                    type="checkbox"
-                                    checked={
-                                        queueFilters.showAll
-                                    }
-                                    onChange={(e) =>
-                                        setQueueFilters(
-                                            (v) => ({
-                                                ...v,
-                                                showAll:
-                                                e
-                                                    .target
-                                                    .checked,
-                                            })
-                                        )
-                                    }
-                                    className="rounded border-slate-300"
-                                />
-
-                                Xem toàn bộ
-
-                            </label>
+                        <div className="mt-3 flex items-center justify-end">
 
                             <span className="rounded-lg bg-primary-50 px-3 py-1.5 text-sm font-medium text-primary-700">
 

@@ -16,6 +16,14 @@ import MyAppointmentsPage from '@/pages/customer/MyAppointmentsPage';
 import CustomerAppointmentDetailPage from '@/pages/customer/AppointmentDetailPage';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import LandingPage from '@/pages/public/LandingPage';
+import {
+  PreviewBookingPage,
+  PreviewContactPage,
+  PreviewDoctorsPage,
+  PreviewHomePage,
+  PreviewJourneyPage,
+  PreviewServicesPage
+} from '@/pages/preview/PreviewSite';
 import ContactPage from '@/pages/public/ContactPage';
 import AboutPage from '@/pages/public/AboutPage';
 import TermsPage from '@/pages/public/TermsPage';
@@ -44,6 +52,7 @@ import RoomManagementPage from '@/pages/admin/RoomManagementPage';
 import CapabilityManagementPage from '@/pages/admin/CapabilityManagementPage';
 import AuditLogManagementPage from '@/pages/admin/AuditLogManagementPage';
 import PublicAnnouncementManagementPage from '@/pages/admin/PublicAnnouncementManagementPage';
+import ClinicInformationPage from '@/pages/admin/ClinicInformationPage';
 import ShiftManagementPage from '@/pages/admin/ShiftManagementPage';
 import SchedulePage from '@/pages/owner/SchedulePage';
 import ReportPage from '@/pages/owner/ReportPage';
@@ -76,6 +85,12 @@ function App() {
     <>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/preview" element={<PreviewHomePage />} />
+        <Route path="/preview/services" element={<PreviewServicesPage />} />
+        <Route path="/preview/doctors" element={<PreviewDoctorsPage />} />
+        <Route path="/preview/booking" element={<PreviewBookingPage />} />
+        <Route path="/preview/journey" element={<PreviewJourneyPage />} />
+        <Route path="/preview/contact" element={<PreviewContactPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/terms" element={<TermsPage />} />
@@ -248,6 +263,11 @@ function App() {
         <Route path={ROUTES.ADMIN_PUBLIC_ANNOUNCEMENTS} element={
           <ProtectedRoute allowedRoles={['ADMIN', 'CLINIC_MANAGER']}>
             <PublicAnnouncementManagementPage />
+          </ProtectedRoute>
+        } />
+        <Route path={ROUTES.ADMIN_CLINIC_INFORMATION} element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'CLINIC_MANAGER']}>
+            <ClinicInformationPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.CLINICAL_FORM_TEMPLATES} element={

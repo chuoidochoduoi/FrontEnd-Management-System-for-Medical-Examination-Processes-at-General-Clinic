@@ -427,6 +427,9 @@ export default function FeedbackPage() {
             );
 
             await load();
+            window.dispatchEvent(
+                new Event('feedback-count-changed')
+            );
         } catch (error) {
             toast.error(
                 error.message

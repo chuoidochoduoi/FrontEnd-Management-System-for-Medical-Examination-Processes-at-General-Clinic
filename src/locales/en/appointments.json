@@ -1,7 +1,7 @@
 {
   "myAppointments": {
     "pageTitle": "MY APPOINTMENTS",
-    "notice": "Consultation Hours: Morning: 07:30–10:30 | Afternoon: 13:30–17:30.",
+    "notice": "Test schedule: Morning 00:00–08:00 | Afternoon 08:00–16:00 | Evening 16:00–23:59.",
     "noticeQueue": "Your doctor and queue number will be assigned at the reception desk.",
     "newBtn": "+ NEW APPOINTMENT",
     "filter": {
@@ -69,7 +69,7 @@
       "total": "Total:"
     },
     "items": "Items",
-    "footer": "Consultation Hours: Morning: 07:30–10:30 | Afternoon: 13:30–17:30.",
+    "footer": "Test schedule: Morning 00:00–08:00 | Afternoon 08:00–16:00 | Evening 16:00–23:59.",
     "cancelConfirm": "Are you sure you want to cancel this appointment?",
     "errors": {
       "loadFailed": "Cannot load appointment details.",

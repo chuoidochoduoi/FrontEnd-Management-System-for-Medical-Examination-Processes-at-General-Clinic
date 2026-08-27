@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Printer, RotateCcw } from 'lucide-react';
 import CashierLayout from '@/components/layout/CashierLayout';
 import { useInvoicePrint } from '@/hooks/useInvoicePrint';
+import useClinicInformation from '@/hooks/useClinicInformation';
 
 const empty = (value) => value === null || value === undefined || String(value).trim() === '' ? '-' : value;
 const money = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value) || 0)} đồng`;
@@ -54,6 +55,7 @@ export default function InvoicePrintPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { invoice, loading, error, reload } = useInvoicePrint(id);
+    const { clinicInformation } = useClinicInformation();
 
     useEffect(() => {
         const shortcut = (event) => {
@@ -82,10 +84,11 @@ export default function InvoicePrintPage() {
             <article id="receipt-print-area" className="receipt-paper bg-white px-[12mm] py-[10mm] text-[12px] leading-relaxed text-slate-950 shadow-lg print:shadow-none">
                 <header className="grid grid-cols-[1fr_1.25fr_1fr] items-start border-b-2 border-slate-900 pb-4">
                     <div>
-                        <p className="text-lg font-black uppercase tracking-wide">CareS</p>
-                        <p className="font-bold uppercase">Phòng khám đa khoa</p>
-                        <p className="mt-1 text-[10px]">Địa chỉ: Khu Công nghệ cao Hoà Lạc, Hà Nội</p>
-                        <p className="text-[10px]">Điện thoại: 1900 1234</p>
+                        <p className="text-lg font-black uppercase tracking-wide">{clinicInformation.clinicName}</p>
+                        <p className="font-bold uppercase">{clinicInformation.legalName}</p>
+                        <p className="mt-1 text-[10px]">MST: {clinicInformation.taxCode}</p>
+                        <p className="text-[10px]">Địa chỉ: {clinicInformation.address}</p>
+                        <p className="text-[10px]">Điện thoại: {clinicInformation.phone}</p>
                     </div>
                     <div className="text-center">
                         <h1 style={{ fontFamily: 'Arial, sans-serif' }} className="text-2xl font-black uppercase">Phiếu thu</h1>
@@ -144,7 +147,7 @@ export default function InvoicePrintPage() {
                     <div><p className="font-bold">Người nộp tiền</p><p className="text-[10px] italic">(Ký, ghi rõ họ tên)</p><div className="h-20"/><p className="font-semibold">{empty(invoice.patientName)}</p></div>
                     <div><p className="font-bold">Người thu tiền</p><p className="text-[10px] italic">(Ký, ghi rõ họ tên)</p><div className="h-20"/><p className="font-semibold">{empty(invoice.cashierName)}</p></div>
                 </footer>
-                <p className="mt-6 border-t pt-2 text-center text-[9px] text-slate-500">Phiếu thu được lập và lưu trữ điện tử trên hệ thống CareS.</p>
+                <p className="mt-6 border-t pt-2 text-center text-[9px] text-slate-500">Phiếu thu được lập và lưu trữ điện tử trên hệ thống {clinicInformation.clinicName}.</p>
             </article>
         </div>
         <style>{`

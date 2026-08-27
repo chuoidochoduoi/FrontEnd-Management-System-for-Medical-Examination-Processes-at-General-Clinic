@@ -3369,11 +3369,11 @@ export default function ExaminationPage() {
                                     <div className="grid grid-cols-[minmax(0,1fr)_120px_24px] border-b border-gray-100 bg-gray-50 px-3 py-2">
 
                                         <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                                            TĂªn xĂ©t nghiá»‡m
+                                            Tên xét nghiệm
                                         </span>
 
                                         <span className="text-center text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                                            Tráº¡ng thĂ¡i
+                                            Trạng thái
                                         </span>
 
                                         <span />
@@ -3384,10 +3384,10 @@ export default function ExaminationPage() {
                                         {testRequests.map(
                                             (lab) => {
                                                 const statusMap = {
-                                                    PENDING: { text: 'Chá» thá»±c hiá»‡n', cls: 'border-amber-200 bg-amber-50 text-amber-700' },
-                                                    IN_PROGRESS: { text: 'Äang thá»±c hiá»‡n', cls: 'border-blue-200 bg-blue-50 text-blue-700' },
-                                                    COMPLETED: { text: 'HoĂ n thĂ nh', cls: 'border-green-200 bg-green-50 text-green-700' },
-                                                    CANCELLED: { text: 'ÄĂ£ há»§y', cls: 'border-red-200 bg-red-50 text-red-700' },
+                                                    PENDING: { text: 'Chờ thực hiện', cls: 'border-amber-200 bg-amber-50 text-amber-700' },
+                                                    IN_PROGRESS: { text: 'Đang thực hiện', cls: 'border-blue-200 bg-blue-50 text-blue-700' },
+                                                    COMPLETED: { text: 'Hoàn thành', cls: 'border-green-200 bg-green-50 text-green-700' },
+                                                    CANCELLED: { text: 'Đã hủy', cls: 'border-red-200 bg-red-50 text-red-700' },
                                                 };
                                                 const status = statusMap[lab.status] || statusMap.PENDING;
                                                 return (

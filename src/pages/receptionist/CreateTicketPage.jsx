@@ -38,6 +38,18 @@ const normalizePhone = (value = '') => {
     return digits.startsWith('84') ? `0${digits.slice(2)}` : digits;
 };
 
+const buildDobIso = (day, month, year) => {
+    if (!day || !month || !year || String(year).length !== 4) return '';
+    const numericDay = Number(day);
+    const numericMonth = Number(month);
+    const numericYear = Number(year);
+    const value = new Date(Date.UTC(numericYear, numericMonth - 1, numericDay));
+    if (value.getUTCFullYear() !== numericYear
+        || value.getUTCMonth() !== numericMonth - 1
+        || value.getUTCDate() !== numericDay) return '';
+    return `${String(numericYear).padStart(4, '0')}-${String(numericMonth).padStart(2, '0')}-${String(numericDay).padStart(2, '0')}`;
+};
+
 const serviceGroup = (service) => {
     if (service.departmentType === 'EXAMINATION') {
         const name = normalizeText(service.specializationName || service.department);
@@ -164,10 +176,10 @@ export default function CreateTicketPage() {
         setPhone,
     ] = useState('');
 
-    const [
-        dob,
-        setDob,
-    ] = useState('');
+    const [dobDay, setDobDay] = useState('');
+    const [dobMonth, setDobMonth] = useState('');
+    const [dobYear, setDobYear] = useState('');
+    const dob = buildDobIso(dobDay, dobMonth, dobYear);
 
     const [
         gender,
@@ -188,6 +200,9 @@ export default function CreateTicketPage() {
     const [resolvingPhone, setResolvingPhone] = useState(false);
     const [phoneLookupDone, setPhoneLookupDone] = useState(false);
     const [fieldErrors, setFieldErrors] = useState({});
+    const [patientSearch, setPatientSearch] = useState('');
+    const [patientSearchResults, setPatientSearchResults] = useState([]);
+    const [searchingPatients, setSearchingPatients] = useState(false);
 
     useEffect(() => {
         if (!submitError) return;
@@ -202,6 +217,13 @@ export default function CreateTicketPage() {
     }, [submitError]);
 
     const patientInputClass = (field) => `${inputCls} ${fieldErrors[field] ? 'border-red-400 bg-red-50/40 focus:border-red-500 focus:ring-red-100' : ''}`;
+
+    const setDobFromIso = (value) => {
+        const [year = '', month = '', day = ''] = (value || '').split('-');
+        setDobDay(day ? String(Number(day)) : '');
+        setDobMonth(month ? String(Number(month)) : '');
+        setDobYear(year);
+    };
 
     const [
         reason,
@@ -230,7 +252,7 @@ export default function CreateTicketPage() {
         setFullName(patient.fullName || '');
         setPhone(patient.phone || '');
         setEmail(patient.email || '');
-        setDob(patient.dateOfBirth ? patient.dateOfBirth.split('T')[0] : '');
+        setDobFromIso(patient.dateOfBirth ? patient.dateOfBirth.split('T')[0] : '');
         if (patient.gender) {
             const normalizedGender = patient.gender.toLowerCase();
             setGender(normalizedGender === 'male' || normalizedGender === 'female' ? normalizedGender : 'male');
@@ -241,6 +263,8 @@ export default function CreateTicketPage() {
         setAllergies(Array.isArray(patient.allergies) ? patient.allergies : []);
         setAllergyInput('');
         setPhoneLookupDone(true);
+        setPatientSearch('');
+        setPatientSearchResults([]);
     };
 
     const fetchPatientDetail = async (id, signal) => {
@@ -264,6 +288,54 @@ export default function CreateTicketPage() {
             setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
         } catch (error) {
             toast.error(error.message || 'Không thể mở tệp kết quả');
+        }
+    };
+
+    useEffect(() => {
+        const query = patientSearch.trim();
+        if (query.length < 2 || customerId) {
+            setPatientSearchResults([]);
+            setSearchingPatients(false);
+            return undefined;
+        }
+        const controller = new AbortController();
+        setSearchingPatients(true);
+        const timer = setTimeout(() => {
+            fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/customers?search=${encodeURIComponent(query)}&page=0&size=8`, {
+                headers: { Authorization: `Bearer ${getToken()}` },
+                signal: controller.signal,
+            })
+                .then(async response => {
+                    if (!response.ok) throw new Error('Không thể tìm hồ sơ bệnh nhân');
+                    return response.json();
+                })
+                .then(body => {
+                    const results = body?.data?.content ?? body?.content ?? body?.result?.content ?? [];
+                    setPatientSearchResults(Array.isArray(results) ? results : []);
+                    setSearchingPatients(false);
+                })
+                .catch(error => {
+                    if (error.name !== 'AbortError') {
+                        setPatientSearchResults([]);
+                        setSearchingPatients(false);
+                    }
+                });
+        }, 350);
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [patientSearch, customerId]);
+
+    const selectPatientFromSearch = async (patient) => {
+        try {
+            setSearchingPatients(true);
+            applyPatientData(await fetchPatientDetail(patient.customerId));
+            setFieldErrors({});
+        } catch (error) {
+            toast.error(error.message || 'Không thể tải hồ sơ bệnh nhân');
+        } finally {
+            setSearchingPatients(false);
         }
     };
 
@@ -563,7 +635,7 @@ export default function CreateTicketPage() {
 
         setFullName('');
         setPhone('');
-        setDob('');
+        setDobFromIso('');
         setGender('male');
         setAddress('');
         setEmail('');
@@ -574,6 +646,9 @@ export default function CreateTicketPage() {
         setPatientCode('');
         setPhoneLookupDone(false);
         setResolvingPhone(false);
+        setPatientSearch('');
+        setPatientSearchResults([]);
+        setSearchingPatients(false);
         setReason('');
 
         setValidationError('');
@@ -586,7 +661,7 @@ export default function CreateTicketPage() {
         setFullName('');
         setPhone('');
         setEmail('');
-        setDob('');
+        setDobFromIso('');
         setGender('male');
         setAddress('');
         setBloodType('');
@@ -594,6 +669,8 @@ export default function CreateTicketPage() {
         setAllergies([]);
         setAllergyInput('');
         setPhoneLookupDone(false);
+        setPatientSearch('');
+        setPatientSearchResults([]);
         setFieldErrors({});
         setSameDayResults([]);
         setSameDayExaminations([]);
@@ -623,9 +700,19 @@ export default function CreateTicketPage() {
 
     const handleSubmit = () => {
         setValidationError('');
+        if (searchingPatients) {
+            setValidationError('Vui lòng chờ hệ thống tìm hồ sơ bệnh nhân.');
+            document.getElementById('patient-search')?.focus();
+            return;
+        }
         if (resolvingPhone) {
             setFieldErrors(previous => ({ ...previous, phone: 'Vui lòng chờ hệ thống đối chiếu số điện thoại' }));
             document.getElementById('patient-phone')?.focus();
+            return;
+        }
+        if (!customerId && patientSearch.trim().length >= 2 && patientSearchResults.length > 0) {
+            setValidationError('Có hồ sơ phù hợp. Vui lòng chọn đúng bệnh nhân hoặc xóa nội dung tìm kiếm để xác nhận tạo hồ sơ mới.');
+            document.getElementById('patient-search')?.focus();
             return;
         }
         const errors = {};
@@ -633,10 +720,12 @@ export default function CreateTicketPage() {
         if (!normalizedName) errors.fullName = t('validation.fullNameRequired');
         else if (normalizedName.length < 2 || normalizedName.length > 100) errors.fullName = 'Họ tên phải có từ 2 đến 100 ký tự';
         else if (/\d/.test(normalizedName)) errors.fullName = 'Họ tên không được chứa chữ số';
-        if (!phone.trim()) errors.phone = t('validation.phoneRequired');
-        else if (!/^(\+84|0)\d{9,10}$/.test(phone.trim())) errors.phone = 'Số điện thoại Việt Nam không hợp lệ';
+        if (phone.trim() && !/^(\+84|0)\d{9,10}$/.test(phone.trim())) errors.phone = 'Số điện thoại Việt Nam không hợp lệ';
         if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.email = 'Email không hợp lệ';
-        if (dob && new Date(dob) >= new Date(new Date().toDateString())) errors.dob = 'Ngày sinh phải là ngày trong quá khứ';
+        const hasDobPart = Boolean(dobDay || dobMonth || dobYear);
+        if (hasDobPart && !dob) errors.dob = 'Ngày sinh không hợp lệ';
+        else if (dob && new Date(dob) >= new Date(new Date().toDateString())) errors.dob = 'Ngày sinh phải là ngày trong quá khứ';
+        else if (!phone.trim() && !email.trim() && !dob) errors.dob = 'Ngày sinh là bắt buộc khi chưa có số điện thoại và email';
         if (address.length > 255) errors.address = 'Địa chỉ không được vượt quá 255 ký tự';
         if (allergyStatus === 'REPORTED' && allergies.length === 0) errors.allergies = 'Vui lòng nhập ít nhất một dị ứng';
         if (selectedServiceIds.length === 0) errors.services = t('validation.serviceRequired');
@@ -807,6 +896,47 @@ export default function CreateTicketPage() {
 
                                     <div className="space-y-4 p-5">
 
+                                        <div className="relative">
+                                            <label className={labelCls}>Tìm hồ sơ bệnh nhân</label>
+                                            <div className="relative">
+                                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                <input
+                                                    id="patient-search"
+                                                    type="text"
+                                                    value={patientSearch}
+                                                    onChange={(event) => setPatientSearch(event.target.value)}
+                                                    disabled={Boolean(customerId)}
+                                                    placeholder="SĐT, email, mã BN hoặc họ tên..."
+                                                    className={`${inputCls} pl-9 disabled:bg-gray-50 disabled:text-gray-400`}
+                                                />
+                                            </div>
+                                            {!customerId && patientSearch.trim().length >= 2 && (
+                                                <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1 shadow-xl">
+                                                    {searchingPatients ? (
+                                                        <p className="px-3 py-4 text-center text-xs text-gray-400">Đang tìm hồ sơ...</p>
+                                                    ) : patientSearchResults.length > 0 ? patientSearchResults.map(patient => (
+                                                        <button
+                                                            key={patient.customerId}
+                                                            type="button"
+                                                            onClick={() => selectPatientFromSearch(patient)}
+                                                            className="w-full rounded-lg px-3 py-2.5 text-left hover:bg-gray-50"
+                                                        >
+                                                            <div className="flex items-center justify-between gap-3">
+                                                                <span className="text-sm font-semibold text-gray-800">{patient.fullName}</span>
+                                                                <span className="shrink-0 text-[11px] font-medium text-gray-500">{patient.patientCode}</span>
+                                                            </div>
+                                                            <p className="mt-1 text-[11px] text-gray-500">
+                                                                {[patient.phone, patient.email, patient.dateOfBirth].filter(Boolean).join(' · ') || 'Chưa có thông tin liên hệ'}
+                                                            </p>
+                                                        </button>
+                                                    )) : (
+                                                        <p className="px-3 py-4 text-center text-xs text-gray-400">Không tìm thấy hồ sơ. Có thể nhập bệnh nhân mới bên dưới.</p>
+                                                    )}
+                                                </div>
+                                            )}
+                                            <p className="mt-1 text-[11px] text-gray-400">Luôn chọn đúng hồ sơ nếu đã tồn tại để giữ đầy đủ lịch sử khám.</p>
+                                        </div>
+
                                         {(customerId || phoneLookupDone || resolvingPhone) && (
                                             <div className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 ${customerId ? 'border-emerald-200 bg-emerald-50' : 'border-blue-100 bg-blue-50'}`}>
                                                 <div className="flex min-w-0 items-center gap-2">
@@ -878,9 +1008,7 @@ export default function CreateTicketPage() {
                                                         'createTicket.patientInfo.phone'
                                                     )}
 
-                                                    <span className="ml-1 text-red-400">
-                                                        *
-                                                    </span>
+                                                    <span className="ml-1 text-[11px] text-gray-400">(không bắt buộc)</span>
                                                 </label>
 
                                                 <input
@@ -916,36 +1044,56 @@ export default function CreateTicketPage() {
                                                     {t(
                                                         'createTicket.patientInfo.dob'
                                                     )}
+                                                    {!phone.trim() && !email.trim() && <span className="ml-1 text-red-400">*</span>}
                                                 </label>
-
-                                                <input
-                                                    id="patient-dob"
-                                                    type="date"
-                                                    max={new Date().toLocaleDateString(
-                                                        'en-CA'
-                                                    )}
-                                                    value={
-                                                        dob
-                                                    }
-                                                    onChange={(
-                                                        event
-                                                    ) => {
-                                                        setDob(
-                                                            event
-                                                                .target
-                                                                .value
-                                                        );
-                                                        setFieldErrors(previous => ({ ...previous, dob: undefined }));
-                                                    }
-                                                    }
-                                                    className={patientInputClass('dob')}
-                                                />
+                                                <div id="patient-dob" tabIndex={-1} className="grid grid-cols-[1fr_1fr_1.35fr] gap-2">
+                                                    <input
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        maxLength={2}
+                                                        value={dobDay}
+                                                        onChange={(event) => {
+                                                            setDobDay(event.target.value.replace(/\D/g, '').slice(0, 2));
+                                                            setFieldErrors(previous => ({ ...previous, dob: undefined }));
+                                                        }}
+                                                        placeholder="Ngày"
+                                                        aria-label="Ngày sinh"
+                                                        className={patientInputClass('dob')}
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        maxLength={2}
+                                                        value={dobMonth}
+                                                        onChange={(event) => {
+                                                            setDobMonth(event.target.value.replace(/\D/g, '').slice(0, 2));
+                                                            setFieldErrors(previous => ({ ...previous, dob: undefined }));
+                                                        }}
+                                                        placeholder="Tháng"
+                                                        aria-label="Tháng sinh"
+                                                        className={patientInputClass('dob')}
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        maxLength={4}
+                                                        value={dobYear}
+                                                        onChange={(event) => {
+                                                            setDobYear(event.target.value.replace(/\D/g, '').slice(0, 4));
+                                                            setFieldErrors(previous => ({ ...previous, dob: undefined }));
+                                                        }}
+                                                        placeholder="Năm"
+                                                        aria-label="Năm sinh"
+                                                        className={patientInputClass('dob')}
+                                                    />
+                                                </div>
+                                                <p className="mt-1 text-[11px] text-gray-400">Nhập trực tiếp ngày, tháng và năm; không cần cuộn lịch.</p>
                                                 {fieldErrors.dob && <p className="mt-1 text-xs text-red-500">{fieldErrors.dob}</p>}
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label className={labelCls}>Email</label>
+                                            <label className={labelCls}>Email <span className="ml-1 text-[11px] text-gray-400">(không bắt buộc)</span></label>
                                             <input
                                                 id="patient-email"
                                                 type="email"
@@ -959,6 +1107,11 @@ export default function CreateTicketPage() {
                                                 className={patientInputClass('email')}
                                             />
                                             {fieldErrors.email && <p className="mt-1 text-xs text-red-500">{fieldErrors.email}</p>}
+                                            {!phone.trim() && !email.trim() && (
+                                                <p className="mt-1.5 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] leading-4 text-amber-700">
+                                                    Hồ sơ khách chưa có thông tin đăng nhập. Hệ thống sẽ dùng mã bệnh nhân; khi cần tài khoản, lễ tân phải bổ sung SĐT hoặc email trước khi bệnh nhân xác minh OTP.
+                                                </p>
+                                            )}
                                         </div>
 
                                         {/* GENDER + ADDRESS */}
@@ -1434,12 +1587,12 @@ export default function CreateTicketPage() {
                                 handleSubmit
                             }
                             disabled={
-                                submitting || resolvingPhone
+                                submitting || resolvingPhone || searchingPatients
                             }
                             className="h-10 shrink-0 rounded-xl bg-gray-900 px-7 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            {resolvingPhone
-                                ? 'Đang đối chiếu số điện thoại...'
+                            {resolvingPhone || searchingPatients
+                                ? 'Đang đối chiếu hồ sơ...'
                                 : submitting
                                 ? t(
                                     'createTicket.submitting'

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BellRing, Building2, Tag, Users, LogOut, Settings, Activity, Wrench, Clock, UserRound } from 'lucide-react';
+import { BellRing, Building2, Tag, Users, LogOut, Settings, Activity, Wrench, Clock, UserRound, MapPin } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
 import SidebarBrand from './SidebarBrand';
@@ -59,6 +59,7 @@ export default function AdminLayout({ children }) {
         { to: ROUTES.ADMIN_CAPABILITIES, icon: Wrench, label: tCommon('sidebar.capabilities') },
         { to: ROUTES.ADMIN_ACCOUNTS, icon: Users,     label: t('sidebar.accounts') },
         { to: ROUTES.ADMIN_SHIFTS, icon: Clock,       label: tCommon('sidebar.shiftConfig') },
+        { to: ROUTES.ADMIN_CLINIC_INFORMATION, icon: MapPin, label: 'Thông tin phòng khám' },
         { to: ROUTES.ADMIN_AUDIT_LOGS, icon: Activity, label: tCommon('sidebar.auditLogs') },
         { to: ROUTES.ADMIN_PUBLIC_ANNOUNCEMENTS, icon: BellRing, label: 'Thông báo công khai' },
     ];

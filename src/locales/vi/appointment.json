@@ -1,0 +1,70 @@
+{
+  "title": "Đặt lịch trực tuyến",
+  "step1": {
+    "heading": "Thông tin khách hàng",
+    "fullName": "Họ và tên",
+    "phone": "Số điện thoại",
+    "age": "Tuổi",
+    "gender": "Giới tính",
+    "address": "Địa chỉ (Tùy chọn)",
+    "genderOptions": {
+      "male": "Nam",
+      "female": "Nữ",
+      "other": "Khác"
+    }
+  },
+  "step2": {
+    "heading": "Chọn loại dịch vụ cần đăng ký",
+    "selectMultiple": "Chọn nhiều",
+    "total": "Tổng chi phí tạm tính",
+    "noService": "dịch vụ được chọn",
+    "loading": "Đang tải dịch vụ..."
+  },
+  "step3": {
+    "heading": "Thời gian khám",
+    "chooseDate": "Chọn ngày khám",
+    "timeSlot": "Khung giờ",
+    "morning": "Buổi sáng",
+    "morningTime": "07:00 – 10:00",
+    "afternoon": "Buổi chiều",
+    "afternoonTime": "13:00 – 17:00"
+  },
+  "submit": "Tiến hành đặt lịch và cấp số phiếu",
+  "errors": {
+    "fullNameRequired": "Vui lòng nhập họ và tên.",
+    "phoneRequired": "Vui lòng nhập số điện thoại.",
+    "phoneInvalid": "Số điện thoại không hợp lệ.",
+    "ageRequired": "Vui lòng nhập tuổi.",
+    "ageInvalid": "Tuổi không hợp lệ.",
+    "genderRequired": "Vui lòng chọn giới tính.",
+    "serviceRequired": "Vui lòng chọn ít nhất một dịch vụ.",
+    "dateRequired": "Vui lòng chọn ngày khám.",
+    "timeSlotRequired": "Vui lòng chọn khung giờ."
+  },
+  "confirmModal": {
+    "title": "Xác nhận thông tin đặt lịch",
+    "subtitle": "Kiểm tra kỹ thông tin trước khi hệ thống lưu lịch hẹn",
+    "patientInfo": "Thông tin bệnh nhân",
+    "fullName": "Họ và tên",
+    "phone": "Số điện thoại",
+    "ageGender": "Tuổi / Giới tính",
+    "email": "Email",
+    "address": "Địa chỉ",
+    "timeInfo": "Thời gian & Chi phí",
+    "date": "Ngày khám",
+    "timeSlot": "Khung giờ",
+    "method": "Hình thức",
+    "total": "Tổng chi phí",
+    "services": "Dịch vụ y tế chỉ định",
+    "serviceList": "Danh sách loại dịch vụ đăng ký",
+    "serviceCount": "({{count}} dịch vụ được chọn)",
+    "reason": "Lý do khám",
+    "note": "Vui lòng mang theo CMND/CCCD và thẻ BHYT (nếu có). Nhân viên y tế tại quầy tiếp đón sẽ liên hệ hoặc phát phiếu khám chính thức khi bạn đến viện.",
+    "back": "Quay lại chỉnh sửa",
+    "confirm": "Xác nhận đặt lịch"
+  },
+  "workflow": {
+    "singleExaminationReplaced": "Mỗi lịch hẹn được chọn tối đa 3 dịch vụ khám bệnh.",
+    "singleExaminationOnly": "Mỗi lịch hẹn được chọn tối đa 3 dịch vụ khám bệnh."
+  }
+}

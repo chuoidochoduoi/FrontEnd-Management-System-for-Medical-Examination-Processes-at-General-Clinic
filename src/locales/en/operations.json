@@ -1,0 +1,22 @@
+{
+  "common": { "refresh": "Refresh", "loading": "Loading...", "allStatuses": "All statuses", "guest": "Guest patient", "account": "Registered account", "minutes": "{{count}} minutes" },
+  "status": { "BLOCKED": "Not ready", "WAITING": "Waiting", "CALLED": "Called", "IN_PROGRESS": "In progress", "WAITING_FOR_TEST": "Waiting for tests", "TEST_DONE": "Return to doctor", "PENDING": "Pending", "DONE": "Completed", "COMPLETED": "Completed", "UNASSIGNED": "Unassigned", "CANCELLED": "Cancelled", "SKIPPED": "Skipped", "NEW": "New", "PROCESSING": "Processing", "RESPONDED": "Responded", "CLOSED": "Closed" },
+  "journey": {
+    "title": "Patient flow", "subtitle": "Track the current location and next step of registered and guest patients.",
+    "search": "Name, phone number or visit code", "sortNewest": "Latest check-in", "sortWaiting": "Longest waiting", "sortName": "Name A–Z",
+    "columns": { "patient": "Patient", "currentStep": "Current step", "location": "Location", "status": "Status", "waiting": "Waiting time", "nextStep": "Next step", "actions": "Actions" },
+    "empty": "No matching patients.", "loadFailed": "Unable to load patient journeys", "details": "Journey details"
+  },
+  "staffList": {
+    "title": "Staff list", "subtitle": "View all staff information. Only administrators can make changes.", "readOnly": "Read-only mode",
+    "status": "Status", "loading": "Loading...", "empty": "No data", "active": "Active", "locked": "Locked",
+    "pagination": "Showing {{from}}-{{to}} of {{total}} staff members",
+    "roles": { "ADMIN": "Administrator", "CLINIC_MANAGER": "Clinic manager", "NURSE": "Nurse", "DOCTOR": "Doctor", "GENERAL_DOCTOR": "Doctor", "SPECIALIST_DOCTOR": "Doctor", "RECEPTIONIST": "Receptionist", "CASHIER": "Cashier" }
+  },
+  "feedback": {
+    "title": "Customer feedback", "managerSubtitle": "Track feedback, add internal notes and respond to customers in the system.", "doctorSubtitle": "Feedback related to visits under your care.",
+    "all": "All", "loading": "Loading feedback...", "empty": "No matching feedback.", "doctor": "Doctor", "noComment": "No comment.",
+    "responsePlaceholder": "Official response (visible to the customer)", "internalPlaceholder": "Internal note (not visible to the customer)", "doctorExplanation": "Doctor's explanation:",
+    "save": "Save response", "explanationPlaceholder": "Explanation for the clinic manager", "sendExplanation": "Send explanation", "updated": "Feedback updated.", "requestFailed": "Unable to process the request."
+  }
+}

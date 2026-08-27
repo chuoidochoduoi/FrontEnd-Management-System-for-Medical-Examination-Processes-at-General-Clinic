@@ -1,0 +1,46 @@
+{
+  "scheduleManagement": {
+    "pageTitle": "Weekly staff schedule",
+    "systemStatus": "System active",
+    "week": "Week:",
+    "copyLastWeek": "Copy previous week",
+    "applyTemplate": "Apply template",
+    "configShifts": "Configure shifts",
+    "days": { "mon": "Monday", "tue": "Tuesday", "wed": "Wednesday", "thu": "Thursday", "fri": "Friday", "sat": "Saturday", "sun": "Sunday" },
+    "shift": "Shift",
+    "addPerson": "+ Assign staff",
+    "personalWeek": "My schedule — week {{week}}",
+    "myShiftCount": "My shifts this week",
+    "shiftCount": "{{count}} shifts",
+    "myShift": "My shift",
+    "colleague": "Colleague",
+    "today": "Today",
+    "shiftConfig": {
+      "title": "Shift time configuration",
+      "subtitle": "Add, edit or remove clinic working shifts",
+      "shiftLabel": "Shift #{{n}}",
+      "startTime": "Start time",
+      "endTime": "End time",
+      "shiftName": "Shift name",
+      "deleteShift": "Delete",
+      "addShift": "+ Add shift",
+      "cancel": "Close",
+      "submit": "Apply",
+      "submitting": "Saving..."
+    },
+    "assignModal": {
+      "title": "Assign shift staff",
+      "searchPlaceholder": "Search staff...",
+      "doctorGroup": "Doctors",
+      "nurseGroup": "Nurses",
+      "receptionistGroup": "Receptionists",
+      "cashierGroup": "Cashiers",
+      "selectBtn": "Select",
+      "selectedBtn": "Selected",
+      "removeBtn": "Remove from shift",
+      "done": "Done"
+    },
+    "loading": "Loading...",
+    "errors": { "loadFailed": "Unable to load the schedule.", "saveFailed": "Unable to save.", "unknown": "An error occurred." }
+  }
+}

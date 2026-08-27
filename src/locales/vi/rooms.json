@@ -1,0 +1,93 @@
+{
+  "sidebar": {
+    "logo": "CareS",
+    "subtitle": "Admin Workspace",
+    "topLevel": "Quản trị tối cao",
+    "clinicOverview": "🏥 Tổng quan & Cấu hình Clinic",
+    "staffList": "👥 Quản lý danh sách nhân sự",
+    "adminSection": "Quản trị Admin",
+    "deptManagement": "🗂️ Quản lý Khoa/Phòng",
+    "staffSchedule": "📅 Staff Schedule",
+    "admin": "Quản trị viên",
+    "logout": "Đăng xuất hệ thống"
+  },
+  "roomManagement": {
+    "pageTitle": "Quản lý Khoa/Phòng",
+    "statusLabel": "Trạng thái hoạt động",
+    "statusValue": "Sẵn sàng",
+    "stats": {
+      "totalRooms": "Tổng số khoa/phòng",
+      "totalRoomsUnit": "khoa/phòng",
+      "serving": "Đang phục vụ",
+      "servingUnit": "khoa đang có ca",
+      "maintenance": "Bảo trì",
+      "maintenanceUnit": "khoa bảo trì"
+    },
+    "filter": {
+      "search": "Tìm kiếm",
+      "searchPlaceholder": "Nhập tên khoa, mã khoa...",
+      "roomType": "Loại khoa",
+      "operationalStatus": "Trạng thái hoạt động",
+      "addBtn": "+ Thêm khoa mới",
+      "searchBtn": "Tìm kiếm"
+    },
+    "roomTypes": {
+      "all": "Tất cả",
+      "examination": "Khám bệnh",
+      "surgery": "Phẫu thuật",
+      "lab": "Xét nghiệm",
+      "imaging": "Chẩn đoán hình ảnh",
+      "emergency": "Cấp cứu",
+      "reception": "Lễ tân",
+      "cashier": "Thu ngân"
+    },
+    "statuses": {
+      "all": "Tất cả",
+      "available": "Sẵn sàng",
+      "occupied": "Đang có ca",
+      "maintenance": "Bảo trì"
+    },
+    "card": {
+      "doctor": "Bác sĩ phụ trách",
+      "equipment": "Thiết bị",
+      "configure": "Cấu hình",
+      "quickStatus": "Trạng thái nhanh"
+    },
+    "addModal": {
+      "title": "Thêm khoa mới",
+      "roomCode": "Mã phòng",
+      "roomCodePlaceholder": "Ví dụ: EX-101",
+      "roomType": "Loại khoa",
+      "roomTypeDefault": "-- Chọn loại --",
+      "roomName": "Tên khoa",
+      "roomNamePlaceholder": "Ví dụ: Khoa Khám Nội",
+      "doctor": "Bác sĩ phụ trách",
+      "doctorPlaceholder": "Tên bác sĩ...",
+      "equipment": "Thiết bị",
+      "initialStatus": "Trạng thái ban đầu",
+      "cancel": "Hủy",
+      "submit": "Tạo khoa",
+      "submitting": "Đang tạo..."
+    },
+    "editModal": {
+      "title": "Chỉnh sửa khoa",
+      "subtitle": "Mã khoa:",
+      "roomCode": "Mã phòng",
+      "roomType": "Loại khoa",
+      "roomName": "Tên khoa",
+      "doctor": "Bác sĩ phụ trách",
+      "equipment": "Thiết bị",
+      "currentStatus": "Trạng thái hiện tại",
+      "deleteBtn": "Xóa khoa",
+      "cancel": "Hủy",
+      "submit": "Lưu thay đổi",
+      "submitting": "Đang lưu..."
+    },
+    "loading": "Đang tải...",
+    "noData": "Không có khoa nào.",
+    "errors": {
+      "loadFailed": "Không thể tải danh sách khoa.",
+      "saveFailed": "Thao tác thất bại. Vui lòng thử lại."
+    }
+  }
+}

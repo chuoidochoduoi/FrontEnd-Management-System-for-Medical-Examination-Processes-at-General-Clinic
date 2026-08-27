@@ -1,0 +1,18 @@
+{
+  "title": "Xác nhận tạo phiếu khám",
+  "subtitle": "Vui lòng kiểm tra lại thông tin trước khi tạo phiếu",
+  "patientInfo": "Thông tin bệnh nhân",
+  "fullName": "Họ và tên",
+  "phone": "Số điện thoại",
+  "age": "Tuổi",
+  "gender": "Giới tính",
+  "services": "Dịch vụ khám",
+  "serviceList": "Danh sách dịch vụ",
+  "serviceCount": "{{count}} dịch vụ",
+  "total": "Tổng cộng",
+  "reason": "Lý do khám",
+  "note": "Sau khi tạo phiếu, thông tin sẽ được lưu và in ra cho bệnh nhân.",
+  "back": "Quay lại",
+  "confirm": "Xác nhận tạo phiếu",
+  "submitting": "Đang xử lý..."
+}

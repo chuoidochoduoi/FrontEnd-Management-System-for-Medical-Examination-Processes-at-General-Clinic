@@ -1,0 +1,46 @@
+{
+  "scheduleManagement": {
+    "pageTitle": "Quản lý lịch trực theo tuần",
+    "systemStatus": "Hệ thống kích hoạt",
+    "week": "Tuần trực:",
+    "copyLastWeek": "Sao chép tuần trước",
+    "applyTemplate": "Áp dụng mẫu",
+    "configShifts": "Cấu hình khung giờ",
+    "days": { "mon": "Thứ 2", "tue": "Thứ 3", "wed": "Thứ 4", "thu": "Thứ 5", "fri": "Thứ 6", "sat": "Thứ 7", "sun": "Chủ Nhật" },
+    "shift": "Ca trực",
+    "addPerson": "+ Gán tên",
+    "personalWeek": "Lịch trực cá nhân — tuần {{week}}",
+    "myShiftCount": "Ca trực của tôi tuần này",
+    "shiftCount": "{{count}} ca",
+    "myShift": "Ca của tôi",
+    "colleague": "Đồng nghiệp",
+    "today": "Hôm nay",
+    "shiftConfig": {
+      "title": "Cấu hình khung giờ trực",
+      "subtitle": "Thêm, sửa hoặc xóa các ca trực làm việc của phòng khám",
+      "shiftLabel": "Ca #{{n}}",
+      "startTime": "Giờ bắt đầu",
+      "endTime": "Giờ kết thúc",
+      "shiftName": "Tên ca",
+      "deleteShift": "Xóa",
+      "addShift": "+ Thêm ca trực mới",
+      "cancel": "Đóng",
+      "submit": "Áp dụng hệ thống",
+      "submitting": "Đang lưu..."
+    },
+    "assignModal": {
+      "title": "Phân bổ kíp trực",
+      "searchPlaceholder": "Tìm tên nhân sự...",
+      "doctorGroup": "Bác sĩ phụ trách (BS)",
+      "nurseGroup": "Y tá / Điều dưỡng (YT)",
+      "receptionistGroup": "Lễ tân (LT)",
+      "cashierGroup": "Thu ngân (TN)",
+      "selectBtn": "Chọn",
+      "selectedBtn": "Đã chọn",
+      "removeBtn": "Gỡ khỏi ca",
+      "done": "Hoàn tất"
+    },
+    "loading": "Đang tải...",
+    "errors": { "loadFailed": "Không thể tải lịch trực.", "saveFailed": "Lưu thất bại.", "unknown": "Có lỗi xảy ra." }
+  }
+}

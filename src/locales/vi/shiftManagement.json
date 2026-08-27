@@ -1,0 +1,65 @@
+{
+  "title": "Cấu hình ca làm việc",
+  "subtitle": "Quản lý các khung giờ làm việc và phân ca trực cho phòng khám.",
+  "add": "Thêm ca mới",
+  "searchLabel": "Tìm kiếm ca",
+  "searchPlaceholder": "Tìm theo tên ca làm việc...",
+  "sortLabel": "Sắp xếp danh sách",
+  "sort": {
+    "startAsc": "Giờ bắt đầu (Sớm - Muộn)",
+    "startDesc": "Giờ bắt đầu (Muộn - Sớm)",
+    "nameAsc": "Tên (A–Z)",
+    "nameDesc": "Tên (Z–A)"
+  },
+  "table": {
+    "name": "Tên ca làm việc",
+    "time": "Khung giờ",
+    "status": "Trạng thái",
+    "actions": "Thao tác"
+  },
+  "loading": "Đang tải dữ liệu...",
+  "emptyTitle": "Chưa có ca làm việc nào",
+  "emptyHint": "Hãy thêm mới để bắt đầu quản lý lịch trực.",
+  "addFirst": "Thêm ca đầu tiên",
+  "status": {
+    "active": "Đang hoạt động",
+    "inactive": "Đã tạm ẩn"
+  },
+  "actions": {
+    "edit": "Sửa",
+    "delete": "Xóa"
+  },
+  "modal": {
+    "createTitle": "Thêm ca làm việc mới",
+    "editTitle": "Cập nhật ca làm việc",
+    "name": "Tên ca làm việc",
+    "namePlaceholder": "Ví dụ: Ca Sáng, Ca Chiều...",
+    "startTime": "Giờ bắt đầu",
+    "endTime": "Giờ kết thúc",
+    "selectTime": "-- Chọn giờ --",
+    "activeLabel": "Trạng thái hoạt động",
+    "activeHint": "Cho phép phân công nhân viên vào ca này",
+    "cancel": "Hủy bỏ",
+    "saving": "Đang lưu...",
+    "save": "Lưu thay đổi"
+  },
+  "validation": {
+    "name": "Vui lòng nhập tên ca làm việc",
+    "startTime": "Vui lòng chọn giờ bắt đầu",
+    "endTime": "Vui lòng chọn giờ kết thúc",
+    "timeRange": "Giờ bắt đầu phải nhỏ hơn giờ kết thúc"
+  },
+  "messages": {
+    "loadFailed": "Không thể tải danh sách ca làm việc",
+    "saveFailed": "Không thể lưu ca làm việc",
+    "createSuccess": "Thêm ca làm việc thành công!",
+    "updateSuccess": "Cập nhật ca làm việc thành công!",
+    "deleteFailed": "Không thể xóa ca làm việc này",
+    "deleteSuccess": "Xóa ca làm việc thành công!"
+  },
+  "deleteModal": {
+    "title": "Xóa ca làm việc",
+    "message": "Bạn có chắc muốn xóa ca “{{name}}”? Dữ liệu liên quan đến ca này có thể bị ảnh hưởng.",
+    "confirm": "Xóa vĩnh viễn"
+  }
+}

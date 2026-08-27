@@ -1,0 +1,202 @@
+{
+
+  "sidebar": {
+    "logo": "Logo",
+    "subtitle": "Hệ thống Y tế v2.1",
+    "checkIn": "Tiếp đón & Check-in",
+    "createTicket": "Tạo phiếu khám",
+    "manageRecords": "Quản lý hồ sơ",
+    "settings": "Settings",
+    "support": "Hỗ trợ",
+    "onlineSupport": "Hỗ trợ trực tuyến"
+  },
+  "notifications": { "newSupport": "Có yêu cầu hỗ trợ mới từ khách hàng!" },
+  "header": {
+    "queuSummary": "Quầy · Tiếp đón · Tổng hợp"
+  },
+  "checkIn": {
+    "title": "Tiếp nhận Bệnh nhân",
+    "search": "Thông tin tìm kiếm",
+    "searchPlaceholder": "Tên khách hàng, SĐT hoặc Mã hẹn...",
+    "viewDate": "Xem lịch hẹn ngày",
+    "timeSlot": "Khung buổi",
+    "all": "Tất cả",
+    "morning": "Buổi sáng",
+    "afternoon": "Buổi chiều",
+    "filter": "Lọc lịch",
+    "createTicket": "Tạo phiếu khám",
+    "table": {
+      "timeSlot": "Khung ca",
+      "code": "Mã lịch đặt",
+      "patient": "Tên bệnh nhân",
+      "age": "Tuổi",
+      "gender": "Giới tính",
+      "phone": "SĐT",
+      "address": "Địa chỉ",
+      "status": "Trạng thái",
+      "actions": "Thao tác xử lý quầy"
+    },
+    "actions": {
+      "viewDetail": "Xem chi tiết",
+      "printTicket": "In phiếu khám"
+    },
+    "status": {
+      "waiting": "Chờ Check-in",
+      "pending": "pending",
+      "done": "Hoàn thành"
+    },
+    "slots": {
+      "morning": "SÁNG",
+      "afternoon": "CHIỀU"
+    },
+    "loading": "Đang tải...",
+    "noData": "Không có lịch hẹn nào."
+  },
+
+  "followUp": {
+    "badge": "CẦN KHÁM LẠI",
+    "statusLabel": "Cần khám lại",
+    "doctorNote": "Bác sĩ ghi chú",
+    "preferredDate": "Ngày đề xuất",
+    "statusPending": "Chưa đặt lịch",
+    "statusScheduled": "Đã đặt lịch",
+    "scheduleBtn": "Đặt lịch ngay",
+    "scheduleSuccess": "Đặt lịch khám lại thành công!",
+    "scheduleFailed": "Đặt lịch thất bại. Vui lòng thử lại.",
+    "noNote": "Chưa có ghi chú từ bác sĩ"
+  },
+
+  "appointmentDetail": {
+    "title": "thông tin lịch hẹn",
+    "subtitle": "Thay đổi thông tin hành chính hoặc điều phối lại dịch vụ/khung giờ cho khách hàng.",
+    "backToList": "Quay lại danh sách",
+    "loading": "Đang tải...",
+    "step1": {
+      "heading": "Thông tin khách hàng",
+      "fullName": "Họ và tên",
+      "phone": "Số điện thoại",
+      "age": "Tuổi",
+      "gender": "Giới tính",
+      "email": "Email (Nếu có)",
+      "emailPlaceholder": "Không áp dụng",
+      "insurance": "Bảo hiểm y tế (nếu có)",
+      "insuranceExpiry": "Hạn sử dụng (nếu có)",
+      "genderOptions": {
+        "male": "Nam",
+        "female": "Nữ",
+        "other": "Khác"
+      }
+    },
+    "step2": {
+      "heading": "Dịch vụ y tế",
+      "service": "Chọn loại dịch vụ cần đăng ký",
+      "reason": "Lý do đến khám / Triệu chứng",
+      "loading": "Đang tải dịch vụ...",
+      "total": "Tổng chi phí tạm tính",
+      "noService": "dịch vụ được chọn"
+    },
+    "step3": {
+      "heading": "Thời gian khám",
+      "chooseDate": "Chọn ngày khám",
+      "timeSlot": "Khung buổi",
+      "morning": "Buổi sáng",
+      "morningTime": "07:00 – 10:00",
+      "afternoon": "Buổi chiều",
+      "afternoonTime": "13:00 – 17:00"
+    },
+    "errors": {
+      "loadFailed": "Không thể tải thông tin ca hẹn.",
+      "saveFailed": "Lưu thất bại. Vui lòng thử lại.",
+      "checkInFailed": "Check-in thất bại. Vui lòng thử lại.",
+      "unknown": "Có lỗi xảy ra.",
+      "validation": {
+        "fullNameRequired": "Vui lòng nhập họ và tên bệnh nhân.",
+        "phoneRequired": "Vui lòng nhập số điện thoại.",
+        "serviceRequired": "Vui lòng chọn ít nhất một dịch vụ.",
+        "serviceRequiredCheckin": "Vui lòng chọn ít nhất một dịch vụ để check-in.",
+        "dateRequired": "Vui lòng chọn ngày khám."
+      }
+    },
+    "actions": {
+      "save": "Lưu cập nhật hẹn",
+      "saving": "Đang lưu...",
+      "checkIn": "Check in",
+      "checkingIn": "Đang xử lý..."
+    }
+  },
+  "validation": {
+    "fullNameRequired": "Vui lòng nhập họ và tên bệnh nhân.",
+    "phoneRequired": "Vui lòng nhập số điện thoại.",
+    "serviceRequired": "Vui lòng chọn ít nhất một dịch vụ."
+  },
+  "confirmModal": {
+    "title": "Xác nhận thông tin cập nhật",
+    "subtitle": "Kiểm tra kỹ thông tin trước khi lưu thay đổi",
+    "patientInfo": "Thông tin bệnh nhân",
+    "fullName": "Họ và tên",
+    "phone": "Số điện thoại",
+    "ageGender": "Tuổi / Giới tính",
+    "email": "Email",
+    "address": "Địa chỉ",
+    "timeInfo": "Thời gian & Chi phí",
+    "date": "Ngày khám",
+    "timeSlot": "Khung giờ",
+    "method": "Hình thức",
+    "total": "Tổng chi phí",
+    "services": "Dịch vụ y tế",
+    "serviceList": "Danh sách dịch vụ",
+    "serviceCount": "({{count}} dịch vụ)",
+    "reason": "Lý do khám",
+    "note": "Thông tin sẽ được cập nhật sau khi bạn xác nhận.",
+    "back": "Quay lại chỉnh sửa",
+    "confirm": "Xác nhận lưu"
+  },
+  "createTicket": {
+    "pageTitle": "Tạo phiếu khám",
+    "bundle": {
+      "title": "Tổ hợp chỉ định dịch vụ đầu vào",
+      "subtitle": "Lễ tân có thể chọn dịch vụ Khám đa khoa kết hợp với các xét nghiệm nhanh và cận lâm sàng phù hợp.",
+      "generalLabel": "Tuyến lâm sàng tổng quát",
+      "bloodGroupLabel": "NHÓM XÉT NGHIỆM HUYẾT HỌC (MÁU)",
+      "urineGroupLabel": "NHÓM XÉT NGHIỆM NƯỚC TIỂU & KHÁC",
+      "reasonLabel": "Lý do đến khám bệnh / Triệu chứng lâm sàng ban đầu",
+      "reasonPlaceholder": "Nhập tóm tắt lý do hoặc yêu cầu của bệnh nhân..."
+    },
+    "patientInfo": {
+      "title": "1. THÔNG TIN HÀNH CHÍNH BỆNH NHÂN",
+      "fullName": "Họ và tên bệnh nhân",
+      "fullNamePlaceholder": "Ví dụ: NGUYỄN VĂN A",
+      "phone": "Số điện thoại",
+      "phonePlaceholder": "0912345678",
+      "dob": "Ngày tháng năm sinh",
+      "dobPlaceholder": "dd/mm/yyyy",
+      "gender": "Giới tính",
+      "male": "Nam",
+      "female": "Nữ",
+      "other": "Khác",
+      "address": "Địa chỉ cư trú hiện tại",
+      "addressPlaceholder": "Số nhà, tên đường, phường/xã, quận/huyện..."
+    },
+    "insurance": {
+      "title": "2. THÔNG TIN THẺ BẢO HIỂM Y TẾ (BHYT)",
+      "cardNumber": "Mã số thẻ BHYT",
+      "cardNumberPlaceholder": "Ví dụ: HS4797912345678",
+      "expiry": "Hạn sử dụng thẻ",
+      "expiryPlaceholder": "dd/mm/yyyy"
+    },
+    "resetForm": "Làm mới form",
+    "totalCost": "Tổng chi phí tạm tính:",
+    "submit": "Lưu & Xuất phiếu tổng hợp",
+    "submitting": "Đang xử lý...",
+    "loading": "Đang tải dịch vụ...",
+    "errors": {
+      "loadFailed": "Không thể tải danh sách dịch vụ.",
+      "submitFailed": "Tạo phiếu thất bại. Vui lòng thử lại.",
+      "unknown": "Có lỗi xảy ra."
+    }
+  },
+  "workflow": {
+    "singleExaminationReplaced": "Mỗi lượt được chọn tối đa 3 dịch vụ khám bệnh.",
+    "singleExaminationOnly": "Mỗi lượt khám được chọn tối đa 3 dịch vụ khám bệnh."
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "report": {
+    "pageTitle": "Hệ Thống Báo Cáo Tích Hợp Toàn Viện",
+    "subtitle1": "Dữ liệu phân tích chuyên sâu (Deep Metrics) hỗ trợ ra quyết định lâm sàng và vận hành.",
+    "subtitle2": "Hoạch toán doanh thu trực tiếp theo danh mục và loại hình dịch vụ y tế phát sinh.",
+    "periods": { "day": "Ngày", "month": "Tháng", "quarter": "Quý", "year": "Năm" },
+    "exportBtn": "🗂 Export Examination Statistics (.CSV)",
+    "footer1": "Cập nhật hệ thống: 2026 — Phiên bản tích hợp Deep Metrics",
+    "footer2": "Kết nối trực tuyến cơ sở dữ liệu thời gian thực",
+    "tab1": {
+      "label": "Tab 1: Tổng quan & Công suất",
+      "revenueChart": "Phân tích giá trị lũy kế (Doanh thu VNĐ)",
+      "sessionChart": "Cơ cấu lưu lượng ca tiếp nhận",
+      "totalSessions": "TỔNG CA",
+      "table": {
+        "title": "Bảng Đối Chiều Năng Lực & Khả Năng Đáp Ứng Tổng Quan",
+        "code": "Mã",
+        "dept": "Phòng ban",
+        "revenue": "Doanh thu lũy kế",
+        "sessions": "Tổng ca tiếp nhận",
+        "occupancy": "Tỉ lệ lấp đầy phòng",
+        "avgTime": "Thời gian Khám TB",
+        "csat": "Điểm hài lòng (CSAT)"
+      }
+    },
+    "tab2": {
+      "label": "Tab 2: Phân tích Dòng tiền (Revenue)",
+      "stats": {
+        "totalRevenue": "Tổng doanh thu dịch vụ lũy kế",
+        "totalRevenueNote": "Ghi nhận từ tổng số {{total}} ca",
+        "avgPerSession": "Giá trị dịch vụ trung bình / Ca",
+        "avgPerSessionNote": "Cơ cấu bill chuẩn hóa hoa viện",
+        "bhytTotal": "BHYT Chi trả lũy kế",
+        "bhytNote": "Tỷ lệ bao phủ bình quân {{rate}}%",
+        "drugRevenue": "Doanh thu Thuốc bổ sung",
+        "drugNote": "Chiếm lý trọng nguồn thu lớn nhất"
+      },
+      "breakdown": {
+        "title": "Cơ cấu phân bổ dòng tiền theo nhóm danh mục dịch vụ"
+      },
+      "table": {
+        "title": "Bảng Thống Kê Chi Tiết Hiệu Quả Kinh Tế Theo Danh Mục Dịch Vụ",
+        "filterAll": "Tất cả nhóm dịch vụ",
+        "sort": "Sắp xếp: Tổng thực thu",
+        "stt": "STT",
+        "serviceName": "Nội dung danh mục dịch vụ y tế",
+        "totalOrders": "Tổng số lượng chỉ định",
+        "unitPrice": "Đơn giá niêm yết",
+        "totalRevenue": "Tổng thực thu phát sinh",
+        "bhytQty": "số lượng có bhyt chi trả",
+        "bhytFund": "Quỹ BHYT chi trả tích lũy"
+      }
+    },
+    "loading": "Đang tải...",
+    "errors": {
+      "loadFailed": "Không thể tải báo cáo.",
+      "unknown": "Có lỗi xảy ra."
+    }
+  }
+}

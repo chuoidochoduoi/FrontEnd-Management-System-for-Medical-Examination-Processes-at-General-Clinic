@@ -1,0 +1,23 @@
+export const CLINIC_INFO = {
+  clinicName: 'Phòng khám CareS',
+  legalName: 'Công ty TNHH Phòng khám CareS',
+  taxCode: '0101234567',
+  operatingLicense: '000123/HNO-GPHD',
+  shortDescription: 'Phòng khám đa khoa cung cấp dịch vụ chăm sóc sức khỏe chất lượng và thuận tiện.',
+  address: 'Khu Công nghệ cao Hòa Lạc, Thạch Thất, Hà Nội',
+  supportEmail: 'lienhe@caresclinic.vn',
+  phone: '1900 1234',
+  websiteUrl: '',
+  facebookUrl: 'https://www.facebook.com/profile.php?id=61593125259676',
+  youtubeUrl: '',
+  zaloUrl: '',
+  latitude: 21.0128,
+  longitude: 105.5259,
+  workingDays: 'Thứ 2 - Thứ 7',
+  closedDays: 'Chủ nhật: Nghỉ',
+  workingShifts: [
+    { label: 'Ca Sáng', time: '00:00 - 08:00' },
+    { label: 'Ca Chiều', time: '08:00 - 16:00' },
+    { label: 'Ca Tối', time: '16:00 - 23:59' },
+  ],
+};

@@ -1,0 +1,218 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+/* Follow-up section animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Custom Auth Animations */
+@keyframes slideUpFade {
+  0% { opacity: 0; transform: translateY(40px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInSmooth {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slowZoom {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.1); }
+}
+
+.animate-slide-up-fade {
+  animation: slideUpFade 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-smooth {
+  animation: fadeInSmooth 1.5s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-slow-zoom {
+  animation: slowZoom 20s ease-in-out infinite alternate;
+}
+
+/* Custom React Toastify - Premium Medical Theme */
+.Toastify__toast {
+  border-radius: 16px !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  box-shadow: 0 20px 40px -15px rgba(0,0,0,0.15) !important;
+  padding: 16px 20px !important;
+  min-height: 60px !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+
+/* Màu thông báo theo ngữ nghĩa: thành công, lỗi, cảnh báo và thông tin. */
+.Toastify__toast-theme--light.Toastify__toast--success {
+  background: #f0fdfa !important;
+  color: #0f766e !important;
+  border-color: #ccfbf1 !important;
+}
+.Toastify__toast--success .Toastify__progress-bar {
+  background: #14b8a6 !important;
+}
+.Toastify__toast--success .Toastify__toast-icon svg {
+  fill: #0d9488 !important;
+}
+
+.Toastify__toast-theme--light.Toastify__toast--error {
+  background: #fef2f2 !important;
+  color: #b91c1c !important;
+  border-color: #fecaca !important;
+}
+.Toastify__toast--error .Toastify__progress-bar { background: #ef4444 !important; }
+.Toastify__toast--error .Toastify__toast-icon svg { fill: #dc2626 !important; }
+
+.Toastify__toast-theme--light.Toastify__toast--warning {
+  background: #fffbeb !important;
+  color: #a16207 !important;
+  border-color: #fde68a !important;
+}
+.Toastify__toast--warning .Toastify__progress-bar { background: #f59e0b !important; }
+.Toastify__toast--warning .Toastify__toast-icon svg { fill: #d97706 !important; }
+
+.Toastify__toast-theme--light.Toastify__toast--info,
+.Toastify__toast-theme--light.Toastify__toast--default {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border-color: #bfdbfe !important;
+}
+.Toastify__toast--info .Toastify__progress-bar,
+.Toastify__toast--default .Toastify__progress-bar { background: #3b82f6 !important; }
+.Toastify__toast--info .Toastify__toast-icon svg,
+.Toastify__toast--default .Toastify__toast-icon svg { fill: #2563eb !important; }
+
+.Toastify__toast-body {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  letter-spacing: 0.01em !important;
+}
+
+.Toastify__progress-bar {
+  height: 4px !important;
+  bottom: 0 !important;
+  border-radius: 0 0 16px 16px !important;
+}
+
+.Toastify__close-button {
+  color: currentColor !important;
+  opacity: 0.4 !important;
+  transition: opacity 0.2s !important;
+  align-self: center !important;
+  margin-left: 12px !important;
+}
+.Toastify__close-button:hover {
+  opacity: 1 !important;
+}
+
+/* Global application preferences. These compatibility rules make the existing
+   utility-based screens theme-aware while modules are migrated to semantic tokens. */
+html.dark body,
+html.dark #root {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+html.dark .bg-white { background-color: #111827 !important; }
+html.dark [class*="bg-white/"] { background-color: rgba(17, 24, 39, .88) !important; }
+html.dark [class*="bg-[#F5F5F7]"] { background-color: #0f172a !important; }
+html.dark .bg-gray-50,
+html.dark .bg-gray-50\/50 { background-color: #0f172a !important; }
+html.dark .bg-gray-100 { background-color: #1f2937 !important; }
+html.dark .bg-gray-200 { background-color: #374151 !important; }
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark .text-gray-700 { color: #f1f5f9 !important; }
+html.dark .text-gray-600,
+html.dark .text-gray-500 { color: #cbd5e1 !important; }
+html.dark .text-gray-400 { color: #94a3b8 !important; }
+html.dark .text-black { color: #f8fafc !important; }
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700 { color: #f1f5f9 !important; }
+html.dark .text-slate-600,
+html.dark .text-slate-500 { color: #cbd5e1 !important; }
+html.dark .text-slate-400 { color: #94a3b8 !important; }
+html.dark .bg-slate-50 { background-color: #0f172a !important; }
+html.dark [class*="bg-[#FAFAFA]"] { background-color: #0f172a !important; }
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-300 { border-color: #334155 !important; }
+html.dark .border-gray-50,
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300 { border-color: #334155 !important; }
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #0f172a;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: #64748b; }
+html.dark table thead,
+html.dark [class*="bg-slate-50"] { background-color: #1e293b !important; }
+/* Table headers must keep enough contrast when a light header utility is
+   overridden by dark mode. This also covers grid-based table headers. */
+html.dark table thead th,
+html.dark table thead td,
+html.dark [class*="bg-gray-50"][class*="uppercase"] > *,
+html.dark [class*="bg-gray-50/80"] > * {
+  color: #e2e8f0 !important;
+}
+html.dark [class*="shadow"] { --tw-shadow-color: rgba(0, 0, 0, 0.45); }
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-100:hover { background-color: #1e293b !important; }
+
+html[data-density='compact'] table th,
+html[data-density='compact'] table td { padding-top: .5rem !important; padding-bottom: .5rem !important; }
+html[data-density='compact'] .density-card { padding: .75rem !important; }
+
+@media print {
+  html.dark body, html.dark #root { background: white !important; color: black !important; }
+  html.dark #receipt-print-area,
+  html.dark #appointment-print-area,
+  html.dark .prescription-sheet,
+  html.dark .record-sheet { background: white !important; color: black !important; }
+  html.dark #receipt-print-area *,
+  html.dark #appointment-print-area *,
+  html.dark .prescription-sheet *,
+  html.dark .record-sheet * { color: black !important; border-color: #334155 !important; }
+}

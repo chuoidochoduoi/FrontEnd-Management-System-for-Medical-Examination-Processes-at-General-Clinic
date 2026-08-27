@@ -1,0 +1,22 @@
+{
+  "title": "System settings",
+  "subtitle": "Customize the interface and user experience",
+  "save": "Save changes",
+  "saving": "Saving...",
+  "saved": "Settings saved successfully!",
+  "appearance": "Appearance & display",
+  "theme": "Interface theme",
+  "themeHint": "Choose a light or dark appearance",
+  "light": "Light",
+  "dark": "Dark",
+  "language": "Language",
+  "languageHint": "Primary display language",
+  "vietnamese": "Tiếng Việt",
+  "english": "English",
+  "notifications": "System notifications",
+  "notificationsHint": "Show updates and action notifications",
+  "sound": "Calling sound",
+  "soundHint": "Play a sound when calling a patient",
+  "compact": "Compact display",
+  "compactHint": "Reduce spacing in lists and tables"
+}

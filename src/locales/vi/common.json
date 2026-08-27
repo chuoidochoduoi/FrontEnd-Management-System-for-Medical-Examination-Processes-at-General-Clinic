@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "appointment": "Đặt lịch khám",
+    "doctors": "Đội ngũ bác sĩ",
+    "pricing": "Bảng giá",
+    "guide": "Hướng dẫn khách hàng",
+    "contact": "Liên hệ",
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "profile": "Trang cá nhân",
+    "myAppointments": "Lịch khám của tôi",
+    "medicalRecord": "Hồ sơ bệnh án",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất",
+    "loggedInAs": "Đăng nhập với vai trò"
+  },
+  "sidebar": {
+    "mySchedule": "Lịch trực của tôi",
+    "profile": "Hồ sơ cá nhân",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất",
+    "statistics": "Thống kê",
+    "schedule": "Lịch trình",
+    "shiftConfig": "Cấu hình ca",
+    "feedback": "Đánh giá",
+    "patientFlow": "Điều phối bệnh nhân",
+    "staff": "Nhân sự",
+    "patients": "Bệnh nhân",
+    "specialties": "Chuyên khoa",
+    "capabilities": "Danh mục kỹ thuật",
+    "auditLogs": "Nhật ký hệ thống"
+  },
+  "roles": {
+    "doctor": "Bác sĩ", "nurse": "Y tá", "receptionist": "Lễ tân",
+    "cashier": "Thu ngân", "admin": "Quản trị viên", "manager": "Quản lý phòng khám",
+    "medicalStaff": "Nhân viên y tế", "customer": "Khách hàng"
+  },
+  "loading": "Đang xử lý...",
+  "error": "Đã xảy ra lỗi",
+  "save": "Lưu",
+  "cancel": "Hủy",
+  "confirm": "Xác nhận",
+  "male": "Nam",
+  "female": "Nữ"
+}

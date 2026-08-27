@@ -1,0 +1,59 @@
+{
+  "paymentHistory": {
+    "pageTitle": "Lịch sử thanh toán",
+    "filter": {
+      "fromDate": "Từ ngày",
+      "toDate": "Đến ngày",
+      "paymentMethod": "Phương thức",
+      "searchBtn": "Tìm kiếm"
+    },
+    "listTitle": "Danh sách phiếu thu",
+    "table": {
+      "invoiceId": "Mã phiếu",
+      "description": "Nội dung",
+      "settlementDate": "Ngày thanh toán",
+      "amount": "Số tiền",
+      "paymentMethod": "Phương thức",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "loading": "Đang tải...",
+    "noData": "Không có dữ liệu",
+    "downloadBtn": "Tải xuống",
+    "status": {
+      "paid": "Đã thanh toán",
+      "pending": "Chờ thanh toán",
+      "cancelled": "Đã huỷ"
+    }
+  },
+  "receiptDetail": {
+    "pageTitle": "Chi tiết phiếu thu",
+    "savePDF": "Lưu PDF",
+    "backBtn": "← Quay lại",
+    "clinicName": "Phòng khám đa khoa CareS",
+    "clinicAddress": "123 Đường Lê Lợi, TP.HCM",
+    "clinicHotline": "Hotline: 1900 1234",
+    "receiptTitle": "PHIẾU THU",
+    "issuedLabel": "Ngày xuất:",
+    "patientLabel": "Bệnh nhân",
+    "patientIdLabel": "Mã bệnh nhân",
+    "examinationType": "Loại khám",
+    "doctorLabel": "Bác sĩ:",
+    "statusPaid": "ĐÃ THANH TOÁN",
+    "paymentDetails": "CHI TIẾT THANH TOÁN",
+    "table": {
+      "no": "STT",
+      "service": "Dịch vụ",
+      "qty": "SL",
+      "unitPrice": "Đơn giá",
+      "total": "Thành tiền",
+      "bhytRate": "BHYT %",
+      "bhytAmt": "BHYT giảm"
+    },
+    "totalService": "Tổng dịch vụ",
+    "bhytCover": "BHYT chi trả",
+    "patientPayment": "Bệnh nhân trả",
+    "inWords": "Viết bằng chữ:",
+    "thankYou": "Cảm ơn quý khách đã tin dùng dịch vụ của chúng tôi!"
+  }
+}

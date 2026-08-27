@@ -1,0 +1,119 @@
+{
+  "sidebar": {
+    "logo": "Logo",
+    "subtitle": "Phòng khám đa khoa",
+    "departments": "Phòng khám",
+    "waitingRoom": "Phòng chờ",
+    "patients": "Bệnh nhân",
+    "records": "Hồ sơ",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất",
+    "labOrders": "Xét nghiệm"
+  },
+  "examination": {
+    "pageTitle": "Examination",
+    "searchPlaceholder": "Tìm kiếm bệnh nhân theo tên bệnh nhân, mã, bệnh nhân, mã bệnh...",
+    "saveBtn": "Lưu khám sơ bộ",
+    "savingBtn": "Đang lưu...",
+    "patient": {
+      "id": "ID",
+      "age": "Tuổi",
+      "bloodType": "Nhóm máu",
+      "allergy": "Dị ứng",
+      "phone": "Số điện thoại",
+      "email": "Email",
+      "address": "Địa chỉ",
+      "dob": "Ngày sinh",
+      "gender": "Giới tính"
+    },
+    "vitals": {
+      "heartRate": "NHỊP TIM",
+      "bloodPressure": "HUYẾT ÁP",
+      "temperature": "THÂN NHIỆT",
+      "height": "CHIỀU CAO",
+      "weight": "CÂN NẶNG"
+    },
+    "history": {
+      "title": "TIỀN SỬ BỆNH ÁN",
+      "viewMore": "XEM THÊM"
+    },
+    "labResults": {
+      "title": "XÉT NGHIỆM"
+    },
+    "symptoms": {
+      "title": "Triệu chứng và lý do khám bệnh",
+      "placeholder": "Nhập triệu chứng..."
+    },
+    "examResult": {
+      "title": "Khám lâm sàng",
+      "placeholder": "Nhập các dấu hiệu và kết quả khám lâm sàng"
+    },
+    "diagnosis": {
+      "title": "Chẩn đoán (ICD-10)",
+      "searchPlaceholder": "Tìm kiếm mã hoặc chẩn đoán...",
+      "addBtn": "+ Thêm"
+    },
+    "referral": {
+      "title": "CHUYÊN KHOA",
+      "searchPlaceholder": "Tìm kiếm chuyên khoa...",
+      "addBtn": "+ Thêm"
+    },
+    "labOrders": {
+      "title": "XÉT NGHIỆM",
+      "selectPlaceholder": "Chọn dịch vụ xét nghiệm...",
+      "createBtn": "TẠO XÉT NGHIỆM",
+      "searchPlaceholder": "Tìm kiếm xét nghiệm...",
+      "addBtn": "+ Thêm"
+    },
+    "prescription": {
+      "title": "Đơn thuốc",
+      "addBtn": "+ Thêm",
+      "days": "ngày",
+      "tablets": "viên"
+    },
+    "notes": {
+      "title": "Hướng dẫn/Ghi chú",
+      "placeholder": "Hướng dẫn theo dõi, chế độ ăn uống hoặc lời khuyên về lối sống..."
+    },
+    "followUp": {
+      "title": "Yêu cầu khám lại",
+      "description": "Bệnh nhân cần quay lại khám. Ghi chú sẽ được gửi đến lễ tân để đặt lịch khám lại tự động.",
+      "noteLabel": "Lý do khám lại",
+      "notePlaceholder": "Ví dụ: Tái khám sau 2 tuần, theo dõi huyết áp, xét nghiệm lại...",
+      "noteHint": "Lễ tân sẽ nhận được thông báo để đặt lịch khám lại cho bệnh nhân",
+      "dateOptional": "Ngày khám đề xuất (tùy chọn)"
+    },
+    "actions": {
+      "draft": "LƯU NHÁP",
+      "print": "IN",
+      "complete": "HOÀN THÀNH",
+      "completing": "Đang xử lý..."
+    },
+    "loading": "Đang tải...",
+    "errors": {
+      "loadFailed": "Không thể tải thông tin khám.",
+      "saveFailed": "Lưu thất bại.",
+      "completeFailed": "Hoàn thành khám thất bại.",
+      "unknown": "Có lỗi xảy ra."
+    }
+  },
+  "departments": {
+    "selectPlaceholder": "Chọn phòng khám",
+    "loading": "Đang tải phòng khám..."
+  },
+  "status": {
+    "all": "Tất cả",
+    "waiting": "Chờ khám",
+    "called": "Đã gọi",
+    "inProgress": "Đang khám",
+    "done": "Hoàn thành",
+    "skipped": "Bỏ qua",
+    "waitingForTest": "Chờ khám cận lâm sàng",
+    "testDone": "Xét nghiệm xong"
+  },
+  "selectRoom": "Chọn phòng khám",
+  "rooms": {
+    "consultation": "Phòng khám",
+    "lab": "Phòng xét nghiệm"
+  }
+}

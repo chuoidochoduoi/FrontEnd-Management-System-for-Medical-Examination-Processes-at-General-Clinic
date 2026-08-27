@@ -1,0 +1,47 @@
+{
+  "medicalHistory": {
+    "pageTitle": "Lịch sử khám bệnh",
+    "searchPlaceholder": "Tìm theo mã hồ sơ, bác sĩ, chẩn đoán...",
+    "table": { "date": "Ngày khám", "specialty": "Dịch vụ khám", "doctor": "Bác sĩ", "diagnosis": "Chẩn đoán", "status": "Trạng thái", "actions": "Thao tác" },
+    "loading": "Đang tải...",
+    "errors": { "loadFailed": "Không thể tải lịch sử khám." },
+    "noData": "Không có lịch sử khám.",
+    "statusAvailable": "HOÀN THÀNH",
+    "viewDetails": "Xem chi tiết"
+  },
+  "visitDetail": {
+    "pageTitle": "Chi tiết lượt khám",
+    "backBtn": "Quay lại",
+    "recordId": "Mã hồ sơ",
+    "appointmentDate": "Ngày khám",
+    "ratingBtn": "Đánh giá",
+    "printBtn": "In phiếu",
+    "triage": { "title": "THÔNG TIN BAN ĐẦU", "symptoms": "Triệu chứng", "clinicalResult": "Kết quả lâm sàng" },
+    "diagnosis": { "title": "CHẨN ĐOÁN", "treatmentTitle": "KẾT LUẬN VÀ ĐIỀU TRỊ", "followUp": "Hướng dẫn theo dõi / tái khám" },
+    "prescription": { "title": "ĐƠN THUỐC" },
+    "tests": {
+      "title": "KẾT QUẢ CẬN LÂM SÀNG", "normal": "Đã có kết quả", "abnormal": "Bất thường",
+      "tableName": "Tên chỉ số", "tableResult": "Kết quả", "tableRange": "Khoảng tham chiếu",
+      "tableUnit": "Đơn vị", "tableAssessment": "Đánh giá", "high": "CAO", "low": "THẤP"
+    },
+    "errors": { "loadFailed": "Không thể tải chi tiết lượt khám." },
+    "feedback": {
+      "title": "ĐÁNH GIÁ VÀ PHẢN HỒI",
+      "ratingLabel": "Điểm đánh giá",
+      "ratingDate": "Ngày đánh giá",
+      "commentLabel": "Nhận xét của bạn",
+      "noComment": "Chưa có nhận xét",
+      "responseLabel": "Phản hồi từ phòng khám",
+      "noResponse": "Chưa có phản hồi",
+      "responseDate": "Phản hồi lúc",
+      "doctorExplanation": "Giải trình từ bác sĩ",
+      "contactRequested": "Bạn đã yêu cầu được liên hệ hồi âm",
+      "statusNew": "Mới",
+      "statusInReview": "Đang xử lý",
+      "statusProcessing": "Đang xử lý",
+      "statusResponded": "Đã phản hồi",
+      "statusWaitingInternal": "Chờ xử lý nội bộ",
+      "statusClosed": "Đã đóng"
+    }
+  }
+}

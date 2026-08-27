@@ -1,0 +1,99 @@
+{
+  "sidebar": {
+    "logo": "Logo",
+    "subtitle": "Phòng khám tim mạch",
+    "dashboard": "Bảng điều khiển",
+    "waitingRoom": "Phòng chờ",
+    "patients": "Bệnh nhân",
+    "labOrders": "Xét nghiệm",
+    "records": "Hồ sơ",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất"
+  },
+  "labQueue": {
+    "searchPlaceholder": "Tìm kiếm bệnh nhân theo mã bệnh nhân, họ và tên, Loại xét nghiệm",
+    "tabs": {
+      "all": "Tất cả",
+      "pending": "Chờ xử lý",
+      "inProgress": "Đang xử lý",
+      "waitingForResult": "Chờ kết quả",
+      "completed": "Hoàn thành",
+      "cancelled": "Đã hủy"
+    },
+    "sort": "Mới nhất trước",
+    "refresh": "Làm mới",
+    "table": {
+      "requestCode": "Mã yêu cầu",
+      "patientCode": "Mã bệnh nhân",
+      "fullName": "Họ và tên",
+      "requestTime": "Thời gian yêu cầu",
+      "labType": "Loại xét nghiệm",
+      "status": "Trạng thái",
+      "actions": "Hành động"
+    },
+    "status": {
+      "pending": "Chờ xử lý",
+      "inProgress": "Đang xử lý",
+      "waitingForResult": "Chờ kết quả",
+      "completed": "Hoàn thành",
+      "cancelled": "Đã hủy"
+    },
+    "actions": {
+      "view": "Xem",
+      "edit": "Sửa",
+      "execute": "Thực hiện"
+    },
+    "pagination": "Hiển thị {{from}} đến {{to}} của {{total}} bệnh nhân",
+    "loading": "Đang tải...",
+    "noData": "Không có yêu cầu xét nghiệm nào.",
+    "errors": {
+      "loadFailed": "Không thể tải danh sách xét nghiệm.",
+      "unknown": "Có lỗi xảy ra."
+    }
+  },
+  "labDetail": {
+    "pageTitle": "Xét nghiệm",
+    "collectionDate": "Collection Date",
+    "specimenId": "ID mẫu vật",
+    "specimenIdPlaceholder": "Nhập ID mẫu vật...",
+    "labType": "Loại",
+    "labTypes": {
+      "blood": "Blood",
+      "urine": "Urine",
+      "liver": "Liver Function",
+      "lipid": "Lipid Panel",
+      "other": "Khác"
+    },
+    "status": {
+      "label": "Trạng thái",
+      "pending": "Chờ xử lý",
+      "inProgress": "Đang xử lý",
+      "completed": "Hoàn thành",
+      "cancelled": "Hủy"
+    },
+    "cancel": {
+      "reason": "Lý do hủy",
+      "reasonPlaceholder": "Nhập lý do hủy xét nghiệm..."
+    },
+    "result": {
+      "label": "Result",
+      "uploadBtn": "Upload file",
+      "uploadHint": "Kéo thả hoặc click để tải file kết quả (Excel, PDF, ảnh)",
+      "fileUploaded": "Đã tải file"
+    },
+    "notes": {
+      "label": "NHẬN XÉT/GHI CHÚ",
+      "placeholder": "Nhập các khó khăn trong quá trình thu thập mẫu, phản ứng của bệnh nhân hoặc các bất thường của mẫu..."
+    },
+        "actions": {
+      "draft": "Lưu nháp",
+      "save": "Lưu",
+      "saving": "Đang lưu..."
+    },
+    "errors": {
+      "loadFailed": "Không thể tải thông tin xét nghiệm.",
+      "saveFailed": "Lưu thất bại. Vui lòng thử lại.",
+      "unknown": "Có lỗi xảy ra."
+    }
+  }
+}

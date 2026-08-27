@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "appointment": "Book appointment",
+    "doctors": "Our doctors",
+    "pricing": "Pricing",
+    "guide": "Customer guide",
+    "contact": "Contact",
+    "login": "Sign in",
+    "register": "Register",
+    "profile": "Profile",
+    "myAppointments": "My appointments",
+    "medicalRecord": "Medical records",
+    "settings": "Settings",
+    "logout": "Sign out",
+    "loggedInAs": "Signed in as"
+  },
+  "sidebar": {
+    "mySchedule": "My schedule",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Sign out",
+    "statistics": "Statistics",
+    "schedule": "Schedule",
+    "shiftConfig": "Shift configuration",
+    "feedback": "Feedback",
+    "patientFlow": "Patient flow",
+    "staff": "Staff",
+    "patients": "Patients",
+    "specialties": "Specialties",
+    "capabilities": "Procedure catalog",
+    "auditLogs": "Audit logs"
+  },
+  "roles": {
+    "doctor": "Doctor", "nurse": "Nurse", "receptionist": "Receptionist",
+    "cashier": "Cashier", "admin": "Administrator", "manager": "Clinic manager",
+    "medicalStaff": "Medical staff", "customer": "Customer"
+  },
+  "loading": "Processing...",
+  "error": "An error occurred",
+  "save": "Save",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "male": "Male",
+  "female": "Female"
+}

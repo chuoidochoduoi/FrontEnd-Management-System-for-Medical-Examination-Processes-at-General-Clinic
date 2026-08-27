@@ -1,0 +1,21 @@
+{
+  "title": "Patients",
+  "subtitle": "Look up patient personal information at the clinic.",
+  "searchPlaceholder": "Search by code, name or phone number...",
+  "allGenders": "All genders",
+  "allAges": "All ages",
+  "filter": "Filter",
+  "loading": "Loading...",
+  "empty": "No matching patients.",
+  "loadFailed": "Unable to load the patient list.",
+  "columns": { "code": "Patient code", "name": "Full name", "birth": "Date of birth", "gender": "Gender", "birthGender": "Date of birth / Gender", "phone": "Phone number", "email": "Email", "address": "Address", "actions": "Actions" },
+  "detail": "Patient details",
+  "viewDetail": "View details",
+  "close": "Close",
+  "bloodType": "Blood type",
+  "male": "Male",
+  "female": "Female",
+  "previous": "Previous",
+  "next": "Next",
+  "showing": "Showing {{from}}–{{to}} / {{total}}"
+}

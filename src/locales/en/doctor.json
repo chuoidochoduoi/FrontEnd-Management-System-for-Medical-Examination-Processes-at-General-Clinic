@@ -1,0 +1,12 @@
+{
+  "examination": {
+    "followUp": {
+      "title": "Follow-up Required",
+      "description": "Patient needs to return for another examination. Notes will be sent to reception to schedule automatically.",
+      "noteLabel": "Reason for follow-up",
+      "notePlaceholder": "e.g., Return in 2 weeks, monitor blood pressure, repeat tests...",
+      "noteHint": "Reception will receive a notification to schedule a follow-up appointment",
+      "dateOptional": "Preferred date (optional)"
+    }
+  }
+}

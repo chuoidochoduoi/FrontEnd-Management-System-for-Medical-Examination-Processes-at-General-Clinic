@@ -8,12 +8,22 @@ const get    = (key) => localStorage.getItem(key) || sessionStorage.getItem(key)
 const bearer = ()    => ({ Authorization: `Bearer ${get('token')}` });
 
 const getMinimumAppointmentDate = () => {
-    const tomorrow = new Date();
-    tomorrow.setHours(0, 0, 0, 0);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const year = tomorrow.getFullYear();
-    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
-    const day = String(tomorrow.getDate()).padStart(2, '0');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    today.setDate(today.getDate() + 1);
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const getMaximumAppointmentDate = () => {
+    const maximum = new Date();
+    maximum.setHours(0, 0, 0, 0);
+    maximum.setFullYear(maximum.getFullYear() + 1);
+    const year = maximum.getFullYear();
+    const month = String(maximum.getMonth() + 1).padStart(2, '0');
+    const day = String(maximum.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 };
 
@@ -152,7 +162,11 @@ export function useAppointment() {
         setError('');
 
         if (formData.date && formData.date < getMinimumAppointmentDate()) {
-            setError('Lịch hẹn chỉ được đặt sớm nhất từ ngày mai.');
+            setError('Lịch hẹn phải được đặt từ ngày mai trở đi.');
+            return;
+        }
+        if (formData.date && formData.date > getMaximumAppointmentDate()) {
+            setError('Lịch hẹn chỉ được đặt trước tối đa 12 tháng.');
             return;
         }
 

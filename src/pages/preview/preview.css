@@ -1,23 +1,23 @@
 .preview-site {
-  --preview-ink: #102a43;
-  --preview-muted: #66788a;
-  --preview-primary: #2f6fed;
-  --preview-coral: #ff826c;
-  --preview-cream: #faf7f2;
-  --preview-powder: #ddebfa;
+  --preview-ink: #123c3a;
+  --preview-muted: #647d7a;
+  --preview-primary: #18a89b;
+  --preview-coral: #57c6b5;
+  --preview-cream: #ffffff;
+  --preview-powder: #ddf5f1;
   min-height: 100vh;
   overflow-x: hidden;
   color: var(--preview-ink);
   background:
-    radial-gradient(circle at 12% 8%, rgba(221, 235, 250, .78), transparent 27rem),
-    radial-gradient(circle at 88% 20%, rgba(255, 205, 194, .38), transparent 28rem),
+    radial-gradient(circle at 12% 8%, rgba(221, 245, 241, .82), transparent 27rem),
+    radial-gradient(circle at 88% 20%, rgba(204, 240, 233, .46), transparent 28rem),
     var(--preview-cream);
 }
 
 .preview-glass {
   border: 1px solid rgba(255, 255, 255, .72);
   background: rgba(255, 255, 255, .68);
-  box-shadow: 0 24px 80px rgba(16, 42, 67, .11);
+  box-shadow: 0 24px 80px rgba(18, 60, 58, .11);
   backdrop-filter: blur(18px);
 }
 
@@ -42,14 +42,14 @@
   position: absolute;
   border-radius: 999px;
   background: var(--preview-primary);
-  box-shadow: 0 0 18px rgba(47,111,237,.65);
+  box-shadow: 0 0 18px rgba(24,168,155,.65);
   opacity: .28;
   animation-name: previewParticleFloat;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
 }
 
-.preview-particles i:nth-child(3n) { background: var(--preview-coral); box-shadow: 0 0 18px rgba(255,130,108,.6); }
+.preview-particles i:nth-child(3n) { background: var(--preview-coral); box-shadow: 0 0 18px rgba(87,198,181,.6); }
 
 .preview-floating-card {
   position: absolute;
@@ -62,7 +62,7 @@
   border-radius: 1.1rem;
   color: var(--preview-ink);
   background: rgba(255,255,255,.76);
-  box-shadow: 0 18px 50px rgba(16,42,67,.16);
+  box-shadow: 0 18px 50px rgba(18,60,58,.16);
   backdrop-filter: blur(16px);
   animation: previewFloatingCard 5.5s ease-in-out infinite;
 }
@@ -94,7 +94,7 @@
 
 .preview-site input:focus, .preview-site textarea:focus {
   background: rgba(255,255,255,.96);
-  box-shadow: 0 0 0 4px rgba(47,111,237,.1), 0 12px 30px rgba(16,42,67,.08);
+  box-shadow: 0 0 0 4px rgba(24,168,155,.11), 0 12px 30px rgba(18,60,58,.08);
   transform: translateY(-1px);
 }
 
@@ -118,16 +118,16 @@
 }
 
 .preview-cinematic-card:hover {
-  border-color: rgba(47,111,237,.22);
-  box-shadow: 0 28px 70px rgba(16,42,67,.17);
+  border-color: rgba(24,168,155,.24);
+  box-shadow: 0 28px 70px rgba(18,60,58,.17);
   transform: perspective(900px) rotateX(2.4deg) rotateY(-2.8deg) translateY(-10px);
 }
 
 .preview-cinematic-card:hover::before { transform: translateX(45%) rotate(8deg); }
 .preview-card-icon { transition: transform .45s cubic-bezier(.22,1,.36,1), box-shadow .4s ease; }
-.preview-cinematic-card:hover .preview-card-icon { box-shadow: 0 12px 28px rgba(47,111,237,.2); transform: translateY(-5px) rotate(-7deg) scale(1.08); }
+.preview-cinematic-card:hover .preview-card-icon { box-shadow: 0 12px 28px rgba(24,168,155,.22); transform: translateY(-5px) rotate(-7deg) scale(1.08); }
 .preview-doctor-avatar { transition: transform .5s cubic-bezier(.22,1,.36,1), box-shadow .5s ease; }
-.preview-cinematic-card:hover .preview-doctor-avatar { box-shadow: 0 20px 45px rgba(16,42,67,.25); transform: scale(1.08) rotate(3deg); }
+.preview-cinematic-card:hover .preview-doctor-avatar { box-shadow: 0 20px 45px rgba(18,60,58,.25); transform: scale(1.08) rotate(3deg); }
 .preview-icon-pulse { animation: previewIconPulse 2.4s ease-in-out infinite; }
 .preview-star { animation: previewStarWave 2.2s ease-in-out infinite; }
 
@@ -137,7 +137,7 @@
   inset: -50% -20%;
   content: '';
   z-index: -1;
-  background: radial-gradient(circle at 70% 45%, rgba(47,111,237,.28), transparent 32%), radial-gradient(circle at 18% 80%, rgba(255,130,108,.18), transparent 26%);
+  background: radial-gradient(circle at 70% 45%, rgba(24,168,155,.3), transparent 32%), radial-gradient(circle at 18% 80%, rgba(87,198,181,.2), transparent 26%);
   animation: previewDarkGlow 10s ease-in-out infinite;
 }
 
@@ -160,7 +160,7 @@
   position: absolute;
   inset: -40%;
   content: '';
-  background: conic-gradient(from 90deg, transparent, rgba(47,111,237,.11), transparent, rgba(255,130,108,.12), transparent);
+  background: conic-gradient(from 90deg, transparent, rgba(24,168,155,.12), transparent, rgba(87,198,181,.14), transparent);
   animation: previewSpin 18s linear infinite;
 }
 
@@ -171,7 +171,7 @@
   bottom: -6rem;
   width: 16rem;
   height: 16rem;
-  border: 38px solid rgba(47,111,237,.15);
+  border: 38px solid rgba(24,168,155,.16);
   border-radius: 999px;
   content: '';
   animation: previewPulse 4s ease-in-out infinite;
@@ -189,13 +189,13 @@
 
 .preview-map-stage { position: relative; }
 .preview-map-radar { position: absolute; inset: 50% auto auto 50%; width: 7rem; height: 7rem; transform: translate(-50%,-50%); }
-.preview-map-radar span { position: absolute; inset: 0; border: 2px solid rgba(47,111,237,.34); border-radius: 999px; animation: previewRadar 3s ease-out infinite; }
+.preview-map-radar span { position: absolute; inset: 0; border: 2px solid rgba(24,168,155,.36); border-radius: 999px; animation: previewRadar 3s ease-out infinite; }
 .preview-map-radar span:nth-child(2) { animation-delay: 1s; }
 .preview-map-radar span:nth-child(3) { animation-delay: 2s; }
-.preview-map-pin { animation: previewMapPin 2.5s ease-in-out infinite; box-shadow: 0 14px 35px rgba(16,42,67,.15); }
+.preview-map-pin { animation: previewMapPin 2.5s ease-in-out infinite; box-shadow: 0 14px 35px rgba(18,60,58,.15); }
 
 .preview-grid-pattern {
-  background-image: radial-gradient(rgba(47, 111, 237, .16) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(24, 168, 155, .17) 1px, transparent 1px);
   background-size: 22px 22px;
 }
 
@@ -223,8 +223,8 @@
   width: 34px;
   height: 17px;
   border-radius: 100% 0 100% 0;
-  background: linear-gradient(135deg, rgba(47, 111, 237, .72), rgba(255, 130, 108, .52));
-  filter: drop-shadow(0 8px 10px rgba(16, 42, 67, .12));
+  background: linear-gradient(135deg, rgba(24, 168, 155, .74), rgba(87, 198, 181, .55));
+  filter: drop-shadow(0 8px 10px rgba(18, 60, 58, .12));
   animation: previewLeafDrift 10s ease-in-out infinite;
 }
 

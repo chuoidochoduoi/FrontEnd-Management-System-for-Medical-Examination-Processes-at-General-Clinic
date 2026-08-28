@@ -22,12 +22,6 @@ import { ROUTES } from '@/constants/routes';
 
 const DEFAULT_PAGE_SIZE = 7;
 
-const RECORD_TYPES = [
-    { value: '', label: 'Tất cả' },
-    { value: 'EXAMINATION', label: 'Khám bệnh' },
-    { value: 'PARACLINICAL', label: 'Cận lâm sàng' },
-];
-
 const STATUSES = [
     { value: '', label: 'Tất cả' },
     { value: 'COMPLETED', label: 'Hoàn thành' },
@@ -65,6 +59,9 @@ const recordStatusLabel = (value) => {
         case 'IN_PROGRESS':
             return 'Đang xử lý';
 
+        case 'DRAFT':
+            return 'Bản nháp';
+
         case 'CANCELLED':
             return 'Đã hủy';
 
@@ -80,6 +77,9 @@ const statusClass = (value) => {
 
         case 'IN_PROGRESS':
             return 'border-gray-300 bg-gray-50 text-gray-700';
+
+        case 'DRAFT':
+            return 'border-amber-200 bg-amber-50 text-amber-700';
 
         case 'COMPLETED':
         default:
@@ -297,11 +297,6 @@ export default function MedicalHistoryPage() {
     ] = useState('');
 
     const [
-        recordType,
-        setRecordType,
-    ] = useState('');
-
-    const [
         status,
         setStatus,
     ] = useState('');
@@ -322,7 +317,6 @@ export default function MedicalHistoryPage() {
         search: '',
         fromDate: '',
         toDate: '',
-        recordType: '',
         status: '',
         sort: 'DESC',
     });
@@ -362,9 +356,6 @@ export default function MedicalHistoryPage() {
             toDate:
                 toDate || undefined,
 
-            recordType:
-                recordType || undefined,
-
             status:
                 status || undefined,
 
@@ -380,7 +371,6 @@ export default function MedicalHistoryPage() {
                 search.trim(),
             fromDate,
             toDate,
-            recordType,
             status,
             sort,
         });
@@ -396,7 +386,6 @@ export default function MedicalHistoryPage() {
         setSearch('');
         setFromDate('');
         setToDate('');
-        setRecordType('');
         setStatus('');
         setSort('DESC');
 
@@ -404,7 +393,6 @@ export default function MedicalHistoryPage() {
             search: '',
             fromDate: '',
             toDate: '',
-            recordType: '',
             status: '',
             sort: 'DESC',
         });
@@ -434,10 +422,6 @@ export default function MedicalHistoryPage() {
                 appliedFilter.toDate ||
                 undefined,
 
-            recordType:
-                appliedFilter.recordType ||
-                undefined,
-
             status:
                 appliedFilter.status ||
                 undefined,
@@ -458,7 +442,7 @@ export default function MedicalHistoryPage() {
      * Nếu backend/hook đã hỗ trợ các filter mới,
      * phần này vẫn không gây ảnh hưởng.
      *
-     * Nó giúp recordType/status/sort hoạt động ở dữ liệu
+     * Nó giúp status/sort hoạt động ở dữ liệu
      * hiện tại trong lúc backend chưa map đầy đủ.
      */
     const displayVisits =
@@ -484,6 +468,7 @@ export default function MedicalHistoryPage() {
                                         visit.doctor,
                                         visit.diagnosis,
                                         visit.specialty,
+                                        visit.serviceName,
                                         ...(visit.serviceNames || []),
                                         ...(visit.doctorNames || []),
                                     ].join(
@@ -495,17 +480,6 @@ export default function MedicalHistoryPage() {
                                 keyword
                             );
                         }
-                    );
-            }
-
-            if (
-                appliedFilter.recordType
-            ) {
-                result =
-                    result.filter(
-                        (visit) => appliedFilter.recordType === 'EXAMINATION'
-                            ? Number(visit.examinationCount || 0) > 0
-                            : Number(visit.testCount || 0) > 0
                     );
             }
 
@@ -640,7 +614,7 @@ export default function MedicalHistoryPage() {
 
                     {/* ROW 1 */}
 
-                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.8fr_0.95fr_0.95fr_0.95fr]">
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.8fr_0.95fr_0.95fr]">
 
                         {/* SEARCH */}
 
@@ -747,50 +721,6 @@ export default function MedicalHistoryPage() {
                             />
                         </div>
 
-                        {/* RECORD TYPE */}
-
-                        <div>
-                            <label className={labelCls}>
-                                Loại hồ sơ
-                            </label>
-
-                            <select
-                                value={
-                                    recordType
-                                }
-                                onChange={(
-                                    event
-                                ) =>
-                                    setRecordType(
-                                        event
-                                            .target
-                                            .value
-                                    )
-                                }
-                                className={
-                                    inputCls
-                                }
-                            >
-                                {RECORD_TYPES.map(
-                                    (
-                                        item
-                                    ) => (
-                                        <option
-                                            key={
-                                                item.value
-                                            }
-                                            value={
-                                                item.value
-                                            }
-                                        >
-                                            {
-                                                item.label
-                                            }
-                                        </option>
-                                    )
-                                )}
-                            </select>
-                        </div>
                     </div>
 
                     {/* ROW 2 */}
@@ -963,14 +893,14 @@ export default function MedicalHistoryPage() {
 
                     {/* HEADER */}
 
-                    <div className="hidden grid-cols-[190px_220px_260px_minmax(250px,1fr)_130px_100px] border-b border-gray-100 px-5 py-3 text-xs font-medium text-gray-400 lg:grid">
+                    <div className="hidden grid-cols-[180px_240px_270px_minmax(250px,1fr)_130px_100px] border-b border-gray-100 px-5 py-3 text-xs font-medium text-gray-400 lg:grid">
 
                         <div>
                             Ngày giờ
                         </div>
 
                         <div>
-                            Dịch vụ trong lượt
+                            Dịch vụ khám
                         </div>
 
                         <div>
@@ -1047,7 +977,7 @@ export default function MedicalHistoryPage() {
                                                 `${ROUTES.CUSTOMER_VISIT_HISTORY}/${visit.id}`
                                             )
                                         }
-                                        className="group grid w-full grid-cols-1 gap-4 border-b border-gray-100 px-5 py-4 text-left transition last:border-b-0 hover:bg-gray-50 lg:grid-cols-[190px_220px_260px_minmax(250px,1fr)_130px_100px] lg:items-center"
+                                        className="group grid w-full grid-cols-1 gap-4 border-b border-gray-100 px-5 py-4 text-left transition last:border-b-0 hover:bg-gray-50 lg:grid-cols-[180px_240px_270px_minmax(250px,1fr)_130px_100px] lg:items-center"
                                     >
 
                                         {/* DATE */}
@@ -1080,17 +1010,17 @@ export default function MedicalHistoryPage() {
 
                                         <div>
                                             <p className="mb-1 text-[10px] text-gray-400 lg:hidden">
-                                                Dịch vụ trong lượt
+                                                Dịch vụ khám
                                             </p>
 
                                             <div className="flex items-start gap-2">
                                                 <Stethoscope size={16} className="mt-0.5 shrink-0 text-gray-500" />
                                                 <div className="min-w-0">
                                                     <p className="line-clamp-2 text-sm font-semibold text-gray-800">
-                                                        {(visit.serviceNames || []).join(', ') || 'Khám bệnh'}
+                                                        {visit.serviceName || visit.specialty || 'Khám bệnh'}
                                                     </p>
                                                     <p className="mt-0.5 text-xs text-gray-400">
-                                                        {visit.examinationCount || 0} phiếu khám · {visit.testCount || 0} kết quả CLS
+                                                        Lượt khám: {visit.visitCode || '-'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -1108,11 +1038,9 @@ export default function MedicalHistoryPage() {
                                                     '-'}
                                             </p>
 
-                                            {(visit.recordCode ||
-                                                visit.visitCode) && (
+                                            {visit.recordCode && (
                                                 <p className="mt-0.5 truncate text-xs text-gray-400">
-                                                    {visit.recordCode ||
-                                                        visit.visitCode}
+                                                    {visit.recordCode}
                                                 </p>
                                             )}
                                         </div>

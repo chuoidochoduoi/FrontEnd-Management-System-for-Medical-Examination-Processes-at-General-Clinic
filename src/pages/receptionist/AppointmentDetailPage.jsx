@@ -593,16 +593,6 @@ export default function AppointmentDetailPage() {
                                 serviceId
                         );
                     }
-                    const selectedService = allServices.find(service => service.id === serviceId);
-                    if (selectedService?.departmentType === 'EXAMINATION') {
-                        const examinationIds = new Set(
-                            allServices.filter(service => service.departmentType === 'EXAMINATION').map(service => service.id)
-                        );
-                        return [
-                            ...prev.filter(id => !examinationIds.has(id)),
-                            serviceId,
-                        ];
-                    }
                     return [...prev, serviceId];
                 }
             );
@@ -664,10 +654,6 @@ export default function AppointmentDetailPage() {
         ) {
             return 'Vui lòng chọn ít nhất một dịch vụ.';
         }
-        if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
-            return 'Mỗi lượt khám chỉ được chọn 1 dịch vụ khám bệnh.';
-        }
-
         if (!date) {
             return 'Vui lòng chọn ngày khám.';
         }
@@ -1664,7 +1650,7 @@ export default function AppointmentDetailPage() {
                                                 </p>
 
                                                 <p className="mt-0.5 text-sm font-semibold text-gray-800">
-                                                    {selectedServiceIds.length} ({selectedServices.filter(service => service.departmentType === 'EXAMINATION').length}/1 khám)
+                                                    {selectedServiceIds.length} dịch vụ · {selectedServices.filter(service => service.departmentType === 'EXAMINATION').length} khám · {selectedServices.filter(service => service.departmentType !== 'EXAMINATION').length} cận lâm sàng
                                                 </p>
                                             </div>
 

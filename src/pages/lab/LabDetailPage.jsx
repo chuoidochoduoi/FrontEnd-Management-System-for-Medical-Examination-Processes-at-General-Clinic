@@ -25,7 +25,7 @@ import {
 import { toast } from 'react-toastify';
 
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
-import DynamicClinicalForm from '@/components/clinical/DynamicClinicalForm';
+import DynamicClinicalForm, { validateClinicalForm } from '@/components/clinical/DynamicClinicalForm';
 import ClinicalDataDisplay from '@/components/clinical/ClinicalDataDisplay';
 import { useLabDetail } from '@/hooks/useLabDetail';
 import { ROUTES } from '@/constants/routes';
@@ -525,6 +525,7 @@ export default function LabDetailPage() {
         useState('');
 
     const [resultData, setResultData] = useState({});
+    const [structuredErrors, setStructuredErrors] = useState({});
 
     const [file, setFile] =
         useState(null);
@@ -588,6 +589,7 @@ export default function LabDetailPage() {
         );
 
         setResultData(order.resultData ?? order.clinicalForm?.values ?? {});
+        setStructuredErrors({});
         setAttachments(order.attachments ?? []);
 
         setFileUrl(
@@ -873,6 +875,15 @@ export default function LabDetailPage() {
         finalize,
         targetStatus = order?.status ?? 'IN_PROGRESS'
     ) => {
+        if (order?.clinicalForm?.schema) {
+            const formErrors = validateClinicalForm(order.clinicalForm.schema, resultData, finalize);
+            setStructuredErrors(formErrors);
+            const firstInvalidKey = Object.keys(formErrors)[0];
+            if (firstInvalidKey) {
+                window.setTimeout(() => document.getElementById(`clinical-${firstInvalidKey}`)?.focus(), 0);
+                return formErrors[firstInvalidKey];
+            }
+        }
         if (
             requiresSpecimen &&
             specimenId.trim().length >
@@ -1662,8 +1673,12 @@ export default function LabDetailPage() {
                                     /> : <DynamicClinicalForm
                                         schema={order?.clinicalForm?.schema}
                                         value={resultData}
-                                        onChange={setResultData}
+                                        onChange={(nextValue) => {
+                                            setResultData(nextValue);
+                                            setStructuredErrors({});
+                                        }}
                                         disabled={isReadOnly}
+                                        errors={structuredErrors}
                                         title={order?.clinicalForm?.templateName || 'Kết quả có cấu trúc'}
                                         emptyMessage="Dịch vụ này chưa được cấu hình biểu mẫu kết quả"
                                         patientAge={order?.patientAge}

@@ -62,6 +62,7 @@ export const ROUTES = {
     ADMIN_CAPABILITIES: '/admin/capabilities',
     ADMIN_AUDIT_LOGS: '/admin/audit-logs',
     ADMIN_SHIFTS: '/admin/shifts',
+    ADMIN_SCHEDULE: '/admin/schedule',
     ADMIN_PUBLIC_ANNOUNCEMENTS: '/admin/public-announcements',
     ADMIN_CLINIC_INFORMATION: '/admin/clinic-information',
     CLINICAL_FORM_TEMPLATES: '/manager/clinical-form-templates',

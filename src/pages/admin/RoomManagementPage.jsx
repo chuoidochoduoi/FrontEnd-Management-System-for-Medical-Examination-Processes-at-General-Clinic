@@ -1,9 +1,11 @@
 // src/pages/admin/RoomManagementPage.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, X, Check, Settings } from 'lucide-react';
+import { Search, X, Check, Settings, CalendarDays, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import AdminLayout from '@/components/layout/AdminLayout';
+import OwnerLayout from '@/components/layout/OwnerLayout';
 import { useRoomManagement } from '@/hooks/useRoomManagement';
 import { useSpecializations } from '@/hooks/useSpecializations';
 import { useCapabilities } from '@/hooks/useCapabilities';
@@ -79,9 +81,50 @@ function Modal({ title, subtitle, onClose, children, footer }) {
     );
 }
 
+function StaffSelectionPanel({ title, hint, query, onQueryChange, items, selectedIds,
+                                 onToggle, currentRoomId, emptyText }) {
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-1.5">
+                <label className={labelCls}>{title}</label>
+                <span className="text-[11px] text-primary-600">Đã chọn {selectedIds.length}</span>
+            </div>
+            <div className="h-56 overflow-y-auto border border-gray-200 rounded-xl p-2 bg-white">
+                <input value={query} onChange={e => onQueryChange(e.target.value)}
+                       placeholder={`Tìm ${title.toLowerCase()}...`}
+                       className="sticky top-0 z-10 w-full text-xs px-2.5 py-2 mb-2 border border-gray-200 rounded-lg bg-white outline-none focus:border-primary-400" />
+                <div className="space-y-1">
+                    {items.length === 0 && <p className="text-xs text-gray-400 p-2">{emptyText}</p>}
+                    {items.map(item => {
+                        const belongsElsewhere = item.assignedDepartmentId
+                            && item.assignedDepartmentId !== currentRoomId;
+                        return (
+                            <label key={item.staffId}
+                                   className={`flex items-start gap-2 rounded-lg p-2 text-sm ${belongsElsewhere
+                                       ? 'cursor-not-allowed bg-gray-50 text-gray-400'
+                                       : 'cursor-pointer text-gray-700 hover:bg-gray-50'}`}>
+                                <input type="checkbox" className="mt-0.5 accent-gray-900"
+                                       checked={selectedIds.includes(item.staffId)}
+                                       disabled={belongsElsewhere}
+                                       onChange={() => !belongsElsewhere && onToggle(item.staffId)} />
+                                <span className="min-w-0">
+                                    <span className="block truncate">{item.fullName}</span>
+                                    <span className="block text-[11px] text-gray-400">
+                                        {belongsElsewhere ? 'Đã thuộc phòng khác' : (item.specializationName || hint)}
+                                    </span>
+                                </span>
+                            </label>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 /* ── Add Room Modal ── */
 function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, specializations, capabilities }) {
-    const [form, setForm] = useState({ roomCode: '', type: '', name: '', specializationId: '', capabilityIds: [], doctorId: '', nurseIds: [], description: '', status: 'available' });
+    const [form, setForm] = useState({ roomCode: '', type: '', name: '', specializationId: '', capabilityIds: [], doctorId: '', doctorIds: [], nurseIds: [], description: '', status: 'available' });
     const [docSearch, setDocSearch] = useState('');
     const [nurseSearch, setNurseSearch] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -93,13 +136,30 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, specializations, 
     }, [error]);
     const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
-    const filteredDoctors = doctors.filter(d => d.fullName.toLowerCase().includes(docSearch.toLowerCase()) || (d.specializationName && d.specializationName.toLowerCase().includes(docSearch.toLowerCase())));
-    const filteredNurses = nurses.filter(n => n.fullName.toLowerCase().includes(nurseSearch.toLowerCase()));
+    const matchesRoomQualification = (person, doctor) => {
+        if (form.type === 'examination') return !doctor || (!!form.specializationId && person.specializationId === form.specializationId);
+        if (form.type === 'paraclinical') return (form.capabilityIds || []).length > 0
+            && (person.capabilityIds || []).some(id => form.capabilityIds.includes(id));
+        return false;
+    };
+    const eligibleDoctors = doctors.filter(d => matchesRoomQualification(d, true));
+    const filteredDoctors = eligibleDoctors.filter(d =>
+        (d.fullName || '').toLowerCase().includes(docSearch.toLowerCase())
+        || (d.specializationName || '').toLowerCase().includes(docSearch.toLowerCase()));
+    const filteredNurses = nurses.filter(n => matchesRoomQualification(n, false)
+        && (n.fullName || '').toLowerCase().includes(nurseSearch.toLowerCase()));
 
     const toggleNurse = (nurseId) => {
         const prev = form.nurseIds || [];
         if (prev.includes(nurseId)) set('nurseIds', prev.filter(id => id !== nurseId));
         else set('nurseIds', [...prev, nurseId]);
+    };
+    const toggleDoctor = (doctorId) => {
+        const selected = form.doctorIds || [];
+        if (selected.includes(doctorId)) {
+            if (form.doctorId === doctorId) set('doctorId', '');
+            set('doctorIds', selected.filter(id => id !== doctorId));
+        } else set('doctorIds', [...selected, doctorId]);
     };
 
     const handleSubmit = async () => {
@@ -107,6 +167,7 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, specializations, 
         if (form.roomCode.trim().length > 20) return setError('Mã phòng không được vượt quá 20 ký tự');
         if (!form.type) return setError('Vui lòng chọn loại khoa/phòng');
         if (form.type === 'examination' && !form.specializationId) return setError('Vui lòng chọn chuyên khoa');
+        if (form.type === 'paraclinical' && !(form.capabilityIds || []).length) return setError('Vui lòng chọn ít nhất một danh mục kỹ thuật');
         if (!form.name.trim()) return setError('Vui lòng nhập tên khoa/phòng');
         if (form.name.trim().length > 150) return setError('Tên khoa/phòng không được vượt quá 150 ký tự');
         if (form.description?.length > 500) return setError('Mô tả không được vượt quá 500 ký tự');
@@ -136,7 +197,15 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, specializations, 
                 </div>
                 <div>
                     <label className={labelCls}>Nhóm chức năng</label>
-                    <select value={form.type} onChange={e => setForm(prev => ({ ...prev, type: e.target.value, specializationId: '' }))} className={inputCls}>
+                    <select value={form.type} onChange={e => setForm(prev => ({
+                        ...prev,
+                        type: e.target.value,
+                        specializationId: '',
+                        capabilityIds: [],
+                        doctorId: '',
+                        doctorIds: [],
+                        nurseIds: [],
+                    }))} className={inputCls}>
                         <option value="">-- Chọn nhóm chức năng --</option>
                         {ROOM_TYPES.map(type => <option key={type} value={type}>{ROOM_TYPE_LABELS[type]}</option>)}
                     </select>
@@ -150,14 +219,19 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, specializations, 
             {form.type === 'examination' && (
                 <div>
                     <label className={labelCls}>Chuyên khoa phục vụ</label>
-                    <select value={form.specializationId} onChange={e => set('specializationId', e.target.value)} className={inputCls}>
+                    <select value={form.specializationId} onChange={e => setForm(prev => ({
+                        ...prev,
+                        specializationId: e.target.value,
+                        doctorId: '',
+                        doctorIds: [],
+                    }))} className={inputCls}>
                         <option value="">-- Chọn chuyên khoa --</option>
                         {specializations.map(item => <option key={item.specializationId} value={item.specializationId}>{item.name}</option>)}
                     </select>
                     <p className="mt-1 text-xs text-gray-400">Chuyên khoa xác định nhóm bệnh nhân và dịch vụ được điều phối vào phòng. Nhiều phòng có thể cùng phục vụ một chuyên khoa.</p>
                 </div>
             )}
-            {form.type !== 'examination' && (
+            {form.type === 'paraclinical' && (
                 <div>
                     <label className={labelCls}>Năng lực thực hiện (có thể chọn nhiều)</label>
                     <div className="w-full h-28 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col space-y-1">
@@ -168,7 +242,15 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, specializations, 
                                     <input
                                         type="checkbox"
                                         checked={isChecked}
-                                        onChange={() => set('capabilityIds', isChecked ? (form.capabilityIds || []).filter(id => id !== c.capabilityId) : [...(form.capabilityIds || []), c.capabilityId])}
+                                        onChange={() => setForm(prev => ({
+                                            ...prev,
+                                            capabilityIds: isChecked
+                                                ? (prev.capabilityIds || []).filter(id => id !== c.capabilityId)
+                                                : [...(prev.capabilityIds || []), c.capabilityId],
+                                            doctorId: '',
+                                            doctorIds: [],
+                                            nurseIds: [],
+                                        }))}
                                         className="accent-gray-900 rounded border-gray-300"
                                     />
                                     <span>{c.name}</span>
@@ -178,65 +260,29 @@ function AddRoomModal({ onClose, onSubmit, t, doctors, nurses, specializations, 
                     </div>
                 </div>
             )}
-            <div className="order-last md:col-start-1">
-                <label className={labelCls}>Bác sĩ phụ trách</label>
-                <div className="w-full max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col">
-                    <input 
-                        type="text" 
-                        placeholder="Tìm bác sĩ..." 
-                        value={docSearch} 
-                        onChange={e => setDocSearch(e.target.value)} 
-                        className="w-full text-xs px-2 py-1.5 mb-2 border border-gray-200 rounded outline-none focus:border-gray-400"
-                    />
-                    <div className="space-y-1">
-                        {filteredDoctors.length === 0 ? <p className="text-xs text-gray-400 p-1">Không tìm thấy bác sĩ</p> : filteredDoctors.map(doc => {
-                            const isAssigned = !!doc.assignedDepartmentId;
-                            return (
-                                <label key={doc.staffId} className={`flex items-center gap-2 text-sm p-1.5 rounded transition-colors ${isAssigned ? 'opacity-50 cursor-not-allowed text-gray-400' : 'cursor-pointer hover:bg-gray-50 text-gray-700'}`}>
-                                    <input
-                                        type="radio"
-                                        name="add_doctor"
-                                        checked={form.doctorId === doc.staffId}
-                                        onChange={() => !isAssigned && set('doctorId', doc.staffId)}
-                                        disabled={isAssigned}
-                                        className="accent-gray-900"
-                                    />
-                                    <span>{doc.fullName} <span className="text-gray-400 text-xs">- {doc.specializationName}</span></span>
-                                </label>
-                            );
-                        })}
-                    </div>
-                </div>
+            <div className="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+                <label className={labelCls}>Bác sĩ phụ trách chuyên môn</label>
+                <select value={form.doctorId}
+                        onChange={e => {
+                            const id = e.target.value;
+                            setForm(prev => ({ ...prev, doctorId: id,
+                                doctorIds: id && !prev.doctorIds.includes(id)
+                                    ? [...prev.doctorIds, id] : prev.doctorIds }));
+                        }} className={inputCls}>
+                    <option value="">-- Chưa chọn --</option>
+                    {eligibleDoctors.filter(doc => !doc.assignedDepartmentId).map(doc =>
+                        <option key={doc.staffId} value={doc.staffId}>{doc.fullName}</option>)}
+                </select>
+                <p className="mt-1.5 text-xs text-blue-600">Chỉ là thông tin quản lý chuyên môn, không đại diện cho bác sĩ trực.</p>
             </div>
-            <div className="order-last md:col-start-2">
-                <label className={labelCls}>Y tá trực (có thể chọn nhiều)</label>
-                <div className="w-full max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col">
-                    <input 
-                        type="text" 
-                        placeholder="Tìm y tá..." 
-                        value={nurseSearch} 
-                        onChange={e => setNurseSearch(e.target.value)} 
-                        className="w-full text-xs px-2 py-1.5 mb-2 border border-gray-200 rounded outline-none focus:border-gray-400"
-                    />
-                    <div className="space-y-1">
-                        {filteredNurses.length === 0 ? <p className="text-xs text-gray-400 p-1">Không tìm thấy y tá</p> : filteredNurses.map(nurse => {
-                            const isAssigned = !!nurse.assignedDepartmentId;
-                            return (
-                                <label key={nurse.staffId} className={`flex items-center gap-2 text-sm p-1.5 rounded transition-colors ${isAssigned ? 'opacity-50 cursor-not-allowed text-gray-400' : 'cursor-pointer hover:bg-gray-50 text-gray-700'}`}>
-                                    <input
-                                        type="checkbox"
-                                        checked={(form.nurseIds || []).includes(nurse.staffId)}
-                                        onChange={() => !isAssigned && toggleNurse(nurse.staffId)}
-                                        disabled={isAssigned}
-                                        className="accent-gray-900 rounded border-gray-300"
-                                    />
-                                    <span>{nurse.fullName}</span>
-                                </label>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
+            <StaffSelectionPanel title="Bác sĩ thuộc phòng" hint="Bác sĩ có thể được phân lịch tại phòng"
+                                 query={docSearch} onQueryChange={setDocSearch} items={filteredDoctors}
+                                 selectedIds={form.doctorIds || []} onToggle={toggleDoctor}
+                                 emptyText="Không tìm thấy bác sĩ" />
+            <StaffSelectionPanel title="Y tá thuộc phòng" hint="Y tá có thể được phân lịch tại phòng"
+                                 query={nurseSearch} onQueryChange={setNurseSearch} items={filteredNurses}
+                                 selectedIds={form.nurseIds || []} onToggle={toggleNurse}
+                                 emptyText="Không tìm thấy y tá" />
             <div>
                 <label className={labelCls}>Mô tả</label>
                 <textarea value={form.description} onChange={e => set('description', e.target.value)}
@@ -259,6 +305,7 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
         capabilityIds: room.capabilityIds ?? [],
         description: room.equipment ?? room.description ?? '',
         doctorId: room.headDoctorId ?? room.doctorId ?? '',
+        doctorIds: room.doctors?.map(d => d.staffId) || [],
         nurseIds: room.nurses?.map(n => n.staffId) || [],
         status: room.status ?? 'available',
     });
@@ -275,17 +322,37 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
     }, [error]);
     const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-    const filteredDoctors = doctors.filter(d => d.fullName.toLowerCase().includes(docSearch.toLowerCase()) || (d.specializationName && d.specializationName.toLowerCase().includes(docSearch.toLowerCase())));
-    const filteredNurses = nurses.filter(n => n.fullName.toLowerCase().includes(nurseSearch.toLowerCase()));
+    const matchesRoomQualification = (person, doctor) => {
+        if (form.type === 'examination') return !doctor || (!!form.specializationId && person.specializationId === form.specializationId);
+        if (form.type === 'paraclinical') return (form.capabilityIds || []).length > 0
+            && (person.capabilityIds || []).some(id => form.capabilityIds.includes(id));
+        return false;
+    };
+    const eligibleDoctors = doctors.filter(d => matchesRoomQualification(d, true));
+    const filteredDoctors = eligibleDoctors.filter(d =>
+        (d.fullName || '').toLowerCase().includes(docSearch.toLowerCase())
+        || (d.specializationName || '').toLowerCase().includes(docSearch.toLowerCase()));
+    const filteredNurses = nurses.filter(n => matchesRoomQualification(n, false)
+        && (n.fullName || '').toLowerCase().includes(nurseSearch.toLowerCase()));
 
     const toggleNurse = (id) => setForm(p => ({
         ...p,
         nurseIds: p.nurseIds?.includes(id) ? p.nurseIds.filter(n => n !== id) : [...(p.nurseIds || []), id]
     }));
+    const toggleDoctor = (id) => setForm(p => {
+        const selected = p.doctorIds || [];
+        const removing = selected.includes(id);
+        return {
+            ...p,
+            doctorId: removing && p.doctorId === id ? '' : p.doctorId,
+            doctorIds: removing ? selected.filter(value => value !== id) : [...selected, id],
+        };
+    });
 
     const handleSubmit = async () => {
         if (!form.type) return setError('Vui lòng chọn loại khoa/phòng');
         if (form.type === 'examination' && !form.specializationId) return setError('Vui lòng chọn chuyên khoa');
+        if (form.type === 'paraclinical' && !(form.capabilityIds || []).length) return setError('Vui lòng chọn ít nhất một danh mục kỹ thuật');
         if (!form.name.trim()) return setError('Vui lòng nhập tên khoa/phòng');
         if (form.name.trim().length > 150) return setError('Tên khoa/phòng không được vượt quá 150 ký tự');
         if (form.description?.length > 500) return setError('Mô tả không được vượt quá 500 ký tự');
@@ -332,7 +399,15 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
                 </div>
                 <div>
                     <label className={labelCls}>Nhóm chức năng</label>
-                    <select value={form.type} onChange={e => setForm(prev => ({ ...prev, type: e.target.value, specializationId: '' }))} className={inputCls}>
+                    <select value={form.type} onChange={e => setForm(prev => ({
+                        ...prev,
+                        type: e.target.value,
+                        specializationId: '',
+                        capabilityIds: [],
+                        doctorId: '',
+                        doctorIds: [],
+                        nurseIds: [],
+                    }))} className={inputCls}>
                         {ROOM_TYPES.map(type => <option key={type} value={type}>{ROOM_TYPE_LABELS[type]}</option>)}
                     </select>
                 </div>
@@ -344,13 +419,18 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
             {form.type === 'examination' && (
                 <div>
                     <label className={labelCls}>Chuyên khoa phục vụ</label>
-                    <select value={form.specializationId} onChange={e => set('specializationId', e.target.value)} className={inputCls}>
+                    <select value={form.specializationId} onChange={e => setForm(prev => ({
+                        ...prev,
+                        specializationId: e.target.value,
+                        doctorId: '',
+                        doctorIds: [],
+                    }))} className={inputCls}>
                         <option value="">-- Chọn chuyên khoa --</option>
                         {specializations.map(item => <option key={item.specializationId} value={item.specializationId}>{item.name}</option>)}
                     </select>
                 </div>
             )}
-            {form.type !== 'examination' && (
+            {form.type === 'paraclinical' && (
                 <div>
                     <label className={labelCls}>Năng lực thực hiện (có thể chọn nhiều)</label>
                     <div className="w-full h-28 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col space-y-1">
@@ -361,7 +441,15 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
                                     <input
                                         type="checkbox"
                                         checked={isChecked}
-                                        onChange={() => set('capabilityIds', isChecked ? (form.capabilityIds || []).filter(id => id !== c.capabilityId) : [...(form.capabilityIds || []), c.capabilityId])}
+                                        onChange={() => setForm(prev => ({
+                                            ...prev,
+                                            capabilityIds: isChecked
+                                                ? (prev.capabilityIds || []).filter(id => id !== c.capabilityId)
+                                                : [...(prev.capabilityIds || []), c.capabilityId],
+                                            doctorId: '',
+                                            doctorIds: [],
+                                            nurseIds: [],
+                                        }))}
                                         className="accent-gray-900 rounded border-gray-300"
                                     />
                                     <span>{c.name}</span>
@@ -371,65 +459,29 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
                     </div>
                 </div>
             )}
-            <div className="order-last md:col-start-1">
-                <label className={labelCls}>Bác sĩ phụ trách</label>
-                <div className="w-full max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col">
-                    <input 
-                        type="text" 
-                        placeholder="Tìm bác sĩ..." 
-                        value={docSearch} 
-                        onChange={e => setDocSearch(e.target.value)} 
-                        className="w-full text-xs px-2 py-1.5 mb-2 border border-gray-200 rounded outline-none focus:border-gray-400"
-                    />
-                    <div className="space-y-1">
-                        {filteredDoctors.length === 0 ? <p className="text-xs text-gray-400 p-1">Không tìm thấy bác sĩ</p> : filteredDoctors.map(doc => {
-                            const isAssigned = doc.assignedDepartmentId && doc.assignedDepartmentId !== room.id;
-                            return (
-                                <label key={doc.staffId} className={`flex items-center gap-2 text-sm p-1.5 rounded transition-colors ${isAssigned ? 'opacity-50 cursor-not-allowed text-gray-400' : 'cursor-pointer hover:bg-gray-50 text-gray-700'}`}>
-                                    <input
-                                        type="radio"
-                                        name={`edit_doctor_${room.id}`}
-                                        checked={form.doctorId === doc.staffId}
-                                        onChange={() => !isAssigned && set('doctorId', doc.staffId)}
-                                        disabled={isAssigned}
-                                        className="accent-gray-900"
-                                    />
-                                    <span>{doc.fullName} <span className="text-gray-400 text-xs">- {doc.specializationName}</span></span>
-                                </label>
-                            );
-                        })}
-                    </div>
-                </div>
+            <div className="md:col-span-2 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+                <label className={labelCls}>Bác sĩ phụ trách chuyên môn</label>
+                <select value={form.doctorId}
+                        onChange={e => {
+                            const id = e.target.value;
+                            setForm(prev => ({ ...prev, doctorId: id,
+                                doctorIds: id && !prev.doctorIds.includes(id)
+                                    ? [...prev.doctorIds, id] : prev.doctorIds }));
+                        }} className={inputCls}>
+                    <option value="">-- Chưa chọn --</option>
+                    {eligibleDoctors.filter(doc => !doc.assignedDepartmentId || doc.assignedDepartmentId === room.id)
+                        .map(doc => <option key={doc.staffId} value={doc.staffId}>{doc.fullName}</option>)}
+                </select>
+                <p className="mt-1.5 text-xs text-blue-600">Chỉ là thông tin quản lý chuyên môn, không đại diện cho bác sĩ trực.</p>
             </div>
-            <div className="order-last md:col-start-2">
-                <label className={labelCls}>Y tá trực (có thể chọn nhiều)</label>
-                <div className="w-full max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-white flex flex-col">
-                    <input 
-                        type="text" 
-                        placeholder="Tìm y tá..." 
-                        value={nurseSearch} 
-                        onChange={e => setNurseSearch(e.target.value)} 
-                        className="w-full text-xs px-2 py-1.5 mb-2 border border-gray-200 rounded outline-none focus:border-gray-400"
-                    />
-                    <div className="space-y-1">
-                        {filteredNurses.length === 0 ? <p className="text-xs text-gray-400 p-1">Không tìm thấy y tá</p> : filteredNurses.map(nurse => {
-                            const isAssigned = nurse.assignedDepartmentId && nurse.assignedDepartmentId !== room.id;
-                            return (
-                                <label key={nurse.staffId} className={`flex items-center gap-2 text-sm p-1.5 rounded transition-colors ${isAssigned ? 'opacity-50 cursor-not-allowed text-gray-400' : 'cursor-pointer hover:bg-gray-50 text-gray-700'}`}>
-                                    <input
-                                        type="checkbox"
-                                        checked={(form.nurseIds || []).includes(nurse.staffId)}
-                                        onChange={() => !isAssigned && toggleNurse(nurse.staffId)}
-                                        disabled={isAssigned}
-                                        className="accent-gray-900 rounded border-gray-300"
-                                    />
-                                    <span>{nurse.fullName}</span>
-                                </label>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
+            <StaffSelectionPanel title="Bác sĩ thuộc phòng" hint="Bác sĩ có thể được phân lịch tại phòng"
+                                 query={docSearch} onQueryChange={setDocSearch} items={filteredDoctors}
+                                 selectedIds={form.doctorIds || []} onToggle={toggleDoctor}
+                                 currentRoomId={room.id} emptyText="Không tìm thấy bác sĩ" />
+            <StaffSelectionPanel title="Y tá thuộc phòng" hint="Y tá có thể được phân lịch tại phòng"
+                                 query={nurseSearch} onQueryChange={setNurseSearch} items={filteredNurses}
+                                 selectedIds={form.nurseIds || []} onToggle={toggleNurse}
+                                 currentRoomId={room.id} emptyText="Không tìm thấy y tá" />
             <div>
                 <label className={labelCls}>Mô tả</label>
                 <textarea value={form.description} onChange={e => set('description', e.target.value)}
@@ -455,8 +507,13 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
 }
 
 /* ── Room Card ── */
-function RoomCard({ room, onConfigure, onQuickStatus, t }) {
+function RoomCard({ room, onConfigure, onQuickStatus, onOpenSchedule, t }) {
     const cfg = STATUS_CFG[room.status] ?? STATUS_CFG.available;
+    const dutyCfg = room.coverageStatus === 'COVERED'
+        ? { label: 'Đủ bác sĩ trực', cls: 'bg-green-50 text-green-700' }
+        : room.coverageStatus === 'MISSING_DOCTOR'
+            ? { label: 'Thiếu bác sĩ trực', cls: 'bg-amber-50 text-amber-700' }
+            : { label: 'Chưa có lịch ca hiện tại', cls: 'bg-gray-100 text-gray-500' };
 
     return (
         <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-sm transition-shadow">
@@ -478,8 +535,21 @@ function RoomCard({ room, onConfigure, onQuickStatus, t }) {
                 {room.type === 'examination' ? (room.specializationName || 'Chưa phân loại') : 'Không áp dụng'}
             </p>
             <p className="text-xs text-gray-500 mb-1">
-                <span className="font-medium">{t('roomManagement.card.doctor')}</span> {room.doctor || '---'}
+                <span className="font-medium">Phụ trách chuyên môn:</span> {room.doctor || 'Chưa phân công'}
             </p>
+            <div className="mt-3 flex items-center gap-3 text-xs text-gray-500">
+                <span className="inline-flex items-center gap-1"><Users size={12}/>{room.doctors?.length || 0} bác sĩ</span>
+                <span>{room.nurses?.length || 0} y tá</span>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                <span className={`rounded-full px-2 py-1 font-medium ${dutyCfg.cls}`}>{dutyCfg.label}</span>
+                {room.doctorsOnDuty?.length > 0 && (
+                    <span className="text-gray-500">Đang trực: {room.doctorsOnDuty.map(item => item.fullName).join(', ')}</span>
+                )}
+                {room.nursesOnDuty?.length > 0 && (
+                    <span className="text-gray-500">Hỗ trợ: {room.nursesOnDuty.map(item => item.fullName).join(', ')}</span>
+                )}
+            </div>
             {room.equipment && (
                 <p className="text-xs text-gray-400 leading-relaxed">
                     <span className="font-medium">{t('roomManagement.card.equipment')}</span>{room.equipment}
@@ -500,13 +570,16 @@ function RoomCard({ room, onConfigure, onQuickStatus, t }) {
                         ))}
                     </div>
                 </div>
-                <button
-                    onClick={() => onConfigure(room)}
-                    className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 transition-colors font-medium"
-                >
-                    <Settings size={12} />
-                    {t('roomManagement.card.configure')}
-                </button>
+                <div className="flex items-center gap-3">
+                    <button onClick={() => onOpenSchedule(room)}
+                            className="flex items-center gap-1.5 text-xs text-primary-600 hover:text-primary-700">
+                        <CalendarDays size={12}/> Xem lịch
+                    </button>
+                    <button onClick={() => onConfigure(room)}
+                            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 transition-colors font-medium">
+                        <Settings size={12} /> {t('roomManagement.card.configure')}
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -514,6 +587,9 @@ function RoomCard({ room, onConfigure, onQuickStatus, t }) {
 
 /* ── Main Page ── */
 export default function RoomManagementPage() {
+    const navigate = useNavigate();
+    const systemRole = localStorage.getItem('systemRole') || sessionStorage.getItem('systemRole');
+    const Layout = systemRole === 'CLINIC_MANAGER' ? OwnerLayout : AdminLayout;
     const { t } = useTranslation('rooms');
     const { rooms, stats, loading, error, fetchRooms, createRoom, updateRoom, deleteRoom, quickStatus, fetchDoctors, fetchNurses } = useRoomManagement();
     const { specializations } = useSpecializations();
@@ -575,7 +651,7 @@ export default function RoomManagementPage() {
     };
 
     return (
-        <AdminLayout>
+        <Layout>
             <div className="px-10 py-8 space-y-6">
                 <div className="flex items-start justify-between">
                     <div>
@@ -652,6 +728,9 @@ export default function RoomManagementPage() {
                                 t={t}
                                 onConfigure={setEditRoom}
                                 onQuickStatus={quickStatus}
+                                onOpenSchedule={room => {
+                                    navigate(`${systemRole === 'ADMIN' ? '/admin/schedule' : '/owner/schedule'}?departmentId=${room.id}`);
+                                }}
                             />
                         ))}
                     </div>
@@ -683,6 +762,6 @@ export default function RoomManagementPage() {
                     capabilities={capabilities}
                 />
             )}
-        </AdminLayout>
+        </Layout>
     );
 }

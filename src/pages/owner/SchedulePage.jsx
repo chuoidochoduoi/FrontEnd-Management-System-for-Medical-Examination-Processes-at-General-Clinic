@@ -1,8 +1,10 @@
 // src/pages/owner/SchedulePage.jsx
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, X, Search } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, X, Search } from 'lucide-react';
 import OwnerLayout from '@/components/layout/OwnerLayout';
+import AdminLayout from '@/components/layout/AdminLayout';
 import { useSchedule } from '@/hooks/useSchedule';
 
 const DAY_KEYS = ['mon','tue','wed','thu','fri','sat','sun'];
@@ -23,7 +25,7 @@ function fmtDate(d) {
     return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 function toISO(d) {
-    return d.toISOString().split('T')[0];
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /* ── Modal base ── */
@@ -59,6 +61,7 @@ function AssignModal({ shiftName, dayLabel, selectedIds, staff, assigning, onTog
     const nurses  = staff.filter(s => s.role === 'YT');
     const receptionists = staff.filter(s => s.role === 'RECEPTIONIST');
     const cashiers = staff.filter(s => s.role === 'CASHIER');
+    const managers = staff.filter(s => s.role === 'CLINIC_MANAGER' || s.role === 'QL');
     const filter  = (list) => list.filter(s => !query || s.name.toLowerCase().includes(query.toLowerCase()));
 
     return (
@@ -180,6 +183,29 @@ function AssignModal({ shiftName, dayLabel, selectedIds, staff, assigning, onTog
                     </div>
                 </div>
             )}
+
+            {/* Quản lý phòng khám */}
+            {filter(managers).length > 0 && (
+                <div>
+                    <p className="text-xs font-semibold text-gray-400 mb-2">QUẢN LÝ PHÒNG KHÁM</p>
+                    <div className="space-y-1">
+                        {filter(managers).map((s, i) => {
+                            const selected = selectedIds.includes(s.id);
+                            return (
+                                <div key={s.id || i} className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                                    <p className="text-sm text-gray-800">{s.name}</p>
+                                    <button disabled={assigning} onClick={() => onToggle(s.id, !selected)}
+                                            className={`px-3 h-7 text-xs font-medium rounded-lg transition-colors ${selected
+                                                ? 'bg-gray-900 text-white'
+                                                : 'border border-gray-300 text-gray-600 hover:border-gray-500'} disabled:cursor-not-allowed disabled:opacity-50`}>
+                                        {selected ? t('scheduleManagement.assignModal.removeBtn') : t('scheduleManagement.assignModal.selectBtn')}
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </Modal>
     );
 }
@@ -187,13 +213,33 @@ function AssignModal({ shiftName, dayLabel, selectedIds, staff, assigning, onTog
 /* ── Main Page ── */
 export default function SchedulePage() {
     const { t } = useTranslation('schedule');
-    const { schedule, shifts, staff, weekStart, loading, copying, assigning, error, fetchSchedule, assignStaff, copyLastWeek, saveShifts, fetchStaffList } = useSchedule();
+    const { schedule, shifts, staff, coverage, weekStart, loading, copying, assigning, error, fetchSchedule, assignStaff, copyLastWeek, fetchStaffList } = useSchedule();
+    const [searchParams] = useSearchParams();
+    const [view, setView] = useState('professional');
+    const [departments, setDepartments] = useState([]);
+    const [departmentId, setDepartmentId] = useState(searchParams.get('departmentId') || '');
 
     const [monday,         setMonday]         = useState(() => getMonday());
     const [assignCell,     setAssignCell]     = useState(null); // { shiftId, dayKey, shiftName, dayLabel }
     const readOnly = false;
 
-    useEffect(() => { fetchSchedule(toISO(monday)); }, [monday]);
+    useEffect(() => {
+        fetch(`${import.meta.env.VITE_API_URL}/api/v1/departments/admin?page=0&size=200`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}` },
+        }).then(res => res.ok ? res.json() : Promise.reject())
+            .then(data => {
+                const rooms = data.content || [];
+                setDepartments(rooms);
+                if (!departmentId && rooms.length) setDepartmentId(rooms[0].departmentId);
+            }).catch(() => setDepartments([]));
+    }, []);
+
+    useEffect(() => {
+        if (view === 'professional' && !departmentId) return;
+        fetchSchedule(toISO(monday), view === 'professional'
+            ? { departmentId, staffGroup: 'PROFESSIONAL' }
+            : { staffGroup: 'GENERAL' });
+    }, [monday, view, departmentId]);
 
     const prevWeek = () => setMonday(prev => addDays(prev, -7));
     const nextWeek = () => setMonday(prev => addDays(prev,  7));
@@ -209,16 +255,70 @@ export default function SchedulePage() {
         assignStaff(assignCell.shiftId, assignCell.dayKey, staffId, add);
     };
 
+    const handleCopyLastWeek = () => {
+        const targetHasSchedule = Object.values(schedule).some(people => (people || []).length > 0);
+        if (targetHasSchedule && !window.confirm(
+            'Tuần đích đã có lịch. Sao chép sẽ thay thế các phân công hiện tại bằng lịch tuần trước. Bạn có muốn tiếp tục?'
+        )) return;
+        copyLastWeek();
+    };
+
+    const selectedDepartment = departments.find(room => room.departmentId === departmentId);
+    const eligibleStaff = view === 'professional'
+        ? staff.filter(person => person.departmentId === departmentId && ['BS', 'YT'].includes(person.role))
+        : staff.filter(person => ['RECEPTIONIST', 'CASHIER', 'CLINIC_MANAGER', 'LT', 'TN', 'QL'].includes(person.role));
+    const systemRole = localStorage.getItem('systemRole') || sessionStorage.getItem('systemRole');
+    const Layout = systemRole === 'ADMIN' ? AdminLayout : OwnerLayout;
+
     return (
-        <OwnerLayout>
+        <Layout>
             <div className="px-8 py-8 space-y-5">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                    <h1 className="text-base font-semibold text-gray-900">{t('scheduleManagement.pageTitle')}</h1>
+                    <div>
+                        <h1 className="text-base font-semibold text-gray-900">Phân công lịch trực</h1>
+                        <p className="mt-1 text-xs text-gray-400">Nhân sự thuộc phòng được cấu hình trước, sau đó mới phân vào từng ngày và ca.</p>
+                    </div>
                     <span className="text-xs text-gray-400">{t('scheduleManagement.systemStatus')}</span>
                 </div>
 
                 {/* Toolbar */}
+                <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="inline-flex rounded-xl bg-gray-100 p-1">
+                            <button onClick={() => setView('professional')}
+                                    className={`rounded-lg px-4 py-2 text-sm ${view === 'professional' ? 'bg-white font-medium text-gray-900 shadow-sm' : 'text-gray-500'}`}>
+                                Phòng chuyên môn
+                            </button>
+                            <button onClick={() => setView('general')}
+                                    className={`rounded-lg px-4 py-2 text-sm ${view === 'general' ? 'bg-white font-medium text-gray-900 shadow-sm' : 'text-gray-500'}`}>
+                                Vận hành chung
+                            </button>
+                        </div>
+                        {view === 'professional' && (
+                            <select value={departmentId} onChange={e => setDepartmentId(e.target.value)}
+                                    className="h-10 min-w-[280px] rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none focus:border-primary-400">
+                                {departments.map(room => <option key={room.departmentId} value={room.departmentId}>
+                                    {room.roomCode} — {room.name}
+                                </option>)}
+                            </select>
+                        )}
+                    </div>
+                    {view === 'professional' && selectedDepartment && (
+                        <div className="grid gap-3 rounded-xl bg-blue-50/60 p-3 text-xs text-gray-600 sm:grid-cols-3">
+                            <span><b>Phụ trách chuyên môn:</b> {selectedDepartment.headDoctor?.fullName || 'Chưa chọn'}</span>
+                            <span><b>Nhân sự phòng:</b> {selectedDepartment.doctors?.length || 0} bác sĩ, {selectedDepartment.nurses?.length || 0} y tá</span>
+                            <span><b>Phân lịch:</b> mỗi ca tối đa 1 bác sĩ</span>
+                        </div>
+                    )}
+                    {view === 'general' && (
+                        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                            <span>Mỗi ca từ <b>Thứ Hai đến Thứ Bảy</b> nên có ít nhất <b>01 lễ tân (LT)</b> và <b>01 thu ngân (TN)</b>. Thiếu nhân sự không khóa hoạt động phòng khám nhưng hệ thống sẽ cảnh báo tại ca tương ứng.</span>
+                        </div>
+                    )}
+                </div>
+
                 <div className="flex items-center gap-3 flex-wrap">
                     {/* Week nav */}
                     <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 h-10">
@@ -229,7 +329,7 @@ export default function SchedulePage() {
                         <button onClick={nextWeek} className="text-gray-400 hover:text-gray-700 transition-colors"><ChevronRight size={15}/></button>
                     </div>
 
-                    {!readOnly && <button onClick={copyLastWeek} disabled={copying || loading}
+                    {!readOnly && <button onClick={handleCopyLastWeek} disabled={copying || loading}
                             className="h-10 px-4 border border-gray-200 rounded-xl text-sm text-gray-700 hover:border-gray-400 transition-colors whitespace-nowrap ml-auto disabled:cursor-not-allowed disabled:opacity-60">
                         {copying ? t('scheduleManagement.loading') : t('scheduleManagement.copyLastWeek')}
                     </button>}
@@ -266,10 +366,37 @@ export default function SchedulePage() {
                                     {/* Day cells */}
                                     {DAY_KEYS.map((dk, di) => {
                                         const people = getCellPeople(shift.id, dk);
+                                        const cellCoverage = coverage[getCellKey(shift.id, dk)];
+                                        const hasReceptionist = people.some(person => ['LT', 'RECEPTIONIST'].includes(person.role));
+                                        const hasCashier = people.some(person => ['TN', 'CASHIER'].includes(person.role));
+                                        const missingOperationalRoles = [
+                                            !hasReceptionist ? 'RECEPTIONIST' : null,
+                                            !hasCashier ? 'CASHIER' : null,
+                                        ].filter(Boolean);
+                                        const operationalCoverageStatus = dk === 'sun'
+                                            ? 'NOT_REQUIRED'
+                                            : missingOperationalRoles.length === 0 ? 'COVERED' : 'MISSING_OPERATIONAL_ROLE';
                                         const dayLabel = `${t(`scheduleManagement.days.${dk}`)} ${fmtDate(addDays(monday, di))}`;
                                         return (
                                             <td key={dk} className="px-3 py-3 align-top border-l border-gray-100 min-w-[120px]">
                                                 <div className="space-y-1">
+                                                    {view === 'professional' && (
+                                                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${cellCoverage?.status === 'COVERED'
+                                                            ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                            {cellCoverage?.status === 'COVERED' ? 'Đủ bác sĩ' : 'Thiếu bác sĩ'}
+                                                        </span>
+                                                    )}
+                                                    {view === 'general' && operationalCoverageStatus !== 'NOT_REQUIRED' && (
+                                                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${operationalCoverageStatus === 'COVERED'
+                                                            ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                                                            {operationalCoverageStatus === 'COVERED'
+                                                                ? 'Đủ LT · TN'
+                                                                : `Thiếu ${[
+                                                                    missingOperationalRoles.includes('RECEPTIONIST') ? 'lễ tân' : null,
+                                                                    missingOperationalRoles.includes('CASHIER') ? 'thu ngân' : null,
+                                                                ].filter(Boolean).join(' và ') || 'nhân sự vận hành'}`}
+                                                        </span>
+                                                    )}
                                                     {people.map((p, pi) => (
                                                         <div key={p.id || pi}
                                                              className="text-xs text-gray-800 bg-gray-50 rounded px-2 py-1 flex items-center justify-between gap-1">
@@ -317,12 +444,12 @@ export default function SchedulePage() {
                     shiftName={assignCell.shiftName}
                     dayLabel={assignCell.dayLabel}
                     selectedIds={getSelectedIds(assignCell.shiftId, assignCell.dayKey)}
-                    staff={staff}
+                    staff={eligibleStaff}
                     assigning={assigning}
                     onToggle={handleToggle}
                     onClose={() => setAssignCell(null)}
                 />
             )}
-        </OwnerLayout>
+        </Layout>
     );
 }

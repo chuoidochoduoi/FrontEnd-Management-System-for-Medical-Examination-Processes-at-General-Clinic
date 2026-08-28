@@ -283,6 +283,11 @@ function App() {
             <SchedulePage />
           </ProtectedRoute>
         } />
+        <Route path={ROUTES.ADMIN_SCHEDULE} element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <SchedulePage />
+          </ProtectedRoute>
+        } />
         <Route path={ROUTES.OWNER_REPORT} element={
           <ProtectedRoute allowedRoles={['CLINIC_MANAGER']}>
             <ReportPage />

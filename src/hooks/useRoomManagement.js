@@ -93,6 +93,10 @@ export function useRoomManagement() {
                 status: STATUS_MAP[d.status] || 'available',
                 doctor: d.headDoctor?.fullName || '',
                 headDoctorId: d.headDoctor?.staffId || null,
+                doctors: d.doctors || [],
+                doctorsOnDuty: d.doctorsOnDuty || [],
+                nursesOnDuty: d.nursesOnDuty || [],
+                coverageStatus: d.coverageStatus || 'UNASSIGNED',
                 specializationId: d.specializationId || null,
                 specializationName: d.specializationName || '',
                 nurses: d.nurses || [],
@@ -130,9 +134,11 @@ export function useRoomManagement() {
             roomCode: payload.roomCode || '',
             name: payload.name,
             departmentType: deptType,
-            status: 'AVAILABLE',
+            status: ({ available: 'AVAILABLE', occupied: 'IN_SESSION', maintenance: 'MAINTENANCE' })[payload.status]
+                || payload.status || 'AVAILABLE',
             description: payload.description || payload.doctor || '',
             headDoctorId: payload.doctorId || payload.headDoctorId || null,
+            doctorIds: payload.doctorIds || [],
             specializationId: payload.specializationId || null,
             nurseIds: payload.nurseIds || [],
             capabilityIds: payload.capabilityIds || [],
@@ -174,6 +180,9 @@ export function useRoomManagement() {
         }
         if (payload.headDoctorId !== undefined) {
             body.headDoctorId = payload.headDoctorId;
+        }
+        if (payload.doctorIds !== undefined) {
+            body.doctorIds = payload.doctorIds;
         }
         if (payload.nurseIds !== undefined) {
             body.nurseIds = payload.nurseIds;

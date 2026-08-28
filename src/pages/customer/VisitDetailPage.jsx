@@ -775,10 +775,15 @@ export default function VisitDetailPage() {
     }));
 
     useEffect(() => {
-        if (activeExam >= examinations.length) {
+        if (examinations.length === 0) {
             setActiveExam(0);
+            return;
         }
-    }, [examinations.length]);
+        const selectedIndex = examinations.findIndex(
+            exam => String(exam.recordId) === String(id)
+        );
+        setActiveExam(selectedIndex >= 0 ? selectedIndex : 0);
+    }, [id, examinations.length]);
 
     useEffect(() => {
         if (activeTest >= tests.length) {
@@ -1352,23 +1357,22 @@ export default function VisitDetailPage() {
                             />
 
                             <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                                Danh sách hồ sơ khám (
+                                Bệnh án khác trong cùng lượt (
                                 {
-                                    examinations.length
+                                    Math.max(0, examinations.length - 1)
                                 }
                                 )
                             </h2>
                         </div>
 
-                        {examinations.length >
-                        0 ? (
+                        {examinations.length > 1 ? (
                             <>
                                 <div className="max-h-[340px] space-y-2 overflow-y-auto pr-1">
                                     {examinations.map(
                                         (
                                             exam,
                                             index
-                                        ) => (
+                                        ) => String(exam.recordId) === String(id) ? null : (
                                             <ExaminationItem
                                                 key={
                                                     exam.recordId ||
@@ -1380,22 +1384,16 @@ export default function VisitDetailPage() {
                                                 index={
                                                     index
                                                 }
-                                                active={
-                                                    activeExam ===
-                                                    index
-                                                }
-                                                onClick={() =>
-                                                    setActiveExam(
-                                                        index
-                                                    )
-                                                }
+                                                active={false}
+                                                onClick={() => navigate(
+                                                    `${ROUTES.CUSTOMER_VISIT_HISTORY}/${exam.recordId}`
+                                                )}
                                             />
                                         )
                                     )}
                                 </div>
 
-                                {examinations.length >
-                                    3 && (
+                                {examinations.length > 4 && (
                                         <p className="mt-3 text-center text-[11px] text-gray-400">
                                             ↓ Cuộn để xem
                                             thêm
@@ -1404,8 +1402,7 @@ export default function VisitDetailPage() {
                             </>
                         ) : (
                             <div className="rounded-xl border border-dashed border-gray-200 p-5 text-center text-sm text-gray-400">
-                                Không có hồ sơ khám
-                                bệnh.
+                                Không có bệnh án khác trong lượt này.
                             </div>
                         )}
                     </aside>

@@ -42,6 +42,16 @@ const displayValue = (field, raw) => {
     return String(raw);
 };
 
+const referenceText = (field, flag) => {
+    const range = flag?.referenceRange || field.referenceRanges?.[0];
+    if (!range) return '';
+    if (Array.isArray(range.normalValues)) return range.normalValues.join(', ');
+    if (range.low != null && range.high != null) return `${range.low} – ${range.high}${field.unit ? ` ${field.unit}` : ''}`;
+    if (range.low != null) return `≥ ${range.low}${field.unit ? ` ${field.unit}` : ''}`;
+    if (range.high != null) return `≤ ${range.high}${field.unit ? ` ${field.unit}` : ''}`;
+    return '';
+};
+
 export default function ClinicalDataDisplay({
     clinicalForm,
     schema = clinicalForm?.schema,
@@ -85,14 +95,18 @@ export default function ClinicalDataDisplay({
                     {open && <dl className="grid grid-cols-1 gap-x-6 px-4 py-1 md:grid-cols-2">
                         {groupFields.map(field => {
                             const raw = values?.[field.key];
-                            const flag = flags?.[field.key]?.status;
-                            const abnormal = ['HIGH', 'LOW', 'ABNORMAL'].includes(flag);
+                            const flagDetail = flags?.[field.key];
+                            const flag = flagDetail?.status;
+                            const abnormal = ['HIGH', 'LOW', 'ABNORMAL', 'CRITICAL_LOW', 'CRITICAL_HIGH'].includes(flag);
+                            const critical = ['CRITICAL_LOW', 'CRITICAL_HIGH'].includes(flag);
+                            const reference = referenceText(field, flagDetail);
                             return <div key={field.key} className={field.type === 'TEXTAREA' ? 'border-b border-slate-100 py-3 md:col-span-2' : 'border-b border-slate-100 py-3'}>
                                 <dt className="text-xs text-slate-400">{field.label || field.key}</dt>
                                 <dd className={`mt-1 whitespace-pre-wrap text-sm font-medium ${raw === null || raw === undefined || raw === '' ? 'text-slate-400' : 'text-slate-800'}`}>
                                     {displayValue(field, raw)}{field.unit && raw !== null && raw !== undefined && raw !== '' ? ` ${field.unit}` : ''}
                                 </dd>
-                                {flag && <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${abnormal ? 'text-amber-700' : 'text-emerald-700'}`}>
+                                {reference && <p className="mt-1 text-[11px] text-slate-400">Tham chiếu: {reference}</p>}
+                                {flag && <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${critical ? 'text-red-700' : abnormal ? 'text-amber-700' : flag === 'NORMAL' ? 'text-emerald-700' : 'text-slate-500'}`}>
                                     {abnormal ? <AlertCircle size={12}/> : <CheckCircle2 size={12}/>} {flag}
                                 </span>}
                             </div>;

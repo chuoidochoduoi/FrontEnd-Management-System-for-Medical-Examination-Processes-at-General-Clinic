@@ -18,13 +18,19 @@ export function useSchedule() {
     const [copying,    setCopying]    = useState(false);
     const [assigningKeys, setAssigningKeys] = useState(() => new Set());
     const assigningKeysRef = useRef(new Set());
+    const filtersRef = useRef({});
+    const [coverage, setCoverage] = useState({});
     const [error,      setError]      = useState('');
 
-    const fetchSchedule = useCallback(async (week) => {
+    const fetchSchedule = useCallback(async (week, filters = {}) => {
         setLoading(true); setError('');
+        filtersRef.current = filters;
         try {
+            const params = new URLSearchParams({ week });
+            if (filters.departmentId) params.set('departmentId', filters.departmentId);
+            if (filters.staffGroup) params.set('staffGroup', filters.staffGroup);
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/v1/clinic-manager/schedules?week=${week}`,
+                `${import.meta.env.VITE_API_URL}/api/v1/clinic-manager/schedules?${params}`,
                 { headers: bearer() }
             );
             if (!res.ok) throw new Error(t('scheduleManagement.errors.loadFailed'));
@@ -35,6 +41,7 @@ export function useSchedule() {
             )));
             setShifts(data.shifts ?? []);
             setStaff((data.staff ?? []).map(normalizePerson));
+            setCoverage(data.coverage ?? {});
             setWeekStart(week);
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
@@ -54,18 +61,7 @@ export function useSchedule() {
             });
             const responseData = await res.json().catch(() => null);
             if (!res.ok) throw new Error(responseData?.message || t('scheduleManagement.errors.saveFailed'));
-            const cellKey = `${shiftId}_${dayKey}`;
-            setSchedule(prev => {
-                const cell = prev[cellKey] ?? [];
-                const exists = cell.some(person => (person.id ?? person.staffId) === staffId);
-                const selectedStaff = staff.find(person => (person.id ?? person.staffId) === staffId);
-                return {
-                    ...prev,
-                    [cellKey]: add
-                        ? (exists || !selectedStaff ? cell : [...cell, { ...selectedStaff, id: staffId }])
-                        : cell.filter(person => (person.id ?? person.staffId) !== staffId),
-                };
-            });
+            await fetchSchedule(weekStart, filtersRef.current);
             toast.success(add ? 'Phân công nhân sự thành công!' : 'Gỡ nhân sự khỏi ca thành công!');
         } catch (requestError) { setError(requestError.message); toast.error(requestError.message); }
         finally {
@@ -87,8 +83,7 @@ export function useSchedule() {
                 body: JSON.stringify({ week: weekStart }),
             });
             if (!res.ok) throw new Error(t('scheduleManagement.errors.saveFailed'));
-            const data = await res.json();
-            setSchedule(data.schedule ?? {});
+            await fetchSchedule(weekStart, filtersRef.current);
             toast.success('Sao chép lịch tuần trước thành công!');
         } catch (err) { setError(err.message); toast.error(err.message); }
         finally { setCopying(false); }
@@ -108,6 +103,8 @@ export function useSchedule() {
                 name: s.fullName,
                 role: ['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(s.systemRole) ? 'BS' :
                       s.systemRole === 'NURSE' ? 'YT' : s.systemRole,
+                departmentId: s.assignedDepartmentId || s.departmentId || null,
+                departmentName: s.departmentName || '',
             })));
         } catch (err) {
             console.error('[fetchStaffList] Error:', err);
@@ -132,5 +129,5 @@ export function useSchedule() {
         }
     };
 
-    return { schedule, shifts, staff, weekStart, loading, copying, assigning: assigningKeys.size > 0, error, fetchSchedule, assignStaff, copyLastWeek, saveShifts, fetchStaffList };
+    return { schedule, shifts, staff, coverage, weekStart, loading, copying, assigning: assigningKeys.size > 0, error, fetchSchedule, assignStaff, copyLastWeek, saveShifts, fetchStaffList };
 }

@@ -4,16 +4,45 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
+import { ChevronDown, Info, Search } from 'lucide-react';
 
 import CustomerLayout from '@/components/layout/CustomerLayout';
 import { useAppointment } from '@/hooks/useAppointment';
 import { useProfile } from '@/hooks/useProfile';
 import AppointmentConfirmModal from '@/components/ui/AppointmentConfirmModal';
-import ServiceSelectionCard, { groupServicesBySpecialty } from '@/components/appointment/ServiceSelectionCard';
+import { groupServicesBySpecialty } from '@/components/appointment/ServiceSelectionCard';
 import { ROUTES } from '@/constants/routes';
 
 const formatVND = amount =>
     new Intl.NumberFormat('vi-VN').format(amount || 0) + ' đ';
+
+const toLocalDateValue = value => {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const getBookingDateRange = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const minimum = new Date(today);
+    minimum.setHours(0, 0, 0, 0);
+    minimum.setDate(minimum.getDate() + 1);
+    const maximum = new Date(today);
+    maximum.setFullYear(maximum.getFullYear() + 1);
+    return { minimum: toLocalDateValue(minimum), maximum: toLocalDateValue(maximum) };
+};
+
+const splitDate = value => {
+    const [year = '', month = '', day = ''] = (value || '').split('-');
+    return { year, month, day };
+};
+
+const daysInMonth = (year, month) => {
+    if (!year || !month) return 31;
+    return new Date(Number(year), Number(month), 0).getDate();
+};
 
 const calculateAge = dob => {
     if (!dob) return null;
@@ -103,6 +132,8 @@ export default function CustomerAppointmentPage() {
         useState(
             initialState.initialDate || ''
         );
+    const initialDateParts = splitDate(initialState.initialDate);
+    const [dateParts, setDateParts] = useState(initialDateParts);
 
     const [shiftId, setShiftId] =
         useState(
@@ -126,6 +157,66 @@ export default function CustomerAppointmentPage() {
         setShowConfirmModal
     ] = useState(false);
 
+    const [activeServiceTab, setActiveServiceTab] = useState('EXAMINATION');
+    const [serviceSearch, setServiceSearch] = useState('');
+    const [expandedGroups, setExpandedGroups] = useState({
+        EXAMINATION: null,
+        PARACLINICAL: null,
+    });
+
+    const bookingDateRange = useMemo(() => getBookingDateRange(), []);
+    const bookingYears = useMemo(() => {
+        const start = Number(bookingDateRange.minimum.slice(0, 4));
+        const end = Number(bookingDateRange.maximum.slice(0, 4));
+        return Array.from({ length: end - start + 1 }, (_, index) => String(start + index));
+    }, [bookingDateRange]);
+
+    const examinationCount = selectedServices.filter(
+        service => service.departmentType === 'EXAMINATION'
+    ).length;
+    const paraclinicalCount = selectedServices.length - examinationCount;
+
+    const visibleServiceGroups = useMemo(() => {
+        const keyword = serviceSearch.trim().toLocaleLowerCase('vi');
+        const filtered = services.filter(service => {
+            const correctType = activeServiceTab === 'EXAMINATION'
+                ? service.departmentType === 'EXAMINATION'
+                : service.departmentType !== 'EXAMINATION';
+            if (!correctType) return false;
+            if (!keyword) return true;
+            return [service.name, service.description, service.specializationName,
+                service.department, service.capabilityName]
+                .filter(Boolean)
+                .join(' ')
+                .toLocaleLowerCase('vi')
+                .includes(keyword);
+        });
+        return groupServicesBySpecialty(filtered);
+    }, [services, activeServiceTab, serviceSearch]);
+
+    useEffect(() => {
+        if (visibleServiceGroups.length === 0 || serviceSearch.trim()) return;
+        setExpandedGroups(previous => previous[activeServiceTab]
+            ? previous
+            : { ...previous, [activeServiceTab]: visibleServiceGroups[0][0] });
+    }, [activeServiceTab, serviceSearch, visibleServiceGroups]);
+
+    const updateAppointmentDate = (part, value) => {
+        setDateParts(previous => {
+            const next = { ...previous, [part]: value };
+            const maximumDay = daysInMonth(next.year, next.month);
+            if (next.day && Number(next.day) > maximumDay) next.day = '';
+            if (!next.year || !next.month || !next.day) {
+                setDate('');
+                return next;
+            }
+            const candidate = `${next.year}-${String(next.month).padStart(2, '0')}-${String(next.day).padStart(2, '0')}`;
+            setDate(candidate >= bookingDateRange.minimum && candidate <= bookingDateRange.maximum
+                ? candidate : '');
+            return next;
+        });
+    };
+
     // =========================================================
     // SERVICE SELECT
     // =========================================================
@@ -142,13 +233,6 @@ export default function CustomerAppointmentPage() {
                     item =>
                         item.id !== service.id
                 );
-            }
-
-            if (service.departmentType === 'EXAMINATION') {
-                return [
-                    ...prev.filter(item => item.departmentType !== 'EXAMINATION'),
-                    service,
-                ];
             }
 
             return [
@@ -274,11 +358,6 @@ export default function CustomerAppointmentPage() {
             );
             return;
         }
-        if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
-            toast.error('Mỗi lượt khám chỉ được chọn 1 dịch vụ khám bệnh.');
-            return;
-        }
-
         if (!date) {
             toast.error(
                 'Vui lòng chọn ngày khám.'
@@ -360,6 +439,7 @@ export default function CustomerAppointmentPage() {
 
         setSelectedServices([]);
         setDate('');
+        setDateParts({ day: '', month: '', year: '' });
         setShiftId('');
 
         navigate(
@@ -484,107 +564,136 @@ export default function CustomerAppointmentPage() {
 
                         </div>
 
-                        {/* BODY */}
-                        <div className="p-6 sm:p-7">
+                        {/* SEARCH + TYPE */}
+                        <div className="border-b border-slate-100 px-6 py-4 sm:px-7">
+                            <div className="relative">
+                                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    type="search"
+                                    value={serviceSearch}
+                                    onChange={event => setServiceSearch(event.target.value)}
+                                    placeholder="Tìm tên dịch vụ, chuyên khoa hoặc kỹ thuật..."
+                                    className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50"
+                                />
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 rounded-xl bg-slate-100 p-1">
+                                {[
+                                    ['EXAMINATION', 'Khám bệnh'],
+                                    ['PARACLINICAL', 'Cận lâm sàng'],
+                                ].map(([type, label]) => {
+                                    const count = services.filter(service => type === 'EXAMINATION'
+                                        ? service.departmentType === 'EXAMINATION'
+                                        : service.departmentType !== 'EXAMINATION').length;
+                                    const selectedCount = type === 'EXAMINATION'
+                                        ? examinationCount : paraclinicalCount;
+                                    return (
+                                        <button
+                                            key={type}
+                                            type="button"
+                                            onClick={() => {
+                                                setActiveServiceTab(type);
+                                                setServiceSearch('');
+                                            }}
+                                            className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${activeServiceTab === type
+                                                ? 'bg-white text-slate-950 shadow-sm'
+                                                : 'text-slate-500 hover:text-slate-800'}`}
+                                        >
+                                            {label} · {count}{selectedCount > 0 ? ` (${selectedCount} đã chọn)` : ''}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div className={`mt-3 flex gap-2 rounded-xl border px-3 py-2.5 text-xs leading-5 ${activeServiceTab === 'EXAMINATION'
+                                ? 'border-blue-200 bg-blue-50 text-blue-800'
+                                : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
+                                <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                                {activeServiceTab === 'EXAMINATION' ? (
+                                    <p><strong>Lưu ý:</strong> Bạn có thể đặt nhiều dịch vụ khám trong một lịch hẹn. Khi check-in, các dịch vụ được thực hiện lần lượt và mỗi dịch vụ có một bệnh án riêng.</p>
+                                ) : (
+                                    <p>Có thể chọn nhiều dịch vụ cận lâm sàng. Dịch vụ khách tự đặt là bước độc lập; chỉ yêu cầu được bác sĩ chỉ định mới cần quay lại phòng khám.</p>
+                                )}
+                            </div>
+                        </div>
 
+                        {/* COMPACT SERVICE LIST */}
+                        <div className="p-5 sm:p-6">
                             {loadingServices ? (
-
-                                <div className="h-[320px] flex items-center justify-center">
-
-                                    <p className="text-sm text-slate-400">
-                                        {t('step2.loading')}
-                                    </p>
-
+                                <div className="flex h-52 items-center justify-center text-sm text-slate-400">
+                                    {t('step2.loading')}
                                 </div>
-
                             ) : services.length === 0 ? (
-
-                                <div className="h-[320px] flex items-center justify-center text-center">
-
+                                <div className="flex h-52 items-center justify-center text-center">
                                     <div>
-
-                                        <p className="font-semibold text-slate-700">
-                                            Chưa có dịch vụ
-                                        </p>
-
-                                        <p className="text-sm text-slate-400 mt-1">
-                                            Vui lòng thử lại sau.
-                                        </p>
-
+                                        <p className="font-semibold text-slate-700">Chưa có dịch vụ</p>
+                                        <p className="mt-1 text-sm text-slate-400">Vui lòng thử lại sau.</p>
                                     </div>
-
                                 </div>
-
+                            ) : visibleServiceGroups.length === 0 ? (
+                                <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-400">
+                                    Không tìm thấy dịch vụ phù hợp
+                                </div>
                             ) : (
-
-                                <div className="space-y-8">
-
-                                    {groupServicesBySpecialty(services).map(
-                                        ([department, deptServices]) => (
-
-                                                <div
-                                                    key={
-                                                        department
-                                                    }
+                                <div className="max-h-[540px] space-y-3 overflow-y-auto pr-1">
+                                    {visibleServiceGroups.map(([groupName, groupServices]) => {
+                                        const searching = serviceSearch.trim().length > 0;
+                                        const open = searching || expandedGroups[activeServiceTab] === groupName;
+                                        const selectedInGroup = groupServices.filter(service =>
+                                            selectedServices.some(item => item.id === service.id)).length;
+                                        return (
+                                            <section key={groupName} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => !searching && setExpandedGroups(previous => ({
+                                                        ...previous,
+                                                        [activeServiceTab]: open ? null : groupName,
+                                                    }))}
+                                                    className="flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-3 text-left"
                                                 >
-
-                                                    {/* GROUP TITLE */}
-                                                    <div className="flex items-center gap-3 mb-4">
-
-                                                        <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 whitespace-nowrap">
-
-                                                            {department}
-
-                                                        </h3>
-
-                                                        <div className="h-px bg-slate-100 flex-1" />
-
-                                                    </div>
-
-                                                    {/* SERVICES */}
-                                                    <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2">
-
-                                                        {deptServices.map(
-                                                            service => {
-
-                                                                const checked =
-                                                                    selectedServices.some(
-                                                                        s =>
-                                                                            s.id ===
-                                                                            service.id
-                                                                    );
-
-                                                                const eligibility =
-                                                                    getServiceEligibility(
-                                                                        service
-                                                                    );
-
-                                                                return (
-
-                                                                    <ServiceSelectionCard
-                                                                        key={service.id}
-                                                                        service={service}
-                                                                        selected={checked}
-                                                                        onToggle={toggleService}
-                                                                        eligibility={eligibility}
+                                                    <span className="text-sm font-bold text-slate-700">
+                                                        {groupName} · {groupServices.length} dịch vụ
+                                                        {selectedInGroup > 0 && <span className="ml-2 text-primary-700">· {selectedInGroup} đã chọn</span>}
+                                                    </span>
+                                                    <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${open ? 'rotate-180' : ''}`} />
+                                                </button>
+                                                {open && (
+                                                    <div className="divide-y divide-slate-100 px-4">
+                                                        {groupServices.map(service => {
+                                                            const selected = selectedServices.some(item => item.id === service.id);
+                                                            const eligibility = getServiceEligibility(service);
+                                                            const disabled = eligibility.eligible === false;
+                                                            return (
+                                                                <label
+                                                                    key={service.id}
+                                                                    className={`flex min-h-[74px] items-start gap-3 py-3 transition ${disabled
+                                                                        ? 'cursor-not-allowed bg-slate-50 opacity-60'
+                                                                        : 'cursor-pointer hover:bg-slate-50'} ${selected ? 'bg-primary-50/60' : ''}`}
+                                                                >
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={selected}
+                                                                        disabled={disabled}
+                                                                        onChange={() => toggleService(service)}
+                                                                        className="mt-1 h-4 w-4 shrink-0 accent-primary-600"
                                                                     />
-
-                                                                );
-
-                                                            }
-                                                        )}
-
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p className="text-sm font-semibold text-slate-900">{service.name}</p>
+                                                                        {service.description && <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{service.description}</p>}
+                                                                        {disabled && <p className="mt-1 text-xs font-medium text-red-600">{eligibility.reason}</p>}
+                                                                    </div>
+                                                                    <div className="shrink-0 text-right">
+                                                                        <p className="text-sm font-bold text-primary-700">{formatVND(service.price)}</p>
+                                                                        {service.durationMinutes && <p className="mt-1 text-[11px] text-slate-400">{service.durationMinutes} phút</p>}
+                                                                    </div>
+                                                                </label>
+                                                            );
+                                                        })}
                                                     </div>
-
-                                                </div>
-
-                                            )
-                                        )}
-
+                                                )}
+                                            </section>
+                                        );
+                                    })}
                                 </div>
-
                             )}
-
                         </div>
 
                     </section>
@@ -620,19 +729,42 @@ export default function CustomerAppointmentPage() {
                                         Ngày khám
                                     </label>
 
-                                    <input
-                                        type="date"
-                                        value={date}
-                                        min={
-                                            (() => { const value = new Date(); value.setDate(value.getDate() + 1); return value.toISOString().split('T')[0]; })()
-                                        }
-                                        onChange={e =>
-                                            setDate(
-                                                e.target.value
-                                            )
-                                        }
-                                        className="w-full h-13 px-4 py-3 text-sm font-semibold text-slate-900 bg-white border border-slate-200 rounded-xl outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-50 transition-all"
-                                    />
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <select
+                                            aria-label="Ngày khám"
+                                            value={dateParts.day}
+                                            onChange={event => updateAppointmentDate('day', event.target.value)}
+                                            className="h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-50"
+                                        >
+                                            <option value="">Ngày</option>
+                                            {Array.from({ length: daysInMonth(dateParts.year, dateParts.month) }, (_, index) => String(index + 1).padStart(2, '0'))
+                                                .map(day => <option key={day} value={day}>{day}</option>)}
+                                        </select>
+                                        <select
+                                            aria-label="Tháng khám"
+                                            value={dateParts.month}
+                                            onChange={event => updateAppointmentDate('month', event.target.value)}
+                                            className="h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-50"
+                                        >
+                                            <option value="">Tháng</option>
+                                            {Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0'))
+                                                .map(month => <option key={month} value={month}>{month}</option>)}
+                                        </select>
+                                        <select
+                                            aria-label="Năm khám"
+                                            value={dateParts.year}
+                                            onChange={event => updateAppointmentDate('year', event.target.value)}
+                                            className="h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-50"
+                                        >
+                                            <option value="">Năm</option>
+                                            {bookingYears.map(year => <option key={year} value={year}>{year}</option>)}
+                                        </select>
+                                    </div>
+                                    {dateParts.day && dateParts.month && dateParts.year && !date && (
+                                        <p className="mt-2 text-xs font-medium text-red-600">
+                                            Ngày khám phải từ ngày mai đến tối đa 12 tháng tiếp theo.
+                                        </p>
+                                    )}
 
                                 </div>
 
@@ -716,9 +848,9 @@ export default function CustomerAppointmentPage() {
                                                                 }
                                                             </p>
 
-                                                            {!shift.available && <p className="mt-1 text-[11px] font-medium text-amber-700">No available schedule</p>}
+                                                            {!shift.available && <p className="mt-1 text-[11px] font-medium text-amber-700">Ca chưa có đủ nhân sự</p>}
 
-                                                            {shift.timeSource === 'SPECIAL' && <p className="mt-1 text-[11px] font-medium text-blue-600">Special working hours</p>}
+                                                            {shift.timeSource === 'SPECIAL' && <p className="mt-1 text-[11px] font-medium text-blue-600">Giờ làm việc ngoại lệ</p>}
 
                                                             <p
                                                                 className={`
@@ -777,7 +909,7 @@ export default function CustomerAppointmentPage() {
                                             {selectedServices.length ===
                                             0
                                                 ? 'Chưa chọn dịch vụ'
-                                                : `${selectedServices.length} dịch vụ đã chọn · ${selectedServices.filter(service => service.departmentType === 'EXAMINATION').length}/1 dịch vụ khám`
+                                                : `${selectedServices.length} dịch vụ đã chọn · Khám bệnh: ${examinationCount} · Cận lâm sàng: ${paraclinicalCount}`
                                             }
 
                                         </p>

@@ -21,87 +21,27 @@ import CreateTicketConfirmModal from '@/components/ui/CreateTicketConfirmModal';
 import LabPackageAnalytePicker, {
     isPackageOrAnalyteService,
 } from '@/components/clinical/LabPackageAnalytePicker';
+import {
+    BLOOD_TYPES,
+    buildDobIso,
+    EXAM_GROUPS,
+    formatCurrency as fmt,
+    normalizePhone,
+    normalizeText,
+    PARACLINICAL_GROUPS,
+    serviceGroup,
+    toGenderEnum,
+} from '@/features/reception/create-ticket/createTicketUtils';
 
 /* =========================================================
    HELPERS
 ========================================================= */
-
-const fmt = (value) =>
-    value != null
-        ? `${new Intl.NumberFormat('vi-VN').format(
-            Number(value)
-        )}đ`
-        : '—';
-
-const EXAM_GROUPS = ['Nội khoa', 'Ngoại khoa', 'Nhi khoa', 'Sản phụ khoa', 'Da liễu', 'Khám bệnh khác'];
-const PARACLINICAL_GROUPS = ['Xét nghiệm', 'Chẩn đoán hình ảnh', 'Cận lâm sàng khác'];
-
-const normalizeText = (value = '') => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-const normalizePhone = (value = '') => {
-    const digits = value.replace(/\D/g, '');
-    return digits.startsWith('84') ? `0${digits.slice(2)}` : digits;
-};
-
-const buildDobIso = (day, month, year) => {
-    if (!day || !month || !year || String(year).length !== 4) return '';
-    const numericDay = Number(day);
-    const numericMonth = Number(month);
-    const numericYear = Number(year);
-    const value = new Date(Date.UTC(numericYear, numericMonth - 1, numericDay));
-    if (value.getUTCFullYear() !== numericYear
-        || value.getUTCMonth() !== numericMonth - 1
-        || value.getUTCDate() !== numericDay) return '';
-    return `${String(numericYear).padStart(4, '0')}-${String(numericMonth).padStart(2, '0')}-${String(numericDay).padStart(2, '0')}`;
-};
-
-const serviceGroup = (service) => {
-    if (service.departmentType === 'EXAMINATION') {
-        const name = normalizeText(service.specializationName || service.department);
-        if (name.includes('noi khoa')) return 'Nội khoa';
-        if (name.includes('ngoai khoa')) return 'Ngoại khoa';
-        if (name.includes('nhi khoa')) return 'Nhi khoa';
-        if (name.includes('san') || name.includes('phu khoa')) return 'Sản phụ khoa';
-        if (name.includes('da lieu')) return 'Da liễu';
-        return 'Khám bệnh khác';
-    }
-    const detail = normalizeText(`${service.department} ${service.capabilityName} ${service.name}`);
-    if (/(x-quang|x quang|sieu am|ecg|dien tim|chan doan hinh anh)/.test(detail)) {
-        return 'Chẩn đoán hình ảnh';
-    }
-    if (/(xet nghiem|huyet hoc|sinh hoa|nuoc tieu|test nhanh|crp)/.test(detail)) return 'Xét nghiệm';
-    return 'Cận lâm sàng khác';
-};
 
 const inputCls =
     'w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-200 bg-white placeholder:text-gray-300';
 
 const labelCls =
     'block text-xs text-gray-500 mb-1.5';
-
-const BLOOD_TYPES = [
-    ['A_POSITIVE', 'A+'], ['A_NEGATIVE', 'A-'],
-    ['B_POSITIVE', 'B+'], ['B_NEGATIVE', 'B-'],
-    ['AB_POSITIVE', 'AB+'], ['AB_NEGATIVE', 'AB-'],
-    ['O_POSITIVE', 'O+'], ['O_NEGATIVE', 'O-'],
-];
-
-const toGenderEnum = (gender) => {
-    if (!gender) return null;
-
-    if (gender === 'male') {
-        return 'MALE';
-    }
-
-    if (gender === 'female') {
-        return 'FEMALE';
-    }
-
-    if (gender === 'other') {
-        return 'OTHER';
-    }
-
-    return gender;
-};
 
 /* =========================================================
    MAIN

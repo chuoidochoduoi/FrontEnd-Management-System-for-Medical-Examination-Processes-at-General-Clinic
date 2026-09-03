@@ -1,7 +1,7 @@
 // src/pages/admin/AccountManagementPage.jsx
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, X } from "lucide-react";
+import { Camera, Search, Trash2, UserRound, X } from "lucide-react";
 import { toast } from "react-toastify";
 import AdminLayout from "@/components/layout/AdminLayout";
 import ConfirmModal from "@/components/ui/ConfirmModal";
@@ -138,6 +138,39 @@ const normalizePhone = value => (value || '').trim().replace(/[\s.-]/g, '');
 const VIETNAM_MOBILE_REGEX = /^(?:0|\+84)[35789]\d{8}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
 
+const prepareAvatarImage = (file) => new Promise((resolve, reject) => {
+  if (!file || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    reject(new Error('Ảnh đại diện chỉ hỗ trợ JPG, PNG hoặc WEBP.'));
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    reject(new Error('Ảnh đại diện không được lớn hơn 5 MB.'));
+    return;
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  const image = new Image();
+  image.onload = () => {
+    const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
+    const sourceX = (image.naturalWidth - sourceSize) / 2;
+    const sourceY = (image.naturalHeight - sourceSize) / 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, 512, 512);
+    context.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, 512, 512);
+    URL.revokeObjectURL(objectUrl);
+    resolve(canvas.toDataURL('image/jpeg', 0.86));
+  };
+  image.onerror = () => {
+    URL.revokeObjectURL(objectUrl);
+    reject(new Error('Không thể đọc tệp ảnh đã chọn.'));
+  };
+  image.src = objectUrl;
+});
+
 /* ── Modal: Thêm nhân sự ── */
 function AddStaffModal({ onClose, onSubmit, t }) {
   const { specializations } = useSpecializations();
@@ -158,11 +191,13 @@ function AddStaffModal({ onClose, onSubmit, t }) {
     licenseNumber: "",
     nationalId: "",
     capabilityIds: [],
+    avatarUrl: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const overlayRef = useRef(null);
+  const avatarInputRef = useRef(null);
   useEffect(() => {
     if (!error) return;
     toast.error(error);
@@ -172,6 +207,17 @@ function AddStaffModal({ onClose, onSubmit, t }) {
   const set = (k, v) => {
     setForm((prev) => ({ ...prev, [k]: v }));
     setFieldErrors((prev) => prev[k] ? { ...prev, [k]: "" } : prev);
+  };
+
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      set('avatarUrl', await prepareAvatarImage(file));
+    } catch (avatarError) {
+      setError(avatarError.message);
+    }
   };
 
   const handleSubmit = async () => {
@@ -243,12 +289,13 @@ function AddStaffModal({ onClose, onSubmit, t }) {
       onClick={(e) => e.target === overlayRef.current && onClose()}
       className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4"
     >
-      <div className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100">
-          <h2 className="text-sm font-semibold text-gray-900">
-            {t("accountManagement.addStaffModal.title")}
-          </h2>
+        <div className="flex items-center justify-between border-b border-gray-100 px-7 py-5">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">{t("accountManagement.addStaffModal.title")}</h2>
+            <p className="mt-1 text-sm text-gray-500">Tạo tài khoản và hồ sơ làm việc cho nhân sự mới.</p>
+          </div>
           <button
             onClick={onClose}
             className="text-gray-300 hover:text-gray-600 transition-colors"
@@ -257,13 +304,54 @@ function AddStaffModal({ onClose, onSubmit, t }) {
           </button>
         </div>
 
-        <div className="px-7 py-6 space-y-7">
+        <div className="flex-1 overflow-y-auto px-7 py-6">
+          <div className="grid grid-cols-1 gap-7 lg:grid-cols-[250px_minmax(0,1fr)]">
+            <aside className="lg:sticky lg:top-0 lg:self-start">
+              <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-5 text-center">
+                <p className="mb-4 text-left text-sm font-bold text-gray-800">Ảnh đại diện</p>
+                <div className="mx-auto flex h-40 w-40 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-white text-teal-600 shadow-sm">
+                  {form.avatarUrl ? (
+                    <img src={form.avatarUrl} alt="Ảnh đại diện nhân sự mới" className="h-full w-full object-cover" />
+                  ) : (
+                    <UserRound size={66} strokeWidth={1.5} />
+                  )}
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white transition hover:bg-teal-700"
+                >
+                  <Camera size={17} /> {form.avatarUrl ? 'Đổi ảnh' : 'Chọn ảnh'}
+                </button>
+                {form.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={() => set('avatarUrl', '')}
+                    className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition hover:border-red-200 hover:text-red-600"
+                  >
+                    <Trash2 size={16} /> Xóa ảnh
+                  </button>
+                )}
+                <p className="mt-4 text-left text-xs leading-5 text-gray-500">
+                  JPG, PNG hoặc WEBP, tối đa 5 MB. Ảnh được cắt vuông và tối ưu trước khi lưu.
+                </p>
+              </div>
+            </aside>
+
+            <div className="space-y-7">
           {/* Section 1 - Account Info */}
-          <div>
+          <div className="rounded-2xl border border-gray-200 p-5">
             <p className="text-xs font-semibold text-gray-500 mb-4">
               {t("accountManagement.addStaffModal.section1")}
             </p>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
               {[
                 {
                   key: "username",
@@ -324,7 +412,7 @@ function AddStaffModal({ onClose, onSubmit, t }) {
 
           {/* Chuyên khoa phục vụ xác định phạm vi khám của bác sĩ. */}
           {form.systemRole === "DOCTOR" && (
-            <div className="space-y-4">
+            <div className="space-y-4 rounded-2xl border border-gray-200 p-5">
               <label className={labelCls}>Chuyên khoa phục vụ *</label>
               <select
                 value={form.specializationId}
@@ -344,11 +432,11 @@ function AddStaffModal({ onClose, onSubmit, t }) {
           )}
 
           {/* Section 2 - Personal Info */}
-          <div>
+          <div className="rounded-2xl border border-gray-200 p-5">
             <p className="text-xs font-semibold text-gray-500 mb-4">
               {t("accountManagement.addStaffModal.section2")}
             </p>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
               {[
                 {
                   key: "fullName",
@@ -406,7 +494,7 @@ function AddStaffModal({ onClose, onSubmit, t }) {
           </div>
 
           {/* Section 3 - Address */}
-          <div>
+          <div className="rounded-2xl border border-gray-200 p-5">
             <label className={labelCls}>
               {t("accountManagement.addStaffModal.fields.address")}
             </label>
@@ -418,11 +506,11 @@ function AddStaffModal({ onClose, onSubmit, t }) {
           </div>
 
           {/* Section 4 - Education */}
-          <div>
+          <div className="rounded-2xl border border-gray-200 p-5">
             <p className="text-xs font-semibold text-gray-500 mb-4">
               {t("accountManagement.addStaffModal.section3")} (không bắt buộc)
             </p>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
               {[
                 { key: "highestDegree", label: "Học vị (không bắt buộc)" },
                 { key: "university", label: "Trường đào tạo (không bắt buộc)" },
@@ -442,20 +530,22 @@ function AddStaffModal({ onClose, onSubmit, t }) {
             </div>
           </div>
 
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-7 py-5 border-t border-gray-100">
+        <div className="flex justify-end gap-3 border-t border-gray-100 bg-white px-7 py-5">
           <button
             onClick={onClose}
-            className="px-5 h-9 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            className="min-h-11 rounded-xl px-5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
           >
             {t("accountManagement.addStaffModal.cancel")}
           </button>
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="px-6 h-9 bg-gray-900 hover:bg-gray-700 disabled:opacity-60 text-white text-sm font-medium rounded-xl transition-colors"
+            className="min-h-11 rounded-xl bg-teal-600 px-6 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-60"
           >
             {submitting
               ? t("accountManagement.addStaffModal.submitting")
@@ -476,6 +566,7 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const overlayRef = useRef(null);
+  const avatarInputRef = useRef(null);
   useEffect(() => {
     if (!error) return;
     toast.error(error);
@@ -494,6 +585,7 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
           dateOfBirth: res.profile?.dateOfBirth || "",
           gender: res.profile?.gender || "",
           address: res.profile?.address || "",
+          avatarUrl: res.profile?.avatarUrl || "",
           systemRole: res.systemRole || "",
           specializationId: res.specialization?.specializationId || "",
           highestDegree: res.highestDegree || "",
@@ -513,6 +605,17 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
   }, [account.accountId]);
 
   const set = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
+
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      set("avatarUrl", await prepareAvatarImage(file));
+    } catch (avatarError) {
+      setError(avatarError.message);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!form.systemRole || !form.fullName || !form.phone || !form.gender || !form.dateOfBirth) {
@@ -576,12 +679,11 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
       onClick={(e) => e.target === overlayRef.current && onClose()}
       className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4"
     >
-      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
         <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100 flex-shrink-0">
           <div>
-            <h2 className="text-xs font-bold text-gray-900 tracking-widest">
-              Cập nhật nhân sự
-            </h2>
+            <h2 className="text-xl font-bold text-gray-900">Cập nhật nhân sự</h2>
+            <p className="mt-1 text-sm text-gray-500">Điều chỉnh hồ sơ, ảnh đại diện và phạm vi làm việc của nhân sự.</p>
           </div>
           <button
             onClick={onClose}
@@ -591,13 +693,54 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-7 py-6 space-y-8">
+        <div className="flex-1 overflow-y-auto px-7 py-6">
+          <div className="grid grid-cols-1 gap-7 lg:grid-cols-[250px_minmax(0,1fr)]">
+            <aside className="lg:sticky lg:top-0 lg:self-start">
+              <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-5 text-center">
+                <p className="mb-4 text-left text-sm font-bold text-gray-800">Ảnh đại diện</p>
+                <div className="mx-auto flex h-40 w-40 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-white text-teal-600 shadow-sm">
+                  {form.avatarUrl ? (
+                    <img src={form.avatarUrl} alt={`Ảnh đại diện ${form.fullName || "nhân sự"}`} className="h-full w-full object-cover" />
+                  ) : (
+                    <UserRound size={66} strokeWidth={1.5} />
+                  )}
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white transition hover:bg-teal-700"
+                >
+                  <Camera size={17} /> {form.avatarUrl ? "Đổi ảnh" : "Chọn ảnh"}
+                </button>
+                {form.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={() => set("avatarUrl", "")}
+                    className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition hover:border-red-200 hover:text-red-600"
+                  >
+                    <Trash2 size={16} /> Xóa ảnh
+                  </button>
+                )}
+                <p className="mt-4 text-left text-xs leading-5 text-gray-500">
+                  JPG, PNG hoặc WEBP, tối đa 5 MB. Ảnh được cắt vuông và tối ưu trước khi lưu.
+                </p>
+              </div>
+            </aside>
+
+            <div className="space-y-7">
           {/* Section 1 - Account */}
-          <div>
+          <div className="rounded-2xl border border-gray-200 p-5">
             <p className="text-xs font-semibold text-gray-500 mb-4">
               ■ {t("accountManagement.addStaffModal.section1")}
             </p>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
               <div>
                 <label className={labelCls}>Tài khoản đăng nhập (Không thể sửa)</label>
                 <input
@@ -622,7 +765,7 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
                   className={inputCls + " placeholder:text-gray-300"}
                 />
               </div>
-              <div className="col-span-2">
+              <div className="md:col-span-2">
                 <label className={labelCls}>Vai trò hệ thống</label>
                 <select
                   value={form.systemRole}
@@ -642,7 +785,7 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
           </div>
 
           {form.systemRole === "DOCTOR" && (
-            <div>
+            <div className="space-y-4 rounded-2xl border border-gray-200 p-5">
               <label className={labelCls}>Chuyên khoa phục vụ *</label>
               <select value={form.specializationId} onChange={(e) => set("specializationId", e.target.value)} className={inputCls}>
                 <option value="">-- Chọn chuyên khoa --</option>
@@ -662,11 +805,11 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
           )}
 
           {/* Section 2 - Personal Info */}
-          <div>
+          <div className="rounded-2xl border border-gray-200 p-5">
             <p className="text-xs font-semibold text-gray-500 mb-4">
               ■ {t("accountManagement.addStaffModal.section2")}
             </p>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
               {[
                 { key: "fullName", label: t("accountManagement.addStaffModal.fields.fullName") },
                 { key: "phone", label: t("accountManagement.addStaffModal.fields.phone") },
@@ -706,7 +849,7 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
           </div>
 
           {/* Section 3 - Address */}
-          <div>
+          <div className="rounded-2xl border border-gray-200 p-5">
             <label className={labelCls}>
               {t("accountManagement.addStaffModal.fields.address")}
             </label>
@@ -718,11 +861,11 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
           </div>
 
           {/* Section 4 - Education */}
-          <div>
+          <div className="rounded-2xl border border-gray-200 p-5">
             <p className="text-xs font-semibold text-gray-500 mb-4">
               ■ {t("accountManagement.addStaffModal.section3")} (không bắt buộc)
             </p>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
               {[
                 { key: "highestDegree", label: "Học vị (không bắt buộc)" },
                 { key: "university", label: "Trường đào tạo (không bắt buộc)" },
@@ -741,20 +884,22 @@ function UpdateStaffModal({ account, onClose, onSubmit, staffHook, t }) {
               ))}
             </div>
           </div>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-7 py-5 border-t border-gray-100 flex-shrink-0">
+        <div className="flex justify-end gap-3 border-t border-gray-100 bg-white px-7 py-5 flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-5 h-9 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            className="min-h-11 rounded-xl px-5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
           >
             {t("accountManagement.addStaffModal.cancel")}
           </button>
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="px-6 h-9 bg-gray-900 hover:bg-gray-700 disabled:opacity-60 text-white text-sm font-medium rounded-xl transition-colors"
+            className="min-h-11 rounded-xl bg-teal-600 px-6 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-60"
           >
             {submitting ? "Đang xử lý..." : "Cập nhật"}
           </button>

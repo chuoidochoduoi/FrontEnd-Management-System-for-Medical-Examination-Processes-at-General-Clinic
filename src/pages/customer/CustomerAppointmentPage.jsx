@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
-import { ChevronDown, Info, Search } from 'lucide-react';
+import { CalendarDays, ChevronDown, Info, Search, UserRound, UsersRound } from 'lucide-react';
 
 import CustomerLayout from '@/components/layout/CustomerLayout';
 import { useAppointment } from '@/hooks/useAppointment';
@@ -12,9 +12,23 @@ import { useProfile } from '@/hooks/useProfile';
 import AppointmentConfirmModal from '@/components/ui/AppointmentConfirmModal';
 import { groupServicesBySpecialty } from '@/components/appointment/ServiceSelectionCard';
 import { ROUTES } from '@/constants/routes';
+import { useFamilyMembers } from '@/hooks/useFamilyMembers';
+import { toggleServiceWithPolicy, serviceRelationHint } from '@/utils/serviceSelectionPolicy';
 
 const formatVND = amount =>
     new Intl.NumberFormat('vi-VN').format(amount || 0) + ' đ';
+
+const formatDateVi = value => {
+    if (!value) return '';
+    const [year, month, day] = value.split('-');
+    return year && month && day ? `${day}/${month}/${year}` : value;
+};
+
+const genderLabel = value => value === 'Nam' || value === 'MALE'
+    ? 'Nam'
+    : value === 'Nữ' || value === 'FEMALE'
+        ? 'Nữ'
+        : value || '';
 
 const toLocalDateValue = value => {
     const year = value.getFullYear();
@@ -32,16 +46,6 @@ const getBookingDateRange = () => {
     const maximum = new Date(today);
     maximum.setFullYear(maximum.getFullYear() + 1);
     return { minimum: toLocalDateValue(minimum), maximum: toLocalDateValue(maximum) };
-};
-
-const splitDate = value => {
-    const [year = '', month = '', day = ''] = (value || '').split('-');
-    return { year, month, day };
-};
-
-const daysInMonth = (year, month) => {
-    if (!year || !month) return 31;
-    return new Date(Number(year), Number(month), 0).getDate();
 };
 
 const calculateAge = dob => {
@@ -82,6 +86,7 @@ export default function CustomerAppointmentPage() {
         services,
         loadingServices,
         book,
+        bookGroup,
         loading: booking,
         error,
         shifts,
@@ -90,12 +95,44 @@ export default function CustomerAppointmentPage() {
     } = useAppointment();
 
     const { profile } = useProfile();
+    const { members: familyMembers, loading: familyLoading } = useFamilyMembers(false);
 
     const initialState =
         location.state || {};
 
     const isReschedule =
         !!initialState.rescheduleApptId;
+
+    const [bookingMode, setBookingMode] = useState('single');
+    const [selectedPatientId, setSelectedPatientId] = useState(initialState.patientProfileId || 'self');
+    const [groupPatientIds, setGroupPatientIds] = useState([]);
+    const [groupServiceMap, setGroupServiceMap] = useState({});
+    const [editingGroupPatientId, setEditingGroupPatientId] = useState(null);
+
+    const patientOptions = useMemo(() => [
+        profile ? {
+            patientProfileId: profile.profileId,
+            fullName: profile.fullName,
+            dateOfBirth: profile.dateOfBirth,
+            age: profile.age,
+            gender: profile.gender,
+            patientCode: profile.patientCode,
+            address: profile.address,
+            phone: profile.phone,
+            email: profile.email,
+            relationshipName: 'Tôi',
+            isSelf: true,
+        } : null,
+        ...familyMembers.map(member => ({ ...member, isSelf: false })),
+    ].filter(Boolean), [profile, familyMembers]);
+
+    const bookingPatient = useMemo(() => {
+        if (bookingMode === 'group' && editingGroupPatientId) {
+            return patientOptions.find(item => item.patientProfileId === editingGroupPatientId) || profile;
+        }
+        if (selectedPatientId === 'self') return profile;
+        return patientOptions.find(item => item.patientProfileId === selectedPatientId) || profile;
+    }, [bookingMode, editingGroupPatientId, patientOptions, profile, selectedPatientId]);
 
     // =========================================================
     // GUEST
@@ -132,8 +169,6 @@ export default function CustomerAppointmentPage() {
         useState(
             initialState.initialDate || ''
         );
-    const initialDateParts = splitDate(initialState.initialDate);
-    const [dateParts, setDateParts] = useState(initialDateParts);
 
     const [shiftId, setShiftId] =
         useState(
@@ -165,11 +200,6 @@ export default function CustomerAppointmentPage() {
     });
 
     const bookingDateRange = useMemo(() => getBookingDateRange(), []);
-    const bookingYears = useMemo(() => {
-        const start = Number(bookingDateRange.minimum.slice(0, 4));
-        const end = Number(bookingDateRange.maximum.slice(0, 4));
-        return Array.from({ length: end - start + 1 }, (_, index) => String(start + index));
-    }, [bookingDateRange]);
 
     const examinationCount = selectedServices.filter(
         service => service.departmentType === 'EXAMINATION'
@@ -201,44 +231,14 @@ export default function CustomerAppointmentPage() {
             : { ...previous, [activeServiceTab]: visibleServiceGroups[0][0] });
     }, [activeServiceTab, serviceSearch, visibleServiceGroups]);
 
-    const updateAppointmentDate = (part, value) => {
-        setDateParts(previous => {
-            const next = { ...previous, [part]: value };
-            const maximumDay = daysInMonth(next.year, next.month);
-            if (next.day && Number(next.day) > maximumDay) next.day = '';
-            if (!next.year || !next.month || !next.day) {
-                setDate('');
-                return next;
-            }
-            const candidate = `${next.year}-${String(next.month).padStart(2, '0')}-${String(next.day).padStart(2, '0')}`;
-            setDate(candidate >= bookingDateRange.minimum && candidate <= bookingDateRange.maximum
-                ? candidate : '');
-            return next;
-        });
-    };
-
     // =========================================================
     // SERVICE SELECT
     // =========================================================
     const toggleService = service => {
         setSelectedServices(prev => {
-            const existed =
-                prev.some(
-                    item =>
-                        item.id === service.id
-                );
-
-            if (existed) {
-                return prev.filter(
-                    item =>
-                        item.id !== service.id
-                );
-            }
-
-            return [
-                ...prev,
-                service
-            ];
+            const resolution = toggleServiceWithPolicy(prev, service, services);
+            if (resolution.message) toast.info(resolution.message);
+            return resolution.services;
         });
     };
 
@@ -247,13 +247,13 @@ export default function CustomerAppointmentPage() {
     // =========================================================
     const getServiceEligibility = service => {
         const patientAge =
-            profile
+            bookingPatient
                 ? (
-                    profile.age ??
+                    bookingPatient.age ??
                     (
-                        profile.dateOfBirth
+                        bookingPatient.dateOfBirth
                             ? calculateAge(
-                                profile.dateOfBirth
+                                bookingPatient.dateOfBirth
                             )
                             : null
                     )
@@ -265,7 +265,7 @@ export default function CustomerAppointmentPage() {
                 );
 
         const rawGender =
-            profile?.gender ||
+            bookingPatient?.gender ||
             gender;
 
         const patientGender =
@@ -347,12 +347,50 @@ export default function CustomerAppointmentPage() {
                 Number(service.price || 0),
             0
         );
+    const effectiveGroupServiceMap = useMemo(() => bookingMode !== 'group'
+        ? {}
+        : {
+            ...groupServiceMap,
+            ...(editingGroupPatientId ? { [editingGroupPatientId]: selectedServices } : {}),
+        }, [bookingMode, groupServiceMap, editingGroupPatientId, selectedServices]);
+    const groupServiceCount = bookingMode === 'group'
+        ? groupPatientIds.reduce((sum, id) => sum + (effectiveGroupServiceMap[id]?.length || 0), 0)
+        : 0;
+    const groupTotalCost = bookingMode === 'group'
+        ? groupPatientIds.reduce((sum, id) => sum + (effectiveGroupServiceMap[id] || [])
+            .reduce((patientSum, service) => patientSum + Number(service.price || 0), 0), 0)
+        : totalCost;
+    const selectedShift = useMemo(() => shifts.find(
+        shift => String(shift.id) === String(shiftId)
+    ), [shiftId, shifts]);
+    const confirmationGroupMembers = useMemo(() => bookingMode !== 'group' ? [] : groupPatientIds.map(id => {
+        const patient = patientOptions.find(item => item.patientProfileId === id);
+        const patientServices = effectiveGroupServiceMap[id] || [];
+        return {
+            patientProfileId: id,
+            fullName: patient?.fullName || 'Chưa xác định',
+            patientCode: patient?.patientCode,
+            relationshipName: patient?.relationshipName || (patient?.isSelf ? 'Tôi' : 'Thành viên'),
+            dateOfBirth: patient?.dateOfBirth ? formatDateVi(patient.dateOfBirth) : '',
+            ageGender: `${patient?.age ?? calculateAge(patient?.dateOfBirth) ?? '—'} tuổi · ${genderLabel(patient?.gender) || 'Chưa rõ'}`,
+            services: patientServices,
+            total: patientServices.reduce((sum, service) => sum + Number(service.price || 0), 0),
+        };
+    }), [bookingMode, effectiveGroupServiceMap, groupPatientIds, patientOptions]);
 
     // =========================================================
     // OPEN MODAL
     // =========================================================
     const handleSubmit = () => {
-        if (selectedServices.length === 0) {
+        if (bookingMode === 'group' && groupPatientIds.length < 2) {
+            toast.error('Vui lòng chọn ít nhất hai người để đặt lịch nhóm.');
+            return;
+        }
+        if (bookingMode === 'group' && groupPatientIds.some(id => !(effectiveGroupServiceMap[id]?.length))) {
+            toast.error('Mỗi người trong nhóm phải có ít nhất một dịch vụ.');
+            return;
+        }
+        if (bookingMode !== 'group' && selectedServices.length === 0) {
             toast.error(
                 'Vui lòng chọn ít nhất một dịch vụ.'
             );
@@ -379,9 +417,27 @@ export default function CustomerAppointmentPage() {
     // CONFIRM BOOKING
     // =========================================================
     const handleConfirm = async () => {
+        if (bookingMode === 'group') {
+            const currentMap = editingGroupPatientId
+                ? { ...groupServiceMap, [editingGroupPatientId]: selectedServices }
+                : groupServiceMap;
+            const groupBookings = groupPatientIds.map(patientProfileId => ({
+                patientProfileId,
+                services: currentMap[patientProfileId] || [],
+            }));
+            if (groupBookings.some(item => item.services.length === 0)) {
+                toast.error('Mỗi thành viên cần được chọn ít nhất một dịch vụ.');
+                return;
+            }
+            const success = await bookGroup({ date, shiftId, members: groupBookings });
+            if (!success) return;
+            setShowConfirmModal(false);
+            navigate(ROUTES.MY_APPOINTMENTS);
+            return;
+        }
         const patientInfo = profile
             ? {
-                customerId: profile.id,
+                patientProfileId: selectedPatientId === 'self' ? null : selectedPatientId,
 
                 fullName: profile.fullName || '',
 
@@ -439,12 +495,47 @@ export default function CustomerAppointmentPage() {
 
         setSelectedServices([]);
         setDate('');
-        setDateParts({ day: '', month: '', year: '' });
         setShiftId('');
 
         navigate(
             ROUTES.MY_APPOINTMENTS
         );
+    };
+
+    const toggleGroupPatient = patientProfileId => {
+        setGroupPatientIds(previous => {
+            const removing = previous.includes(patientProfileId);
+            const next = removing ? previous.filter(id => id !== patientProfileId) : [...previous, patientProfileId];
+            if (removing) {
+                setGroupServiceMap(map => {
+                    const copy = { ...map };
+                    delete copy[patientProfileId];
+                    return copy;
+                });
+                if (editingGroupPatientId === patientProfileId) {
+                    setEditingGroupPatientId(null);
+                    setSelectedServices([]);
+                }
+            }
+            return next;
+        });
+    };
+
+    const editGroupServices = patientProfileId => {
+        if (editingGroupPatientId) {
+            setGroupServiceMap(previous => ({ ...previous, [editingGroupPatientId]: selectedServices }));
+        }
+        setEditingGroupPatientId(patientProfileId);
+        setSelectedServices(groupServiceMap[patientProfileId] || []);
+    };
+
+    const applyServicesToAll = () => {
+        if (!selectedServices.length || groupPatientIds.length < 2) {
+            toast.error('Hãy chọn người và dịch vụ trước khi áp dụng cho cả nhóm.');
+            return;
+        }
+        setGroupServiceMap(Object.fromEntries(groupPatientIds.map(id => [id, [...selectedServices]])));
+        toast.success('Đã áp dụng danh sách dịch vụ cho tất cả thành viên.');
     };
 
     return (
@@ -453,7 +544,7 @@ export default function CustomerAppointmentPage() {
             {/* =================================================
                 PAGE CONTAINER
             ================================================= */}
-            <div className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 pb-14">
+            <div className="cares-booking-page w-full pb-14">
 
                 {/* =================================================
                     HEADER
@@ -533,6 +624,44 @@ export default function CustomerAppointmentPage() {
 
                 </div>
 
+                {!isReschedule && (
+                    <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div className="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <span className="text-[11px] font-bold tracking-[0.18em] text-primary-600">BƯỚC 00</span>
+                                <h2 className="mt-1 text-lg font-bold text-slate-900">Người được khám</h2>
+                            </div>
+                            <div className="grid grid-cols-2 rounded-xl bg-slate-100 p-1">
+                                <button type="button" onClick={() => { setBookingMode('single'); setSelectedServices([]); }} className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${bookingMode === 'single' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}><UserRound size={16} /> Đặt cá nhân</button>
+                                <button type="button" onClick={() => { setBookingMode('group'); setSelectedServices([]); }} className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${bookingMode === 'group' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}><UsersRound size={16} /> Đặt theo nhóm</button>
+                            </div>
+                        </div>
+                        <div className="p-5 sm:p-6">
+                            {familyLoading ? <p className="text-sm text-slate-400">Đang tải hồ sơ gia đình...</p> : bookingMode === 'single' ? (
+                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    {patientOptions.map(patient => {
+                                        const value = patient.isSelf ? 'self' : patient.patientProfileId;
+                                        const active = selectedPatientId === value;
+                                        return <button key={value} type="button" onClick={() => setSelectedPatientId(value)} className={`flex items-center gap-3 rounded-xl border p-4 text-left transition ${active ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-100' : 'border-slate-200 hover:border-primary-200'}`}><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white font-bold text-primary-700 shadow-sm">{patient.fullName?.[0] || 'T'}</span><span className="min-w-0"><strong className="block truncate text-sm text-slate-900">{patient.fullName}</strong><small className="text-xs text-slate-500">{patient.relationshipName || 'Thành viên'} · {patient.age ?? calculateAge(patient.dateOfBirth) ?? '-'} tuổi</small></span></button>;
+                                    })}
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                        {patientOptions.map(patient => {
+                                            const id = patient.patientProfileId;
+                                            const selected = groupPatientIds.includes(id);
+                                            return <label key={id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition ${selected ? 'border-primary-500 bg-primary-50' : 'border-slate-200'}`}><input type="checkbox" checked={selected} onChange={() => toggleGroupPatient(id)} className="h-4 w-4 accent-primary-600" /><span className="min-w-0"><strong className="block truncate text-sm text-slate-900">{patient.fullName}</strong><small className="text-xs text-slate-500">{patient.relationshipName || 'Tôi'}</small></span></label>;
+                                        })}
+                                    </div>
+                                    {groupPatientIds.length > 0 && <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-semibold text-slate-700">Chọn người để cấu hình dịch vụ riêng</p><button type="button" onClick={applyServicesToAll} className="rounded-lg border border-primary-200 bg-white px-3 py-2 text-xs font-bold text-primary-700">Áp dụng dịch vụ hiện tại cho tất cả</button></div><div className="flex flex-wrap gap-2">{groupPatientIds.map(id => { const patient = patientOptions.find(item => item.patientProfileId === id); const servicesForPatient = editingGroupPatientId === id ? selectedServices : (groupServiceMap[id] || []); const cost = servicesForPatient.reduce((sum, service) => sum + Number(service.price || 0), 0); return <button key={id} type="button" onClick={() => editGroupServices(id)} className={`rounded-lg px-3 py-2 text-left text-xs font-semibold ${editingGroupPatientId === id ? 'bg-primary-600 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200'}`}><span className="block">{patient?.fullName} · {servicesForPatient.length} dịch vụ</span><span className={`mt-0.5 block text-[11px] ${editingGroupPatientId === id ? 'text-white/75' : 'text-slate-400'}`}>{formatVND(cost)}</span></button>; })}</div><p className="mt-3 text-xs text-slate-500">Mỗi người sẽ có một lịch hẹn độc lập nhưng dùng chung ngày và ca.</p></div>}
+                                </div>
+                            )}
+                            <button type="button" onClick={() => navigate(ROUTES.CUSTOMER_FAMILY_MEMBERS)} className="mt-4 text-xs font-bold text-primary-700 hover:underline">+ Thêm hoặc quản lý thành viên gia đình</button>
+                        </div>
+                    </section>
+                )}
+
                 {/* =================================================
                     CONTENT
                 ================================================= */}
@@ -541,7 +670,7 @@ export default function CustomerAppointmentPage() {
                     {/* =================================================
                         LEFT - SERVICES
                     ================================================= */}
-                    <section className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                    <section className="cares-booking-card bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
 
                         {/* HEADER */}
                         <div className="px-6 sm:px-7 py-5 border-b border-slate-100 flex items-center justify-between">
@@ -678,6 +807,7 @@ export default function CustomerAppointmentPage() {
                                                                     <div className="min-w-0 flex-1">
                                                                         <p className="text-sm font-semibold text-slate-900">{service.name}</p>
                                                                         {service.description && <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{service.description}</p>}
+                                                                        {serviceRelationHint(service) && <p className="mt-1 text-xs font-semibold text-teal-700">{serviceRelationHint(service)}</p>}
                                                                         {disabled && <p className="mt-1 text-xs font-medium text-red-600">{eligibility.reason}</p>}
                                                                     </div>
                                                                     <div className="shrink-0 text-right">
@@ -706,7 +836,7 @@ export default function CustomerAppointmentPage() {
                         {/* =================================================
                             TIME
                         ================================================= */}
-                        <section className="bg-white border border-slate-200 rounded-2xl shadow-sm">
+                        <section className="cares-booking-card bg-white border border-slate-200 rounded-2xl shadow-sm">
 
                             <div className="px-6 py-5 border-b border-slate-100">
 
@@ -729,42 +859,28 @@ export default function CustomerAppointmentPage() {
                                         Ngày khám
                                     </label>
 
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <select
+                                    <div className="relative">
+                                        <CalendarDays
+                                            size={20}
+                                            aria-hidden="true"
+                                            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-primary-600"
+                                        />
+                                        <input
+                                            type="date"
                                             aria-label="Ngày khám"
-                                            value={dateParts.day}
-                                            onChange={event => updateAppointmentDate('day', event.target.value)}
-                                            className="h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-50"
-                                        >
-                                            <option value="">Ngày</option>
-                                            {Array.from({ length: daysInMonth(dateParts.year, dateParts.month) }, (_, index) => String(index + 1).padStart(2, '0'))
-                                                .map(day => <option key={day} value={day}>{day}</option>)}
-                                        </select>
-                                        <select
-                                            aria-label="Tháng khám"
-                                            value={dateParts.month}
-                                            onChange={event => updateAppointmentDate('month', event.target.value)}
-                                            className="h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-50"
-                                        >
-                                            <option value="">Tháng</option>
-                                            {Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0'))
-                                                .map(month => <option key={month} value={month}>{month}</option>)}
-                                        </select>
-                                        <select
-                                            aria-label="Năm khám"
-                                            value={dateParts.year}
-                                            onChange={event => updateAppointmentDate('year', event.target.value)}
-                                            className="h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-50"
-                                        >
-                                            <option value="">Năm</option>
-                                            {bookingYears.map(year => <option key={year} value={year}>{year}</option>)}
-                                        </select>
+                                            value={date}
+                                            min={bookingDateRange.minimum}
+                                            max={bookingDateRange.maximum}
+                                            onChange={event => {
+                                                setDate(event.target.value);
+                                                setShiftId('');
+                                            }}
+                                            className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-12 pr-4 text-base font-semibold text-slate-900 outline-none transition focus:border-primary-500 focus:ring-4 focus:ring-primary-50"
+                                        />
                                     </div>
-                                    {dateParts.day && dateParts.month && dateParts.year && !date && (
-                                        <p className="mt-2 text-xs font-medium text-red-600">
-                                            Ngày khám phải từ ngày mai đến tối đa 12 tháng tiếp theo.
-                                        </p>
-                                    )}
+                                    <p className="mt-2 text-sm text-slate-500">
+                                        Chọn ngày từ ngày mai đến tối đa 12 tháng tiếp theo.
+                                    </p>
 
                                 </div>
 
@@ -864,11 +980,11 @@ export default function CustomerAppointmentPage() {
                                                                 `}
                                                             >
                                                                 {
-                                                                    shift.startTime
+                                                                    String(shift.startTime || '').slice(0, 5)
                                                                 }
                                                                 {' – '}
                                                                 {
-                                                                    shift.endTime
+                                                                    String(shift.endTime || '').slice(0, 5)
                                                                 }
                                                             </p>
 
@@ -892,7 +1008,7 @@ export default function CustomerAppointmentPage() {
                         {/* =================================================
                             SUMMARY
                         ================================================= */}
-                        <section className="bg-slate-950 text-white rounded-2xl shadow-xl overflow-hidden">
+                        <section className="overflow-hidden rounded-2xl border border-teal-200 bg-gradient-to-br from-white via-teal-50/70 to-emerald-50 text-slate-900 shadow-[0_18px_45px_rgba(15,159,145,0.14)] dark:border-teal-800/70 dark:from-slate-900 dark:via-slate-900 dark:to-teal-950/50 dark:text-white">
 
                             <div className="p-6">
 
@@ -900,25 +1016,27 @@ export default function CustomerAppointmentPage() {
 
                                     <div>
 
-                                        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                                        <p className="text-sm font-bold uppercase tracking-[0.14em] text-teal-700 dark:text-teal-300">
                                             Chi phí tạm tính
                                         </p>
 
-                                        <p className="text-sm text-slate-400 mt-1">
+                                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
 
-                                            {selectedServices.length ===
+                                            {(bookingMode === 'group' ? groupServiceCount : selectedServices.length) ===
                                             0
                                                 ? 'Chưa chọn dịch vụ'
-                                                : `${selectedServices.length} dịch vụ đã chọn · Khám bệnh: ${examinationCount} · Cận lâm sàng: ${paraclinicalCount}`
+                                                : bookingMode === 'group'
+                                                    ? `${groupPatientIds.length} người · ${groupServiceCount} lượt dịch vụ`
+                                                    : `${selectedServices.length} dịch vụ đã chọn · Khám bệnh: ${examinationCount} · Cận lâm sàng: ${paraclinicalCount}`
                                             }
 
                                         </p>
 
                                     </div>
 
-                                    <p className="text-2xl sm:text-3xl font-bold tracking-tight whitespace-nowrap">
+                                    <p className="whitespace-nowrap text-2xl font-bold tracking-tight text-teal-700 sm:text-3xl dark:text-teal-300">
                                         {formatVND(
-                                            totalCost
+                                            groupTotalCost
                                         )}
                                     </p>
 
@@ -928,7 +1046,7 @@ export default function CustomerAppointmentPage() {
                                 {selectedServices.length >
                                     0 && (
 
-                                        <div className="mt-5 pt-5 border-t border-white/10 space-y-2 max-h-[145px] overflow-y-auto pr-1">
+                                        <div className="mt-5 max-h-[145px] space-y-2 overflow-y-auto border-t border-teal-200 pt-5 pr-1 dark:border-teal-800/70">
 
                                             {selectedServices.map(
                                                 service => (
@@ -940,13 +1058,13 @@ export default function CustomerAppointmentPage() {
                                                         className="flex items-start justify-between gap-3 text-xs"
                                                     >
 
-                                                    <span className="text-slate-300 leading-relaxed">
+                                                    <span className="leading-relaxed text-slate-700 dark:text-slate-300">
                                                         {
                                                             service.name
                                                         }
                                                     </span>
 
-                                                        <span className="font-semibold text-white whitespace-nowrap">
+                                                        <span className="whitespace-nowrap font-semibold text-teal-700 dark:text-teal-300">
                                                         {formatVND(
                                                             service.price
                                                         )}
@@ -962,8 +1080,8 @@ export default function CustomerAppointmentPage() {
                                     )}
 
                                 {error && (
-                                    <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-400/20">
-                                        <p className="text-xs text-red-300">
+                                    <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-800/70 dark:bg-red-950/40">
+                                        <p className="text-sm text-red-700 dark:text-red-300">
                                             {error}
                                         </p>
                                     </div>
@@ -977,7 +1095,7 @@ export default function CustomerAppointmentPage() {
                                     disabled={
                                         booking
                                     }
-                                    className="w-full h-14 mt-6 bg-white hover:bg-slate-100 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-950 text-sm font-bold uppercase tracking-[0.14em] rounded-xl transition-all"
+                                    className="mt-6 h-14 w-full rounded-xl bg-teal-600 text-sm font-bold uppercase tracking-[0.14em] text-white shadow-lg shadow-teal-600/20 transition-all hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
                                 >
 
                                     {booking
@@ -1007,44 +1125,55 @@ export default function CustomerAppointmentPage() {
                     <AppointmentConfirmModal
                         namespace="appointment"
                         data={{
-                            fullName: profile?.fullName || fullName || '',
+                            title: bookingMode === 'group' ? 'Xác nhận đặt lịch theo nhóm' : undefined,
+                            subtitle: bookingMode === 'group'
+                                ? 'Kiểm tra đúng người được khám và dịch vụ riêng của từng thành viên trước khi tạo lịch.'
+                                : undefined,
+                            fullName: bookingMode === 'group'
+                                ? `${groupPatientIds.length} thành viên gia đình`
+                                : bookingPatient?.fullName || fullName || '',
 
-                            phone: profile?.phone || phone || '',
+                            patientCode: bookingMode === 'group' ? undefined : bookingPatient?.patientCode,
 
-                            email: profile?.email || '',
+                            dateOfBirth: bookingMode === 'group' || !bookingPatient?.dateOfBirth
+                                ? undefined : formatDateVi(bookingPatient.dateOfBirth),
 
-                            ageGender: profile
-                                ? `${
-                                    profile.age ??
-                                    calculateAge(profile.dateOfBirth) ??
-                                    ''
-                                } / ${
-                                    profile.gender === 'Nam'
-                                        ? 'Nam'
-                                        : profile.gender === 'Nữ'
-                                            ? 'Nữ'
-                                            : profile.gender === 'Khác'
-                                                ? 'Khác'
-                                                : profile.gender || ''
-                                }`
+                            phone: bookingMode === 'group' || (bookingPatient && !bookingPatient.isSelf)
+                                ? '' : profile?.phone || phone || '',
+
+                            email: bookingMode === 'group' || (bookingPatient && !bookingPatient.isSelf)
+                                ? '' : profile?.email || '',
+
+                            ageGender: bookingMode === 'group' ? 'Đặt lịch nhóm' : bookingPatient
+                                ? `${bookingPatient.age ?? calculateAge(bookingPatient.dateOfBirth) ?? '—'} tuổi · ${genderLabel(bookingPatient.gender) || 'Chưa rõ'}`
                                 : '',
 
-                            address: profile?.address || address || '',
+                            address: bookingPatient?.address || address || '',
 
-                            date,
+                            date: formatDateVi(date),
 
-                            timeSlot:
-                                shifts.find(
-                                    s => String(s.id) === String(shiftId)
-                                )?.name || '',
+                            timeSlot: selectedShift
+                                ? `${selectedShift.name || 'Ca khám'}${selectedShift.startTime && selectedShift.endTime ? ` · ${selectedShift.startTime}–${selectedShift.endTime}` : ''}`
+                                : '',
 
                             method: 'Khám trực tiếp tại phòng khám',
 
-                            total: formatVND(totalCost),
+                            total: formatVND(groupTotalCost),
 
                             services: selectedServices,
 
-                            reason: ''
+                            groupMembers: confirmationGroupMembers,
+
+                            contactManager: (bookingMode === 'group' || (bookingPatient && !bookingPatient.isSelf)) ? {
+                                name: profile?.fullName,
+                                phone: profile?.phone || phone,
+                                email: profile?.email,
+                            } : null,
+
+                            reason: '',
+                            note: bookingMode === 'group'
+                                ? 'Hệ thống sẽ tạo một lịch hẹn độc lập cho mỗi người. Sau khi đặt, đổi lịch hoặc hủy lịch được thực hiện riêng từng người.'
+                                : undefined,
                         }}
                         isLoading={booking}
                         onClose={() => setShowConfirmModal(false)}

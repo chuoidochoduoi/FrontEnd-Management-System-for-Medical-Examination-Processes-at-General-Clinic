@@ -14,7 +14,7 @@ export const clinicalFieldList = (schema) => {
 const groupsOf = (fields) => {
     const groups = new Map();
     [...fields].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)).forEach((field) => {
-        const group = field.group || 'Thông tin chuyên khoa';
+        const group = field.group || 'Kết quả';
         groups.set(group, [...(groups.get(group) || []), field]);
     });
     return [...groups.entries()];
@@ -22,6 +22,12 @@ const groupsOf = (fields) => {
 
 const rawValue = (field, value) => value?.[field.key] ?? (field.type === 'BOOLEAN' ? false : '');
 const empty = (value) => value === null || value === undefined || value === '';
+const omissionReasons = [
+    { value: 'INSUFFICIENT_SAMPLE', label: 'Không đủ mẫu' },
+    { value: 'UNACCEPTABLE_SAMPLE', label: 'Mẫu không đạt' },
+    { value: 'EQUIPMENT_ERROR', label: 'Lỗi thiết bị' },
+    { value: 'OTHER', label: 'Lý do khác' },
+];
 
 const conditionMatches = (condition, values) => {
     if (!condition) return true;
@@ -34,12 +40,21 @@ const conditionMatches = (condition, values) => {
 
 const fieldVisible = (field, values) => conditionMatches(field.visibleWhen, values);
 
-export const validateClinicalForm = (schema, values = {}, requireComplete = true) => {
+export const validateClinicalForm = (schema, values = {}, requireComplete = true, enabledFieldKeys = null) => {
     const errors = {};
     const fields = clinicalFieldList(schema);
+    const omissions = values?._omissions || {};
     fields.forEach((field) => {
+        if (enabledFieldKeys && !enabledFieldKeys.includes(field.key)) return;
         if (!fieldVisible(field, values) || field.calculatorKey) return;
         const value = values?.[field.key];
+        const omission = omissions[field.key];
+        if (omission) {
+            if (!omission.reasonCode || (omission.reasonCode === 'OTHER' && !omission.reasonDetail?.trim())) {
+                errors[field.key] = `Vui lòng chọn lý do không thực hiện ${field.label}`;
+            }
+            return;
+        }
         const conditionallyRequired = field.requiredWhen && conditionMatches(field.requiredWhen, values);
         if (requireComplete && (field.required || field.requiredOnSign || conditionallyRequired) && empty(value)) {
             errors[field.key] = `Vui lòng nhập ${field.label}`;
@@ -176,26 +191,45 @@ const FieldControl = ({ field, current, setField, disabled, error, compact = fal
 };
 
 export default function DynamicClinicalForm({
-    schema, value = {}, onChange, disabled = false, title = 'Biểu mẫu chuyên khoa',
-    emptyMessage = 'Chưa cấu hình biểu mẫu chuyên khoa', patientAge, patientGender, errors = {},
+    schema, value = {}, onChange, disabled = false, title = 'Biểu mẫu kết quả',
+    emptyMessage = 'Chưa cấu hình biểu mẫu kết quả', patientAge, patientGender, errors = {},
+    lockedFieldKeys = [],
 }) {
     const fields = useMemo(() => clinicalFieldList(schema), [schema]);
     const visibleFields = useMemo(() => fields.filter((field) => fieldVisible(field, value)), [fields, value]);
     const groups = useMemo(() => groupsOf(visibleFields), [visibleFields]);
+    // `groups` is a new array on each value change.  Use a stable list of
+    // group names so typing a result does not reset/collapse an open panel.
+    const groupNamesKey = useMemo(() => groups.map(([name]) => name).join('|'), [groups]);
     const flags = value?._meta?.flags || {};
     const warnings = value?._meta?.warnings || [];
     const laboratoryTable = schema?.layout === 'LAB_TABLE';
     const [openGroups, setOpenGroups] = useState(() => new Set());
+    const [resultFilter, setResultFilter] = useState('ALL');
+    const omissions = value?._omissions || {};
+    const measurableFields = visibleFields.filter((field) => !field.calculatorKey);
+    const purchasedFields = measurableFields.filter((field) => !lockedFieldKeys.includes(field.key));
+    const completedCount = purchasedFields.filter((field) => !empty(value?.[field.key]) || omissions[field.key]).length;
+    const omittedCount = purchasedFields.filter((field) => omissions[field.key]).length;
 
     useEffect(() => {
-        setOpenGroups(new Set(laboratoryTable && groups[0] ? [groups[0][0]] : groups.map(([name]) => name)));
-    }, [schema, laboratoryTable]);
+        const names = groups.map(([name]) => name);
+        setOpenGroups((current) => {
+            if (!current.size) return new Set(laboratoryTable && names[0] ? [names[0]] : names);
+            const retained = [...current].filter((name) => names.includes(name));
+            return new Set(retained.length ? retained : (laboratoryTable && names[0] ? [names[0]] : names));
+        });
+    }, [schema, laboratoryTable, groupNamesKey]);
 
     if (!fields.length) return <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">{emptyMessage}</div>;
 
     const setField = (field, nextValue) => {
         const clean = { ...(value || {}) };
         delete clean._meta;
+        const nextOmissions = { ...(clean._omissions || {}) };
+        delete nextOmissions[field.key];
+        if (Object.keys(nextOmissions).length) clean._omissions = nextOmissions;
+        else delete clean._omissions;
         clean[field.key] = field.type === 'NUMBER' ? (nextValue === '' ? null : Number(nextValue)) : field.type === 'BOOLEAN' ? Boolean(nextValue) : nextValue;
         fields.forEach((candidate) => {
             if (!fieldVisible(candidate, clean)) delete clean[candidate.key];
@@ -203,16 +237,46 @@ export default function DynamicClinicalForm({
         onChange?.(previewCalculations(clean, fields, patientAge, patientGender));
     };
 
+    const setOmission = (field, reasonCode = 'INSUFFICIENT_SAMPLE', reasonDetail = '') => {
+        const clean = { ...(value || {}) };
+        delete clean._meta;
+        delete clean[field.key];
+        clean._omissions = {
+            ...(clean._omissions || {}),
+            [field.key]: { reasonCode, ...(reasonDetail.trim() ? { reasonDetail: reasonDetail.trim() } : {}) },
+        };
+        onChange?.(previewCalculations(clean, fields, patientAge, patientGender));
+    };
+
+    const restoreField = (field) => {
+        const clean = { ...(value || {}) };
+        delete clean._meta;
+        const nextOmissions = { ...(clean._omissions || {}) };
+        delete nextOmissions[field.key];
+        if (Object.keys(nextOmissions).length) clean._omissions = nextOmissions;
+        else delete clean._omissions;
+        onChange?.(previewCalculations(clean, fields, patientAge, patientGender));
+    };
+
     const applyNormalPreset = () => {
         const next = { ...(value || {}) };
         delete next._meta;
+        delete next._omissions;
         fields.forEach((field) => {
+            if (lockedFieldKeys.includes(field.key)) return;
             if (field.normalValue !== undefined) next[field.key] = field.normalValue;
             else if (field.normalPreset !== undefined) next[field.key] = field.normalPreset;
         });
         onChange?.(previewCalculations(next, fields, patientAge, patientGender));
     };
     const hasNormalPreset = fields.some((field) => field.normalValue !== undefined || field.normalPreset !== undefined);
+    const filterFields = (groupFields) => groupFields.filter((field) => {
+        if (resultFilter === 'OMITTED') return Boolean(omissions[field.key]);
+        if (resultFilter === 'MISSING') return !field.calculatorKey && !omissions[field.key] && empty(value?.[field.key]);
+        return true;
+    });
+    const displayGroups = groups.map(([name, groupFields]) => [name, filterFields(groupFields)])
+        .filter(([, groupFields]) => groupFields.length > 0);
     return <section className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div><h3 className="text-sm font-bold text-slate-900">{title}</h3><p className="mt-1 text-xs text-slate-500">Các trường được cấu hình, kiểm tra và tính cờ bởi backend.</p></div>
@@ -223,8 +287,19 @@ export default function DynamicClinicalForm({
             {warnings.map((warning) => <p key={warning} className="flex items-center gap-2"><TriangleAlert size={14} />{warning}</p>)}
         </div>}
 
+        {laboratoryTable && <div className="mb-5 space-y-3 rounded-xl border border-teal-100 bg-teal-50/60 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div><p className="font-bold text-slate-900">Tiến độ kết quả</p><p className="mt-1 text-sm text-slate-600">{completedCount}/{purchasedFields.length} chỉ số đã mua đã xử lý</p></div>
+                {omittedCount > 0 && <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-bold text-amber-800">{omittedCount} chỉ số không thực hiện</span>}
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-teal-600 transition-all" style={{ width: `${purchasedFields.length ? completedCount / purchasedFields.length * 100 : 0}%` }} /></div>
+            <div className="flex flex-wrap gap-2">
+                {[['ALL', 'Tất cả', measurableFields.length], ['MISSING', 'Chưa nhập', Math.max(0, purchasedFields.length - completedCount)], ['OMITTED', 'Không thực hiện', omittedCount]].map(([key, label, count]) => <button type="button" key={key} onClick={() => setResultFilter(key)} className={`min-h-10 rounded-lg border px-4 text-sm font-bold transition ${resultFilter === key ? 'border-teal-600 bg-white text-teal-700 shadow-sm' : 'border-slate-200 bg-white/60 text-slate-600 hover:bg-white'}`}>{label} <span className="ml-1 text-xs">{count}</span></button>)}
+            </div>
+        </div>}
+
         <div className="space-y-5">
-            {groups.map(([group, groupFields]) => <details key={group} open={openGroups.has(group)} onToggle={(event) => {
+            {displayGroups.map(([group, groupFields]) => <details key={group} open={openGroups.has(group)} onToggle={(event) => {
                 if (!laboratoryTable) return;
                 const isOpen = event.currentTarget.open;
                 setOpenGroups((current) => {
@@ -237,16 +312,27 @@ export default function DynamicClinicalForm({
                     ? <summary className="cursor-pointer select-none bg-slate-50 px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-600">{group} · {groupFields.length} chỉ số</summary>
                     : <p className="mb-3 border-b border-slate-100 pb-2 text-xs font-bold uppercase tracking-wide text-slate-600">{group}</p>}
                 {laboratoryTable ? <div className="overflow-x-auto">
-                    <table className="w-full min-w-[760px] table-fixed text-left">
-                        <thead className="border-y border-slate-100 bg-white text-[11px] uppercase text-slate-400"><tr><th className="w-[28%] px-4 py-2">Chỉ số</th><th className="w-[25%] px-3 py-2">Kết quả</th><th className="w-[13%] px-3 py-2">Đơn vị</th><th className="w-[22%] px-3 py-2">Khoảng tham chiếu</th><th className="w-[12%] px-3 py-2">Cờ</th></tr></thead>
+                    <table className="w-full min-w-[980px] table-fixed text-left">
+                        <thead className="border-y border-slate-100 bg-white text-sm uppercase text-slate-500"><tr><th className="w-[24%] px-4 py-3">Chỉ số</th><th className="w-[22%] px-3 py-3">Kết quả</th><th className="w-[11%] px-3 py-3">Đơn vị</th><th className="w-[18%] px-3 py-3">Khoảng tham chiếu</th><th className="w-[25%] px-3 py-3">Trạng thái</th></tr></thead>
                         <tbody>{groupFields.map((field) => {
-                            const current = rawValue(field, value), flag = flags[field.key], error = errors[field.key];
-                            return <tr key={field.key} className="border-b border-slate-100 last:border-0 align-top">
-                                <td className="px-4 py-3"><p className="text-sm font-semibold text-slate-800">{field.code || field.label}{(field.required || field.requiredOnSign || field.requiredWhen) ? <span className="text-red-500"> *</span> : ''}</p>{field.code && field.label !== field.code && <p className="mt-0.5 text-[11px] text-slate-400">{field.label}</p>}{field.loincCode && <p className="mt-0.5 text-[10px] text-slate-300">LOINC {field.loincCode}</p>}</td>
-                                <td className="px-3 py-2"><FieldControl field={field} current={current} setField={setField} disabled={disabled} error={error} compact />{error && <p className="mt-1 text-[11px] font-medium text-red-600">{error}</p>}</td>
-                                <td className="px-3 py-3 text-xs text-slate-500">{field.unit || '—'}</td>
-                                <td className="px-3 py-3 text-xs text-slate-600">{referenceText(field, flag, value, patientAge, patientGender)}</td>
-                                <td className="px-3 py-3">{flag?.status && <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${statusStyle(flag.status)}`}><StatusIcon status={flag.status} />{statusLabel(flag.status)}</span>}</td>
+                            const current = rawValue(field, value), flag = flags[field.key], error = errors[field.key], omission = omissions[field.key], locked = lockedFieldKeys.includes(field.key);
+                            return <tr key={field.key} className={`border-b border-slate-100 last:border-0 align-top ${locked ? 'bg-slate-50 text-slate-400 opacity-75' : omission ? 'bg-amber-50/60' : ''}`}>
+                                <td className="px-4 py-3"><p className="text-base font-semibold text-slate-800">{field.code || field.label}{!locked && (field.required || field.requiredOnSign || field.requiredWhen) ? <span className="text-red-500"> *</span> : ''}</p>{locked && <span className="mt-1 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">Chưa mua · không nhập</span>}{field.code && field.label !== field.code && <p className="mt-1 text-sm text-slate-500">{field.label}</p>}{field.loincCode && <p className="mt-1 text-xs text-slate-400">LOINC {field.loincCode}</p>}</td>
+                                <td className="px-3 py-2">{omission ? <div className="min-h-10 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-800">— Không có kết quả</div> : <FieldControl field={field} current={current} setField={setField} disabled={disabled || locked} error={error} compact />}{error && <p className="mt-1 text-sm font-medium text-red-600">{error}</p>}</td>
+                                <td className="px-3 py-3 text-sm text-slate-600">{field.unit || '—'}</td>
+                                <td className="px-3 py-3 text-sm text-slate-700">{referenceText(field, flag, value, patientAge, patientGender)}</td>
+                                <td className="px-3 py-2">
+                                    {locked ? <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-600">🔒 Chưa mua</span> : field.calculatorKey ? (flag?.status && <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-bold ${statusStyle(flag.status)}`}><StatusIcon status={flag.status} />{statusLabel(flag.status)}</span>) : omission ? <div className="space-y-2">
+                                        <select disabled={disabled} value={omission.reasonCode || ''} onChange={(event) => setOmission(field, event.target.value, omission.reasonDetail || '')} className="min-h-10 w-full rounded-lg border border-amber-300 bg-white px-3 text-sm font-semibold text-amber-800">
+                                            {omissionReasons.map((reason) => <option key={reason.value} value={reason.value}>{reason.label}</option>)}
+                                        </select>
+                                        {omission.reasonCode === 'OTHER' && <input disabled={disabled} value={omission.reasonDetail || ''} onChange={(event) => setOmission(field, 'OTHER', event.target.value)} placeholder="Nhập lý do" className="min-h-10 w-full rounded-lg border border-amber-300 bg-white px-3 text-sm" />}
+                                        {!disabled && <button type="button" onClick={() => restoreField(field)} className="text-sm font-bold text-teal-700 hover:underline">Chuyển lại sang nhập kết quả</button>}
+                                    </div> : <div className="space-y-2">
+                                        <div className="flex flex-wrap gap-2">{flag?.status && <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-bold ${statusStyle(flag.status)}`}><StatusIcon status={flag.status} />{statusLabel(flag.status)}</span>}{!empty(current) && !flag?.status && <span className="rounded-full bg-emerald-100 px-2.5 py-1.5 text-xs font-bold text-emerald-700">Đã nhập</span>}</div>
+                                        {!disabled && <button type="button" onClick={() => setOmission(field)} className="text-sm font-bold text-amber-700 hover:underline">Đánh dấu không thực hiện</button>}
+                                    </div>}
+                                </td>
                             </tr>;
                         })}</tbody>
                     </table>

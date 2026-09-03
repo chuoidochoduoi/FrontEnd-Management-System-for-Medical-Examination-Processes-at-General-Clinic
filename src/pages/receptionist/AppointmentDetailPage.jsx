@@ -9,16 +9,34 @@ import {
     UserRound,
     CalendarDays,
     Stethoscope,
-    LogIn
+    LogIn,
+    Pencil,
+    RotateCcw,
+    Info,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { ROUTES } from '@/constants/routes';
 import AppointmentConfirmModal from '@/components/ui/AppointmentConfirmModal';
+import { toggleServiceWithPolicy } from '@/utils/serviceSelectionPolicy';
+import LabPackageAnalytePicker, {
+    isPackageOrAnalyteService,
+} from '@/components/clinical/LabPackageAnalytePicker';
 
 const formatVND = amount =>
     new Intl.NumberFormat('vi-VN').format(amount || 0) + ' đ';
+
+const clinicDateKey = () => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    return `${values.year}-${values.month}-${values.day}`;
+};
 
 const calculateAge = dateOfBirth => {
     if (!dateOfBirth) return '';
@@ -147,6 +165,11 @@ export default function AppointmentDetailPage() {
     const [searchTerm, setSearchTerm] =
         useState('');
 
+    // Keep the service catalogue focused, as on the create-ticket screen.
+    // Showing packages, analytes and every examination service at once makes the
+    // appointment detail unnecessarily tall and difficult to scan.
+    const [activeServiceTab, setActiveServiceTab] = useState('EXAMINATION');
+
     // =========================================================
     // MODAL
     // =========================================================
@@ -237,6 +260,30 @@ export default function AppointmentDetailPage() {
             )
         );
 
+    const packageAndAnalyteServices = servicesToShow.filter(service =>
+        service.departmentType === 'PARACLINICAL' && isPackageOrAnalyteService(service));
+    const packageAndAnalyteIds = new Set(packageAndAnalyteServices.map(service => service.id));
+    const servicesInActiveTab = filteredServices.filter(service => {
+        if (activeServiceTab === 'LABORATORY') {
+            return service.departmentType === 'PARACLINICAL' && isPackageOrAnalyteService(service);
+        }
+        if (activeServiceTab === 'PARACLINICAL_OTHER') {
+            return service.departmentType === 'PARACLINICAL' && !isPackageOrAnalyteService(service);
+        }
+        return service.departmentType === activeServiceTab;
+    });
+    const regularFilteredServices = servicesInActiveTab.filter(service => !isPackageOrAnalyteService(service));
+    const originalPackageAndAnalyteIds = (appointment?.services || [])
+        .map(service => service.serviceId || service.id)
+        .filter(serviceId => packageAndAnalyteIds.has(serviceId));
+    const originallyBookedIds = new Set(
+        (appointment?.services || [])
+            .map(service => service.serviceId || service.id)
+            .filter(Boolean)
+    );
+    const bookedServices = selectedServices.filter(service => originallyBookedIds.has(service.id));
+    const addedServices = selectedServices.filter(service => !originallyBookedIds.has(service.id));
+
     const totalCost =
         selectedServices.reduce(
             (sum, service) =>
@@ -254,8 +301,13 @@ export default function AppointmentDetailPage() {
             : rawStatus?.name || rawStatus?.value || ''
     ).toUpperCase();
 
-    const canCheckIn =
+    const scheduledDate = appointment?.scheduledAt
+        ? String(appointment.scheduledAt).slice(0, 10)
+        : '';
+    const isPastAppointment = Boolean(scheduledDate && scheduledDate < clinicDateKey());
+    const isAwaitingCheckIn =
         currentStatus === 'PENDING' || currentStatus === 'RESCHEDULED';
+    const canCheckIn = isAwaitingCheckIn && !isPastAppointment;
     const isEditable = ['PENDING', 'CONFIRMED', 'RESCHEDULED'].includes(currentStatus);
 
     // =========================================================
@@ -558,7 +610,8 @@ export default function AppointmentDetailPage() {
                                 capabilityName:
                                     service
                                         .requiredCapabilityName ||
-                                    ''
+                                    '',
+                                relations: service.relations || []
                             })
                         )
                     );
@@ -586,17 +639,26 @@ export default function AppointmentDetailPage() {
             }
             setSelectedServiceIds(
                 prev => {
-                    if (prev.includes(serviceId)) {
-                        return prev.filter(
-                            currentId =>
-                                currentId !==
-                                serviceId
-                        );
-                    }
-                    return [...prev, serviceId];
+                    const candidate = allServices.find(service => service.id === serviceId);
+                    if (!candidate) return prev;
+                    const selected = allServices.filter(service => prev.includes(service.id));
+                    const resolution = toggleServiceWithPolicy(selected, candidate, allServices);
+                    if (resolution.message) toast.info(resolution.message);
+                    return resolution.services.map(service => service.id);
                 }
             );
         };
+
+    const customizeLabPanel = (panel, analytes, excludedAnalyteId) => {
+        const panelId = panel.id || panel.serviceId;
+        const analyteIds = new Set(analytes.map(item => item.id || item.serviceId));
+        setSelectedServiceIds(previous => [
+            ...previous.filter(serviceId => serviceId !== panelId && !analyteIds.has(serviceId)),
+            ...analytes
+                .map(item => item.id || item.serviceId)
+                .filter(serviceId => serviceId !== excludedAnalyteId),
+        ]);
+    };
 
     // =========================================================
     // VALIDATION
@@ -606,21 +668,8 @@ export default function AppointmentDetailPage() {
             return 'Vui lòng nhập họ và tên bệnh nhân.';
         }
 
-        const hasPhone =
-            !!phone?.trim();
-
-        const hasEmail =
-            !!email?.trim();
-
         if (
-            !hasPhone &&
-            !hasEmail
-        ) {
-            return 'Vui lòng nhập số điện thoại hoặc email.';
-        }
-
-        if (
-            hasPhone &&
+            phone?.trim() &&
             !/^(\+84|0)\d{9,10}$/.test(
                 phone.trim()
             )
@@ -629,7 +678,7 @@ export default function AppointmentDetailPage() {
         }
 
         if (
-            hasEmail &&
+            email?.trim() &&
             !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
                 email.trim()
             )
@@ -643,10 +692,6 @@ export default function AppointmentDetailPage() {
 
         if (!gender) {
             return 'Vui lòng chọn giới tính.';
-        }
-
-        if (!address.trim()) {
-            return 'Vui lòng nhập địa chỉ.';
         }
 
         if (
@@ -842,6 +887,11 @@ export default function AppointmentDetailPage() {
             return;
         }
 
+        if (isPastAppointment) {
+            toast.error('Không thể check-in lịch hẹn đã quá ngày.');
+            return;
+        }
+
         if (!canCheckIn) {
             if (
                 currentStatus ===
@@ -883,6 +933,12 @@ export default function AppointmentDetailPage() {
     // =========================================================
     const handleCheckIn = async () => {
         if (!appointment) {
+            return;
+        }
+
+        if (isPastAppointment) {
+            toast.error('Không thể check-in lịch hẹn đã quá ngày.');
+            setShowConfirmModal(false);
             return;
         }
 
@@ -999,15 +1055,14 @@ export default function AppointmentDetailPage() {
             confirmAction ===
             'save'
         ) {
-            handleSave();
-            return;
+            return handleSave();
         }
 
         if (
             confirmAction ===
             'checkin'
         ) {
-            handleCheckIn();
+            return handleCheckIn();
         }
     };
 
@@ -1051,18 +1106,18 @@ export default function AppointmentDetailPage() {
 
     return (
         <ReceptionistLayout>
-            <div className="flex min-h-[calc(100vh-3.5rem)] flex-col -m-8 bg-slate-50">
+            <div className="cares-reception-long-form flex min-h-full flex-col">
 
                 {/* =====================================================
                 BODY
             ===================================================== */}
-                <div className="flex-1 overflow-y-auto px-5 py-5 pb-28 lg:px-8">
+                <div className="flex-1 pb-28">
                     <div className="w-full space-y-5">
 
                         {/* =================================================
                         HEADER
                     ================================================= */}
-                        <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="cares-reception-page-header">
 
                             <div>
                                 <button
@@ -1122,7 +1177,9 @@ export default function AppointmentDetailPage() {
                                 <div className="h-full rounded-2xl border border-gray-200 bg-white shadow-sm">
 
                                     {/* HEADER */}
-                                    <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4">
+                                    <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
+
+                                    <div className="flex items-center gap-3">
 
                                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-bold text-white">
                                         1
@@ -1134,13 +1191,32 @@ export default function AppointmentDetailPage() {
                                             </h2>
 
                                             <p className="mt-0.5 text-xs text-gray-400">
-                                                Kiểm tra thông tin trước khi tiếp nhận
+                                                Bắt buộc họ tên, ngày sinh và giới tính. Thông tin liên hệ, địa chỉ có thể bổ sung sau.
                                             </p>
                                         </div>
                                     </div>
 
+                                        {isEditable && (
+                                            <button type="button" onClick={() => document.getElementById('reception-patient-full-name')?.focus()}
+                                                className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-teal-200 bg-white px-3 text-[15px] font-semibold text-teal-700 hover:bg-teal-50">
+                                                <Pencil size={16} /> Chỉnh sửa thông tin
+                                            </button>
+                                        )}
+                                    </div>
+
                                     {/* BODY */}
                                     <div className="space-y-4 p-5">
+
+                                        {appointment?.contactManagerName && (
+                                            <div className="rounded-xl border border-primary-100 bg-primary-50 p-4">
+                                                <p className="text-xs font-semibold uppercase tracking-wider text-primary-700">Người quản lý / liên hệ</p>
+                                                <p className="mt-1 text-sm font-bold text-slate-900">{appointment.contactManagerName}</p>
+                                                <p className="mt-1 text-xs text-slate-600">
+                                                    {[appointment.contactManagerPhone, appointment.contactManagerEmail].filter(Boolean).join(' · ') || 'Chưa có thông tin liên hệ'}
+                                                </p>
+                                                <p className="mt-2 text-xs text-slate-500">Thông tin liên hệ thuộc chủ tài khoản, không ghi vào hồ sơ người được khám.</p>
+                                            </div>
+                                        )}
 
                                         {/* FULL NAME */}
                                         <div>
@@ -1150,6 +1226,7 @@ export default function AppointmentDetailPage() {
                                             </label>
 
                                             <input
+                                                id="reception-patient-full-name"
                                                 type="text"
                                                 disabled={!isEditable}
                                                 value={fullName}
@@ -1168,7 +1245,7 @@ export default function AppointmentDetailPage() {
 
                                             <div>
                                                 <label className="mb-1.5 block text-xs text-gray-500">
-                                                    Số điện thoại
+                                                    Số điện thoại (không bắt buộc)
                                                 </label>
 
                                                 <input
@@ -1187,7 +1264,7 @@ export default function AppointmentDetailPage() {
 
                                             <div>
                                                 <label className="mb-1.5 block text-xs text-gray-500">
-                                                    Email
+                                                    Email (không bắt buộc)
                                                 </label>
 
                                                 <input
@@ -1211,6 +1288,7 @@ export default function AppointmentDetailPage() {
                                             <div>
                                                 <label className="mb-1.5 block text-xs text-gray-500">
                                                     Ngày sinh
+                                                    <span className="ml-1 text-red-400">*</span>
                                                 </label>
 
                                                 <input
@@ -1242,6 +1320,7 @@ export default function AppointmentDetailPage() {
                                             <div>
                                                 <label className="mb-1.5 block text-xs text-gray-500">
                                                     Giới tính
+                                                    <span className="ml-1 text-red-400">*</span>
                                                 </label>
 
                                                 <div className="grid grid-cols-2 gap-2">
@@ -1277,7 +1356,7 @@ export default function AppointmentDetailPage() {
                                         {/* ADDRESS */}
                                         <div>
                                             <label className="mb-1.5 block text-xs text-gray-500">
-                                                Địa chỉ
+                                                Địa chỉ (không bắt buộc)
                                             </label>
 
                                             <input
@@ -1433,35 +1512,93 @@ export default function AppointmentDetailPage() {
 
                                             {selectedServiceIds.length >
                                                 0 && (
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    {isEditable && (
+                                                        <button type="button"
+                                                            onClick={() => {
+                                                                const originalIds = (appointment?.services || []).map(service => service.serviceId || service.id);
+                                                                setSelectedServiceIds(originalIds);
+                                                                toast.info('Đã khôi phục danh sách dịch vụ ban đầu của lịch hẹn.');
+                                                            }}
+                                                            className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-teal-200 bg-white px-3 text-[14px] font-semibold text-teal-700 hover:bg-teal-50">
+                                                            <RotateCcw size={15} /> Bệnh nhân yêu cầu chọn lại
+                                                        </button>
+                                                    )}
                                                     <span className="rounded-full bg-gray-900 px-2.5 py-1 text-[11px] font-medium text-white">
                                                 Đã chọn{' '}
                                                         {
                                                             selectedServiceIds.length
                                                         }
                                             </span>
+                                                </div>
                                                 )}
                                         </div>
 
-                                        {/* SEARCH */}
-                                        <div className="relative mt-4">
+                                        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+                                            {activeServiceTab !== 'LABORATORY' && <div className="relative min-w-0 flex-1">
+                                                <Search
+                                                    size={16}
+                                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    disabled={!isEditable}
+                                                    value={searchTerm}
+                                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                                    placeholder={activeServiceTab === 'EXAMINATION'
+                                                        ? 'Tìm dịch vụ khám...'
+                                                        : activeServiceTab === 'LABORATORY'
+                                                            ? 'Tìm gói hoặc chỉ số xét nghiệm...'
+                                                            : 'Tìm dịch vụ chẩn đoán hình ảnh, ECG...'}
+                                                    className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm outline-none transition focus:border-teal-400 focus:bg-white disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+                                                />
+                                            </div>}
 
-                                            <Search
-                                                size={16}
-                                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                                            />
+                                            <div className="grid shrink-0 grid-cols-1 rounded-xl bg-gray-100 p-1 sm:grid-cols-3">
+                                                {[
+                                                    ['EXAMINATION', 'Khám bệnh'],
+                                                    ['LABORATORY', 'Xét nghiệm'],
+                                                    ['PARACLINICAL_OTHER', 'Hình ảnh & khác'],
+                                                ].map(([type, label]) => {
+                                                    const count = servicesToShow.filter(service => {
+                                                        if (type === 'LABORATORY') {
+                                                            return service.departmentType === 'PARACLINICAL' && isPackageOrAnalyteService(service);
+                                                        }
+                                                        if (type === 'PARACLINICAL_OTHER') {
+                                                            return service.departmentType === 'PARACLINICAL' && !isPackageOrAnalyteService(service);
+                                                        }
+                                                        return service.departmentType === type;
+                                                    }).length;
+                                                    return (
+                                                        <button
+                                                            key={type}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setActiveServiceTab(type);
+                                                                setSearchTerm('');
+                                                            }}
+                                                            className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${activeServiceTab === type
+                                                                ? 'bg-white text-gray-900 shadow-sm'
+                                                                : 'text-gray-500 hover:text-gray-800'}`}
+                                                        >
+                                                            {label} · {count}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
 
-                                            <input
-                                                type="text"
-                                                disabled={!isEditable}
-                                                value={searchTerm}
-                                                onChange={(e) =>
-                                                    setSearchTerm(
-                                                        e.target.value
-                                                    )
-                                                }
-                                                placeholder="Tìm kiếm dịch vụ..."
-                                                className="h-10 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm outline-none transition focus:border-gray-400 focus:bg-white disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
-                                            />
+                                        <div className={`mt-3 flex gap-2 rounded-xl border px-3 py-2.5 text-xs leading-5 ${activeServiceTab === 'EXAMINATION'
+                                            ? 'border-blue-200 bg-blue-50 text-blue-800'
+                                            : activeServiceTab === 'LABORATORY'
+                                                ? 'border-teal-200 bg-teal-50 text-teal-900'
+                                                : 'border-violet-200 bg-violet-50 text-violet-900'}`}>
+                                            <Info size={16} className="mt-0.5 shrink-0" />
+                                            <p>{activeServiceTab === 'EXAMINATION'
+                                                ? <><strong>Lưu ý:</strong> Có thể chọn nhiều dịch vụ khám trong cùng một lượt. Mỗi dịch vụ được lưu thành bệnh án riêng và thực hiện theo thứ tự.</>
+                                                : activeServiceTab === 'LABORATORY'
+                                                    ? <><strong>Gói và chỉ số lẻ:</strong> Chọn đủ chỉ số sẽ áp dụng giá gói; bỏ bớt sẽ tính giá lẻ. Các phần trùng không bị thu hai lần.</>
+                                                    : <><strong>Dịch vụ khác:</strong> Chọn riêng siêu âm, X-quang, ECG hoặc các dịch vụ cận lâm sàng không phải xét nghiệm.</>}</p>
                                         </div>
                                     </div>
 
@@ -1474,18 +1611,44 @@ export default function AppointmentDetailPage() {
                                                     Đang tải dịch vụ...
                                                 </p>
                                             </div>
-                                        ) : filteredServices.length ===
-                                        0 ? (
+                                        ) : regularFilteredServices.length === 0 && (activeServiceTab !== 'LABORATORY' || packageAndAnalyteServices.length === 0) ? (
                                             <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50">
                                                 <p className="text-sm text-gray-400">
                                                     Không tìm thấy dịch vụ
                                                 </p>
                                             </div>
                                         ) : (
-                                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                            <div className="space-y-4">
+                                                {activeServiceTab === 'LABORATORY' && packageAndAnalyteServices.length > 0 && (
+                                                    <LabPackageAnalytePicker
+                                                        services={packageAndAnalyteServices}
+                                                        selectedIds={selectedServiceIds.filter(serviceId => packageAndAnalyteIds.has(serviceId))}
+                                                        disabled={!isEditable}
+                                                        loading={loadingServices}
+                                                        title="Chọn gói và chỉ số xét nghiệm"
+                                                        helper="Chọn gói đầy đủ, chỉ số lẻ hoặc kết hợp cả hai. Các chỉ số đã có trong gói sẽ không bị tính trùng."
+                                                        onToggle={service => toggleService(service.id || service.serviceId)}
+                                                        onCustomizePanel={customizeLabPanel}
+                                                        onReset={() => setSelectedServiceIds(previous => [
+                                                            ...previous.filter(serviceId => !packageAndAnalyteIds.has(serviceId)),
+                                                            ...originalPackageAndAnalyteIds,
+                                                        ])}
+                                                        getServiceState={service => {
+                                                            const serviceId = service.id || service.serviceId;
+                                                            const completedToday = sameDayResults.some(result => result.serviceId === serviceId);
+                                                            return completedToday
+                                                                ? { disabled: true, label: 'Đã có kết quả hôm nay · Không thu lại' }
+                                                                : { disabled: false, label: '' };
+                                                        }}
+                                                        compact
+                                                    />
+                                                )}
+
+                                            {regularFilteredServices.length > 0 && (
+                                            <div className="grid grid-cols-1 gap-4">
 
                                                 {Object.entries(
-                                                    filteredServices.reduce(
+                                                    regularFilteredServices.reduce(
                                                         (
                                                             acc,
                                                             service
@@ -1639,10 +1802,12 @@ export default function AppointmentDetailPage() {
                                                         )
                                                     )}
                                             </div>
+                                            )}
+                                            </div>
                                         )}
 
                                         {/* TOTAL */}
-                                        <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
+                                        <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
 
                                             <div>
                                                 <p className="text-xs text-gray-400">
@@ -1650,7 +1815,7 @@ export default function AppointmentDetailPage() {
                                                 </p>
 
                                                 <p className="mt-0.5 text-sm font-semibold text-gray-800">
-                                                    {selectedServiceIds.length} dịch vụ · {selectedServices.filter(service => service.departmentType === 'EXAMINATION').length} khám · {selectedServices.filter(service => service.departmentType !== 'EXAMINATION').length} cận lâm sàng
+                                                    {selectedServiceIds.length} dịch vụ · {bookedServices.length} khách đặt · {addedServices.length} bổ sung
                                                 </p>
                                             </div>
 
@@ -1676,7 +1841,7 @@ export default function AppointmentDetailPage() {
                 {/* =====================================================
                 STICKY FOOTER
             ===================================================== */}
-                <div className="fixed bottom-0 left-52 right-0 z-40 border-t border-gray-200 bg-white">
+                <div className="cares-reception-fixed-summary sticky bottom-0 z-40 border border-gray-200 bg-white">
 
                     <div className="flex h-[72px] items-center justify-between gap-5 px-6 lg:px-8">
 
@@ -1716,7 +1881,7 @@ export default function AppointmentDetailPage() {
                                         checkingIn ||
                                         saving
                                     }
-                                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-gray-900 px-7 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="cares-reception-primary"
                                 >
                                     <LogIn size={15} />
 
@@ -1732,6 +1897,12 @@ export default function AppointmentDetailPage() {
                                         Bệnh nhân đã check-in
                                     </div>
                                 )}
+
+                            {isAwaitingCheckIn && isPastAppointment && (
+                                <div className="flex h-10 items-center rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-600">
+                                    Lịch hẹn đã quá ngày, không thể check-in
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1743,6 +1914,20 @@ export default function AppointmentDetailPage() {
                     <AppointmentConfirmModal
                         namespace="receptionist"
                         data={{
+                            title: confirmAction === 'checkin'
+                                ? 'Xác nhận thông tin check-in'
+                                : 'Xác nhận thông tin cập nhật',
+                            subtitle: 'Đối chiếu người được khám, ngày/ca và dịch vụ trước khi xác nhận.',
+                            confirmLabel: confirmAction === 'checkin' ? 'Xác nhận check-in' : 'Xác nhận lưu',
+                            note: confirmAction === 'checkin'
+                                ? 'Xác nhận để tiếp nhận bệnh nhân với các dịch vụ đã chọn. Thao tác này không xác nhận thanh toán. Thông tin liên hệ và địa chỉ còn thiếu có thể bổ sung sau.'
+                                : 'Chỉ lưu các thay đổi của lịch hẹn, chưa thực hiện check-in. Thông tin liên hệ và địa chỉ còn thiếu có thể bổ sung sau.',
+                            dateOfBirth: dob ? new Date(`${dob}T00:00:00`).toLocaleDateString('vi-VN') : '',
+                            contactManager: appointment.contactManagerName ? {
+                                name: appointment.contactManagerName,
+                                phone: appointment.contactManagerPhone,
+                                email: appointment.contactManagerEmail,
+                            } : null,
                             fullName:
                                 fullName || '',
 
@@ -1753,7 +1938,7 @@ export default function AppointmentDetailPage() {
                                 email || '',
 
                             ageGender: `${
-                                age || '-'
+                                age === '' || age == null ? 'Chưa cung cấp' : `${age} tuổi`
                             } / ${
                                 gender === 'male'
                                     ? 'Nam'

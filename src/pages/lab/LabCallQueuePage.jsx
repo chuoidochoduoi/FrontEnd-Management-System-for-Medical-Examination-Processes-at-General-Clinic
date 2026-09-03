@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
     ArrowLeft,
+    MonitorUp,
     RotateCcw,
     Search,
     UserCircle,
@@ -11,6 +12,7 @@ import { toast } from 'react-toastify';
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { useLabQueue } from '@/hooks/useLabQueue';
 import { ROUTES } from '@/constants/routes';
+import { openAuthenticatedTab } from '@/utils/openAuthenticatedTab';
 
 const label = {
     WAITING: 'Chờ gọi',
@@ -67,6 +69,8 @@ export default function LabCallQueuePage() {
                         status: request.queueStatus,
                         patientName: request.patientName,
                         patientCode: request.patientCode,
+                        priorityCategory: request.priorityCategory,
+                        priorityLabel: request.priorityLabel,
                         requests: [],
                     };
                 }
@@ -219,6 +223,10 @@ export default function LabCallQueuePage() {
 
                         <div className="flex items-center gap-2">
 
+                            <button type="button" onClick={() => openAuthenticatedTab(ROUTES.ROOM_QUEUE_DISPLAY.replace(':departmentId', departmentId))} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-primary-300 hover:text-primary-700">
+                                <MonitorUp size={17}/> Mở màn hình phòng
+                            </button>
+
                             <div className="relative">
 
                                 <Search
@@ -309,6 +317,13 @@ export default function LabCallQueuePage() {
                                             .filter(Boolean)
                                             .join(', ') || '—'}
                                     </p>
+                                    {currentPatient.requests.length > 1 && (
+                                        <p className="mt-1 text-sm font-semibold text-primary-700">
+                                            Đã hoàn thành {currentPatient.requests.filter(request =>
+                                                ['COMPLETED', 'DONE'].includes(request.status)).length}/
+                                            {currentPatient.requests.length} dịch vụ
+                                        </p>
+                                    )}
 
                                     <div className="mt-2 flex flex-wrap items-center gap-2">
 
@@ -334,16 +349,18 @@ export default function LabCallQueuePage() {
                                 <div className="shrink-0">
 
                                     <button
-                                        onClick={() =>
-                                            action(
-                                                currentPatient.ticketId,
-                                                'finish-service',
-                                                'Đã xác nhận xong thao tác tại phòng.'
-                                            )
-                                        }
+                                        onClick={() => {
+                                            const nextRequest = currentPatient.requests.find(request =>
+                                                !['COMPLETED', 'DONE', 'CANCELLED'].includes(request.status));
+                                            if (nextRequest?.testRequestId) {
+                                                navigate(ROUTES.DOCTOR_LAB_DETAIL.replace(':id', nextRequest.testRequestId));
+                                            }
+                                        }}
+                                        disabled={!currentPatient.requests.some(request =>
+                                            !['COMPLETED', 'DONE', 'CANCELLED'].includes(request.status))}
                                         className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
                                     >
-                                        Đã xong thao tác
+                                        Nhập kết quả dịch vụ
                                     </button>
 
                                 </div>
@@ -567,6 +584,13 @@ export default function LabCallQueuePage() {
                                                                 ', '
                                                             ) ||
                                                         '—'}
+                                                    {group.requests.length > 1 && (
+                                                        <p className="mt-1 text-sm font-semibold text-primary-700">
+                                                            Đã hoàn thành {group.requests.filter(request =>
+                                                                ['COMPLETED', 'DONE'].includes(request.status)).length}/
+                                                            {group.requests.length} dịch vụ
+                                                        </p>
+                                                    )}
 
                                                 </td>
 
@@ -589,6 +613,9 @@ export default function LabCallQueuePage() {
                                                                     ] ||
                                                                 group.status}
                                                         </span>
+                                                        {group.priorityLabel && <span className="ml-2 inline-flex rounded-lg border border-orange-300 bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-800">
+                                                            {group.priorityLabel}
+                                                        </span>}
 
                                                 </td>
 

@@ -1,7 +1,8 @@
 // src/pages/customer/ProfilePage.jsx
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pencil, Key, Calendar, User, Users, Phone, Mail, MapPin, Droplets, Shield, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Pencil, Key, Calendar, User, Users, Phone, Mail, MapPin, Droplets, Shield, CheckCircle, AlertCircle, Loader2, HeartPulse } from 'lucide-react';
 import { toast } from 'react-toastify';
 import CustomerLayout from '@/components/layout/CustomerLayout';
 import { useProfile } from '@/hooks/useProfile';
@@ -62,6 +63,7 @@ const DateDropdowns = ({ value, onChange, className }) => {
 
 export default function ProfilePage() {
     const { t } = useTranslation('customer');
+    const navigate = useNavigate();
     const { profile, loading, saving, error, saveProfile } = useProfile();
 
     const [editing, setEditing] = useState(false);
@@ -274,7 +276,7 @@ export default function ProfilePage() {
 
         return (
             <CustomerLayout>
-                <div className="max-w-2xl mx-auto py-8">
+                <div className="cares-profile-onboarding mx-auto w-full py-8">
                     {/* Header */}
                     <div className="text-center mb-10">
                         <h1 className="text-2xl font-bold text-gray-900 mb-2">Hoàn tất hồ sơ cá nhân</h1>
@@ -415,6 +417,13 @@ export default function ProfilePage() {
                                     {onboardingErrors.address && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{onboardingErrors.address}</p>}
                                 </div>
 
+                                <div className="cares-profile-section-title md:col-span-2">
+                                    <HeartPulse size={17} />
+                                    <span>
+                                        <strong>Thông tin sức khỏe</strong>
+                                        <small>Dữ liệu hỗ trợ bác sĩ trong quá trình thăm khám</small>
+                                    </span>
+                                </div>
                                 {/* Nhóm máu */}
                                 <div>
                                     <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-2">
@@ -548,9 +557,13 @@ export default function ProfilePage() {
 
     return (
         <CustomerLayout>
-            <div className="space-y-5">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-lg font-semibold text-gray-900">{t('profile.pageTitle')}</h1>
+            <div className="cares-profile-page space-y-5">
+                <header className="cares-customer-page-heading">
+                    <div>
+                        <span className="cares-customer-eyebrow"><User size={15} /> Thông tin của bạn</span>
+                        <h1 className="text-lg font-semibold text-gray-900">{t('profile.pageTitle')}</h1>
+                        <p>Quản lý thông tin cá nhân và dữ liệu sức khỏe cơ bản.</p>
+                    </div>
                     <button
                         onClick={() => setShowPasswordModal(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-sm font-semibold transition-all shadow-sm"
@@ -558,7 +571,7 @@ export default function ProfilePage() {
                         <Key size={16} />
                         Đổi mật khẩu
                     </button>
-                </div>
+                </header>
 
                 {error && <p className="text-red-500 text-sm">{error}</p>}
 
@@ -568,7 +581,7 @@ export default function ProfilePage() {
                     <div className="w-full space-y-5">
 
                         {/* Thông tin cá nhân */}
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6">
+                        <div className="cares-profile-card bg-white border border-gray-200 rounded-2xl p-6">
                             <div className="flex items-center justify-between mb-5">
                                 <h3 className="text-sm font-semibold text-gray-900">
                                     {t('profile.personalInfo.title')}
@@ -665,6 +678,13 @@ export default function ProfilePage() {
                                         ? <input type="text" maxLength={255} value={address} onChange={e => setAddress(e.target.value)} className={inputCls} />
                                         : <p className={fieldValue}>{address || '—'}</p>}
                                 </div>
+                                <div className="cares-profile-section-title md:col-span-2">
+                                    <HeartPulse size={17} />
+                                    <span>
+                                        <strong>Thông tin sức khỏe</strong>
+                                        <small>Dữ liệu hỗ trợ bác sĩ trong quá trình thăm khám</small>
+                                    </span>
+                                </div>
                                 {/* Nhóm máu */}
                                 <div>
                                     <div className={fieldLabel}>
@@ -709,12 +729,16 @@ export default function ProfilePage() {
 
 
                         {/* Cuộc hẹn gần đây */}
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6">
+                        <div className="cares-profile-card bg-white border border-gray-200 rounded-2xl p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-sm font-semibold text-gray-900">
                                     {t('profile.appointments.title')}
                                 </h3>
-                                <button className="text-xs text-primary-500 hover:text-primary-600 font-medium">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/my-appointments')}
+                                    className="text-xs text-primary-500 hover:text-primary-600 font-medium"
+                                >
                                     {t('profile.appointments.viewAll')}
                                 </button>
                             </div>

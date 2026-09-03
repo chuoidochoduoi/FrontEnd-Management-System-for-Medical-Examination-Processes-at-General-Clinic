@@ -1,307 +1,72 @@
-// src/pages/cashier/InvoiceListPage.jsx
-import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Eye, FileText, Search, WalletCards } from 'lucide-react';
 import CashierLayout from '@/components/layout/CashierLayout';
 import { useInvoiceList } from '@/hooks/useInvoiceList';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { ROUTES } from '@/constants/routes';
+import styles from './InvoiceListPage.module.css';
 
-/* ── helpers ── */
-const fmt = (n) =>
-    n != null ? new Intl.NumberFormat('vi-VN').format(n) : '—';
-
-const STATUS_STYLE = {
-    pending:   'bg-orange-50 text-orange-600 border border-orange-200',
-    paid:      'bg-green-50  text-green-700  border border-green-200',
-    cancelled: 'bg-gray-100  text-gray-500   border border-gray-200',
+const fmt = (value) => value != null ? `${new Intl.NumberFormat('vi-VN').format(value)} đ` : '—';
+const statusKey = (value = '') => value.toLowerCase();
+const statusLabel = { pending: 'Chờ thanh toán', paid: 'Đã thanh toán', cancelled: 'Đã hủy' };
+const formatDate = (invoice) => {
+    const value = invoice.checkInTime || invoice.createdAt;
+    if (!value) return invoice.issueDate || '—';
+    try { return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)); } catch { return value; }
 };
 
-/* ── Services cell: first service + badge ── */
-function ServicesCell({ services }) {
-    if (!services?.length) return <span className="text-gray-400 text-xs">—</span>;
-
-    const first = services[0];
-    const rest  = services.length - 1;
-
-    return (
-        <div>
-            <p className="text-sm text-gray-800 leading-snug">{first.name}</p>
-            {first.description && (
-                <p className="text-xs text-gray-400 mt-0.5">{first.description}</p>
-            )}
-            {rest > 0 && (
-                <span className="mt-1.5 inline-block text-xs text-primary-500">
-                    +{rest} dịch vụ khác
-                </span>
-            )}
-        </div>
-    );
+function ServiceSummary({ services = [] }) {
+    if (!services.length) return <span className="text-gray-400">Chưa có dịch vụ</span>;
+    return <div className={styles.serviceSummary}><strong>{services[0].name}</strong>{services[0].description && services[0].description !== services[0].name && <small className={styles.description} title={services[0].description}>{services[0].description}</small>}{services.length > 1 && <small className={styles.moreServices}>+{services.length - 1} dịch vụ khác</small>}</div>;
 }
 
-/* ── Debug log panel ── */
-function DebugLog({ invoices, loading, error, total }) {
-    const [showLog, setShowLog] = useState(false);
-
-    // Chỉ hiện trong development hoặc khi có ?debug=true
-    const isDebug = import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === 'true';
-    if (!isDebug) return null;
-
-    return (
-        <div className="fixed bottom-4 right-4 z-50">
-            <button
-                onClick={() => setShowLog(v => !v)}
-                className="px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg shadow-lg"
-            >
-                {showLog ? 'Ẩn log' : 'Hiện log'}
-            </button>
-            {showLog && (
-                <div className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-lg text-xs max-w-md max-h-80 overflow-y-auto">
-                    <p><strong>Trạng thái:</strong> {loading ? 'Đang tải...' : 'Sẵn sàng'}</p>
-                    <p><strong>Tổng số (API trả về):</strong> {total}</p>
-                    <p><strong>Số lượng invoices hiển thị:</strong> {invoices.length}</p>
-                    {error && <p className="text-red-400"><strong>Lỗi:</strong> {error}</p>}
-
-                    <div className="mt-2 border-t border-gray-700 pt-2">
-                        <p className="text-yellow-400 font-semibold">Debug Info:</p>
-                        <p className="text-gray-500">Kiểm tra Console (F12) để xem log chi tiết</p>
-                        <p className="text-gray-500">API URL: {import.meta.env.VITE_API_URL}/api/v1/invoices</p>
-
-                        {invoices.length > 0 && (
-                            <details className="mt-2">
-                                <summary className="cursor-pointer text-yellow-300">Dữ liệu invoices (click để xem)</summary>
-                                <pre className="mt-1 text-xs overflow-x-auto max-h-40">
-                                    {JSON.stringify(invoices.slice(0, 3), null, 2)}
-                                </pre>
-                            </details>
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-/* ── Main page ── */
 export default function InvoiceListPage() {
-    const { t } = useTranslation('cashier');
     const { invoices, loading, error, page, total, fetchInvoices } = useInvoiceList();
-
-    const [search,   setSearch]   = useState('');
-    const [status,   setStatus]   = useState('');
+    const [search, setSearch] = useState('');
+    const [status, setStatus] = useState('');
     const [category, setCategory] = useState('');
     const [fromDate, setFromDate] = useState('');
-    const [toDate,   setToDate]   = useState('');
+    const [toDate, setToDate] = useState('');
+    const pageSize = 7;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const query = (nextPage = 0) => ({ search, status, category, fromDate, toDate, page: nextPage, size: pageSize });
 
-    const PAGE_SIZE = 7;
-    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-    useEffect(() => {
-        // Gọi với page=0 (Spring Data 0-indexed)
-        fetchInvoices({ page: 0, size: PAGE_SIZE });
-    }, []);
-
-    const handleSearch = () => fetchInvoices({ search, status, category, fromDate, toDate, page: 0, size: PAGE_SIZE });
-    const handlePage   = (p) => fetchInvoices({ search, status, category, fromDate, toDate, page: p - 1, size: PAGE_SIZE });
-
-    // Lắng nghe sự kiện qua WebSocket
+    useEffect(() => { fetchInvoices({ page: 0, size: pageSize }); }, []);
     useWebSocket('/topic/cashier-invoices', null, (message) => {
-        if (message === 'INVOICE_UPDATED') {
-            // Re-fetch the current page when an invoice is created/updated
-            fetchInvoices({ search, status, category, fromDate, toDate, page: page - 1 < 0 ? 0 : page - 1, size: PAGE_SIZE });
-        }
+        if (message === 'INVOICE_UPDATED') fetchInvoices(query(Math.max(0, page - 1)));
     });
 
-    return (
-        <CashierLayout>
-            <div className="space-y-5">
-                <h1 className="text-lg font-semibold text-gray-900">
-                    {t('invoiceList.pageTitle')}
-                </h1>
+    const renderState = () => {
+        if (loading) return <div className="cares-reception-state"><span className="cares-reception-spinner"/><strong>Đang tải hóa đơn...</strong></div>;
+        if (error) return <div className="cares-reception-state is-error"><strong>{error}</strong><button type="button" onClick={() => fetchInvoices(query(Math.max(0, page - 1)))}>Thử lại</button></div>;
+        if (!invoices.length) return <div className="cares-reception-state"><FileText size={36}/><strong>Không có hóa đơn phù hợp</strong><p>Hãy thay đổi bộ lọc hoặc khoảng ngày.</p></div>;
+        return null;
+    };
 
-                {/* ── Filter bar ── */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 grid grid-cols-1 md:grid-cols-[1fr_120px_150px_130px_130px_auto] gap-3 items-end">
-                    {/* Search */}
-                    <div>
-                        <p className="text-xs text-gray-400 mb-1.5">{t('invoiceList.filter.search')}</p>
-                        <div className="relative">
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                                placeholder={t('invoiceList.filter.searchPlaceholder')}
-                                className="w-full h-10 pl-3 pr-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 placeholder:text-gray-300"
-                            />
-                        </div>
-                    </div>
+    return <CashierLayout><div className={`cares-ops-screen ${styles.page}`}>
+        <header className="cares-ops-header"><div><span className="cares-ops-eyebrow"><WalletCards size={17}/>Quầy thanh toán</span><h1>Danh sách hóa đơn</h1><p>Theo dõi hóa đơn, thu tiền và mở phiếu thu của bệnh nhân.</p></div></header>
 
-                    {/* Status */}
-                    <div>
-                        <p className="text-xs text-gray-400 mb-1.5">{t('invoiceList.filter.status')}</p>
-                        <select
-                            value={status}
-                            onChange={e => setStatus(e.target.value)}
-                            className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500 bg-white"
-                        >
-                            <option value="">— Tất cả —</option>
-                            <option value="pending">{t('invoiceList.status.pending')}</option>
-                            <option value="paid">{t('invoiceList.status.paid')}</option>
-                            <option value="cancelled">{t('invoiceList.status.cancelled')}</option>
-                        </select>
-                    </div>
+        <section className="cares-ops-filter">
+            <label><span>Tìm kiếm</span><input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && fetchInvoices(query(0))} placeholder="Mã hóa đơn, bệnh nhân hoặc mã bệnh nhân..."/></label>
+            <label><span>Trạng thái</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Tất cả</option><option value="pending">Chờ thanh toán</option><option value="paid">Đã thanh toán</option><option value="cancelled">Đã hủy</option></select></label>
+            <label><span>Dịch vụ</span><input value={category} onChange={(event) => setCategory(event.target.value)} placeholder="Tên dịch vụ..."/></label>
+            <label><span>Từ ngày</span><input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)}/></label>
+            <label><span>Đến ngày</span><input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)}/></label>
+            <button type="button" className="cares-ops-primary" onClick={() => fetchInvoices(query(0))}><Search size={18}/>Tìm kiếm</button>
+        </section>
 
-                    {/* Category */}
-                    <div>
-                        <p className="text-xs text-gray-400 mb-1.5">{t('invoiceList.filter.category')}</p>
-                        <input
-                            type="text"
-                            value={category}
-                            onChange={e => setCategory(e.target.value)}
-                            className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500 placeholder:text-gray-300"
-                            placeholder="Tên dịch vụ..."
-                        />
-                    </div>
+        <section className="cares-ops-card">
+            <header className="cares-ops-card-header"><div><h2>Hóa đơn hiện có</h2><p className="text-sm text-gray-500">Kết quả được cập nhật khi trạng thái thanh toán thay đổi.</p></div><span className="cares-ops-badge is-active">{total} hóa đơn</span></header>
+            <div className="cares-ops-table-scroll" tabIndex={0} role="region" aria-label="Danh sách hóa đơn, cuộn ngang để xem đầy đủ các cột"><table className={`cares-ops-table ${styles.table}`}>
+                <colgroup><col className={styles.codeColumn}/><col className={styles.dateColumn}/><col className={styles.patientColumn}/><col/><col className={styles.amountColumn}/><col className={styles.statusColumn}/><col className={styles.actionColumn}/></colgroup>
+                <thead><tr>{['Mã hóa đơn', 'Thời gian', 'Bệnh nhân', 'Dịch vụ', 'Tổng tiền', 'Trạng thái', 'Thao tác'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead><tbody>
+                {(loading || error || !invoices.length) && <tr><td colSpan="7">{renderState()}</td></tr>}
+                {!loading && !error && invoices.map((invoice) => <tr key={invoice.id}><td><strong>{invoice.code}</strong></td><td>{formatDate(invoice)}</td><td><strong>{invoice.patientName || '—'}</strong><small>{invoice.patientCode || 'Chưa có mã bệnh nhân'}</small></td><td><ServiceSummary services={invoice.services}/></td><td><strong>{fmt(invoice.total)}</strong></td><td><span className={`cares-ops-badge is-${statusKey(invoice.status)}`}>{statusLabel[statusKey(invoice.status)] || invoice.status}</span></td><td><Link className="cares-ops-row-link" to={ROUTES.CASHIER_INVOICE_DETAIL.replace(':id', invoice.id)}><Eye size={17}/>Xem chi tiết</Link></td></tr>)}
+            </tbody></table></div>
+            <div className="cares-ops-mobile-list">{renderState() || invoices.map((invoice) => <article key={invoice.id}><header><strong>{invoice.code}</strong><span className={`cares-ops-badge is-${statusKey(invoice.status)}`}>{statusLabel[statusKey(invoice.status)] || invoice.status}</span></header><h3>{invoice.patientName || '—'}</h3><p>{invoice.patientCode || 'Chưa có mã'} · {formatDate(invoice)}</p><ServiceSummary services={invoice.services}/><footer><strong>{fmt(invoice.total)}</strong><Link className="cares-ops-row-link" to={ROUTES.CASHIER_INVOICE_DETAIL.replace(':id', invoice.id)}><Eye size={17}/>Chi tiết</Link></footer></article>)}</div>
+        </section>
 
-                    {/* From Date */}
-                    <div>
-                        <p className="text-xs text-gray-400 mb-1.5">{t('Từ ngày')}</p>
-                        <input
-                            type="date"
-                            value={fromDate}
-                            onChange={e => setFromDate(e.target.value)}
-                            className="w-full h-10 px-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500"
-                        />
-                    </div>
-
-                    {/* To Date */}
-                    <div>
-                        <p className="text-xs text-gray-400 mb-1.5">{t('Đến ngày')}</p>
-                        <input
-                            type="date"
-                            value={toDate}
-                            onChange={e => setToDate(e.target.value)}
-                            className="w-full h-10 px-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary-500"
-                        />
-                    </div>
-
-                    {/* Button */}
-                    <button
-                        onClick={handleSearch}
-                        className="h-10 px-5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-medium rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap"
-                    >
-                        <Search size={14} />
-                        {t('invoiceList.filter.submit')}
-                    </button>
-                </div>
-
-                {/* ── Table ── */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                    {/* Header */}
-                    <div className="grid grid-cols-[130px_150px_170px_1fr_120px_120px_130px] px-6 py-3 border-b border-gray-100 bg-gray-50">
-                        {[
-                            t('invoiceList.table.invoiceCode'),
-                            'Thời gian khám/check-in',
-                            t('invoiceList.table.patient'),
-                            t('invoiceList.table.services'),
-                            t('invoiceList.table.total'),
-                            t('invoiceList.table.status'),
-                            t('invoiceList.table.actions'),
-                        ].map(col => (
-                            <span key={col} className="text-xs font-medium text-gray-400">{col}</span>
-                        ))}
-                    </div>
-
-                    {/* States */}
-                    {loading && (
-                        <p className="text-sm text-gray-400 text-center py-12">{t('invoiceList.loading')}</p>
-                    )}
-                    {error && (
-                        <p className="text-sm text-red-500 text-center py-12">{error}</p>
-                    )}
-                    {!loading && !error && invoices.length === 0 && (
-                        <p className="text-sm text-gray-400 text-center py-12">{t('invoiceList.noData')}</p>
-                    )}
-
-                    {/* Debug Log Panel - luôn hiện trong môi trường dev */}
-                    <DebugLog invoices={invoices} loading={loading} error={error} total={total} />
-
-                    {/* Rows */}
-                    {!loading && invoices.map((inv) => (
-                        <div
-                            key={inv.id}
-                            className="grid grid-cols-[130px_150px_170px_1fr_120px_120px_130px] px-6 py-4 border-b border-gray-50 hover:bg-gray-50 transition-colors items-start"
-                        >
-                            {/* Mã hóa đơn */}
-                            <div>
-                                <p className="text-sm font-semibold text-gray-800">{inv.code}</p>
-                            </div>
-
-                            <div className="text-xs text-gray-600 tabular-nums">
-                                {inv.checkInTime || inv.createdAt ? new Intl.DateTimeFormat('vi-VN', {
-                                    dateStyle: 'short', timeStyle: 'short'
-                                }).format(new Date(inv.checkInTime || inv.createdAt)) : inv.issueDate || '—'}
-                            </div>
-
-                            {/* Bệnh nhân */}
-                            <div>
-                                <p className="text-sm font-medium text-gray-900">{inv.patientName}</p>
-                                <p className="text-xs text-gray-400 mt-0.5">{inv.patientCode}</p>
-                            </div>
-
-                            {/* Dịch vụ — first + badge */}
-                            <ServicesCell services={inv.services} />
-
-                            {/* Tổng tiền */}
-                            <p className="text-sm font-semibold text-gray-900 tabular-nums">
-                                {fmt(inv.total)}
-                            </p>
-
-                            {/* Trạng thái */}
-                            <div>
-                <span className={`inline-block text-xs px-2.5 py-1 rounded-full ${STATUS_STYLE[inv.status] ?? STATUS_STYLE.pending}`}>
-                  {t(`invoiceList.status.${inv.status}`) || inv.status}
-                </span>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex flex-col gap-1.5 items-start">
-                                {/* Nút xem chi tiết - luôn hiện cho mọi trạng thái */}
-                                <Link
-                                    to={`${ROUTES.CASHIER_INVOICE_DETAIL.replace(':id', inv.id)}`}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 hover:border-gray-500 text-gray-600 text-xs font-medium rounded-lg transition-colors"
-                                >
-                                    👁️ Xem chi tiết
-                                </Link>
-
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* ── Pagination ── */}
-                {totalPages > 1 && (
-                    <div className="flex justify-end gap-1.5">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                            <button
-                                key={p}
-                                onClick={() => handlePage(p)}
-                                className={`w-8 h-8 text-sm rounded-lg transition-colors ${
-                                    p === page
-                                        ? 'bg-gray-900 text-white'
-                                        : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-400'
-                                }`}
-                            >
-                                {p}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {/* Debug Log Panel */}
-                <DebugLog invoices={invoices} loading={loading} error={error} total={total} />
-            </div>
-        </CashierLayout>
-    );
+        {totalPages > 1 && <nav className="cares-ops-pagination" aria-label="Phân trang">{Array.from({ length: totalPages }, (_, index) => index + 1).map((number) => <button type="button" key={number} className={number === page ? 'is-active' : ''} onClick={() => fetchInvoices(query(number - 1))}>{number}</button>)}</nav>}
+    </div></CashierLayout>;
 }

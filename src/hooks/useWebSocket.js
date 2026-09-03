@@ -3,14 +3,16 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { useQueryClient } from '@tanstack/react-query';
 
-export function useWebSocket(topic, queryKeyToInvalidate, onMessage = null) {
+export function useWebSocket(topic, queryKeyToInvalidate, onMessage = null, { authenticated = false, onConnect = null } = {}) {
     const queryClient = useQueryClient();
     const clientRef = useRef(null);
     const onMessageRef = useRef(onMessage);
+    const onConnectRef = useRef(onConnect);
 
     useEffect(() => {
         onMessageRef.current = onMessage;
-    }, [onMessage]);
+        onConnectRef.current = onConnect;
+    }, [onMessage, onConnect]);
 
     useEffect(() => {
         if (!topic) return;
@@ -24,6 +26,13 @@ export function useWebSocket(topic, queryKeyToInvalidate, onMessage = null) {
             heartbeatOutgoing: 4000,
         });
 
+        client.beforeConnect = () => {
+            if (authenticated) {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                client.connectHeaders = { Authorization: `Bearer ${token || ''}` };
+            }
+        };
+
         client.onConnect = () => {
             client.subscribe(topic, (message) => {
                 if (queryKeyToInvalidate) {
@@ -33,6 +42,8 @@ export function useWebSocket(topic, queryKeyToInvalidate, onMessage = null) {
                     onMessageRef.current(message.body);
                 }
             });
+            // Also refresh after reconnect: changes may have happened while offline.
+            onConnectRef.current?.();
         };
 
         client.onStompError = (frame) => {
@@ -44,9 +55,8 @@ export function useWebSocket(topic, queryKeyToInvalidate, onMessage = null) {
         clientRef.current = client;
 
         return () => {
-            if (clientRef.current) {
-                clientRef.current.deactivate();
-            }
+            client.deactivate();
+            if (clientRef.current === client) clientRef.current = null;
         };
-    }, [topic, queryClient, queryKeyToInvalidate]);
+    }, [topic, queryClient, queryKeyToInvalidate, authenticated]);
 }

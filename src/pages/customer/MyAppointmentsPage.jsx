@@ -1,6 +1,6 @@
 // src/pages/patient/MyAppointmentsPage.jsx
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,6 +10,7 @@ import {
     ChevronsLeft,
     ChevronsRight,
     Filter,
+    Clock3,
     Plus,
 } from 'lucide-react';
 
@@ -18,6 +19,8 @@ import CancelConfirmModal from '@/components/ui/CancelConfirmModal';
 import { useAppointments } from '@/hooks/useAppointmentsCustomer';
 import { ROUTES } from '@/constants/routes';
 import { toast } from 'react-toastify';
+import { useFamilyMembers } from '@/hooks/useFamilyMembers';
+import { useProfile } from '@/hooks/useProfile';
 
 /* =========================================================
    HELPERS
@@ -207,6 +210,8 @@ export default function MyAppointmentsPage() {
 
     const navigate =
         useNavigate();
+    const { profile } = useProfile();
+    const { members: familyMembers } = useFamilyMembers(true);
 
     const {
         appointments,
@@ -238,6 +243,7 @@ export default function MyAppointmentsPage() {
         date,
         setDate,
     ] = useState('');
+    const [patientProfileId, setPatientProfileId] = useState('all');
 
     /* =====================================================
        STATUS CONFIG
@@ -289,6 +295,8 @@ export default function MyAppointmentsPage() {
         fetchAppointments({
             status,
             date,
+            patientProfileId: patientProfileId === 'all' ? '' : patientProfileId,
+            includeFamily: patientProfileId === 'all',
             page: 0,
         });
     };
@@ -322,28 +330,38 @@ export default function MyAppointmentsPage() {
             total
         );
 
+    const nextAppointment = useMemo(() => appointments.find((appointment) => {
+        const normalized = normalizeStatus(appointment.status);
+        if (!['scheduled', 'pending', 'rescheduled', 'upcoming'].includes(normalized)) return false;
+        if (!appointment.date) return true;
+        const [day, month, year] = appointment.date.split('/');
+        const appointmentDate = new Date(`${year}-${month}-${day}T23:59:59`);
+        return !Number.isNaN(appointmentDate.getTime()) && appointmentDate >= new Date();
+    }), [appointments]);
+
     /* =====================================================
        UI
     ===================================================== */
 
     return (
         <PatientLayout>
-            <div className="w-full space-y-5">
+            <div className="cares-appointments-page w-full space-y-5">
 
                 {/* =================================================
                     HEADER
                 ================================================= */}
 
-                <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="cares-customer-page-heading">
 
                     <div>
+                        <span className="cares-customer-eyebrow"><CalendarDays size={15} /> Trung tâm lịch hẹn</span>
                         <h1 className="text-2xl font-bold text-gray-900">
                             {t(
                                 'myAppointments.pageTitle'
                             )}
                         </h1>
 
-                        <p className="mt-4 text-sm leading-6 text-gray-400">
+                        <p className="text-sm leading-6 text-gray-400">
                             {t(
                                 'myAppointments.notice'
                             )}
@@ -363,7 +381,7 @@ export default function MyAppointmentsPage() {
                                 ROUTES.CUSTOMER_APPOINTMENT
                             )
                         }
-                        className="inline-flex h-11 items-center gap-2 rounded-xl bg-gray-900 px-5 text-sm font-semibold text-white transition hover:bg-gray-700"
+                        className="cares-customer-primary-button"
                     >
                         <Plus size={17} />
 
@@ -373,13 +391,42 @@ export default function MyAppointmentsPage() {
                     </button>
                 </div>
 
+                {nextAppointment && (
+                    <section className="cares-next-appointment">
+                        <div className="cares-next-appointment-date">
+                            <CalendarDays size={22} />
+                            <span><small>Lịch gần nhất</small><strong>{nextAppointment.date || 'Đang cập nhật'}</strong></span>
+                        </div>
+                        <div>
+                            <small>Dịch vụ</small>
+                            <strong>{nextAppointment.serviceSummary || nextAppointment.serviceName || 'Chưa cập nhật dịch vụ'}</strong>
+                        </div>
+                        <div>
+                            <small>Thời gian</small>
+                            <strong><Clock3 size={16} />{nextAppointment.timeWindow || nextAppointment.shift || 'Đang cập nhật'}</strong>
+                        </div>
+                        <button type="button" onClick={() => navigate(`/my-appointments/${nextAppointment.id}`)}>
+                            Xem chi tiết <ChevronRight size={17} />
+                        </button>
+                    </section>
+                )}
+
                 {/* =================================================
                     FILTER
                 ================================================= */}
 
-                <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                <div className="cares-customer-filter-card rounded-2xl border border-gray-200 bg-white p-5">
 
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_1fr_260px]">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_220px]">
+
+                        <div>
+                            <label className={labelCls}>Người được khám</label>
+                            <select value={patientProfileId} onChange={event => setPatientProfileId(event.target.value)} className={inputCls}>
+                                <option value="all">Tất cả thành viên</option>
+                                {profile?.profileId && <option value={profile.profileId}>Tôi · {profile.fullName}</option>}
+                                {familyMembers.map(member => <option key={member.patientProfileId} value={member.patientProfileId}>{member.fullName} · {member.relationshipName}{member.active ? '' : ' · Đã lưu trữ'}</option>)}
+                            </select>
+                        </div>
 
                         {/* DATE FILTER */}
                         <div>
@@ -458,7 +505,7 @@ export default function MyAppointmentsPage() {
                                 onClick={
                                     handleFilter
                                 }
-                                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-5 text-sm font-semibold text-white transition hover:bg-gray-700"
+                                className="cares-customer-filter-button"
                             >
                                 <Filter
                                     size={
@@ -478,11 +525,13 @@ export default function MyAppointmentsPage() {
                     APPOINTMENT TABLE
                 ================================================= */}
 
-                <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                <div className="cares-customer-list-card overflow-hidden rounded-2xl border border-gray-200 bg-white">
 
                     {/* TABLE HEADER */}
 
-                    <div className="hidden grid-cols-[1.1fr_1.4fr_1fr_220px] border-b border-gray-100 px-5 py-4 text-xs font-semibold text-gray-500 md:grid">
+                    <div className="hidden grid-cols-[1fr_1fr_1.4fr_1fr_220px] border-b border-gray-100 px-5 py-4 text-xs font-semibold text-gray-500 md:grid">
+
+                        <div>Người được khám</div>
 
                         <div>
                             {t(
@@ -624,12 +673,17 @@ export default function MyAppointmentsPage() {
                                         key={
                                             appointment.id
                                         }
-                                        className={`grid grid-cols-1 gap-4 border-b border-gray-100 px-5 py-5 transition hover:bg-gray-50 md:grid-cols-[1.1fr_1.4fr_1fr_220px] md:items-center ${
+                                        className={`cares-appointment-row grid grid-cols-1 gap-4 border-b border-gray-100 px-5 py-5 transition hover:bg-gray-50 md:grid-cols-[1fr_1fr_1.4fr_1fr_220px] md:items-center ${
                                             isDone
                                                 ? 'text-gray-400'
                                                 : ''
                                         }`}
                                     >
+
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-bold text-gray-900">{appointment.patientName || 'Bệnh nhân'}</p>
+                                            <p className="mt-1 text-xs text-gray-400">{appointment.isSelf ? 'Tôi' : appointment.relationship || appointment.patientCode || 'Thành viên'}</p>
+                                        </div>
 
                                         {/* DATE */}
 

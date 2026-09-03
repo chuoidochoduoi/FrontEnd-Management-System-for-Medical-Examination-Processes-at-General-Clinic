@@ -38,7 +38,10 @@ export function useLabQueue(initialDepartmentId = null) {
             queryParams.set('size', PAGE_SIZE);
             queryParams.set('sort', params.sort === 'oldest' ? 'createdAt,asc' : 'createdAt,desc');
 
-            const requestUrl = `/api/v1/test-requests?${queryParams.toString()}`;
+            // The laboratory worklist is intentionally panel-based.  A
+            // purchased CBC analyte is still its own TestRequest for billing
+            // and traceability, but it must not appear as a separate work item.
+            const requestUrl = `/api/v1/test-requests/panels?${queryParams.toString()}`;
             logger.info('Tải danh sách yêu cầu cận lâm sàng', {
                 endpoint: requestUrl,
                 filters: { ...params },
@@ -57,7 +60,7 @@ export function useLabQueue(initialDepartmentId = null) {
                     receivedCount: rawOrders.length,
                     firstOrder: rawOrders[0]
                         ? {
-                            testRequestId: rawOrders[0].testRequestId ?? rawOrders[0].id,
+                            testRequestId: rawOrders[0].representativeId ?? rawOrders[0].testRequestId ?? rawOrders[0].id,
                             queueTicketId: rawOrders[0].queueTicketId ?? null,
                             queueStatus: rawOrders[0].queueStatus ?? null,
                             status: rawOrders[0].status ?? null,
@@ -75,6 +78,7 @@ export function useLabQueue(initialDepartmentId = null) {
 
                 const mappedOrders = rawOrders.map(order => ({
                     ...order,
+                    testRequestId: order.representativeId ?? order.testRequestId ?? order.id,
                     status: typeof order.status === 'object' && order.status?.name
                         ? order.status.name
                         : (typeof order.status === 'string' ? order.status : String(order.status || 'PENDING')),

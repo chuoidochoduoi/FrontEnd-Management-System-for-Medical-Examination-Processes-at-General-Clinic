@@ -1,8 +1,7 @@
-// src/components/layout/CashierLayout.jsx
-import { useState, useEffect } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FileText, LogOut, Users, Settings, CalendarDays, Clock3 } from 'lucide-react';
+import { CalendarDays, FileText, LogOut, Menu, Settings, ShieldCheck, UserRound, Users, WalletCards, X } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
 import SidebarBrand from './SidebarBrand';
@@ -15,111 +14,54 @@ export default function CashierLayout({ children }) {
     const { t } = useTranslation('cashier');
     const { t: tCommon } = useTranslation('common');
     const navigate = useNavigate();
+    const location = useLocation();
     const username = get('username') || 'Thu ngân';
     const staffId = get('staffId');
     const systemRole = get('systemRole') || '';
-    
     const [staffInfo, setStaffInfo] = useState(null);
+    const [mobileOpen, setMobileOpen] = useState(false);
 
+    useEffect(() => setMobileOpen(false), [location.pathname]);
     useEffect(() => {
-        if (staffId) {
-            fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/${staffId}`, {
-                headers: { Authorization: `Bearer ${get('token')}` }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.data) {
-                    setStaffInfo(data.data);
-                } else {
-                    setStaffInfo(data);
-                }
-            })
-            .catch(err => console.error("Error fetching staff info:", err));
-        }
+        if (!staffId) return;
+        fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/${staffId}`, { headers: { Authorization: `Bearer ${get('token')}` } })
+            .then((res) => res.json()).then((data) => setStaffInfo(data.data || data))
+            .catch((error) => console.error('Error fetching staff info:', error));
     }, [staffId]);
 
-    const getRoleName = () => {
-        if (staffInfo && staffInfo.specialization) return staffInfo.specialization.name;
-        if (systemRole === 'NURSE') return tCommon('roles.nurse');
-        if (systemRole === 'RECEPTIONIST') return tCommon('roles.receptionist');
-        if (['DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR'].includes(systemRole)) return tCommon('roles.doctor');
-        return tCommon('roles.cashier');
-    };
+    if (systemRole === 'CLINIC_MANAGER') return <OwnerLayout>{children}</OwnerLayout>;
 
-    const handleLogout = () => {
-        ['token', 'refreshToken', 'role', 'username', 'accountId', 'systemRole', 'staffId'].forEach(k => {
-            localStorage.removeItem(k); sessionStorage.removeItem(k);
-        });
-        navigate(ROUTES.LOGIN);
-    };
-
-    const mainNav = [
-        { to: ROUTES.CASHIER_INVOICES, icon: FileText,  label: t('sidebar.invoiceList') },
-        { to: ROUTES.STAFF_SCHEDULE,   icon: CalendarDays, label: tCommon('sidebar.mySchedule') },
-        { to: ROUTES.STAFF_PROFILE, icon: Users, label: tCommon('sidebar.profile') },
+    const displayName = staffInfo?.profile?.fullName || username;
+    const roleName = staffInfo?.specialization?.name || tCommon('roles.cashier');
+    const initials = displayName.trim().split(/\s+/).slice(-2).map((part) => part[0]).join('').toUpperCase();
+    const groups = [
+        { label: 'Thanh toán', items: [
+            { to: ROUTES.CASHIER_INVOICES, icon: FileText, label: t('sidebar.invoiceList') },
+            { to: ROUTES.CASHIER_MEMBERSHIP_TOPUP, icon: WalletCards, label: 'Nạp tiền thẻ CareS' },
+        ] },
+        { label: 'Cá nhân', items: [
+            { to: ROUTES.STAFF_SCHEDULE, icon: CalendarDays, label: tCommon('sidebar.mySchedule') },
+            { to: ROUTES.STAFF_PROFILE, icon: Users, label: tCommon('sidebar.profile') },
+            { to: ROUTES.SETTINGS, icon: Settings, label: tCommon('sidebar.settings') },
+        ] },
     ];
 
-    
+    const logout = () => {
+        ['token', 'refreshToken', 'role', 'username', 'accountId', 'systemRole', 'staffId'].forEach((key) => { localStorage.removeItem(key); sessionStorage.removeItem(key); });
+        navigate(ROUTES.LOGIN);
+    };
+    const linkClass = ({ isActive }) => `cares-workspace-nav-link${isActive ? ' is-active' : ''}`;
+    const sidebar = <>
+        <button type="button" className="cares-workspace-brand" onClick={() => navigate(ROUTES.CASHIER_INVOICES)}><SidebarBrand /></button>
+        <div className="cares-workspace-identity"><span className="cares-workspace-avatar">{initials || 'TN'}</span><span><strong>{displayName}</strong><small>{roleName}</small></span></div>
+        <nav className="cares-workspace-navigation" aria-label="Điều hướng thu ngân">{groups.map((group) => <section key={group.label}><p>{group.label}</p>{group.items.map(({ to, icon: Icon, label }) => <NavLink key={to} to={to} className={linkClass}><Icon size={20}/><span>{label}</span></NavLink>)}</section>)}</nav>
+        <div className="cares-workspace-sidebar-footer"><div><ShieldCheck size={18}/><span>Giao dịch được bảo vệ</span></div><button type="button" onClick={logout}><LogOut size={19}/>Đăng xuất</button></div>
+    </>;
 
-    const linkClass = ({ isActive }) =>
-        `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-            isActive ? 'bg-primary-50 text-primary-600 font-medium' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
-        }`;
-
-    if (systemRole === 'CLINIC_MANAGER') {
-        return <OwnerLayout>{children}</OwnerLayout>;
-    }
-
-    return (
-        <div className="flex h-screen bg-gray-50 font-jakarta overflow-hidden print:block print:h-auto print:overflow-visible print:bg-white">
-            {/* Sidebar */}
-            <aside className="w-44 bg-white border-r border-gray-200 flex flex-col shrink-0 print:hidden">
-                <SidebarBrand />
-
-                {/* User info */}
-                <div className="px-4 py-4 border-b border-gray-100">
-                    <p className="text-xs font-semibold text-gray-800 break-words">
-                        {staffInfo?.profile?.fullName || username}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">{getRoleName()}</p>
-                </div>
-
-                <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-                    {mainNav.map(({ to, icon: Icon, label }) => (
-                        <NavLink key={to} to={to} className={linkClass}>
-                            <Icon size={15} className="shrink-0" />
-                            {label}
-                        </NavLink>
-                    ))}
-                </nav>
-
-                <div className="px-2 py-3 border-t border-gray-100 space-y-0.5">
-                    
-                    <NavLink to={ROUTES.SETTINGS} className={linkClass}>
-                        <Settings size={15} className="shrink-0" />
-                        {tCommon('sidebar.settings')}
-                    </NavLink>
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
-                    >
-                        <LogOut size={15} className="shrink-0" />
-                        {tCommon('sidebar.logout')}
-                    </button>
-                </div>
-            </aside>
-
-            <div className="flex-1 flex flex-col overflow-hidden relative print:block print:overflow-visible">
-                <header className="absolute top-4 right-8 z-10 bg-white shadow-sm rounded-full px-2 py-1 flex items-center border border-gray-100 print:hidden">
-                    <AppPreferencesMenu />
-                    <NotificationBell />
-                </header>
-                <main className="flex-1 overflow-y-auto p-8 pt-16 print:overflow-visible print:p-0">
-                    {children}
-                </main>
-            </div>
-        </div>
-    );
+    return <div className="cares-workspace-shell print:block print:min-h-0 print:bg-white">
+        <aside className="cares-workspace-sidebar print:hidden">{sidebar}</aside>
+        <header className="cares-workspace-mobile-header print:hidden"><button type="button" onClick={() => navigate(ROUTES.CASHIER_INVOICES)}><span><WalletCards size={21}/></span><strong>CareS</strong></button><div><AppPreferencesMenu/><NotificationBell/><button type="button" onClick={() => setMobileOpen(true)} aria-label="Mở menu"><Menu size={23}/></button></div></header>
+        {mobileOpen && <div className="cares-workspace-drawer-layer print:hidden" role="dialog" aria-modal="true"><button type="button" className="cares-workspace-drawer-backdrop" onClick={() => setMobileOpen(false)} aria-label="Đóng menu"/><aside className="cares-workspace-drawer"><button type="button" className="cares-workspace-drawer-close" onClick={() => setMobileOpen(false)} aria-label="Đóng menu"><X size={22}/></button>{sidebar}</aside></div>}
+        <section className="cares-workspace-main"><header className="cares-workspace-toolbar print:hidden"><div><span>Không gian làm việc thu ngân</span><strong>Xin chào, {displayName}</strong></div><div><AppPreferencesMenu/><NotificationBell/><button type="button" className="cares-workspace-profile" onClick={() => navigate(ROUTES.STAFF_PROFILE)} aria-label="Mở hồ sơ"><UserRound size={20}/></button></div></header><main className="cares-workspace-content print:block print:p-0"><div className="cares-workspace-page cares-cashier-page">{children}</div></main></section>
+    </div>;
 }
-
-

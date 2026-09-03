@@ -1,397 +1,187 @@
+import { useEffect, useId, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import {
-    CheckCircle2,
-    User,
-    Clock,
-    FileText
-} from 'lucide-react';
+import { CheckCircle2, User, UsersRound, Clock, FileText, Phone, X, Info, LoaderCircle } from 'lucide-react';
+import styles from './AppointmentConfirmModal.module.css';
 
-export default function AppointmentConfirmModal({
-                                                    data,
-                                                    onClose,
-                                                    onConfirm,
-                                                    namespace = 'appointment',
-                                                    isLoading = false
-                                                }) {
+const money = value => new Intl.NumberFormat('vi-VN').format(value || 0) + ' đ';
+const displayValue = value => value === undefined || value === null || String(value).trim() === ''
+    ? 'Chưa cung cấp' : value;
+const serviceKind = service => {
+    const code = String(service.code || service.serviceCode || '').toUpperCase();
+    if (code.startsWith('AN-')) return `Chỉ số lẻ · ${code}`;
+    if ((service.relations || []).some(relation =>
+        relation.type === 'INCLUDES' && String(relation.targetServiceCode || '').startsWith('AN-'))) {
+        return `Gói xét nghiệm · ${code}`;
+    }
+    return service.departmentType === 'EXAMINATION' ? 'Dịch vụ khám' : 'Cận lâm sàng';
+};
+
+function Details({ rows }) {
+    return <dl className={styles.details}>
+        {rows.map(row => <div key={row.label} className={row.wide ? styles.wide : undefined}>
+            <dt>{row.label}</dt>
+            <dd>{displayValue(row.value)}</dd>
+        </div>)}
+    </dl>;
+}
+
+export default function AppointmentConfirmModal({ data, onClose, onConfirm, namespace = 'appointment', isLoading = false }) {
     const { t } = useTranslation(namespace);
+    const titleId = useId();
+    const descriptionId = useId();
+    const dialogRef = useRef(null);
+    const backRef = useRef(null);
+    const pendingRef = useRef(false);
+    const tConfirm = key => t('confirmModal.' + key);
+    const services = data.services || [];
+    const groupMembers = data.groupMembers || [];
+    const isGroup = groupMembers.length > 0;
 
-    const tConfirm = (key, options) =>
-        t(`confirmModal.${key}`, options);
+    useEffect(() => {
+        const previousFocus = document.activeElement;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        backRef.current?.focus();
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            previousFocus?.focus?.();
+        };
+    }, []);
 
-    // =========================================================
-    // THÔNG TIN BỆNH NHÂN
-    // =========================================================
+    const handleKeyDown = event => {
+        if (event.key === 'Escape') {
+            event.stopPropagation();
+            if (!isLoading && !pendingRef.current) onClose();
+        }
+        if (event.key !== 'Tab') return;
+        const controls = [...dialogRef.current.querySelectorAll('button:not(:disabled), [tabindex="0"]')];
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (!first) { event.preventDefault(); return; }
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) {
+            event.preventDefault(); last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault(); first.focus();
+        }
+    };
+
+    const confirm = async () => {
+        if (isLoading || pendingRef.current) return;
+        pendingRef.current = true;
+        try { await onConfirm(); } finally { pendingRef.current = false; }
+    };
+
     const patientRows = [
-        {
-            key: tConfirm('fullName'),
-            val: data.fullName,
-            bold: true
-        }
+        { label: tConfirm('fullName'), value: data.fullName, wide: true },
+        ...(data.patientCode ? [{ label: 'Mã bệnh nhân', value: data.patientCode }] : []),
+        ...('dateOfBirth' in data ? [{ label: 'Ngày sinh', value: data.dateOfBirth }] : []),
+        { label: tConfirm('ageGender'), value: data.ageGender },
+        { label: tConfirm('phone'), value: data.phone },
+        { label: 'Email', value: data.email },
+        { label: 'Địa chỉ', value: data.address, wide: true },
+        ...(data.bhyt ? [{ label: 'Bảo hiểm y tế', value: data.bhyt, wide: true }] : []),
     ];
 
-    // Có SĐT thì hiện SĐT
-    if (data.phone) {
-        patientRows.push({
-            key: tConfirm('phone'),
-            val: data.phone
-        });
-    }
+    return createPortal(
+        <div className={styles.overlay}>
+            <div className={styles.dialog} ref={dialogRef} role="dialog" aria-modal="true"
+                aria-labelledby={titleId} aria-describedby={descriptionId} aria-busy={isLoading}
+                tabIndex={-1} onKeyDown={handleKeyDown}>
+                <header className={styles.header}>
+                    <CheckCircle2 className={styles.headerIcon} size={32} aria-hidden="true" />
+                    <div>
+                        <h2 id={titleId}>{data.title || tConfirm('title')}</h2>
+                        <p id={descriptionId}>{data.subtitle || tConfirm('subtitle')}</p>
+                    </div>
+                    <button type="button" className={styles.close} aria-label="Đóng xác nhận"
+                        disabled={isLoading} onClick={onClose}><X size={24} /></button>
+                </header>
 
-    // Có Email thì hiện Email
-    if (data.email) {
-        patientRows.push({
-            key: 'EMAIL',
-            val: data.email
-        });
-    }
-
-    patientRows.push({
-        key: tConfirm('ageGender'),
-        val: data.ageGender
-    });
-
-    if (data.address) {
-        patientRows.push({
-            key: 'ĐỊA CHỈ',
-            val: data.address
-        });
-    }
-
-    if (data.bhyt) {
-        patientRows.push({
-            key: 'BẢO HIỂM Y TẾ',
-            val: data.bhyt,
-            bold: true
-        });
-    }
-
-    // =========================================================
-    // THỜI GIAN
-    // =========================================================
-    const timeRows = [
-        {
-            key: tConfirm('date'),
-            val: data.date,
-            bold: true
-        },
-        {
-            key: tConfirm('timeSlot'),
-            val: data.timeSlot
-        }
-    ];
-
-    if (data.method) {
-        timeRows.push({
-            key: 'HÌNH THỨC',
-            val: data.method
-        });
-    }
-
-    return (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 px-4 animate-in fade-in duration-300">
-
-            <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] relative flex flex-col max-h-[90vh] border border-slate-100">
-
-                {/* =====================================================
-                    HEADER
-                ===================================================== */}
-                <div className="px-8 pt-8 pb-6 border-b border-slate-100 flex items-start justify-between shrink-0 bg-slate-50/50">
-
-                    <div className="flex items-center gap-4">
-
-                        <div className="w-12 h-12 bg-primary-50 rounded-2xl flex items-center justify-center border border-primary-100">
-                            <CheckCircle2 className="w-6 h-6 text-primary-600" />
+                <div className={styles.body} tabIndex={0} aria-label="Thông tin cần xác nhận">
+                    <div className={`${styles.grid} ${isGroup ? styles.groupGrid : ''}`}>
+                        {!isGroup && <section className={styles.section}>
+                            <h3><User size={22} aria-hidden="true" />{tConfirm('patientInfo')}</h3>
+                            <Details rows={patientRows} />
+                        </section>}
+                        <div className={styles.stack}>
+                            <section className={styles.section}>
+                                <h3><Clock size={22} aria-hidden="true" />Thông tin lịch khám</h3>
+                                <Details rows={[
+                                    { label: tConfirm('date'), value: data.date },
+                                    { label: 'Ca khám / Khung giờ', value: data.timeSlot },
+                                    ...(data.method ? [{ label: 'Hình thức', value: data.method, wide: true }] : []),
+                                ]} />
+                            </section>
+                            {data.contactManager && <section className={styles.section}>
+                                <h3><Phone size={22} aria-hidden="true" />Người quản lý / liên hệ</h3>
+                                <Details rows={[
+                                    { label: 'Họ và tên', value: data.contactManager.name, wide: true },
+                                    { label: 'Số điện thoại', value: data.contactManager.phone },
+                                    { label: 'Email', value: data.contactManager.email },
+                                ]} />
+                                <p className={styles.hint}>Thông tin liên hệ của người quản lý, không thay thế hồ sơ người được khám.</p>
+                            </section>}
                         </div>
-
-                        <div>
-
-                            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-                                {tConfirm('title')}
-                            </h2>
-
-                            <p className="text-sm text-slate-500 mt-1 font-medium">
-                                {tConfirm('subtitle')}
-                            </p>
-
-                        </div>
-
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
-                    >
-                        ✕
-                    </button>
+                    {isGroup && <section className={styles.section}>
+                        <div className={styles.serviceHeading}>
+                            <h3><UsersRound size={22} aria-hidden="true" />Người được khám và dịch vụ riêng</h3>
+                            <span className={styles.count}>{groupMembers.length} người · {groupMembers.reduce((sum, member) => sum + member.services.length, 0)} lượt dịch vụ</span>
+                        </div>
+                        <div className={styles.memberList}>
+                            {groupMembers.map((member, memberIndex) => <article className={styles.memberCard} key={member.patientProfileId || memberIndex}>
+                                <header className={styles.memberHeader}>
+                                    <span className={styles.memberNumber}>{memberIndex + 1}</span>
+                                    <div>
+                                        <strong>{member.fullName}</strong>
+                                        <p>{[member.relationshipName, member.patientCode, member.dateOfBirth, member.ageGender].filter(Boolean).join(' · ')}</p>
+                                    </div>
+                                    <strong className={styles.memberTotal}>{money(member.total)}</strong>
+                                </header>
+                                <div className={styles.memberServices}>
+                                    {member.services.map((service, serviceIndex) => <div key={service.id || service.serviceId || serviceIndex}>
+                                        <span>{serviceIndex + 1}. {service.name}</span>
+                                        <strong>{money(service.price)}</strong>
+                                    </div>)}
+                                </div>
+                            </article>)}
+                        </div>
+                        <div className={styles.total}><span>Tổng chi phí cả nhóm</span><strong>{data.total}</strong></div>
+                    </section>}
 
+                    {!isGroup && <section className={styles.section}>
+                        <div className={styles.serviceHeading}>
+                            <h3><FileText size={22} aria-hidden="true" />{tConfirm('services')}</h3>
+                            <span className={styles.count}>{services.length} dịch vụ</span>
+                        </div>
+                        <div className={styles.serviceLabels}><span>Dịch vụ đã chọn</span><span>Chi phí</span></div>
+                        <ul className={styles.services}>
+                            {services.map((service, index) => <li key={service.id || service.serviceId || index}>
+                                <span className={styles.serviceName}>
+                                    <span className={styles.number}>{index + 1}</span>
+                                    <span>{service.name}<small className="mt-1 block text-sm font-normal text-slate-500">{serviceKind(service)}</small></span>
+                                </span>
+                                <strong>{money(service.price)}</strong>
+                            </li>)}
+                        </ul>
+                        {!services.length && <p className={styles.hint}>Chưa chọn dịch vụ.</p>}
+                        <div className={styles.total}><span>{tConfirm('total')}</span><strong>{data.total}</strong></div>
+                        {data.reason && <div className={styles.reason}><span>{tConfirm('reason')}</span><p>{data.reason}</p></div>}
+                    </section>}
+                    <p className={styles.note}><Info size={22} aria-hidden="true" /><span>{data.note || tConfirm('note')}</span></p>
                 </div>
 
-                {/* =====================================================
-                    BODY
-                ===================================================== */}
-                <div className="px-8 py-6 overflow-y-auto custom-scrollbar flex-1">
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-                        {/* =================================================
-                            BỆNH NHÂN
-                        ================================================= */}
-                        <div className="flex flex-col">
-
-                            <div className="flex items-center gap-2 mb-4">
-
-                                <User className="w-4 h-4 text-primary-500" />
-
-                                <p className="text-xs font-bold tracking-widest uppercase text-slate-900">
-                                    {tConfirm('patientInfo')}
-                                </p>
-
-                            </div>
-
-                            <div className="bg-white rounded-2xl p-5 space-y-4 border border-slate-100 shadow-sm flex-1">
-
-                                {patientRows.map((row, i) => (
-
-                                    <div
-                                        key={i}
-                                        className="flex flex-col gap-1.5"
-                                    >
-
-                                        <span className="text-[11px] font-semibold tracking-wider uppercase text-slate-400">
-                                            {row.key}
-                                        </span>
-
-                                        <span
-                                            className={`
-                                                text-sm
-                                                text-slate-800
-                                                break-words
-                                                ${
-                                                row.bold
-                                                    ? 'font-bold'
-                                                    : 'font-medium'
-                                            }
-                                            `}
-                                        >
-                                            {row.val || '---'}
-                                        </span>
-
-                                    </div>
-
-                                ))}
-
-                            </div>
-
-                        </div>
-
-                        {/* =================================================
-                            THỜI GIAN
-                        ================================================= */}
-                        <div className="flex flex-col">
-
-                            <div className="flex items-center gap-2 mb-4">
-
-                                <Clock className="w-4 h-4 text-primary-500" />
-
-                                <p className="text-xs font-bold tracking-widest uppercase text-slate-900">
-                                    {tConfirm('timeInfo')}
-                                </p>
-
-                            </div>
-
-                            <div className="bg-white rounded-2xl p-5 space-y-4 border border-slate-100 shadow-sm flex-1 flex flex-col">
-
-                                {timeRows.map((row, i) => (
-
-                                    <div
-                                        key={i}
-                                        className="flex flex-col gap-1.5"
-                                    >
-
-                                        <span className="text-[11px] font-semibold tracking-wider uppercase text-slate-400">
-                                            {row.key}
-                                        </span>
-
-                                        <span
-                                            className={`
-                                                text-sm
-                                                text-slate-800
-                                                ${
-                                                row.bold
-                                                    ? 'font-bold text-primary-700'
-                                                    : 'font-medium'
-                                            }
-                                            `}
-                                        >
-                                            {row.val || '---'}
-                                        </span>
-
-                                    </div>
-
-                                ))}
-
-                                <div className="pt-4 mt-auto border-t border-slate-100 border-dashed">
-
-                                    <span className="text-[11px] font-semibold tracking-wider uppercase text-slate-400 block mb-1">
-                                        {tConfirm('total')}
-                                    </span>
-
-                                    <span className="text-2xl font-bold text-primary-600">
-                                        {data.total}
-                                    </span>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        {/* =================================================
-                            DỊCH VỤ
-                        ================================================= */}
-                        <div className="col-span-1 md:col-span-2 mt-2">
-
-                            <div className="flex items-center gap-2 mb-4">
-
-                                <FileText className="w-4 h-4 text-primary-500" />
-
-                                <p className="text-xs font-bold tracking-widest uppercase text-slate-900">
-                                    {tConfirm('services')}
-                                </p>
-
-                            </div>
-
-                            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm">
-
-                                <div className="px-5 py-4 flex justify-between items-center border-b border-slate-100 bg-slate-50/50">
-
-                                    <span className="text-xs font-bold tracking-widest uppercase text-slate-600">
-                                        {tConfirm('serviceList')}
-                                    </span>
-
-                                    <span className="text-[11px] font-bold text-primary-700 bg-primary-50 px-3 py-1 rounded-full border border-primary-100">
-                                        {tConfirm(
-                                            'serviceCount',
-                                            {
-                                                count:
-                                                    data.services?.length || 0
-                                            }
-                                        )}
-                                    </span>
-
-                                </div>
-
-                                <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
-
-                                    {data.services?.map((service, i) => (
-
-                                        <div
-                                            key={i}
-                                            className="flex justify-between items-center px-5 py-4 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors"
-                                        >
-
-                                            <span className="text-sm font-medium text-slate-700 truncate pr-4">
-                                                • {service.name}
-                                            </span>
-
-                                            <span className="text-sm font-bold text-slate-900 shrink-0">
-                                                {new Intl.NumberFormat(
-                                                    'vi-VN'
-                                                ).format(
-                                                    service.price || 0
-                                                )}{' '}
-                                                đ
-                                            </span>
-
-                                        </div>
-
-                                    ))}
-
-                                </div>
-
-                                {data.reason && (
-
-                                    <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50 flex flex-col gap-1.5">
-
-                                        <span className="text-[11px] font-semibold tracking-wider uppercase text-slate-500">
-                                            {tConfirm('reason')}
-                                        </span>
-
-                                        <span className="text-sm font-medium text-slate-700">
-                                            {data.reason}
-                                        </span>
-
-                                    </div>
-
-                                )}
-
-                            </div>
-
-                        </div>
-
-                        {/* =================================================
-                            NOTE
-                        ================================================= */}
-                        <div className="col-span-1 md:col-span-2 bg-blue-50/50 border border-blue-100 rounded-2xl px-6 py-5 text-sm text-blue-800 flex gap-4 items-start shadow-sm">
-
-                            <span className="text-xl shrink-0 leading-none">
-                                💡
-                            </span>
-
-                            <span className="leading-relaxed font-medium">
-                                {tConfirm('note')}
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                {/* =====================================================
-                    FOOTER
-                ===================================================== */}
-                <div className="px-8 py-6 border-t border-slate-100 bg-white flex gap-4 shrink-0">
-
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        disabled={isLoading}
-                        className="flex-1 h-14 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all shadow-sm disabled:opacity-50"
-                    >
+                <footer className={styles.footer}>
+                    <button ref={backRef} type="button" className={styles.back} disabled={isLoading} onClick={onClose}>
                         {tConfirm('back')}
                     </button>
-
-                    <button
-                        type="button"
-                        onClick={onConfirm}
-                        disabled={isLoading}
-                        className="flex-1 h-14 bg-primary-600 rounded-2xl text-sm font-bold text-white hover:bg-primary-700 transition-all shadow-[0_8px_20px_-6px_rgba(14,165,233,0.5)] disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
-                    >
-
-                        {isLoading ? (
-
-                            <div className="flex items-center justify-center gap-2">
-
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-
-                                <span>
-                                    Đang xử lý...
-                                </span>
-
-                            </div>
-
-                        ) : (
-                            tConfirm('confirm')
-                        )}
-
+                    <button type="button" className={styles.confirm} disabled={isLoading} onClick={confirm}>
+                        {isLoading ? <><LoaderCircle size={20} className={styles.spinner} />Đang xử lý...</> : data.confirmLabel || tConfirm('confirm')}
                     </button>
-
-                </div>
-
+                </footer>
             </div>
-
-        </div>
+        </div>, document.body
     );
 }

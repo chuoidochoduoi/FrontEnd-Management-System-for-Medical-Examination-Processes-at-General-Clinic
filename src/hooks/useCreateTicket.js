@@ -38,6 +38,7 @@ export function useCreateTicket() {
                     durationMinutes: s.durationMinutes,
                     workflowPriority: s.workflowPriority ?? 1,
                     capabilityName: s.requiredCapabilityName || '',
+                    relations: s.relations || [],
                 }));
                 setServices(mappedServices);
             } catch (err) {

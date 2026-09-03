@@ -15,8 +15,12 @@ import {
 
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { useCreateTicket } from '@/hooks/useCreateTicket';
+import { toggleServiceWithPolicy, serviceRelationHint } from '@/utils/serviceSelectionPolicy';
 import { useToast } from '@/hooks/useToast';
 import CreateTicketConfirmModal from '@/components/ui/CreateTicketConfirmModal';
+import LabPackageAnalytePicker, {
+    isPackageOrAnalyteService,
+} from '@/components/clinical/LabPackageAnalytePicker';
 
 /* =========================================================
    HELPERS
@@ -508,32 +512,25 @@ export default function CreateTicketPage() {
             toast.warn('Dịch vụ này đã có kết quả được ký trong ngày và không cần mua lại.');
             return;
         }
-        setSelectedServiceIds(
-            (previous) => {
-                if (previous.includes(service.id)) {
-                    return previous.filter(
-                        (id) =>
-                            id !==
-                            service.id
-                    );
-                }
-                if (service.departmentType === 'EXAMINATION') {
-                    const examinationIds = new Set(
-                        services.filter(item => item.departmentType === 'EXAMINATION').map(item => item.id)
-                    );
-                    const replaced = previous.some(id => examinationIds.has(id));
-                    if (replaced) {
-                        setTimeout(() => toast.info('Mỗi phiếu chỉ có một dịch vụ khám. Dịch vụ khám trước đã được thay thế.'), 0);
-                    }
-                    return [
-                        ...previous.filter(id => !examinationIds.has(id)),
-                        service.id,
-                    ];
-                }
-                return [...previous, service.id];
-            }
-        );
+        setSelectedServiceIds(previous => {
+            const selected = services.filter(item => previous.includes(item.id));
+            const resolution = toggleServiceWithPolicy(selected, service, services);
+            if (resolution.message) toast.info(resolution.message);
+            return resolution.services.map(item => item.id);
+        });
 
+        setValidationError('');
+    };
+
+    const customizeLabPanel = (panel, analytes, excludedAnalyteId) => {
+        const panelId = panel.id || panel.serviceId;
+        const analyteIds = new Set(analytes.map(item => item.id || item.serviceId));
+        setSelectedServiceIds(previous => [
+            ...previous.filter(serviceId => serviceId !== panelId && !analyteIds.has(serviceId)),
+            ...analytes
+                .map(item => item.id || item.serviceId)
+                .filter(serviceId => serviceId !== excludedAnalyteId),
+        ]);
         setValidationError('');
     };
 
@@ -549,7 +546,15 @@ export default function CreateTicketPage() {
                         service.id === id
                 )
             )
-            .filter(Boolean);
+            .filter(Boolean)
+            .sort((first, second) => {
+                const firstGroup = first.departmentType === 'EXAMINATION' ? 0 : 1;
+                const secondGroup = second.departmentType === 'EXAMINATION' ? 0 : 1;
+                if (firstGroup !== secondGroup) return firstGroup - secondGroup;
+                const priorityDifference = Number(second.workflowPriority || 1) - Number(first.workflowPriority || 1);
+                if (priorityDifference !== 0) return priorityDifference;
+                return String(first.code || '').localeCompare(String(second.code || ''), 'vi');
+            });
 
     /*
      * Không còn BHYT ở Receptionist.
@@ -606,13 +611,18 @@ export default function CreateTicketPage() {
             }
         );
 
+    const packageAndAnalyteServices = services.filter(service =>
+        service.departmentType === 'PARACLINICAL' && isPackageOrAnalyteService(service));
+    const packageAndAnalyteIds = new Set(packageAndAnalyteServices.map(service => service.id));
+
     /* =========================================================
        GROUP SERVICE
     ========================================================= */
 
     const groupOrder = activeServiceTab === 'EXAMINATION' ? EXAM_GROUPS : PARACLINICAL_GROUPS;
     const orderedGroups = groupOrder
-        .map(groupName => [groupName, filteredServices.filter(service => serviceGroup(service) === groupName)])
+        .map(groupName => [groupName, filteredServices.filter(service =>
+            serviceGroup(service) === groupName && !isPackageOrAnalyteService(service))])
         .filter(([, items]) => items.length > 0);
 
     useEffect(() => {
@@ -729,9 +739,6 @@ export default function CreateTicketPage() {
         if (address.length > 255) errors.address = 'Địa chỉ không được vượt quá 255 ký tự';
         if (allergyStatus === 'REPORTED' && allergies.length === 0) errors.allergies = 'Vui lòng nhập ít nhất một dị ứng';
         if (selectedServiceIds.length === 0) errors.services = t('validation.serviceRequired');
-        if (selectedServices.filter(service => service.departmentType === 'EXAMINATION').length > 1) {
-            errors.services = 'Mỗi lượt khám chỉ được chọn 1 dịch vụ khám bệnh.';
-        }
         setFieldErrors(errors);
         const firstField = Object.keys(errors)[0];
         if (firstField) {
@@ -776,7 +783,7 @@ export default function CreateTicketPage() {
             customerId,
 
             serviceIds:
-            selectedServiceIds,
+            selectedServices.map(service => service.id),
 
             issuedById:
                 getIssuerId(),
@@ -818,13 +825,13 @@ export default function CreateTicketPage() {
 
     return (
         <ReceptionistLayout>
-            <div className="flex min-h-[calc(100vh-3.5rem)] flex-col -m-8 bg-slate-50">
+            <div className="cares-reception-long-form flex min-h-full flex-col">
 
                 {/* =====================================================
                     BODY
                 ===================================================== */}
 
-                <div className="flex-1 overflow-y-auto px-5 py-5 pb-28 lg:px-8">
+                <div className="flex-1 pb-28">
 
                     <div className="w-full space-y-5">
 
@@ -832,7 +839,7 @@ export default function CreateTicketPage() {
                             HEADER
                         ================================================= */}
 
-                        <div className="flex flex-wrap items-end justify-between gap-4">
+                        <div className="cares-reception-page-header">
 
                             <div>
                                 <h1 className="text-xl font-bold text-gray-900">
@@ -1366,7 +1373,13 @@ export default function CreateTicketPage() {
                                         {activeServiceTab === 'EXAMINATION' && (
                                             <div className="mt-3 flex gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-xs leading-5 text-blue-800">
                                                 <Info size={16} className="mt-0.5 shrink-0" />
-                                                <p><strong>Lưu ý:</strong> Mỗi phiếu chỉ được chọn tối đa 01 dịch vụ khám bệnh. Bệnh nhân có thể tạo phiếu mới cho dịch vụ khám khác, nhưng không thể đăng ký lại dịch vụ khám đã chọn trong cùng ngày.</p>
+                                                <p><strong>Lưu ý:</strong> Có thể chọn nhiều dịch vụ khám trong cùng một lượt. Hệ thống ưu tiên khám bệnh trước, sắp theo mức ưu tiên quy trình rồi mã dịch vụ; chỉ bước đầu tiên được mở và mỗi dịch vụ khám có bệnh án riêng.</p>
+                                            </div>
+                                        )}
+                                        {activeServiceTab === 'PARACLINICAL' && (
+                                            <div className="mt-3 flex gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2.5 text-xs leading-5 text-teal-900">
+                                                <Info size={16} className="mt-0.5 shrink-0" />
+                                                <p><strong>Gói và chỉ số lẻ:</strong> chọn đủ các chỉ số của một gói sẽ tự áp dụng giá gói. Bỏ bớt chỉ số sẽ tính theo giá lẻ; phần trùng không bị thu hai lần.</p>
                                             </div>
                                         )}
                                     </div>
@@ -1421,8 +1434,26 @@ export default function CreateTicketPage() {
                                                     )}
                                                 </p>
                                             </div>
-                                        ) : orderedGroups.length > 0 ? (
+                                        ) : orderedGroups.length > 0 || (activeServiceTab === 'PARACLINICAL' && packageAndAnalyteServices.length > 0) ? (
                                             <div className="max-h-[390px] space-y-3 overflow-y-auto pr-1 custom-scrollbar">
+                                                {activeServiceTab === 'PARACLINICAL' && packageAndAnalyteServices.length > 0 && (
+                                                    <LabPackageAnalytePicker
+                                                        services={packageAndAnalyteServices}
+                                                        selectedIds={selectedServiceIds.filter(serviceId => packageAndAnalyteIds.has(serviceId))}
+                                                        loading={loadingSvc}
+                                                        onToggle={toggleService}
+                                                        onCustomizePanel={customizeLabPanel}
+                                                        onReset={() => setSelectedServiceIds(previous =>
+                                                            previous.filter(serviceId => !packageAndAnalyteIds.has(serviceId)))}
+                                                        getServiceState={(service) => {
+                                                            const completedToday = sameDayResults.some(result => result.serviceId === service.id);
+                                                            return completedToday
+                                                                ? { disabled: true, label: 'Đã có kết quả hôm nay · Không thu lại' }
+                                                                : { disabled: false, label: '' };
+                                                        }}
+                                                        compact
+                                                    />
+                                                )}
                                                 {orderedGroups.map(([groupName, servicesGroup]) => {
                                                     const open = expandedGroups[activeServiceTab] === groupName;
                                                     return (
@@ -1448,8 +1479,7 @@ export default function CreateTicketPage() {
                                                                         return (
                                                                             <label key={service.id} className={`flex min-h-[68px] items-start gap-3 py-3 transition ${disabled ? 'cursor-not-allowed bg-gray-50 opacity-70' : 'cursor-pointer hover:bg-gray-50'} ${checked ? 'bg-primary-50/50' : ''}`}>
                                                                                 <input
-                                                                                    type={activeServiceTab === 'EXAMINATION' ? 'radio' : 'checkbox'}
-                                                                                    name={activeServiceTab === 'EXAMINATION' ? 'examination-service' : undefined}
+                                                                                    type="checkbox"
                                                                                     checked={checked}
                                                                                     disabled={disabled}
                                                                                     onChange={() => toggleService(service)}
@@ -1457,6 +1487,9 @@ export default function CreateTicketPage() {
                                                                                 />
                                                                                 <div className="min-w-0 flex-1">
                                                                                     <p className="text-sm font-semibold text-gray-800">{service.name}</p>
+                                                                                    {String(service.code || '').startsWith('AN-') && (
+                                                                                        <span className="mt-1 inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">Chỉ số lẻ</span>
+                                                                                    )}
                                                                                     {registeredToday && (
                                                                                         <p className="mt-1 text-[11px] font-semibold text-amber-700">
                                                                                             {registeredToday.reason || `Đã đăng ký hôm nay · ${registeredToday.visitCode}`}
@@ -1466,6 +1499,7 @@ export default function CreateTicketPage() {
                                                                                         <p className="mt-1 text-[11px] font-semibold text-blue-700">Đã có kết quả hôm nay · Không cần mua lại</p>
                                                                                     )}
                                                                                     {service.description && <p className="mt-1 line-clamp-2 text-xs text-gray-400">{service.description}</p>}
+                                                                                    {serviceRelationHint(service) && <p className="mt-1 text-xs font-semibold text-teal-700">{serviceRelationHint(service)}</p>}
                                                                                     {activeServiceTab === 'PARACLINICAL' && service.capabilityName && (
                                                                                         <p className="mt-1 text-[11px] text-gray-500">Năng lực: {service.capabilityName}</p>
                                                                                     )}
@@ -1550,7 +1584,7 @@ export default function CreateTicketPage() {
                     STICKY FOOTER
                 ===================================================== */}
 
-                <div className="fixed bottom-0 left-52 right-0 z-40 border-t border-gray-200 bg-white">
+                <div className="cares-reception-fixed-summary sticky bottom-0 z-40 border border-gray-200 bg-white">
 
                     <div className="flex h-[72px] items-center justify-between gap-5 px-6 lg:px-8">
 
@@ -1562,7 +1596,7 @@ export default function CreateTicketPage() {
 
                                 <p className="text-xs text-gray-400">Dịch vụ đã chọn</p>
                                 <div className="mt-0.5 flex flex-wrap gap-x-4 text-sm font-semibold text-gray-800">
-                                    <span>Khám bệnh: {selectedServices.filter(service => service.departmentType === 'EXAMINATION').length}/1</span>
+                                    <span>Khám bệnh: {selectedServices.filter(service => service.departmentType === 'EXAMINATION').length}</span>
                                     <span>Cận lâm sàng: {selectedServices.filter(service => service.departmentType === 'PARACLINICAL').length}</span>
                                     <span>Tổng: {selectedServiceIds.length}</span>
                                 </div>
@@ -1589,7 +1623,7 @@ export default function CreateTicketPage() {
                             disabled={
                                 submitting || resolvingPhone || searchingPatients
                             }
-                            className="h-10 shrink-0 rounded-xl bg-gray-900 px-7 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="cares-reception-primary"
                         >
                             {resolvingPhone || searchingPatients
                                 ? 'Đang đối chiếu hồ sơ...'

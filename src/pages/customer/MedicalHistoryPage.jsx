@@ -4,9 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     CalendarDays,
+    CircleSlash2,
     ChevronLeft,
     ChevronRight,
+    FileCheck2,
     Filter,
+    FlaskConical,
     RotateCcw,
     Search,
     Stethoscope,
@@ -14,6 +17,8 @@ import {
 
 import PatientLayout from '@/components/layout/CustomerLayout';
 import { useMedicalHistory } from '@/hooks/useMedicalHistory';
+import { useFamilyMembers } from '@/hooks/useFamilyMembers';
+import { useProfile } from '@/hooks/useProfile';
 import { ROUTES } from '@/constants/routes';
 
 /* =========================================================
@@ -24,9 +29,8 @@ const DEFAULT_PAGE_SIZE = 7;
 
 const STATUSES = [
     { value: '', label: 'Tất cả' },
-    { value: 'COMPLETED', label: 'Hoàn thành' },
-    { value: 'IN_PROGRESS', label: 'Đang xử lý' },
-    { value: 'CANCELLED', label: 'Đã hủy' },
+    { value: 'COMPLETE', label: 'Đã hoàn thành' },
+    { value: 'PARTIAL', label: 'Đã bỏ lượt một phần' },
 ];
 
 const SORT_OPTIONS = [
@@ -53,17 +57,11 @@ const normalize = (value) =>
 
 const recordStatusLabel = (value) => {
     switch (String(value || '').toUpperCase()) {
+        case 'PARTIAL':
+            return 'Đã bỏ lượt một phần';
+        case 'COMPLETE':
         case 'COMPLETED':
-            return 'Hoàn thành';
-
-        case 'IN_PROGRESS':
-            return 'Đang xử lý';
-
-        case 'DRAFT':
-            return 'Bản nháp';
-
-        case 'CANCELLED':
-            return 'Đã hủy';
+            return 'Đã hoàn thành';
 
         default:
             return value || 'Hoàn thành';
@@ -72,18 +70,12 @@ const recordStatusLabel = (value) => {
 
 const statusClass = (value) => {
     switch (String(value || '').toUpperCase()) {
-        case 'CANCELLED':
-            return 'border-red-200 bg-white text-red-500';
-
-        case 'IN_PROGRESS':
-            return 'border-gray-300 bg-gray-50 text-gray-700';
-
-        case 'DRAFT':
-            return 'border-amber-200 bg-amber-50 text-amber-700';
-
+        case 'PARTIAL':
+            return 'border-amber-200 bg-amber-50 text-amber-800';
+        case 'COMPLETE':
         case 'COMPLETED':
         default:
-            return 'border-gray-200 bg-gray-50 text-gray-600';
+            return 'border-teal-200 bg-teal-50 text-teal-700';
     }
 };
 
@@ -262,6 +254,9 @@ function Pagination({
 
 export default function MedicalHistoryPage() {
     const navigate = useNavigate();
+    const { profile } = useProfile();
+    const { members: familyMembers } = useFamilyMembers(true);
+    const [patientProfileId, setPatientProfileId] = useState('self');
 
     const {
         visits = [],
@@ -319,6 +314,7 @@ export default function MedicalHistoryPage() {
         toDate: '',
         status: '',
         sort: 'DESC',
+        patientProfileId: '',
     });
 
     /* =====================================================
@@ -330,6 +326,7 @@ export default function MedicalHistoryPage() {
             page: 0,
             size: pageSize,
             sort: 'DESC',
+            patientProfileId: '',
         });
     }, []);
 
@@ -360,6 +357,7 @@ export default function MedicalHistoryPage() {
                 status || undefined,
 
             sort,
+            patientProfileId: patientProfileId === 'self' ? '' : patientProfileId,
 
             page: 0,
 
@@ -373,6 +371,7 @@ export default function MedicalHistoryPage() {
             toDate,
             status,
             sort,
+            patientProfileId: patientProfileId === 'self' ? '' : patientProfileId,
         });
 
         fetchHistory(filters);
@@ -388,6 +387,7 @@ export default function MedicalHistoryPage() {
         setToDate('');
         setStatus('');
         setSort('DESC');
+        setPatientProfileId('self');
 
         setAppliedFilter({
             search: '',
@@ -395,12 +395,14 @@ export default function MedicalHistoryPage() {
             toDate: '',
             status: '',
             sort: 'DESC',
+            patientProfileId: '',
         });
 
         fetchHistory({
             page: 0,
             size: pageSize,
             sort: 'DESC',
+            patientProfileId: '',
         });
     };
 
@@ -490,8 +492,8 @@ export default function MedicalHistoryPage() {
                     result.filter(
                         (visit) =>
                             String(
-                                visit.status ||
-                                'COMPLETED'
+                                visit.completionStatus ||
+                                'COMPLETE'
                             ).toUpperCase() ===
                             appliedFilter.status
                     );
@@ -594,23 +596,27 @@ export default function MedicalHistoryPage() {
 
     return (
         <PatientLayout>
-            <div className="w-full space-y-5">
+            <div className="cares-medical-history-page w-full space-y-5">
 
                 {/* =================================================
                     TITLE
                 ================================================= */}
 
-                <div>
+                <header className="cares-customer-page-heading">
+                    <div>
+                    <span className="cares-customer-eyebrow"><Stethoscope size={15} /> Hồ sơ sức khỏe</span>
                     <h1 className="text-xl font-bold text-gray-900">
                         Lịch sử khám bệnh
                     </h1>
-                </div>
+                    <p>Mỗi thẻ là một lượt khám. Bệnh án, kết quả và dịch vụ bỏ lượt được tách riêng trong chi tiết.</p>
+                    </div>
+                </header>
 
                 {/* =================================================
                     FILTER CARD
                 ================================================= */}
 
-                <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                <div className="cares-customer-filter-card rounded-2xl border border-gray-200 bg-white p-5">
 
                     {/* ROW 1 */}
 
@@ -725,7 +731,19 @@ export default function MedicalHistoryPage() {
 
                     {/* ROW 2 */}
 
-                    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-[260px_260px_140px_140px]">
+                    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-[minmax(220px,1fr)_220px_220px_140px_140px]">
+
+                        <div>
+                            <label className={labelCls}>Người được khám</label>
+                            <select value={patientProfileId} onChange={(event) => setPatientProfileId(event.target.value)} className={inputCls}>
+                                <option value="self">Tôi · {profile?.fullName || 'Chính chủ'}</option>
+                                {familyMembers.map((member) => (
+                                    <option key={member.patientProfileId} value={member.patientProfileId}>
+                                        {member.fullName} · {member.relationshipName}{member.active ? '' : ' · Đã lưu trữ'}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
                         {/* STATUS */}
 
@@ -826,7 +844,7 @@ export default function MedicalHistoryPage() {
                                 onClick={
                                     handleFilter
                                 }
-                                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition hover:bg-gray-700"
+                                className="cares-customer-filter-button"
                             >
                                 <Filter
                                     size={
@@ -881,7 +899,7 @@ export default function MedicalHistoryPage() {
                             Hiển thị{' '}
                             {from}–
                             {to} trong tổng số{' '}
-                            {total} hồ sơ
+                            {total} lượt khám
                         </p>
                     )}
 
@@ -889,39 +907,12 @@ export default function MedicalHistoryPage() {
                     HISTORY LIST
                 ================================================= */}
 
-                <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-
-                    {/* HEADER */}
-
-                    <div className="hidden grid-cols-[180px_240px_270px_minmax(250px,1fr)_130px_100px] border-b border-gray-100 px-5 py-3 text-xs font-medium text-gray-400 lg:grid">
-
-                        <div>
-                            Ngày giờ
-                        </div>
-
-                        <div>
-                            Dịch vụ khám
-                        </div>
-
-                        <div>
-                            Bác sĩ / Mã hồ sơ
-                        </div>
-
-                        <div>
-                            Chẩn đoán
-                        </div>
-
-                        <div>
-                            Trạng thái
-                        </div>
-
-                        <div />
-                    </div>
+                <div className="space-y-4">
 
                     {/* LOADING */}
 
                     {loading && (
-                        <div className="py-16 text-center text-sm text-gray-400">
+                        <div className="rounded-2xl border border-gray-200 bg-white py-16 text-center text-gray-500">
                             Đang tải lịch sử khám bệnh...
                         </div>
                     )}
@@ -930,7 +921,7 @@ export default function MedicalHistoryPage() {
 
                     {!loading &&
                         error && (
-                            <div className="py-16 text-center text-sm text-red-500">
+                            <div className="rounded-2xl border border-red-200 bg-red-50 py-16 text-center text-red-600">
                                 {error}
                             </div>
                         )}
@@ -941,7 +932,7 @@ export default function MedicalHistoryPage() {
                         !error &&
                         displayVisits.length ===
                         0 && (
-                            <div className="py-16 text-center">
+                            <div className="rounded-2xl border border-gray-200 bg-white py-16 text-center">
 
                                 <CalendarDays
                                     size={30}
@@ -962,9 +953,9 @@ export default function MedicalHistoryPage() {
                         !error &&
                         displayVisits.map(
                             (visit) => {
-                                const visitStatus =
-                                    visit.status ||
-                                    'COMPLETED';
+                                const visitStatus = visit.completionStatus || 'COMPLETE';
+                                const completedServices = visit.completedServiceNames || [];
+                                const skippedServices = visit.skippedServiceNames || [];
 
                                 return (
                                     <button
@@ -974,119 +965,31 @@ export default function MedicalHistoryPage() {
                                         type="button"
                                         onClick={() =>
                                             navigate(
-                                                `${ROUTES.CUSTOMER_VISIT_HISTORY}/${visit.id}`
+                                                `${ROUTES.CUSTOMER_VISIT_HISTORY}/${visit.id}${patientProfileId === 'self' ? '' : `?patientProfileId=${encodeURIComponent(patientProfileId)}`}`
                                             )
                                         }
-                                        className="group grid w-full grid-cols-1 gap-4 border-b border-gray-100 px-5 py-4 text-left transition last:border-b-0 hover:bg-gray-50 lg:grid-cols-[180px_240px_270px_minmax(250px,1fr)_130px_100px] lg:items-center"
+                                        className="group w-full rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md"
                                     >
-
-                                        {/* DATE */}
-
-                                        <div className="flex items-start gap-3">
-
-                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-400">
-
-                                                <CalendarDays
-                                                    size={
-                                                        17
-                                                    }
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <p className="text-sm font-semibold text-gray-900">
-                                                    {visit.date ||
-                                                        '-'}
-                                                </p>
-
-                                                <p className="mt-0.5 text-xs text-gray-400">
-                                                    {visit.time ||
-                                                        '-'}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* TYPE */}
-
-                                        <div>
-                                            <p className="mb-1 text-[10px] text-gray-400 lg:hidden">
-                                                Dịch vụ khám
-                                            </p>
-
-                                            <div className="flex items-start gap-2">
-                                                <Stethoscope size={16} className="mt-0.5 shrink-0 text-gray-500" />
+                                        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                                            <div className="flex min-w-0 items-start gap-4">
+                                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700"><CalendarDays size={22}/></div>
                                                 <div className="min-w-0">
-                                                    <p className="line-clamp-2 text-sm font-semibold text-gray-800">
-                                                        {visit.serviceName || visit.specialty || 'Khám bệnh'}
-                                                    </p>
-                                                    <p className="mt-0.5 text-xs text-gray-400">
-                                                        Lượt khám: {visit.visitCode || '-'}
-                                                    </p>
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <h2 className="text-lg font-bold text-gray-900">Lượt khám {visit.visitCode || '-'}</h2>
+                                                        <span className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${statusClass(visitStatus)}`}>{recordStatusLabel(visitStatus)}</span>
+                                                    </div>
+                                                    <p className="mt-1 text-base text-gray-600">{visit.date || '-'} {visit.time ? `· ${visit.time}` : ''}</p>
+                                                    <p className="mt-1 line-clamp-2 text-base text-gray-700">{completedServices.join(', ') || 'Kết quả cận lâm sàng đã được công bố'}</p>
+                                                    <p className="mt-1 text-sm text-gray-500">Bác sĩ: {visit.doctor || '—'}</p>
                                                 </div>
                                             </div>
+                                            <div className="grid shrink-0 grid-cols-3 gap-2 sm:min-w-[430px]">
+                                                <div className="rounded-xl bg-teal-50 p-3"><FileCheck2 size={18} className="mb-2 text-teal-700"/><strong className="block text-lg text-gray-900">{visit.examinationCount || 0}</strong><span className="text-sm text-gray-600">Bệnh án</span></div>
+                                                <div className="rounded-xl bg-blue-50 p-3"><FlaskConical size={18} className="mb-2 text-blue-700"/><strong className="block text-lg text-gray-900">{visit.testCount || 0}</strong><span className="text-sm text-gray-600">Kết quả CLS</span></div>
+                                                <div className={`rounded-xl p-3 ${skippedServices.length ? 'bg-amber-50' : 'bg-gray-50'}`}><CircleSlash2 size={18} className={`mb-2 ${skippedServices.length ? 'text-amber-700' : 'text-gray-400'}`}/><strong className="block text-lg text-gray-900">{visit.skippedServiceCount || 0}</strong><span className="text-sm text-gray-600">Bỏ lượt</span></div>
+                                            </div>
                                         </div>
-
-                                        {/* DOCTOR / RECORD */}
-
-                                        <div>
-                                            <p className="mb-1 text-[10px] text-gray-400 lg:hidden">
-                                                Bác sĩ / Mã hồ sơ
-                                            </p>
-
-                                            <p className="truncate text-sm text-gray-700">
-                                                {visit.doctor ||
-                                                    '-'}
-                                            </p>
-
-                                            {visit.recordCode && (
-                                                <p className="mt-0.5 truncate text-xs text-gray-400">
-                                                    {visit.recordCode}
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        {/* DIAGNOSIS */}
-
-                                        <div>
-                                            <p className="mb-1 text-[10px] text-gray-400 lg:hidden">
-                                                Chẩn đoán
-                                            </p>
-
-                                            <p className="line-clamp-2 text-sm font-medium leading-5 text-gray-900">
-                                                {visit.diagnosis ||
-                                                    '-'}
-                                            </p>
-                                        </div>
-
-                                        {/* STATUS */}
-
-                                        <div>
-                                            <span
-                                                className={`inline-flex rounded-md border px-2.5 py-1 text-[11px] font-medium ${statusClass(
-                                                    visitStatus
-                                                )}`}
-                                            >
-                                                {recordStatusLabel(
-                                                    visitStatus
-                                                )}
-                                            </span>
-                                        </div>
-
-                                        {/* ACTION */}
-
-                                        <div className="flex items-center justify-end gap-2 text-sm text-gray-500">
-
-                                            <span className="hidden group-hover:text-gray-900 lg:inline">
-                                                Xem chi tiết
-                                            </span>
-
-                                            <ChevronRight
-                                                size={
-                                                    17
-                                                }
-                                                className="text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-gray-700"
-                                            />
-                                        </div>
+                                        <div className="mt-4 flex items-center justify-end gap-2 border-t border-gray-100 pt-4 font-semibold text-teal-700">Xem chi tiết lượt khám <ChevronRight size={18} className="transition group-hover:translate-x-1"/></div>
                                     </button>
                                 );
                             }

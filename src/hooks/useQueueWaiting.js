@@ -69,7 +69,8 @@ export function useQueueWaiting(departmentId, filters = {}) {
             ) : items;
             if (filters.sort === 'QUEUE_DESC') visibleItems = [...visibleItems].sort((a, b) => (b.queueNumber ?? 0) - (a.queueNumber ?? 0));
             else if (filters.sort === 'NAME_ASC') visibleItems = [...visibleItems].sort((a, b) => (a.patientName ?? '').localeCompare(b.patientName ?? '', 'vi'));
-            else visibleItems = [...visibleItems].sort((a, b) => (a.queueNumber ?? 0) - (b.queueNumber ?? 0));
+            else if (filters.sort === 'QUEUE_ASC') visibleItems = [...visibleItems].sort((a, b) => (a.queueNumber ?? 0) - (b.queueNumber ?? 0));
+            // PRIORITY (mac dinh): giu nguyen thu tu backend de bac si, man TV va benh nhan cung mot hang cho.
             setTickets(visibleItems);
             // Total count from PageResponse
             setWaitingCount(visibleItems.length);

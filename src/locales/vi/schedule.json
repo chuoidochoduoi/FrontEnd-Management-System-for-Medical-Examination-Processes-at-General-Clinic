@@ -1,7 +1,7 @@
 {
   "scheduleManagement": {
     "pageTitle": "Quản lý lịch trực theo tuần",
-    "systemStatus": "Hệ thống kích hoạt",
+    "systemStatus": "Lịch trực CareS · Admin và Clinic Manager dùng chung",
     "week": "Tuần trực:",
     "copyLastWeek": "Sao chép tuần trước",
     "applyTemplate": "Áp dụng mẫu",
@@ -31,7 +31,7 @@
     "assignModal": {
       "title": "Phân bổ kíp trực",
       "searchPlaceholder": "Tìm tên nhân sự...",
-      "doctorGroup": "Bác sĩ phụ trách (BS)",
+      "doctorGroup": "Bác sĩ thuộc phòng (BS)",
       "nurseGroup": "Y tá / Điều dưỡng (YT)",
       "receptionistGroup": "Lễ tân (LT)",
       "cashierGroup": "Thu ngân (TN)",

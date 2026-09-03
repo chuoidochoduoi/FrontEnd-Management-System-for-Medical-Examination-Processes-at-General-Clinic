@@ -150,7 +150,7 @@ export default function LoginPage() {
 	};
 
 	return (
-		<div className="font-jakarta selection:bg-primary-900 selection:text-white">
+		<div className="cares-auth-shell font-jakarta selection:bg-primary-900 selection:text-white">
 			<div className="min-h-screen flex bg-white relative">
                 
                 {/* Back to Home Button */}
@@ -163,7 +163,7 @@ export default function LoginPage() {
                 </Link>
 
                 {/* Left Side - Image & Branding */}
-                <div className="hidden lg:flex lg:w-1/2 relative bg-slate-900 overflow-hidden">
+                <div className="cares-auth-visual hidden lg:flex lg:w-1/2 relative bg-slate-900 overflow-hidden">
                     <img 
                         src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=1600&auto=format&fit=crop" 
                         alt="Medical Facility" 
@@ -201,7 +201,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Right Side - Login Form */}
-                <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-white relative">
+                <div className="cares-auth-form-panel w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-white relative">
                     {/* Subtle decorative background element */}
                     <div className="absolute top-0 right-0 w-96 h-96 bg-primary-50/50 rounded-full blur-3xl -z-10 pointer-events-none transform translate-x-1/3 -translate-y-1/3"></div>
 
@@ -306,7 +306,7 @@ export default function LoginPage() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="group relative w-full h-14 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white rounded-xl overflow-hidden transition-all duration-300 shadow-[0_10px_20px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_30px_-10px_rgba(0,0,0,0.4)] disabled:shadow-none"
+                                className="cares-auth-submit group relative w-full h-14 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white rounded-xl overflow-hidden transition-all duration-300 shadow-[0_10px_20px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_20px_30px_-10px_rgba(0,0,0,0.4)] disabled:shadow-none"
                             >
                                 <span className="relative z-10 flex items-center justify-center gap-3 text-sm font-bold tracking-[0.1em] uppercase">
                                     {loading ? tCommon('loading') : t('login.submit')}

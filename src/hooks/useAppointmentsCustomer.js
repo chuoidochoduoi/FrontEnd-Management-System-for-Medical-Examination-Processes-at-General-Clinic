@@ -14,6 +14,8 @@ export function useAppointments() {
         code: '',
         status: '',
         date: '',
+        patientProfileId: '',
+        includeFamily: true,
         page: 0
     });
 
@@ -24,8 +26,10 @@ export function useAppointments() {
                 code: params.code,
                 status: params.status,
                 page: String(params.page),
-                size: String(PAGE_SIZE)
+                size: String(PAGE_SIZE),
+                includeFamily: String(params.includeFamily),
             });
+            if (params.patientProfileId) queryParams.set('patientProfileId', params.patientProfileId);
             if (params.date) {
                 queryParams.set('from', `${params.date}T00:00:00`);
                 queryParams.set('to', `${params.date}T23:59:59`);

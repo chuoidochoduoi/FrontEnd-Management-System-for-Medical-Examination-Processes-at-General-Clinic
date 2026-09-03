@@ -82,11 +82,11 @@ export default function RecordsManagementPage() {
 
     return (
         <ReceptionistLayout>
-            <div className="space-y-5">
-                <div><h1 className="text-lg font-semibold text-gray-900">Danh sách bệnh nhân</h1><p className="mt-1 text-sm text-gray-400">Thông tin cá nhân cơ bản của bệnh nhân tại phòng khám.</p></div>
+            <div className="cares-reception-screen">
+                <div className="cares-reception-page-header"><div><h1 className="text-lg font-semibold text-gray-900">Danh sách bệnh nhân</h1><p className="mt-1 text-sm text-gray-400">Thông tin cá nhân cơ bản của bệnh nhân tại phòng khám.</p></div></div>
 
                 {/* Filter bar */}
-                <div className="bg-white border border-gray-200 rounded-xl px-5 py-4 grid grid-cols-[1fr_140px_160px_160px_auto] gap-3 items-end">
+                <div className="cares-reception-filter-bar lg:!grid-cols-[1fr_160px_180px_180px_auto]">
                     {/* Search */}
                     <div>
                         <p className="text-xs text-gray-400 mb-1.5">Từ khóa tìm kiếm</p>
@@ -135,9 +135,9 @@ export default function RecordsManagementPage() {
                 </div>
 
                 {/* Table */}
-                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div className="cares-reception-table-card">
                     {/* Table header */}
-                    <div className="grid grid-cols-[150px_1fr_160px_150px_170px] px-5 py-3 border-b border-gray-100 bg-gray-50">
+                    <div className="cares-reception-records-head grid grid-cols-[150px_1fr_160px_180px_190px] px-5 py-3 border-b border-gray-100 bg-gray-50">
                         {['Mã bệnh nhân','Họ và tên','Số điện thoại','Ngày sinh / Giới tính','Thao tác'].map(col => (
                             <span key={col} className="text-xs font-medium text-gray-400">{col}</span>
                         ))}
@@ -154,20 +154,20 @@ export default function RecordsManagementPage() {
                     {!loading && records.map(rec => (
                         <div
                             key={rec.id}
-                            className="grid grid-cols-[150px_1fr_160px_150px_170px] px-5 py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors items-center"
+                            className="cares-reception-record-row grid grid-cols-[150px_1fr_160px_180px_190px] px-5 py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors items-center"
                         >
                             {/* Mã bệnh án */}
-                            <span className="text-sm font-bold text-gray-900">{rec.code || '—'}</span>
+                            <span data-label="Mã bệnh nhân" className="text-sm font-bold text-gray-900">{rec.code || '—'}</span>
 
-                            <div>
+                            <div data-label="Bệnh nhân">
                                 <p className="text-sm font-semibold text-gray-900">{rec.fullName}</p>
                                 <p className="text-xs text-gray-400 mt-0.5">{rec.email || '-'}</p>
                             </div>
-                            <span className="text-sm text-gray-700">{rec.phone || '-'}</span>
-                            <div><p className="text-sm text-gray-700">{rec.dateOfBirth ? new Date(rec.dateOfBirth).toLocaleDateString('vi-VN') : '-'}</p><p className="mt-0.5 text-xs text-gray-400">{rec.gender === 'MALE' ? 'Nam' : rec.gender === 'FEMALE' ? 'Nữ' : '-'}</p></div>
+                            <span data-label="Số điện thoại" className="text-sm text-gray-700">{rec.phone || '-'}</span>
+                            <div data-label="Ngày sinh / Giới tính"><p className="text-sm text-gray-700">{rec.dateOfBirth ? new Date(rec.dateOfBirth).toLocaleDateString('vi-VN') : '-'}</p><p className="mt-0.5 text-xs text-gray-400">{rec.gender === 'MALE' ? 'Nam' : rec.gender === 'FEMALE' ? 'Nữ' : '-'}</p></div>
 
                             {/* Actions */}
-                            <div className="flex flex-col gap-1.5 items-start">
+                            <div className="cares-reception-record-actions flex flex-col gap-1.5 items-start">
                                 <button
                                     onClick={() => navigate(ROUTES.RECEPTIONIST_PATIENT_DETAIL.replace(':id', rec.id))}
                                     className="text-xs text-gray-500 hover:text-primary-500 transition-colors font-medium"

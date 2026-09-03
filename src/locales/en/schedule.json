@@ -1,7 +1,7 @@
 {
   "scheduleManagement": {
     "pageTitle": "Weekly staff schedule",
-    "systemStatus": "System active",
+    "systemStatus": "Shared CareS schedule · Admin and Clinic Manager",
     "week": "Week:",
     "copyLastWeek": "Copy previous week",
     "applyTemplate": "Apply template",
@@ -31,7 +31,7 @@
     "assignModal": {
       "title": "Assign shift staff",
       "searchPlaceholder": "Search staff...",
-      "doctorGroup": "Doctors",
+      "doctorGroup": "Doctors assigned to this room",
       "nurseGroup": "Nurses",
       "receptionistGroup": "Receptionists",
       "cashierGroup": "Cashiers",

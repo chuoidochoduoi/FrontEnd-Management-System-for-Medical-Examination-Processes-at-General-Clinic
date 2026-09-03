@@ -32,6 +32,7 @@ export function useInvoicePrint(id) {
 
             const data = await res.json();
             setInvoice({
+                printData: data,
                 id: data.invoiceId,
                 code: data.invoiceCode,
                 receiptNumber: data.receiptNumber || data.invoiceCode,

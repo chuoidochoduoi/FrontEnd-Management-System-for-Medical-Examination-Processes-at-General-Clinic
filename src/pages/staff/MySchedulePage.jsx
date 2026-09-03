@@ -1,7 +1,7 @@
 // src/pages/staff/MySchedulePage.jsx
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import CashierLayout from '@/components/layout/CashierLayout';
@@ -61,7 +61,9 @@ export default function MySchedulePage() {
 
     // Kiểm tra ô có nhân viên hiện tại không
     const isMyShift = (shiftId, dayKey) =>
-        getCellPeople(shiftId, dayKey).some(p => String(p.id) === String(myId));
+        getCellPeople(shiftId, dayKey).some(person =>
+            String(person.staffId ?? person.id) === String(myId)
+        );
 
     // Đếm ca trực trong tuần của mình
     const myShiftCount = shifts.reduce((acc, shift) =>
@@ -74,7 +76,7 @@ export default function MySchedulePage() {
 
     return (
         <Layout>
-            <div className="px-8 py-8 space-y-5">
+            <div className="cares-reception-shared-page px-8 py-8 space-y-5">
 
                 {/* Header */}
                 <div className="flex items-start justify-between">
@@ -112,7 +114,9 @@ export default function MySchedulePage() {
                     {/* Legend */}
                     <div className="flex items-center gap-4 ml-4">
                         <div className="flex items-center gap-1.5">
-                            <div className="w-3 h-3 rounded bg-primary-500" />
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-500 text-white">
+                                <Check size={13} strokeWidth={3} />
+                            </span>
                             <span className="text-xs text-gray-500">{t('scheduleManagement.myShift')}</span>
                         </div>
                     </div>
@@ -163,39 +167,24 @@ export default function MySchedulePage() {
 
                                     {/* Day cells */}
                                     {DAY_KEYS.map((dk, di) => {
-                                        const people  = getCellPeople(shift.id, dk);
                                         const mine    = isMyShift(shift.id, dk);
                                         return (
                                             <td
                                                 key={`${shift.id || si}_${dk}`}
-                                                className={`px-3 py-3 align-top border-l border-gray-100 min-w-[120px] transition-colors ${
+                                                className={`h-20 min-w-[120px] border-l border-gray-100 px-3 py-3 text-center align-middle transition-colors ${
                                                     mine ? 'bg-primary-50' : ''
                                                 }`}
                                             >
-                                                {people.length === 0 ? (
-                                                    <span className="text-xs text-gray-200">—</span>
+                                                {mine ? (
+                                                    <span
+                                                        className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-primary-500 text-white shadow-sm"
+                                                        title={t('scheduleManagement.myShift')}
+                                                    >
+                                                        <Check size={20} strokeWidth={3} />
+                                                        <span className="sr-only">{t('scheduleManagement.myShift')}</span>
+                                                    </span>
                                                 ) : (
-                                                    <div className="space-y-1">
-                                                        {people.map((p, pi) => {
-                                                            const isMe = String(p.id) === String(myId);
-                                                            return (
-                                                                <div
-                                                                    key={p.id || pi}
-                                                                    className={`text-xs rounded px-2 py-1.5 flex items-center gap-1.5 ${
-                                                                        isMe
-                                                                            ? 'bg-primary-500 text-white font-semibold'
-                                                                            : 'bg-gray-100 text-gray-600'
-                                                                    }`}
-                                                                >
-                                                                    {isMe && <span>👤</span>}
-                                                                    <span>{p.name}</span>
-                                                                    <span className={`text-xs ${isMe ? 'text-primary-200' : 'text-gray-400'}`}>
-                                      ({p.role})
-                                    </span>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
+                                                    <span className="text-sm text-gray-200">—</span>
                                                 )}
                                             </td>
                                         );

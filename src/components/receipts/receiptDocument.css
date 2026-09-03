@@ -1,0 +1,52 @@
+/* Isolated print typography. No application typography or table utilities here. */
+:is(#cares-receipt-frame, #cares-receipt-print-root) { color-scheme: light; color: #182329; background: white; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-document,
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-document * {
+    box-sizing: border-box !important; font-family: Arial, sans-serif !important;
+    font-size: 10pt !important; line-height: 12pt !important; letter-spacing: normal !important;
+    text-transform: none !important; color: #182329 !important;
+    min-width: 0 !important; min-height: 0 !important; max-width: none !important;
+    margin: 0; padding: 0; text-shadow: none !important; box-shadow: none !important;
+    animation: none !important; transition: none !important;
+}
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-document { width: 190mm; background: white !important; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-document p { overflow-wrap: anywhere; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-header { display: grid; grid-template-columns: 115mm 75mm; padding-bottom: 5pt; border-bottom: .7pt solid #087c73; break-inside: avoid; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-reference { text-align: right; overflow-wrap: anywhere; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-brand { color: #087c73 !important; font-weight: 700; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-title { font-size: 16pt !important; line-height: 19pt !important; font-weight: 700; text-align: center; margin: 5pt 0 4pt; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-patient { display: grid; grid-template-columns: 115mm 75mm; gap: 2pt 0; break-inside: avoid; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-address { grid-column: 1 / -1; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-small,
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-units,
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-footer,
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-line-note,
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-line-note * { font-size: 8pt !important; line-height: 10pt !important; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-units { text-align: right; margin: 4pt 0; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-line-note { display: block; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-table { display: table; width: 100%; table-layout: fixed; border-collapse: collapse; border-spacing: 0; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-table thead { display: table-header-group; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-table tbody { display: table-row-group; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-table tr { display: table-row; break-inside: avoid; page-break-inside: avoid; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-table :is(th, td) { display: table-cell; border: .35pt solid #9ea8ac; padding: 1pt 3pt; vertical-align: middle; text-align: left; overflow-wrap: anywhere; background: white !important; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-table th { background: #f1f4f4 !important; font-weight: 700; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-table .cr-number { text-align: right; font-variant-numeric: tabular-nums; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-table .cr-center { text-align: center; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-topup-table th:last-child { width: 40mm; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-ending { break-inside: avoid; page-break-inside: avoid; padding-top: 5pt; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-summary { display: grid; grid-template-columns: 105mm 85mm; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-payment-notes { padding-right: 4mm; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-payment-notes p { margin-bottom: 2pt; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-totals > div { display: grid; grid-template-columns: 51mm 34mm; padding: 1pt 0; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-totals dd { text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-total-strong { font-weight: 700; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-signature { width: 60mm; margin: 3pt 0 0 auto; text-align: center; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-signature-space { height: 10mm; }
+:is(#cares-receipt-frame, #cares-receipt-print-root) .cr-footer { margin-top: 2mm; color: #50595d !important; }
+@page caresReceipt { size: A4 portrait; margin: 10mm 10mm 13mm; }
+@media print {
+    html:has(#cares-receipt-print-root), body:has(> #cares-receipt-print-root) { height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; background: white !important; }
+    body:has(> #cares-receipt-print-root) > :not(#cares-receipt-print-root) { display: none !important; }
+    #cares-receipt-print-root { display: block !important; position: static !important; width: 190mm !important; margin: 0 !important; padding: 0 !important; page: caresReceipt; }
+    #cares-receipt-print-root, #cares-receipt-print-root * { visibility: visible !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

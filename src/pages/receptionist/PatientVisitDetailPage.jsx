@@ -3,12 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { toast } from 'react-toastify';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
-import ClinicalDataDisplay from '@/components/clinical/ClinicalDataDisplay';
 import PatientAllergyBanner from '@/components/clinical/PatientAllergyBanner';
 import { ROUTES } from '@/constants/routes';
 
 const show = value => value === null || value === undefined || value === '' ? '-' : value;
 const token = () => localStorage.getItem('token') || sessionStorage.getItem('token');
+const examinationDiagnosis = exam => exam.diagnoses?.length
+    ? exam.diagnoses.map(item => `${item.code || ''} ${item.name || item.codeName || ''}`.trim()).join(', ')
+    : exam.diagnosis;
 
 export default function PatientVisitDetailPage() {
     const { id, visitId } = useParams();
@@ -38,8 +40,8 @@ export default function PatientVisitDetailPage() {
         }
     };
 
-    return <ReceptionistLayout><div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-xl font-bold text-gray-900">Chi tiết lượt khám</h1><p className="mt-1 text-sm text-gray-400">Mã lượt khám: {show(visit?.visitCode || visit?.recordId)}</p></div><button onClick={() => navigate(ROUTES.RECEPTIONIST_PATIENT_DETAIL.replace(':id', id))} className="flex items-center gap-2 text-sm text-gray-500"><ArrowLeft size={16}/> Hồ sơ bệnh nhân</button></div>
+    return <ReceptionistLayout><div className="cares-reception-screen">
+        <div className="cares-reception-page-header"><div><h1 className="text-xl font-bold text-gray-900">Chi tiết lượt khám</h1><p className="mt-1 text-sm text-gray-400">Mã lượt khám: {show(visit?.visitCode || visit?.recordId)}</p></div><button onClick={() => navigate(ROUTES.RECEPTIONIST_PATIENT_DETAIL.replace(':id', id))} className="flex min-h-12 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-500"><ArrowLeft size={18}/> Hồ sơ bệnh nhân</button></div>
         {error && <p className="py-16 text-center text-red-500">{error}</p>}
         {!visit && !error && <p className="py-16 text-center text-sm text-gray-400">Đang tải dữ liệu...</p>}
         {visit && <>
@@ -49,8 +51,17 @@ export default function PatientVisitDetailPage() {
             </section>
 
             <section className="space-y-4">
-                <div><h2 className="text-base font-bold text-gray-900">Hồ sơ khám chuyên khoa</h2><p className="mt-1 text-xs text-gray-400">Hiển thị theo đúng phiên bản biểu mẫu tại thời điểm khám.</p></div>
-                {visit.examinations?.length ? visit.examinations.map(exam => <article key={exam.recordId} className="space-y-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"><div><h3 className="font-bold text-gray-900">{exam.serviceName || 'Khám bệnh'}</h3><p className="mt-1 text-xs text-gray-400">{exam.doctorName || '-'} • {exam.status || '-'}</p></div><ClinicalDataDisplay clinicalForm={exam.clinicalForm} compact/></article>) : <p className="rounded-2xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-400">Không có hồ sơ khám chuyên khoa.</p>}
+                <div><h2 className="text-base font-bold text-gray-900">Các bệnh án trong lượt khám</h2><p className="mt-1 text-xs text-gray-400">Mỗi dịch vụ khám được lưu thành một bệnh án độc lập.</p></div>
+                {visit.examinations?.length ? visit.examinations.map(exam => <article key={exam.recordId} className="space-y-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                    <div><h3 className="font-bold text-gray-900">{exam.serviceName || 'Khám bệnh'}</h3><p className="mt-1 text-xs text-gray-400">{exam.doctorName || '-'} • {exam.status || '-'}</p></div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <Card title="Lý do khám" text={exam.chiefComplaint || exam.symptoms}/>
+                        <Card title="Kết quả khám lâm sàng" text={exam.clinicalFindings || exam.clinicalResult}/>
+                        <Card title="Chẩn đoán" text={examinationDiagnosis(exam)}/>
+                        <Card title="Kết luận và hướng điều trị" text={exam.conclusion || exam.treatmentPlan}/>
+                    </div>
+                    {exam.patientInstruction && <p className="rounded-xl bg-teal-50 p-4 text-sm text-teal-900"><b>Dặn dò:</b> {exam.patientInstruction}</p>}
+                </article>) : <p className="rounded-2xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-400">Không có bệnh án khám.</p>}
             </section>
 
             <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"><h2 className="mb-4 text-sm font-bold">Kết quả cận lâm sàng</h2>{visit.tests?.length ? <div className="space-y-5">{visit.tests.map(test => <article key={test.id} className="rounded-xl border border-gray-100 p-4">

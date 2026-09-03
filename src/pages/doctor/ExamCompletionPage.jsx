@@ -3,7 +3,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, FlaskConical, FileText, Pill, ArrowLeft } from 'lucide-react';
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { ROUTES } from '@/constants/routes';
-import ClinicalDataDisplay from '@/components/clinical/ClinicalDataDisplay';
 import PatientAllergyBanner from '@/components/clinical/PatientAllergyBanner';
 
 const text = value => value || '-';
@@ -32,8 +31,8 @@ export default function ExamCompletionPage() {
     const go = (route) => navigate(route.replace(':recordId', recordId), { state: data });
 
     return <MedicalStaffLayout>
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-6 lg:p-10">
-            <div className="mx-auto max-w-6xl space-y-6">
+        <div className="cares-exam-completion flex-1 bg-gray-50">
+            <div className="w-full space-y-6">
                 <section className={`rounded-2xl border p-6 ${data.waitingForTests ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'}`}>
                     <div className="flex items-start gap-4">
                         {data.waitingForTests ? <FlaskConical className="text-amber-600" size={34}/> : <CheckCircle2 className="text-emerald-600" size={34}/>} 
@@ -56,12 +55,6 @@ export default function ExamCompletionPage() {
                     <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Khám lâm sàng</h2><p className="whitespace-pre-wrap text-sm text-gray-700">{text(record.clinicalFindings)}</p></section>
                     <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Đơn thuốc</h2><p className="text-sm text-gray-700">{medicines.length ? `${medicines.length} loại thuốc đã kê` : 'Không kê thuốc'}</p></section>
                 </div>
-
-                <ClinicalDataDisplay
-                    clinicalForm={record.clinicalForm}
-                    schema={record.clinicalForm?.schema}
-                    values={record.clinicalForm?.values || record.specialtyData || {}}
-                />
 
                 {record.vitalSigns && <section className="rounded-2xl border border-gray-200 bg-white p-6">
                     <h2 className="mb-4 font-bold">Sinh hiệu</h2>

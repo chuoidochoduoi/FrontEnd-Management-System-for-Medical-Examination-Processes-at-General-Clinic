@@ -1,0 +1,31 @@
+.site { min-height: 100vh; color: var(--cares-text); background: var(--cares-surface-subtle); }
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 3.5%; background: var(--cares-surface); border-bottom: 1px solid var(--cares-border); }
+.brand { display: inline-flex; align-items: center; gap: 10px; color: var(--cares-brand-strong); font-size: 30px; font-weight: 800; text-decoration: none; }
+.brand img { width: 42px; height: 42px; object-fit: contain; border-radius: 10px; }
+.nav nav { display: flex; flex-wrap: wrap; gap: 12px 28px; font-size: 17px; }.nav nav a { color: var(--cares-text); text-decoration: none; padding-block: 10px; }
+.nav a:focus-visible { outline: 2px solid var(--cares-brand); outline-offset: 3px; }
+.page { padding: 28px 3.5% 36px; }
+.heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 22px; }
+.heading h1 { margin: 0 0 7px; font-size: clamp(28px, 2.6vw, 38px); font-weight: 750; line-height: 1.25; }
+.heading p { color: var(--cares-text-muted); font-size: 18px; }
+.primary, .secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 10px 20px; border-radius: 10px; font-size: 16px; font-weight: 650; line-height: 1.5; }
+.primary { border: 1px solid var(--cares-brand); color: white; background: var(--cares-brand-strong); }
+.secondary { border: 1px solid var(--cares-border); color: var(--cares-brand-strong); background: var(--cares-surface); }
+.searchForm { border: 1px solid var(--cares-border); border-radius: 16px; padding: 22px; margin-bottom: 18px; background: var(--cares-surface); }
+.searchFields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(160px, .55fr); gap: 20px; align-items: start; }
+.searchFields label { display: grid; min-width: 0; gap: 8px; font-size: 16px; font-weight: 650; }
+.searchFields input { width: 100%; min-width: 0; min-height: 48px; border: 1px solid var(--cares-border); border-radius: 10px; padding: 10px 14px; color: var(--cares-text); background: var(--cares-surface); font: inherit; font-weight: 400; }
+.searchFields input:focus-visible { outline: 2px solid var(--cares-brand); outline-offset: 2px; }
+.searchFields input[aria-invalid=true] { border-color: #dc2626; }.fieldError { font-size: 15px; font-weight: 500; color: #dc2626; }
+.searchFields > button { margin-top: 34px; }
+.hint { margin-top: 14px !important; font-size: 16px; color: var(--cares-text-muted); }
+.identity { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; padding: 16px 22px; margin-bottom: 18px; border: 1px solid var(--cares-border); border-radius: 14px; background: var(--cares-surface); }
+.identity > svg { color: var(--cares-brand-strong); flex-shrink: 0; }.identity strong { font-size: 19px; overflow-wrap: anywhere; }
+.identity > span { font-size: 16px; color: var(--cares-text-muted); }.identity > .visitCode { padding: 4px 10px; border: 1px solid var(--cares-border); border-radius: 7px; color: var(--cares-brand-strong); }
+.identity button { margin-left: auto; }
+.initial { display: grid; justify-items: center; gap: 12px; padding: 48px 24px; border: 1px dashed var(--cares-border); border-radius: 16px; text-align: center; }
+.initial > svg { color: var(--cares-brand-strong); }.initial p { max-width: 620px; color: var(--cares-text-muted); }.initial span { font-size: 16px; color: var(--cares-text-muted); }
+.help { display: flex; align-items: flex-start; gap: 10px; padding: 14px; margin: 0 22px 22px; border: 1px solid var(--cares-border); border-radius: 10px; background: var(--cares-brand-soft); color: var(--cares-brand-strong); font-size: 16px; }.help > svg { flex-shrink: 0; margin-top: 3px; }
+.privacy, .footer { display: flex; align-items: flex-start; gap: 8px; color: var(--cares-text-muted); font-size: 15px; }.privacy { margin-top: 20px !important; }.footer { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--cares-border); }.privacy > svg, .footer > svg { flex-shrink: 0; margin-top: 3px; }
+@media (max-width: 800px) { .searchFields { grid-template-columns: minmax(0, 1fr); gap: 16px; }.searchFields > button { margin-top: 0; }.page { padding-inline: 16px; }.searchForm { padding: 18px; } }
+@media (max-width: 500px) { .nav { padding: 12px 16px; gap: 6px; flex-wrap: wrap; }.brand { font-size: 25px; gap: 6px; }.brand img { width: 34px; height: 34px; }.nav nav { flex-basis: 100%; gap: 14px; font-size: 16px; }.page { padding: 22px 12px; }.identity { padding: 16px; gap: 10px; }.identity button { flex-basis: 100%; }.heading p { font-size: 17px; } }

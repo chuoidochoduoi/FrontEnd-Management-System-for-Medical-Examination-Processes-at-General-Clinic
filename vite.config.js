@@ -12,6 +12,10 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    watch: {
+      // Temporary UI checks contain browser profiles with locked files on Windows.
+      ignored: ['**/tmp/**'],
+    },
   },
   resolve: {
     alias: {
@@ -23,7 +27,6 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
-          if (id.includes('html5-qrcode') || id.includes('/qrcode/')) return 'qr';
           if (id.includes('framer-motion')) return 'motion';
           if (id.includes('@stomp') || id.includes('sockjs')) return 'realtime';
           if (id.includes('i18next')) return 'i18n';

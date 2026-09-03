@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { useTranslation } from 'react-i18next';
-import { Send, User, CheckCircle2, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Send, User, CheckCircle2, MessageCircle } from 'lucide-react';
 
 export default function ReceptionistSupportPage() {
     const { t } = useTranslation('receptionist');
@@ -111,9 +111,9 @@ export default function ReceptionistSupportPage() {
 
     return (
         <ReceptionistLayout>
-            <div className="flex h-[calc(100vh-120px)] bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="cares-reception-chat">
                 {/* Sidebar danh sách chat */}
-                <div className="w-80 border-r border-gray-100 bg-gray-50/30 flex flex-col">
+                <div className={`cares-reception-chat-list ${activeSession ? 'is-hidden-mobile' : ''}`}>
                     <div className="px-5 pt-5 pb-3 border-b border-gray-100 bg-white">
                         <h2 className="font-bold text-lg text-gray-900">Inbox Hỗ trợ</h2>
                         <div className="flex gap-2 mt-3">
@@ -170,14 +170,17 @@ export default function ReceptionistSupportPage() {
                 </div>
 
                 {/* Khung chat chính */}
-                <div className="flex-1 flex flex-col bg-gray-50/50">
+                <div className={`cares-reception-chat-main ${activeSession ? 'is-active-mobile' : ''}`}>
                     {activeSession ? (
                         <>
                             {/* Header */}
                             <div className="bg-white p-5 border-b border-gray-100 flex justify-between items-center shadow-sm z-10">
-                                <div>
+                                <div className="flex items-center gap-3">
+                                    <button type="button" className="cares-reception-chat-back" onClick={() => setActiveSession(null)} aria-label="Quay lại danh sách"><ArrowLeft size={20} /></button>
+                                    <div>
                                     <h3 className="font-bold text-gray-900">{activeSession.customerName}</h3>
                                     <p className="text-xs text-gray-500 mt-0.5">Mã BN: <span className="font-mono font-medium">{activeSession.patientCode}</span></p>
+                                    </div>
                                 </div>
                                 {activeSession.status !== 'CLOSED' && (
                                     <button

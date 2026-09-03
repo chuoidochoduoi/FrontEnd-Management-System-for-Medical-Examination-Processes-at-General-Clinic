@@ -68,3 +68,12 @@ The application will open automatically in your browser at `http://localhost:300
 ## License
 
 © 2024 Hospl. All rights reserved.
+# CareS frontend
+
+## Kiểm tra trước khi hợp nhất
+
+```powershell
+npm run check
+```
+
+Lệnh này lần lượt kiểm tra ESLint, file/import/dependency không còn sử dụng và build production.

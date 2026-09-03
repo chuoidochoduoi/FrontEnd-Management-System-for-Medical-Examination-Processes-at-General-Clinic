@@ -1,4 +1,4 @@
-const apiBase = import.meta.env.VITE_API_URL;
+const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const stored = key => localStorage.getItem(key) || sessionStorage.getItem(key);
 
 const parse = async response => {

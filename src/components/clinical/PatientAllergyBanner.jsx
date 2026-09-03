@@ -87,6 +87,9 @@ export default function PatientAllergyBanner({
                         {historicalContext && <p className="mt-1 text-xs text-slate-500">Đây là dữ liệu hiện tại, không phải thông tin được chụp lại tại thời điểm khám cũ.</p>}
                         {status === 'REPORTED' && <div className="mt-2 flex flex-wrap gap-2">{(allergy.items || []).map(item => <span key={item} className="rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-semibold text-red-700">{item}</span>)}</div>}
                         {status === 'UNVERIFIED' && <p className="mt-1 text-xs text-amber-700">Cần xác minh trước khi lưu đơn thuốc.</p>}
+                        <p className={`mt-2 text-xs font-semibold leading-5 ${styles.text}`}>
+                            An toàn kê đơn: hỏi lại bệnh nhân hoặc người giám hộ về tác nhân, biểu hiện và thời điểm phản ứng; không dựa duy nhất vào dữ liệu đã khai báo.
+                        </p>
                     </div>
                 </div>
                 {editable && recordId && <button type="button" onClick={openEditor} className="shrink-0 rounded-lg border border-current/20 bg-white/70 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-white">Cập nhật</button>}
@@ -97,6 +100,10 @@ export default function PatientAllergyBanner({
             <section className="w-full max-w-lg rounded-2xl bg-white shadow-2xl" onMouseDown={event => event.stopPropagation()}>
                 <header className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h3 className="font-bold text-slate-900">Xác minh dị ứng</h3><p className="mt-1 text-xs text-slate-500">Thông tin này được dùng trong các lần khám tiếp theo.</p></div><button type="button" onClick={() => setEditing(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X size={18}/></button></header>
                 <div className="space-y-4 p-5">
+                    <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                        <AlertTriangle className="mt-0.5 shrink-0 text-amber-600" size={17}/>
+                        <span>Đối chiếu trực tiếp với bệnh nhân/người giám hộ. Nhập riêng từng tác nhân cụ thể; không nhập triệu chứng hoặc nội dung “không rõ”.</span>
+                    </div>
                     <label className="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm"><input type="checkbox" checked={noneReported} onChange={event => { setNoneReported(event.target.checked); if (event.target.checked) setItems([]); }}/><span>Đã xác nhận chưa ghi nhận dị ứng</span></label>
                     {!noneReported && <>
                         <div className="flex gap-2"><input value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addItem(); } }} placeholder="Ví dụ: Penicillin" className="h-10 flex-1 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-primary-400"/><button type="button" onClick={addItem} className="rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white">Thêm</button></div>

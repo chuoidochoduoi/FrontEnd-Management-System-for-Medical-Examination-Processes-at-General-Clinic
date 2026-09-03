@@ -432,7 +432,7 @@ export default function RegisterPage() {
     );
 
     return (
-        <div className="font-jakarta selection:bg-primary-900 selection:text-white relative">
+        <div className="cares-auth-shell font-jakarta selection:bg-primary-900 selection:text-white relative">
 
             <div className="min-h-screen flex bg-white relative">
 
@@ -456,7 +456,7 @@ export default function RegisterPage() {
                 {/* =====================================================
                     LEFT SIDE
                 ===================================================== */}
-                <div className="hidden lg:flex lg:w-1/2 relative bg-slate-900 overflow-hidden">
+                <div className="cares-auth-visual hidden lg:flex lg:w-1/2 relative bg-slate-900 overflow-hidden">
 
                     <img
                         src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=1600&auto=format&fit=crop"
@@ -498,7 +498,7 @@ export default function RegisterPage() {
                 {/* =====================================================
                     RIGHT SIDE
                 ===================================================== */}
-                <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-20 bg-white relative overflow-y-auto">
+                <div className="cares-auth-form-panel w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-20 bg-white relative overflow-y-auto">
 
                     <div className="absolute top-0 right-0 w-96 h-96 bg-primary-50/50 rounded-full blur-3xl -z-10 pointer-events-none transform translate-x-1/3 -translate-y-1/3" />
 

@@ -1,4 +1,4 @@
-const apiUrl = import.meta.env.VITE_API_URL;
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const get = key => localStorage.getItem(key) || sessionStorage.getItem(key);
 const authHeaders = () => ({
   'Content-Type': 'application/json',

@@ -221,6 +221,7 @@ export default function SchedulePage() {
 
     const [monday,         setMonday]         = useState(() => getMonday());
     const [assignCell,     setAssignCell]     = useState(null); // { shiftId, dayKey, shiftName, dayLabel }
+    const [copyConfirmOpen, setCopyConfirmOpen] = useState(false);
     const readOnly = false;
 
     useEffect(() => {
@@ -257,9 +258,15 @@ export default function SchedulePage() {
 
     const handleCopyLastWeek = () => {
         const targetHasSchedule = Object.values(schedule).some(people => (people || []).length > 0);
-        if (targetHasSchedule && !window.confirm(
-            'Tuần đích đã có lịch. Sao chép sẽ thay thế các phân công hiện tại bằng lịch tuần trước. Bạn có muốn tiếp tục?'
-        )) return;
+        if (targetHasSchedule) {
+            setCopyConfirmOpen(true);
+            return;
+        }
+        copyLastWeek();
+    };
+
+    const confirmCopyLastWeek = () => {
+        setCopyConfirmOpen(false);
         copyLastWeek();
     };
 
@@ -279,7 +286,9 @@ export default function SchedulePage() {
                         <h1 className="text-base font-semibold text-gray-900">Phân công lịch trực</h1>
                         <p className="mt-1 text-xs text-gray-400">Nhân sự thuộc phòng được cấu hình trước, sau đó mới phân vào từng ngày và ca.</p>
                     </div>
-                    <span className="text-xs text-gray-400">{t('scheduleManagement.systemStatus')}</span>
+                    <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700">
+                        {t('scheduleManagement.systemStatus')}
+                    </span>
                 </div>
 
                 {/* Toolbar */}
@@ -314,7 +323,7 @@ export default function SchedulePage() {
                     {view === 'general' && (
                         <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
                             <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                            <span>Mỗi ca từ <b>Thứ Hai đến Thứ Bảy</b> nên có ít nhất <b>01 lễ tân (LT)</b> và <b>01 thu ngân (TN)</b>. Thiếu nhân sự không khóa hoạt động phòng khám nhưng hệ thống sẽ cảnh báo tại ca tương ứng.</span>
+                            <span>Mỗi ca từ <b>Thứ Hai đến Chủ nhật</b> cần có ít nhất <b>01 lễ tân (LT)</b> và <b>01 thu ngân (TN)</b>. Ca thiếu người sẽ được cảnh báo để quản lý bổ sung trước khi vận hành.</span>
                         </div>
                     )}
                 </div>
@@ -367,26 +376,30 @@ export default function SchedulePage() {
                                     {DAY_KEYS.map((dk, di) => {
                                         const people = getCellPeople(shift.id, dk);
                                         const cellCoverage = coverage[getCellKey(shift.id, dk)];
+                                        const examinationRoom = selectedDepartment?.departmentType === 'EXAMINATION';
+                                        const hasProfessionalCoverage = cellCoverage?.status === 'COVERED';
                                         const hasReceptionist = people.some(person => ['LT', 'RECEPTIONIST'].includes(person.role));
                                         const hasCashier = people.some(person => ['TN', 'CASHIER'].includes(person.role));
                                         const missingOperationalRoles = [
                                             !hasReceptionist ? 'RECEPTIONIST' : null,
                                             !hasCashier ? 'CASHIER' : null,
                                         ].filter(Boolean);
-                                        const operationalCoverageStatus = dk === 'sun'
-                                            ? 'NOT_REQUIRED'
-                                            : missingOperationalRoles.length === 0 ? 'COVERED' : 'MISSING_OPERATIONAL_ROLE';
+                                        const operationalCoverageStatus = missingOperationalRoles.length === 0
+                                            ? 'COVERED'
+                                            : 'MISSING_OPERATIONAL_ROLE';
                                         const dayLabel = `${t(`scheduleManagement.days.${dk}`)} ${fmtDate(addDays(monday, di))}`;
                                         return (
                                             <td key={dk} className="px-3 py-3 align-top border-l border-gray-100 min-w-[120px]">
                                                 <div className="space-y-1">
                                                     {view === 'professional' && (
-                                                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${cellCoverage?.status === 'COVERED'
+                                                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${hasProfessionalCoverage
                                                             ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
-                                                            {cellCoverage?.status === 'COVERED' ? 'Đủ bác sĩ' : 'Thiếu bác sĩ'}
+                                                            {examinationRoom
+                                                                ? (hasProfessionalCoverage ? 'Đủ bác sĩ' : 'Thiếu bác sĩ')
+                                                                : (hasProfessionalCoverage ? 'Đủ nhân sự chuyên môn' : 'Thiếu nhân sự chuyên môn')}
                                                         </span>
                                                     )}
-                                                    {view === 'general' && operationalCoverageStatus !== 'NOT_REQUIRED' && (
+                                                    {view === 'general' && (
                                                         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${operationalCoverageStatus === 'COVERED'
                                                             ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
                                                             {operationalCoverageStatus === 'COVERED'
@@ -449,6 +462,43 @@ export default function SchedulePage() {
                     onToggle={handleToggle}
                     onClose={() => setAssignCell(null)}
                 />
+            )}
+            {copyConfirmOpen && (
+                <Modal
+                    title="Xác nhận sao chép lịch trực"
+                    subtitle={`Tuần đích ${weekLabel} đã có phân công`}
+                    onClose={() => !copying && setCopyConfirmOpen(false)}
+                    footer={(
+                        <>
+                            <button
+                                type="button"
+                                disabled={copying}
+                                onClick={() => setCopyConfirmOpen(false)}
+                                className="h-11 rounded-xl border border-gray-200 px-5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                                Giữ lịch hiện tại
+                            </button>
+                            <button
+                                type="button"
+                                disabled={copying}
+                                onClick={confirmCopyLastWeek}
+                                className="h-11 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50"
+                            >
+                                {copying ? 'Đang sao chép...' : 'Thay bằng lịch tuần trước'}
+                            </button>
+                        </>
+                    )}
+                >
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                        <div className="flex items-start gap-3">
+                            <AlertTriangle size={19} className="mt-0.5 shrink-0" />
+                            <p>
+                                Toàn bộ phân công đang có trong tuần này sẽ được thay bằng lịch của tuần trước.
+                                Hệ thống ghi đè có kiểm soát và không cộng thêm bản ghi trùng.
+                            </p>
+                        </div>
+                    </div>
+                </Modal>
             )}
         </Layout>
     );

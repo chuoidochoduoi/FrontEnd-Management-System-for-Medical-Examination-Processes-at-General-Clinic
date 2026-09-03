@@ -35,13 +35,16 @@ export default function InvoiceDetailPage() {
     const navigate = useNavigate();
     const { t }  = useTranslation('cashier');
     const {
-        invoice, insurances, loading, confirming, applyingInsurance, generatingQR, error,
-        confirmPayment, applyInsurance, checkQRPayment, generateQRPayment
+        invoice, insurances, loading, confirming, cancelling, payingByMembership, applyingInsurance, generatingQR, error,
+        confirmPayment, cancelInvoice, payByMembershipCard, applyInsurance, checkQRPayment, generateQRPayment
     } =
         useInvoiceDetail(id);
     const [selectedInsuranceId, setSelectedInsuranceId] = useState('');
     const [bhytCode, setBhytCode] = useState('');
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [membershipOpen, setMembershipOpen] = useState(false);
+    const [membershipForm, setMembershipForm] = useState({ cardCode: '', pin: '', useBenefit: true });
 
     useEffect(() => {
         if (invoice?.bhytCode) setBhytCode(invoice.bhytCode);
@@ -80,15 +83,17 @@ export default function InvoiceDetailPage() {
     const items        = invoice?.items        ?? [];
     const totalSvc     = Number(invoice?.totalServices) || 0;
     const bhytDeduct   = Number(invoice?.bhytDeduct)    || 0;
+    const otherDiscount = Number(invoice?.otherDiscount) || 0;
+    const membershipBenefit = Number(invoice?.membershipBenefitAmount) || 0;
     const vat          = Number(invoice?.vat)           || 0;
     const grandTotal   = Number(invoice?.grandTotal)    || 0;
 
     return (
         <CashierLayout>
-            <div className="max-w-4xl mx-auto space-y-0">
+            <div className="cares-invoice-detail-screen">
 
                 {/* ── Page header ── */}
-                <div className="bg-white border border-gray-200 rounded-t-2xl px-8 py-5 flex items-start justify-between border-b-0">
+                <div className="cares-invoice-heading bg-white border border-gray-200 rounded-t-2xl px-8 py-5 flex items-start justify-between border-b-0">
                     <div>
                         <h1 className="text-lg font-bold text-gray-900">
                             {t('invoiceDetail.dept')}
@@ -103,7 +108,7 @@ export default function InvoiceDetailPage() {
                 </div>
 
                 {/* ── Invoice card ── */}
-                <div className="bg-white border border-gray-200 rounded-b-2xl px-8 py-6 space-y-6">
+                <div className="cares-invoice-body bg-white border border-gray-200 rounded-b-2xl px-8 py-6 space-y-6">
 
                     {/* Patient identity */}
                     <div className="flex items-start justify-between">
@@ -231,7 +236,7 @@ export default function InvoiceDetailPage() {
                     </div>
 
                     {/* ── Summary ── */}
-                    <div className="flex justify-end">
+                    <div className="cares-invoice-totals flex justify-end">
                         <div className="w-72 space-y-2.5">
                             <div className="flex justify-between text-sm text-gray-600">
                                 <span>Tổng dịch vụ</span>
@@ -241,6 +246,12 @@ export default function InvoiceDetailPage() {
                                 <div className="flex justify-between text-sm text-gray-600">
                                     <span>Giảm BHYT</span>
                                     <span className="font-medium tabular-nums text-red-500">- {fmtNum(bhytDeduct)} VND</span>
+                                </div>
+                            )}
+                            {otherDiscount > 0 && (
+                                <div className="flex justify-between gap-4 text-sm text-gray-600">
+                                    <span>{membershipBenefit > 0 ? `Ưu đãi thẻ CareS (${fmtNum(invoice.membershipBenefitPercent)}%)` : 'Ưu đãi / giảm khác'}</span>
+                                    <span className="font-medium tabular-nums text-teal-700">- {fmtNum(otherDiscount)} VND</span>
                                 </div>
                             )}
                             {vat > 0 && (
@@ -263,6 +274,12 @@ export default function InvoiceDetailPage() {
                                     </div>
                                 </div>
                             </div>
+                            {invoice.membershipCardCodeMasked && <div className="rounded-xl border border-teal-100 bg-teal-50 p-3 text-sm text-teal-900">
+                                <p className="font-bold">Thanh toán bằng thẻ CareS</p>
+                                <p className="mt-1">{invoice.membershipCardCodeMasked}</p>
+                                <p className="mt-1">Ưu đãi: {membershipBenefit > 0 ? `${fmtNum(invoice.membershipBenefitPercent)}% · ${fmtNum(membershipBenefit)} VND` : 'Không áp dụng'}</p>
+                                {invoice.paymentTransactionCode && <p className="mt-1">Mã giao dịch: {invoice.paymentTransactionCode}</p>}
+                            </div>}
                         </div>
                     </div>
 
@@ -270,7 +287,7 @@ export default function InvoiceDetailPage() {
                     {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
                     {/* ── Actions ── */}
-                    <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-5">
+                    <div className="cares-invoice-actions flex items-center justify-end gap-3 border-t border-gray-100 pt-5">
                         {invoice?.status === 'paid' && (
                             <button
                                 onClick={() => navigate(ROUTES.CASHIER_INVOICE_PRINT.replace(':id', id))}
@@ -281,6 +298,13 @@ export default function InvoiceDetailPage() {
                         )}
                         {invoice?.status === 'pending' && (
                             <>
+                                <button
+                                    onClick={() => setIsCancelModalOpen(true)}
+                                    disabled={cancelling || confirming || generatingQR}
+                                    className="px-6 h-10 border border-red-300 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed text-red-600 text-sm font-medium rounded-xl transition-colors"
+                                >
+                                    {cancelling ? 'Đang hủy...' : 'Hủy hóa đơn'}
+                                </button>
                                 <button
                                     onClick={() => setIsConfirmModalOpen(true)}
                                     disabled={confirming}
@@ -295,6 +319,11 @@ export default function InvoiceDetailPage() {
                                 >
                                     {generatingQR ? 'Đang tạo QR...' : 'Thanh toán QR'}
                                 </button>
+                                <button
+                                    onClick={() => setMembershipOpen(true)}
+                                    disabled={payingByMembership}
+                                    className="px-6 h-10 bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white text-sm font-medium rounded-xl transition-colors"
+                                >Thẻ CareS</button>
                             </>
                         )}
                         {invoice?.status === 'paid' && (
@@ -321,6 +350,50 @@ export default function InvoiceDetailPage() {
                 confirmText="Xác nhận đã thu tiền"
                 isDanger={false}
             />
+            <ConfirmModal
+                isOpen={isCancelModalOpen}
+                onClose={() => setIsCancelModalOpen(false)}
+                onConfirm={async () => {
+                    const cancelled = await cancelInvoice();
+                    if (cancelled) setIsCancelModalOpen(false);
+                }}
+                title="Hủy hóa đơn"
+                message="Bạn có chắc chắn muốn hủy hóa đơn đang chờ thanh toán này? Hóa đơn đã thanh toán sẽ không thể hủy tại đây."
+                confirmText="Xác nhận hủy"
+                isDanger
+            />
+            {membershipOpen && <div className="cares-ops-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                <div className="cares-ops-modal w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                    <h2 className="text-xl font-bold">Thanh toán bằng thẻ CareS</h2>
+                    <p className="mt-1 text-sm text-gray-500">Quét/nhập mã thẻ và yêu cầu chủ thẻ nhập PIN.</p>
+                    <label className="mt-5 block text-sm font-medium">Mã thẻ<input value={membershipForm.cardCode} onChange={e=>setMembershipForm({...membershipForm,cardCode:e.target.value.toUpperCase()})} className="mt-2 h-11 w-full rounded-xl border px-3" placeholder="CS-..."/></label>
+                    <label className="mt-4 block text-sm font-medium">PIN 6 số<input value={membershipForm.pin} onChange={e=>setMembershipForm({...membershipForm,pin:e.target.value.replace(/\D/g,'').slice(0,6)})} type="password" inputMode="numeric" className="mt-2 h-11 w-full rounded-xl border px-3"/></label>
+                    <label className="mt-4 flex gap-2 text-sm"><input type="checkbox" checked={membershipForm.useBenefit} onChange={e=>setMembershipForm({...membershipForm,useBenefit:e.target.checked})}/><span>Áp dụng ưu đãi và thanh toán toàn bộ hóa đơn</span></label>
+                    <div className="mt-6 flex justify-end gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setMembershipOpen(false)}
+                            className="rounded-xl border px-5 py-2.5"
+                        >
+                            Đóng
+                        </button>
+                        <button
+                            type="button"
+                            disabled={payingByMembership || !membershipForm.cardCode || membershipForm.pin.length !== 6}
+                            onClick={async () => {
+                                const paid = await payByMembershipCard(membershipForm);
+                                if (paid) {
+                                    setMembershipOpen(false);
+                                    navigate(ROUTES.CASHIER_INVOICE_PRINT.replace(':id', id));
+                                }
+                            }}
+                            className="rounded-xl bg-teal-600 px-5 py-2.5 font-semibold text-white disabled:opacity-50"
+                        >
+                            {payingByMembership ? 'Đang xử lý...' : 'Xác nhận thanh toán'}
+                        </button>
+                    </div>
+                </div>
+            </div>}
         </CashierLayout>
     );
 }

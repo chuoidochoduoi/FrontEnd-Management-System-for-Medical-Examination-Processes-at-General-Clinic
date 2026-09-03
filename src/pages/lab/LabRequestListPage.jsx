@@ -8,11 +8,13 @@ import {
     ArrowUpDown,
     FlaskConical,
     UserCircle,
+    MonitorUp,
 } from 'lucide-react';
 
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { useLabQueue } from '@/hooks/useLabQueue';
 import { ROUTES } from '@/constants/routes';
+import { openAuthenticatedTab } from '@/utils/openAuthenticatedTab';
 
 /* =========================================================
    STATUS
@@ -233,19 +235,17 @@ export default function LabRequestListPage() {
                             </div>
                         </div>
 
-                        <button
-                            onClick={() =>
-                                navigate(
-                                    ROUTES.DOCTOR_LAB_CALL.replace(
-                                        ':departmentId',
-                                        departmentId
-                                    )
-                                )
-                            }
-                            className="h-10 rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white transition hover:bg-primary-700"
-                        >
-                            Mở hàng chờ
-                        </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button type="button" onClick={() => openAuthenticatedTab(ROUTES.ROOM_QUEUE_DISPLAY.replace(':departmentId', departmentId))} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-primary-300 hover:text-primary-700">
+                                <MonitorUp size={17}/> Màn hình phòng
+                            </button>
+                            <button
+                                onClick={() => navigate(ROUTES.DOCTOR_LAB_CALL.replace(':departmentId', departmentId))}
+                                className="h-10 rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white transition hover:bg-primary-700"
+                            >
+                                Mở hàng chờ
+                            </button>
+                        </div>
 
                     </header>
 
@@ -274,7 +274,7 @@ export default function LabRequestListPage() {
                                             e.target.value
                                         )
                                     }
-                                    placeholder="Tìm theo tên bệnh nhân, mã bệnh nhân, dịch vụ..."
+                                    placeholder="Tìm theo tên bệnh nhân, mã bệnh nhân, phiếu xét nghiệm..."
                                     className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 text-sm outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
                                 />
 
@@ -334,7 +334,7 @@ export default function LabRequestListPage() {
                             </div>
 
                             <span className="rounded-lg bg-primary-50 px-3 py-1.5 text-sm font-medium text-primary-700">
-                                {total} yêu cầu
+                                {total} phiếu xét nghiệm
                             </span>
 
                         </div>
@@ -352,11 +352,11 @@ export default function LabRequestListPage() {
                         <div className="border-b border-slate-100 px-5 py-3">
 
                             <h2 className="text-base font-semibold text-slate-900">
-                                Yêu cầu cận lâm sàng
+                                Phiếu xét nghiệm theo gói
                             </h2>
 
                             <p className="mt-0.5 text-xs text-slate-400">
-                                Danh sách các yêu cầu được gửi đến phòng hiện tại
+                                Mỗi gói xét nghiệm chỉ xuất hiện một lần, kể cả khi người bệnh mua từng chỉ số lẻ.
                             </p>
 
                         </div>
@@ -412,7 +412,7 @@ export default function LabRequestListPage() {
                                         <tr className="bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
 
                                             <th className="w-[13%] px-5 py-3 text-left font-medium">
-                                                Mã yêu cầu
+                                                Phiếu xét nghiệm
                                             </th>
 
                                             <th className="w-[12%] px-5 py-3 text-left font-medium">
@@ -428,7 +428,7 @@ export default function LabRequestListPage() {
                                             </th>
 
                                             <th className="w-[20%] px-5 py-3 text-left font-medium">
-                                                Dịch vụ
+                                                Gói / dịch vụ
                                             </th>
 
                                             <th className="w-[10%] px-5 py-3 text-left font-medium">
@@ -461,10 +461,7 @@ export default function LabRequestListPage() {
                                                 return (
 
                                                     <tr
-                                                        key={
-                                                            order.testRequestId ??
-                                                            idx
-                                                        }
+                                                        key={order.representativeId ?? order.testRequestId ?? idx}
                                                         className="transition hover:bg-slate-50/70"
                                                     >
 
@@ -474,14 +471,9 @@ export default function LabRequestListPage() {
 
                                                             <p
                                                                 className="max-w-[150px] truncate font-medium text-slate-700"
-                                                                title={
-                                                                    order.testRequestId ??
-                                                                    order.id
-                                                                }
+                                                                title={order.representativeId ?? order.testRequestId ?? order.id}
                                                             >
-                                                                {order.testRequestId ??
-                                                                    order.id ??
-                                                                    '—'}
+                                                                {order.grouped ? `Phiếu ${order.panelCode}` : (order.testRequestId ?? order.id ?? '—')}
                                                             </p>
 
                                                         </td>
@@ -536,10 +528,9 @@ export default function LabRequestListPage() {
                                                         <td className="px-5 py-3.5">
 
                                                             <p className="font-medium text-slate-700">
-                                                                {order.serviceName ??
-                                                                    order.labType ??
-                                                                    '—'}
+                                                                {order.panelName ?? order.serviceName ?? order.labType ?? '—'}
                                                             </p>
+                                                            {order.grouped && <p className="mt-1 text-xs text-slate-500">Đã mua {order.purchasedCount}/{order.totalAnalyteCount} chỉ số · Hoàn thành {order.completedCount}/{order.purchasedCount}</p>}
 
                                                         </td>
 
@@ -565,17 +556,11 @@ export default function LabRequestListPage() {
 
                                                                 <button
                                                                     onClick={() =>
-                                                                        navigate(
-                                                                            ROUTES.DOCTOR_LAB_DETAIL.replace(
-                                                                                ':id',
-                                                                                order.testRequestId ??
-                                                                                order.id
-                                                                            )
-                                                                        )
+                                                                        navigate(`${ROUTES.DOCTOR_LAB_DETAIL.replace(':id', order.representativeId ?? order.testRequestId ?? order.id)}${order.grouped ? '?panel=1' : ''}`)
                                                                     }
                                                                     className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                                                                 >
-                                                                    Xem
+                                                                    {order.grouped ? 'Mở phiếu' : 'Xem'}
                                                                 </button>
 
                                                                 {order.status ===
@@ -583,17 +568,11 @@ export default function LabRequestListPage() {
 
                                                                         <button
                                                                             onClick={() =>
-                                                                                navigate(
-                                                                                    ROUTES.DOCTOR_LAB_DETAIL.replace(
-                                                                                        ':id',
-                                                                                        order.testRequestId ??
-                                                                                        order.id
-                                                                                    )
-                                                                                )
+                                                                                navigate(`${ROUTES.DOCTOR_LAB_DETAIL.replace(':id', order.representativeId ?? order.testRequestId ?? order.id)}${order.grouped ? '?panel=1' : ''}`)
                                                                             }
                                                                             className="rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-600"
                                                                         >
-                                                                            Thực hiện
+                                                                            {order.grouped ? 'Nhập kết quả' : 'Thực hiện'}
                                                                         </button>
 
                                                                     )}

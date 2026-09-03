@@ -2,9 +2,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Receipt, CreditCard, Banknote, Landmark, Download } from 'lucide-react';
+import { Receipt, CreditCard, Banknote, Landmark, ArrowRight } from 'lucide-react';
 import PatientLayout from '@/components/layout/CustomerLayout';
 import { usePaymentHistory } from '@/hooks/usePaymentHistory';
+import { useFamilyMembers } from '@/hooks/useFamilyMembers';
+import { useProfile } from '@/hooks/useProfile';
 import { ROUTES } from '@/constants/routes';
 import { toast } from 'react-toastify';
 
@@ -42,32 +44,50 @@ export default function PaymentHistoryPage() {
     const { t }    = useTranslation('payment');
     const navigate = useNavigate();
     const { invoices, loading, error, total, page, PAGE_SIZE, fetchInvoices } = usePaymentHistory();
+    const { profile } = useProfile();
+    const { members: familyMembers } = useFamilyMembers(true);
 
     const [fromDate, setFromDate] = useState('');
     const [toDate,   setToDate]   = useState('');
     const [method,   setMethod]   = useState('');
+    const [patientProfileId, setPatientProfileId] = useState('self');
 
-    useEffect(() => { fetchInvoices(); }, []);
+    useEffect(() => {
+        fetchInvoices({ patientProfileId: patientProfileId === 'self' ? '' : patientProfileId });
+    }, [patientProfileId]);
 
     const handleSearch = () => {
         if (fromDate && toDate && fromDate > toDate) {
             toast.error('Ngày bắt đầu không được sau ngày kết thúc');
             return;
         }
-        fetchInvoices({ fromDate, toDate, method, page: 0 });
+        fetchInvoices({ fromDate, toDate, method, patientProfileId: patientProfileId === 'self' ? '' : patientProfileId, page: 0 });
     };
-    const handlePage   = (p) => fetchInvoices({ fromDate, toDate, method, page: p - 1 }); // Frontend 1-based → backend 0-based
+    const handlePage   = (p) => fetchInvoices({ fromDate, toDate, method, patientProfileId: patientProfileId === 'self' ? '' : patientProfileId, page: p - 1 }); // Frontend 1-based → backend 0-based
 
     const thCls = 'text-xs font-medium text-gray-400 text-left px-4 py-3';
     const tdCls = 'px-4 py-4 text-sm align-middle';
 
     return (
         <PatientLayout>
-            <div className="space-y-5">
-                <h1 className="text-sm font-bold text-gray-900 tracking-widest">{t('paymentHistory.pageTitle')}</h1>
+            <div className="cares-payments-page space-y-5">
+                <header className="cares-customer-page-heading">
+                    <div>
+                        <span className="cares-customer-eyebrow"><Receipt size={15} /> Giao dịch của bạn</span>
+                        <h1>{t('paymentHistory.pageTitle')}</h1>
+                        <p>Tra cứu các khoản đã thanh toán và mở phiếu thu điện tử.</p>
+                    </div>
+                </header>
 
                 {/* Filter */}
-                <div className="bg-white border border-gray-200 rounded-xl px-5 py-4 grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
+                <div className="cares-customer-filter-card bg-white border border-gray-200 rounded-xl px-5 py-4 grid grid-cols-1 md:grid-cols-[1.2fr_1fr_1fr_1fr_auto] gap-3 items-end">
+                    <div>
+                        <p className="text-xs text-gray-400 mb-1.5">Người được khám</p>
+                        <select value={patientProfileId} onChange={e => setPatientProfileId(e.target.value)} className={inputCls}>
+                            <option value="self">Tôi · {profile?.fullName || 'Chính chủ'}</option>
+                            {familyMembers.map(member => <option key={member.patientProfileId} value={member.patientProfileId}>{member.fullName} · {member.relationshipName}{member.active ? '' : ' · Đã lưu trữ'}</option>)}
+                        </select>
+                    </div>
                     <div>
                         <p className="text-xs text-gray-400 mb-1.5">{t('paymentHistory.filter.fromDate')}</p>
                         <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
@@ -85,7 +105,7 @@ export default function PaymentHistoryPage() {
                         </select>
                     </div>
                     <button onClick={handleSearch}
-                            className="h-10 px-5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+                            className="cares-customer-filter-button h-10 px-5 whitespace-nowrap">
                         {t('paymentHistory.filter.searchBtn')}
                     </button>
                 </div>
@@ -113,9 +133,7 @@ export default function PaymentHistoryPage() {
                     )}
                     
                     <div className="space-y-3">
-                        {!loading && invoices.map((inv, i) => {
-                            const isLast = i === invoices.length - 1;
-                            
+                        {!loading && invoices.map((inv) => {
                             const PaymentIcon = inv.paymentMethod?.toLowerCase().includes('card') 
                                 ? CreditCard 
                                 : inv.paymentMethod?.toLowerCase().includes('transfer') 
@@ -125,28 +143,22 @@ export default function PaymentHistoryPage() {
                             return (
                                 <div 
                                     key={inv.id}
-                                    className={`group border rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all shadow-sm hover:shadow-md ${
-                                        isLast 
-                                            ? 'bg-slate-900 border-slate-800' 
-                                            : 'bg-white border-gray-100 hover:border-gray-200'
-                                    }`}
+                                    className="cares-payment-row group border rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all bg-white border-gray-100"
                                 >
                                     {/* Left: Icon & Main Info */}
                                     <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-                                            isLast ? 'bg-slate-800 text-slate-300' : 'bg-slate-50 text-slate-400 group-hover:bg-primary-50 group-hover:text-primary-500'
-                                        } transition-colors`}>
+                                        <div className="cares-payment-icon w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors">
                                             <Receipt className="w-6 h-6" />
                                         </div>
                                         <div>
-                                            <p className={`font-bold text-lg leading-tight ${isLast ? 'text-white' : 'text-gray-900'}`}>
+                                            <p className="font-bold text-lg leading-tight text-gray-900">
                                                 {inv.description}
                                             </p>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${isLast ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-500'}`}>
+                                                <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
                                                     #{inv.invoiceId}
                                                 </span>
-                                                <span className={`text-sm ${isLast ? 'text-slate-400' : 'text-gray-500'}`}>
+                                                <span className="text-sm text-gray-500">
                                                     • {inv.settlementDate} {inv.settlementTime}
                                                 </span>
                                             </div>
@@ -156,13 +168,13 @@ export default function PaymentHistoryPage() {
                                     {/* Right: Amount & Status */}
                                     <div className="flex items-center justify-between md:justify-end gap-6 md:min-w-[300px]">
                                         <div className="text-right">
-                                            <p className={`text-xl font-bold font-mono tracking-tight ${isLast ? 'text-white' : 'text-gray-900'}`}>
+                                            <p className="text-xl font-bold font-mono tracking-tight text-gray-900">
                                                 {fmt(inv.amount)}
                                             </p>
                                             <div className="flex items-center justify-end gap-1.5 mt-1">
-                                                <PaymentIcon className={`w-3.5 h-3.5 ${isLast ? 'text-slate-400' : 'text-gray-400'}`} />
-                                                <p className={`text-xs ${isLast ? 'text-slate-400' : 'text-gray-500'}`}>
-                                                    {inv.paymentMethod}
+                                                <PaymentIcon className="w-3.5 h-3.5 text-gray-400" />
+                                                <p className="text-xs text-gray-500">
+                                                    {METHOD_LABELS[String(inv.paymentMethod || '').toLowerCase()] || inv.paymentMethod || 'Chưa cập nhật'}
                                                 </p>
                                             </div>
                                         </div>
@@ -170,15 +182,11 @@ export default function PaymentHistoryPage() {
                                         <div className="flex items-center gap-3">
                                             <div className="w-[1px] h-10 bg-gray-200 hidden md:block opacity-50"></div>
                                             <button
-                                                onClick={() => navigate(`${ROUTES.CUSTOMER_PAYMENT}/${inv.id}`)}
-                                                className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
-                                                    isLast 
-                                                        ? 'bg-slate-800 text-white hover:bg-primary-600' 
-                                                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-gray-100'
-                                                }`}
-                                                title={t('paymentHistory.downloadBtn')}
+                                                onClick={() => navigate(`${ROUTES.CUSTOMER_PAYMENT}/${inv.id}${patientProfileId === 'self' ? '' : `?patientProfileId=${encodeURIComponent(patientProfileId)}`}`)}
+                                                className="cares-payment-view-button"
+                                                title="Xem phiếu thu"
                                             >
-                                                <Download className="w-4 h-4" />
+                                                <ArrowRight className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </div>

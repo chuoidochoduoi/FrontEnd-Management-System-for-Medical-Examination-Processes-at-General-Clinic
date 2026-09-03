@@ -21,7 +21,6 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 
 import OwnerLayout from '@/components/layout/OwnerLayout';
-import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 
 /* =========================================================
@@ -158,13 +157,7 @@ export default function FeedbackPage() {
     const systemRole =
         stored('systemRole');
 
-    /*
-     * Theo phân quyền hiện tại:
-     * Receptionist quản lý feedback.
-     *
-     * Các role khác nếu vẫn truy cập được route cũ
-     * thì chỉ xem, không phản hồi.
-     */
+    /* Chỉ Lễ tân và Clinic Manager được quản lý phản hồi. */
     const isReceptionist =
         systemRole ===
         'RECEPTIONIST';
@@ -173,11 +166,13 @@ export default function FeedbackPage() {
         systemRole ===
         'CLINIC_MANAGER';
 
+    const canManageFeedback =
+        isReceptionist ||
+        isManager;
+
     const Layout = isManager
         ? OwnerLayout
-        : isReceptionist
-            ? ReceptionistLayout
-            : MedicalStaffLayout;
+        : ReceptionistLayout;
 
     /* =====================================================
        DATA
@@ -363,7 +358,7 @@ export default function FeedbackPage() {
     const save = async (
         item
     ) => {
-        if (!isReceptionist) {
+        if (!canManageFeedback) {
             return;
         }
 
@@ -1098,7 +1093,7 @@ export default function FeedbackPage() {
                                                             </div>
                                                         </div>
                                                     </>
-                                                ) : isReceptionist ? (
+                                                ) : canManageFeedback ? (
                                                     <>
                                                         {/* NEW RESPONSE */}
 

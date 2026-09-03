@@ -5,8 +5,13 @@ import OwnerLayout from '@/components/layout/OwnerLayout';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const headers = () => ({ Authorization: `Bearer ${get('token')}`, 'Content-Type': 'application/json' });
-const emptyField = () => ({ key: '', label: '', type: 'TEXT', group: 'Thông tin chuyên khoa', unit: '', required: false, min: '', max: '', normalValue: '', referenceMin: '', referenceMax: '' });
+const emptyField = () => ({ key: '', label: '', type: 'TEXT', group: 'Kết quả', unit: '', required: false, min: '', max: '', normalValue: '', referenceMin: '', referenceMax: '' });
 const SYSTEM_LAB_TEMPLATES = new Set(['LAB_CBC', 'LAB_GLUCOSE', 'LAB_BIOCHEM', 'LAB_LIVER', 'LAB_KIDNEY', 'LAB_URINALYSIS', 'LAB_CRP', 'LAB_RAPID_INFECTIOUS']);
+const CONTEXT_LABELS = {
+    LAB_RESULT: 'Xét nghiệm',
+    IMAGING_RESULT: 'Chẩn đoán hình ảnh',
+    ECG_RESULT: 'Điện tim',
+};
 
 export default function ClinicalFormTemplatePage() {
     const [templates, setTemplates] = useState([]);
@@ -14,18 +19,22 @@ export default function ClinicalFormTemplatePage() {
     const [selectedServices, setSelectedServices] = useState([]);
     const [editingTemplateId, setEditingTemplateId] = useState(null);
     const [saving, setSaving] = useState(false);
-    const [form, setForm] = useState({ code: '', name: '', context: 'EXAMINATION', description: '', changeReason: 'Khởi tạo biểu mẫu', effectiveFrom: new Date().toISOString().slice(0, 10), fields: [emptyField()] });
+    const [form, setForm] = useState({ code: '', name: '', context: 'LAB_RESULT', description: '', changeReason: 'Khởi tạo biểu mẫu', effectiveFrom: new Date().toISOString().slice(0, 10), fields: [emptyField()] });
     const api = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
     const load = async () => {
         const [templateRes, serviceRes] = await Promise.all([
             fetch(`${api}/api/v1/clinical-form-templates`, { headers: headers() }),
-            fetch(`${api}/api/v1/medical-services?size=200`, { headers: headers() }),
+            fetch(`${api}/api/v1/medical-services?departmentType=PARACLINICAL&size=200`, { headers: headers() }),
         ]);
-        if (templateRes.ok) setTemplates(await templateRes.json());
+        if (templateRes.ok) {
+            const body = await templateRes.json();
+            setTemplates((Array.isArray(body) ? body : []).filter(template => template.context !== 'EXAMINATION'));
+        }
         if (serviceRes.ok) {
             const body = await serviceRes.json();
-            setServices(Array.isArray(body) ? body : body.content || []);
+            const items = Array.isArray(body) ? body : body.content || [];
+            setServices(items.filter(service => service.departmentType === 'PARACLINICAL'));
         }
     };
 
@@ -79,7 +88,7 @@ export default function ClinicalFormTemplatePage() {
                 if (!bindRes.ok) throw new Error('Đã tạo biểu mẫu nhưng chưa liên kết được dịch vụ');
             }
             toast.success('Đã tạo bản nháp biểu mẫu');
-            setForm({ code: '', name: '', context: 'EXAMINATION', description: '', changeReason: 'Khởi tạo biểu mẫu', effectiveFrom: new Date().toISOString().slice(0, 10), fields: [emptyField()] });
+            setForm({ code: '', name: '', context: 'LAB_RESULT', description: '', changeReason: 'Khởi tạo biểu mẫu', effectiveFrom: new Date().toISOString().slice(0, 10), fields: [emptyField()] });
             setSelectedServices([]); await load();
             setEditingTemplateId(null);
         } catch (error) { toast.error(error.message); } finally { setSaving(false); }
@@ -121,12 +130,12 @@ export default function ClinicalFormTemplatePage() {
     return (
         <OwnerLayout>
             <div className="space-y-5">
-                <div><h1 className="text-2xl font-bold text-slate-900">Biểu mẫu chuyên môn</h1><p className="mt-1 text-sm text-slate-500">Tạo form động, liên kết dịch vụ và phát hành theo phiên bản.</p></div>
+                <div><h1 className="text-2xl font-bold text-slate-900">Biểu mẫu kết quả cận lâm sàng</h1><p className="mt-1 text-sm text-slate-500">Cấu hình trường nhập kết quả cho xét nghiệm, chẩn đoán hình ảnh và điện tim.</p></div>
                 <section className="rounded-2xl border border-slate-200 bg-white p-5">
                     <div className="grid gap-4 md:grid-cols-3">
                         <input disabled={editingTemplateId != null} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="Mã biểu mẫu" className="rounded-lg border px-3 py-2 text-sm disabled:bg-slate-100" />
                         <input disabled={editingTemplateId != null} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Tên biểu mẫu" className="rounded-lg border px-3 py-2 text-sm disabled:bg-slate-100" />
-                        <select disabled={editingTemplateId != null} value={form.context} onChange={(e) => setForm({ ...form, context: e.target.value })} className="rounded-lg border px-3 py-2 text-sm disabled:bg-slate-100"><option value="EXAMINATION">Phiếu khám</option><option value="LAB_RESULT">Xét nghiệm</option><option value="IMAGING_RESULT">Chẩn đoán hình ảnh</option><option value="ECG_RESULT">Điện tim</option></select>
+                        <select disabled={editingTemplateId != null} value={form.context} onChange={(e) => setForm({ ...form, context: e.target.value })} className="rounded-lg border px-3 py-2 text-sm disabled:bg-slate-100"><option value="LAB_RESULT">Xét nghiệm</option><option value="IMAGING_RESULT">Chẩn đoán hình ảnh</option><option value="ECG_RESULT">Điện tim</option></select>
                         <input value={form.changeReason} onChange={(e) => setForm({ ...form, changeReason: e.target.value })} placeholder="Lý do thay đổi" className="rounded-lg border px-3 py-2 text-sm md:col-span-2" />
                         <input type="date" value={form.effectiveFrom} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, effectiveFrom: e.target.value })} className="rounded-lg border px-3 py-2 text-sm" />
                     </div>
@@ -155,7 +164,7 @@ export default function ClinicalFormTemplatePage() {
                 </section>
                 <section className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="mb-3 font-bold">Danh sách biểu mẫu</h2><div className="space-y-2">{templates.map((template) => {
                     const systemLabTemplate = SYSTEM_LAB_TEMPLATES.has(template.code);
-                    return <div key={template.templateId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"><div><p className="font-semibold">{template.name} <span className="text-xs text-slate-400">v{template.versionNo}</span>{systemLabTemplate && <span className="ml-2 rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700">Biểu mẫu hệ thống</span>}</p><p className="text-xs text-slate-500">{template.code} · {template.context} · {template.status} · {template.serviceIds?.length || 0} dịch vụ</p>{systemLabTemplate && <p className="mt-1 text-[11px] text-slate-400">Chỉ số và khoảng tham chiếu được khóa để bảo đảm nội dung chuyên môn nhất quán.</p>}</div>{!systemLabTemplate && <div className="flex gap-2"><button onClick={() => editTemplate(template)} className="rounded-lg border px-3 py-2 text-xs font-bold">{template.status === 'DRAFT' ? 'Sửa bản nháp' : 'Tạo phiên bản mới'}</button>{template.status === 'DRAFT' && <button onClick={() => publish(template.templateId)} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white"><Send size={14} /> Phát hành</button>}{template.status === 'PUBLISHED' && <button onClick={() => retire(template.templateId)} className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold text-white">Ngừng dùng</button>}</div>}</div>;
+                    return <div key={template.templateId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"><div><p className="font-semibold">{template.name} <span className="text-xs text-slate-400">v{template.versionNo}</span>{systemLabTemplate && <span className="ml-2 rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700">Biểu mẫu hệ thống</span>}</p><p className="text-xs text-slate-500">{template.code} · {CONTEXT_LABELS[template.context] || template.context} · {template.status} · {template.serviceIds?.length || 0} dịch vụ</p>{systemLabTemplate && <p className="mt-1 text-[11px] text-slate-400">Chỉ số và khoảng tham chiếu được khóa để bảo đảm nội dung chuyên môn nhất quán.</p>}</div>{!systemLabTemplate && <div className="flex gap-2"><button onClick={() => editTemplate(template)} className="rounded-lg border px-3 py-2 text-xs font-bold">{template.status === 'DRAFT' ? 'Sửa bản nháp' : 'Tạo phiên bản mới'}</button>{template.status === 'DRAFT' && <button onClick={() => publish(template.templateId)} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white"><Send size={14} /> Phát hành</button>}{template.status === 'PUBLISHED' && <button onClick={() => retire(template.templateId)} className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold text-white">Ngừng dùng</button>}</div>}</div>;
                 })}</div></section>
             </div>
         </OwnerLayout>

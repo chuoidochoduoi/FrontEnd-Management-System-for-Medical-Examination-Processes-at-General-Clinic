@@ -1,0 +1,10 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["src/main.jsx"],
+  "project": ["src/**/*.js", "src/**/*.jsx"],
+  "paths": {
+    "@/*": ["src/*"]
+  },
+  "ignore": ["src/locales/**"],
+  "ignoreDependencies": ["autoprefixer", "postcss", "tailwindcss"]
+}

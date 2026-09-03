@@ -34,7 +34,18 @@ const buildScheduledAt = (date, shiftId, shifts) => {
     const shift = shifts.find(s => s.id === shiftId || s.shiftId === shiftId);
     if (!shift) return null;
 
-    return `${year}-${month}-${day}T${shift.startTime}:00`;
+    const [hour = '00', minute = '00', second = '00'] = String(shift.startTime || '')
+        .trim()
+        .split(':');
+    if (!/^\d{1,2}$/.test(hour) || !/^\d{1,2}$/.test(minute) || !/^\d{1,2}$/.test(second)) {
+        return null;
+    }
+
+    const normalizedTime = [hour, minute, second]
+        .map(value => value.padStart(2, '0'))
+        .join(':');
+
+    return `${year}-${month}-${day}T${normalizedTime}`;
 };
 
 // Helper: chuyển đổi gender sang format Enum backend (MALE, FEMALE, OTHER)
@@ -82,6 +93,7 @@ export function useAppointment() {
                     maximumAge: s.maximumAge ?? 120,
                     allowedGender: s.allowedGender || '',
                     specializationName: s.requiredSpecializationName || '',
+                    relations: s.relations || [],
                 }));
                 setServices(mappedServices);
             } catch (err) {
@@ -196,9 +208,8 @@ export function useAppointment() {
             // Xây dựng body request dựa trên trạng thái đăng nhập
             const body = isLoggedIn
                 ? {
-                      customerId: formData.customerId,
+                      patientProfileId: formData.patientProfileId || null,
                       scheduledAt,
-                      cancelReason: formData.cancelReason || null,
                       shiftId: formData.shiftId,
                       serviceIds: formData.selectedServices.map(s => s.id),
                   }
@@ -221,7 +232,7 @@ export function useAppointment() {
                 endpoint = `${import.meta.env.VITE_API_URL}/api/v1/appointments/my/${formData.rescheduleApptId}`;
                 method = 'PUT';
             } else if (isLoggedIn) {
-                endpoint = `${import.meta.env.VITE_API_URL}/api/v1/appointments`;
+                endpoint = `${import.meta.env.VITE_API_URL}/api/v1/appointments/my`;
             } else {
                 endpoint = `${import.meta.env.VITE_API_URL}/api/v1/appointments/guest`;
             }
@@ -260,5 +271,39 @@ export function useAppointment() {
         }
     };
 
-    return { services, loadingServices, book, loading, error, shifts, shiftLoading, fetchShifts };
+    const bookGroup = async ({ date, shiftId, members }) => {
+        setError('');
+        if (!date) return setError('Vui lòng chọn ngày khám.');
+        if (!shiftId) return setError('Vui lòng chọn ca khám.');
+        if (!Array.isArray(members) || members.length < 2) return setError('Đặt lịch nhóm cần ít nhất hai người.');
+        const scheduledAt = buildScheduledAt(date, shiftId, shifts);
+        if (!scheduledAt) return setError('Ca khám đã chọn không còn khả dụng.');
+        setLoading(true);
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/appointments/my/group`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...bearer() },
+                body: JSON.stringify({
+                    scheduledAt,
+                    shiftId,
+                    members: members.map(member => ({
+                        patientProfileId: member.patientProfileId,
+                        serviceIds: member.services.map(service => service.id),
+                    })),
+                }),
+            });
+            const body = await response.json().catch(() => null);
+            if (!response.ok) throw new Error(body?.message || body?.error || 'Không thể đặt lịch nhóm.');
+            toast.success(`Đã tạo ${members.length} lịch hẹn độc lập cho gia đình.`);
+            return true;
+        } catch (err) {
+            setError(err.message || 'Không thể đặt lịch nhóm.');
+            toast.error(err.message || 'Không thể đặt lịch nhóm.');
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { services, loadingServices, book, bookGroup, loading, error, shifts, shiftLoading, fetchShifts };
 }

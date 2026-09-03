@@ -1,11 +1,16 @@
 // src/pages/doctor/ExaminationPage.jsx
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
+    Beaker,
+    CalendarDays,
+    Check,
+    ChevronDown,
     ChevronRight,
     Search,
+    Stethoscope,
     X,
 } from 'lucide-react';
 
@@ -13,7 +18,14 @@ import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import { useInProgressPatient } from '@/hooks/useInProgressPatient';
 import { useDiagnosis, useTagSearch } from '@/hooks/useDiagnosis';
 import { useLabServices } from '@/hooks/useLabServices';
+import { toggleServiceWithPolicy } from '@/utils/serviceSelectionPolicy';
 import PatientAllergyBanner from '@/components/clinical/PatientAllergyBanner';
+import LabResultReviewModal from '@/components/clinical/LabResultReviewModal';
+import LabPanelResultReviewModal from '@/components/clinical/LabPanelResultReviewModal';
+import LabPackageAnalytePicker, {
+    isPackageOrAnalyteService,
+} from '@/components/clinical/LabPackageAnalytePicker';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 
 import { toast } from 'react-toastify';
 import { ROUTES } from '@/constants/routes';
@@ -48,6 +60,13 @@ const formatHistoryDate = (date, time) => {
         minute: time ? '2-digit' : undefined,
     });
 };
+
+const clinicToday = () => new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+}).format(new Date());
 
 const validateVitalSignsForCompletion = ({
     heartRate,
@@ -250,14 +269,21 @@ function TagList({
                      labelKey = 'name',
                      onRemove,
                      codeKey,
+                     removeKey = 'id',
+                     maxVisible,
+                     expanded = false,
+                     onToggleExpanded,
                  }) {
     if (!items?.length) {
         return null;
     }
 
+    const visibleItems = maxVisible && !expanded ? items.slice(0, maxVisible) : items;
+    const hiddenCount = items.length - visibleItems.length;
+
     return (
-        <div className="mt-2 flex flex-wrap gap-2">
-            {items.map((item) => (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+            {visibleItems.map((item) => (
                 <div
                     key={
                         item.code ??
@@ -290,16 +316,235 @@ function TagList({
                         type="button"
                         onClick={() =>
                             onRemove(
-                                item.code ??
-                                item.id
+                                item[removeKey] ??
+                                item.id ??
+                                item.code
                             )
                         }
+                        aria-label={`Bỏ chọn ${item[labelKey] || item.code || 'mục này'}`}
                         className="text-gray-300 transition hover:text-red-500"
                     >
                         <X size={12} />
                     </button>
                 </div>
             ))}
+            {maxVisible && items.length > maxVisible && (
+                <button
+                    type="button"
+                    onClick={onToggleExpanded}
+                    className="min-h-9 rounded-lg border border-teal-200 bg-teal-50 px-3 text-sm font-semibold text-teal-700 hover:bg-teal-100"
+                >
+                    {expanded ? 'Thu gọn chẩn đoán' : `Xem thêm ${hiddenCount} chẩn đoán`}
+                </button>
+            )}
+        </div>
+    );
+}
+
+const formatServicePrice = (value) =>
+    `${Number(value || 0).toLocaleString('vi-VN')} đ`;
+
+const groupExistingLabRequests = (requests, services) => {
+    const byId = new Map((services || []).map(service => [String(service.serviceId || service.id), service]));
+    const panelByAnalyteCode = new Map();
+    (services || []).filter(isPackageOrAnalyteService).forEach(panel => {
+        const isPanel = (panel.relations || []).some(relation => relation.type === 'INCLUDES'
+            && String(relation.targetServiceCode || '').toUpperCase().startsWith('AN-'));
+        if (!isPanel) return;
+        (panel.relations || []).filter(relation => relation.type === 'INCLUDES').forEach(relation => {
+            const code = String(relation.targetServiceCode || '').toUpperCase();
+            if (code.startsWith('AN-') && !panelByAnalyteCode.has(code)) panelByAnalyteCode.set(code, panel);
+        });
+    });
+
+    const groups = new Map();
+    (requests || []).filter(request => request.status !== 'CANCELLED').forEach(request => {
+        const service = byId.get(String(request.serviceId || ''));
+        const code = String(service?.serviceCode || service?.code || '').toUpperCase();
+        const panel = code.startsWith('AN-') ? panelByAnalyteCode.get(code) : null;
+        const groupService = panel || service;
+        const grouped = Boolean(panel) || Boolean(groupService && (groupService.relations || []).some(relation =>
+            relation.type === 'INCLUDES' && String(relation.targetServiceCode || '').toUpperCase().startsWith('AN-')));
+        const key = grouped ? `PANEL:${groupService.serviceId || groupService.id}` : `REQUEST:${request.testRequestId}`;
+        if (!groups.has(key)) groups.set(key, {
+            key,
+            panelName: groupService?.name || request.serviceName || 'Dịch vụ cận lâm sàng',
+            panelCode: groupService?.serviceCode || groupService?.code || '',
+            grouped,
+            representativeId: request.testRequestId,
+            requests: [],
+        });
+        groups.get(key).requests.push(request);
+    });
+    return [...groups.values()].map(group => {
+        const completedCount = group.requests.filter(item => item.status === 'COMPLETED').length;
+        const inProgress = group.requests.some(item => item.status === 'IN_PROGRESS');
+        const pending = group.requests.some(item => item.status === 'PENDING');
+        return {
+            ...group,
+            completedCount,
+            status: completedCount === group.requests.length ? 'COMPLETED' : inProgress ? 'IN_PROGRESS' : pending ? 'PENDING' : group.requests[0]?.status,
+        };
+    });
+};
+
+function LabServicePicker({
+    services,
+    selected,
+    loading,
+    unavailableIds,
+    sameDayResultIds,
+    existingByServiceId,
+    relatedConflictByServiceId,
+    onToggle,
+}) {
+    const ref = useRef(null);
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState('');
+
+    useEffect(() => {
+        const handleOutside = (event) => {
+            if (ref.current && !ref.current.contains(event.target)) setOpen(false);
+        };
+        document.addEventListener('mousedown', handleOutside);
+        return () => document.removeEventListener('mousedown', handleOutside);
+    }, []);
+
+    const selectedIds = new Set(selected.map((item) => item.id));
+    const normalizedQuery = query.trim().toLocaleLowerCase('vi');
+    const visibleServices = services.filter((service) => {
+        if (!normalizedQuery) return true;
+        return [service.name, service.serviceCode, service.departmentName, service.requiredCapabilityName]
+            .some((value) => String(value || '').toLocaleLowerCase('vi').includes(normalizedQuery));
+    });
+    const grouped = visibleServices.reduce((result, service) => {
+        const analytePanel = String(service.serviceCode || '').startsWith('AN-CBC-') ? 'Chỉ số lẻ · Công thức máu'
+            : String(service.serviceCode || '').startsWith('AN-BIO-') ? 'Chỉ số lẻ · Sinh hóa máu'
+                : String(service.serviceCode || '').startsWith('AN-LIV-') ? 'Chỉ số lẻ · Chức năng gan'
+                    : String(service.serviceCode || '').startsWith('AN-REN-') ? 'Chỉ số lẻ · Chức năng thận'
+                        : String(service.serviceCode || '').startsWith('AN-URI-') ? 'Chỉ số lẻ · Nước tiểu'
+                            : null;
+        const group = analytePanel || service.departmentName || service.requiredCapabilityName || 'Cận lâm sàng';
+        if (!result[group]) result[group] = [];
+        result[group].push(service);
+        return result;
+    }, {});
+
+    const stateOf = (service) => {
+        const existing = existingByServiceId.get(service.serviceId);
+        if (existing?.status === 'COMPLETED' || sameDayResultIds.has(service.serviceId)) {
+            return { disabled: true, label: 'Đã có kết quả' };
+        }
+        if (existing?.linkedToExamination) {
+            return { disabled: true, label: 'Đã được chỉ định' };
+        }
+        if (unavailableIds.has(service.serviceId)) {
+            return { disabled: true, label: 'Không thể chọn' };
+        }
+        if (existing) return { disabled: true, label: 'Đã đặt trước cho lượt này' };
+        const relatedConflict = relatedConflictByServiceId.get(service.serviceId);
+        if (relatedConflict) return { disabled: true, label: relatedConflict };
+        return { disabled: false, label: '' };
+    };
+
+    return (
+        <div ref={ref} className="relative w-full">
+            <button
+                type="button"
+                onClick={() => setOpen((current) => !current)}
+                disabled={loading}
+                aria-expanded={open}
+                className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 text-left text-sm text-slate-700 transition hover:border-teal-300 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-100 disabled:opacity-60"
+            >
+                <span>
+                    {loading
+                        ? 'Đang tải dịch vụ cận lâm sàng...'
+                        : selected.length > 0
+                            ? `Đã chọn ${selected.length} dịch vụ — chọn thêm`
+                            : 'Tìm và chọn dịch vụ cận lâm sàng'}
+                </span>
+                <ChevronDown size={18} className={`shrink-0 transition ${open ? 'rotate-180' : ''}`} />
+            </button>
+
+            {open && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-full min-w-[min(760px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div className="border-b border-slate-100 p-3">
+                        <div className="relative">
+                            <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                autoFocus
+                                value={query}
+                                onChange={(event) => setQuery(event.target.value)}
+                                placeholder="Tìm theo tên, mã, phòng hoặc kỹ thuật..."
+                                className="h-11 w-full rounded-xl border border-slate-200 pl-10 pr-4 text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="max-h-[430px] overflow-y-auto p-3">
+                        {Object.keys(grouped).length === 0 ? (
+                            <p className="px-3 py-8 text-center text-sm text-slate-500">Không tìm thấy dịch vụ phù hợp.</p>
+                        ) : Object.entries(grouped).map(([group, items]) => (
+                            <section key={group} className="mb-4 last:mb-0">
+                                <h3 className="mb-2 px-1 text-xs font-bold uppercase tracking-wide text-slate-500">{group}</h3>
+                                <div className="grid gap-2 md:grid-cols-2">
+                                    {items.map((service) => {
+                                        const selectedService = selectedIds.has(service.serviceId);
+                                        const state = stateOf(service);
+                                        const includedRelations = (service.relations || [])
+                                            .filter((relation) => relation.type === 'INCLUDES');
+                                        const analyteRelations = includedRelations.filter((relation) =>
+                                            String(relation.targetServiceCode || '').toUpperCase().startsWith('AN-'));
+                                        const relationHint = analyteRelations.length > 4
+                                            ? `${analyteRelations.length} chỉ số`
+                                            : includedRelations.map((relation) => relation.targetServiceName)
+                                                .filter(Boolean).join(', ');
+                                        return (
+                                            <button
+                                                key={service.serviceId}
+                                                type="button"
+                                                disabled={state.disabled && !selectedService}
+                                                onClick={() => onToggle(service)}
+                                                className={`flex items-start gap-3 rounded-xl border p-3 text-left transition ${selectedService
+                                                    ? 'border-teal-400 bg-teal-50'
+                                                    : 'border-slate-200 hover:border-teal-200 hover:bg-slate-50'} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60`}
+                                            >
+                                                <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${selectedService
+                                                    ? 'border-teal-600 bg-teal-600 text-white'
+                                                    : 'border-slate-300 bg-white text-transparent'}`}>
+                                                    <Check size={14} />
+                                                </span>
+                                                <span className="min-w-0 flex-1">
+                                                    <span className="flex flex-wrap items-start justify-between gap-2">
+                                                        <strong className="text-sm text-slate-900">{service.name}</strong>
+                                                        <span className="text-xs font-semibold text-teal-700">{formatServicePrice(service.price)}</span>
+                                                    </span>
+                                                    <span className="mt-1 block text-xs text-slate-500">
+                                                        {service.serviceCode || 'Không có mã'}
+                                                        {service.durationMinutes ? ` · ${service.durationMinutes} phút` : ''}
+                                                        {service.requiredCapabilityName ? ` · ${service.requiredCapabilityName}` : ''}
+                                                    </span>
+                                                    {String(service.serviceCode || '').startsWith('AN-') && (
+                                                        <span className="mt-1.5 inline-flex rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">
+                                                            Chỉ số lẻ · không đặt online
+                                                        </span>
+                                                    )}
+                                                    {relationHint && (
+                                                        <span className="mt-1.5 block text-xs font-medium text-amber-700">Bao gồm {relationHint}</span>
+                                                    )}
+                                                    {state.label && (
+                                                        <span className="mt-1.5 block text-xs font-semibold text-slate-500">{state.label}</span>
+                                                    )}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </section>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -430,9 +675,15 @@ export default function ExaminationPage() {
     ] = useState('');
 
     const [vitalErrors, setVitalErrors] = useState({});
+    const [vitalSource, setVitalSource] = useState({
+        inherited: false,
+        recordedAt: null,
+    });
+    const [vitalsEdited, setVitalsEdited] = useState(false);
 
     const updateVitalValue = (field, setter) => (value) => {
         setter(value);
+        setVitalsEdited(true);
         setVitalErrors((current) => {
             if (!current[field]) return current;
             const next = { ...current };
@@ -462,13 +713,32 @@ export default function ExaminationPage() {
             loadingLabServices,
     } = useLabServices();
 
-    const [
-        labSelect,
-        setLabSelect,
-    ] = useState('');
-
     const [sameDayResults, setSameDayResults] = useState([]);
     const [loadingSameDayResults, setLoadingSameDayResults] = useState(false);
+    const [sameRoomChain, setSameRoomChain] = useState(null);
+
+    useEffect(() => {
+        if (!examination?.ticketId) {
+            setSameRoomChain(null);
+            return undefined;
+        }
+
+        const controller = new AbortController();
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+        fetch(`${apiBase}/api/v1/queue-tickets/${examination.ticketId}/same-room-chain`, {
+            headers: authHeader(),
+            signal: controller.signal,
+        })
+            .then(async response => {
+                if (!response.ok) throw new Error('Không thể tải tiến độ khám tại phòng');
+                return response.json();
+            })
+            .then(body => setSameRoomChain(body?.data ?? body?.result ?? body ?? null))
+            .catch(fetchError => {
+                if (fetchError.name !== 'AbortError') setSameRoomChain(null);
+            });
+        return () => controller.abort();
+    }, [examination?.ticketId]);
 
     useEffect(() => {
         if (!examination?.recordId) {
@@ -633,7 +903,7 @@ export default function ExaminationPage() {
     const [
         showPrescription,
         setShowPrescription,
-    ] = useState(true);
+    ] = useState(false);
 
     const [
         prescriptionAdvice,
@@ -853,6 +1123,15 @@ export default function ExaminationPage() {
         setCompleting,
     ] = useState(false);
 
+    const [completeConfirmationOpen, setCompleteConfirmationOpen] = useState(false);
+    const [existingLabDataExpanded, setExistingLabDataExpanded] = useState(false);
+    const [labPickerOpen, setLabPickerOpen] = useState(false);
+    const [labPickerStep, setLabPickerStep] = useState(1);
+    const [labPickerSnapshot, setLabPickerSnapshot] = useState([]);
+    const [diagnosisExpanded, setDiagnosisExpanded] = useState(false);
+    const [selectedLabResultId, setSelectedLabResultId] = useState(null);
+    const [selectedLabPanelId, setSelectedLabPanelId] = useState(null);
+
     const [
         error,
         setError,
@@ -867,6 +1146,11 @@ export default function ExaminationPage() {
         visitTestRequests,
         setVisitTestRequests,
     ] = useState([]);
+
+    const existingLabGroups = useMemo(
+        () => groupExistingLabRequests(testRequests, labServices),
+        [testRequests, labServices]
+    );
 
     useEffect(() => {
         const visitId = examination?.visitId;
@@ -910,6 +1194,42 @@ export default function ExaminationPage() {
     const visitTestRequestByServiceId = new Map(
         activeVisitTestRequests.map((request) => [request.serviceId, request])
     );
+    const relatedLabConflictByServiceId = new Map();
+    const existingLabServiceIds = new Set(visitTestRequestByServiceId.keys());
+    const labServiceByCode = new Map(
+        labServices.map((service) => [String(service.serviceCode || '').toUpperCase(), service])
+    );
+    labServices.forEach((service) => {
+        if (existingLabServiceIds.has(service.serviceId)) return;
+        const serviceCode = String(service.serviceCode || '').toUpperCase();
+
+        const includedExisting = (service.relations || []).find((relation) => {
+            if (relation.type !== 'INCLUDES') return false;
+            const target = labServiceByCode.get(String(relation.targetServiceCode || '').toUpperCase());
+            return target && existingLabServiceIds.has(target.serviceId);
+        });
+        if (includedExisting) {
+            relatedLabConflictByServiceId.set(
+                service.serviceId,
+                `Trùng với ${includedExisting.targetServiceName} đã đặt trước`
+            );
+            return;
+        }
+
+        const coveringExisting = labServices.find((candidate) =>
+            existingLabServiceIds.has(candidate.serviceId)
+            && (candidate.relations || []).some((relation) =>
+                relation.type === 'INCLUDES'
+                && String(relation.targetServiceCode || '').toUpperCase() === serviceCode
+            )
+        );
+        if (coveringExisting) {
+            relatedLabConflictByServiceId.set(
+                service.serviceId,
+                `Đã được bao gồm trong ${coveringExisting.name} đã đặt trước`
+            );
+        }
+    });
     const unavailableLabServiceIds = new Set(
         activeVisitTestRequests
             .filter(
@@ -920,10 +1240,126 @@ export default function ExaminationPage() {
             .filter(Boolean)
     );
 
+    const labSelectionState = (service) => {
+        const serviceId = service.serviceId || service.id;
+        const existing = visitTestRequestByServiceId.get(serviceId);
+        if (existing?.status === 'COMPLETED' || sameDayResultByServiceId.has(serviceId)) {
+            return { disabled: true, label: 'Đã có kết quả trong ngày' };
+        }
+        if (existing?.linkedToExamination) {
+            return { disabled: true, label: 'Đã được chỉ định từ bệnh án' };
+        }
+        if (unavailableLabServiceIds.has(serviceId)) {
+            return { disabled: true, label: 'Không thể chọn ở trạng thái hiện tại' };
+        }
+        if (existing) {
+            return { disabled: true, label: 'Đã đặt trước cho lượt khám này' };
+        }
+        const conflict = relatedLabConflictByServiceId.get(serviceId);
+        return conflict ? { disabled: true, label: conflict } : { disabled: false, label: '' };
+    };
+
+    const packageAndAnalyteServices = labServices.filter(isPackageOrAnalyteService);
+    const otherParaclinicalServices = labServices.filter(service => !isPackageOrAnalyteService(service));
+    const packageAndAnalyteIdSet = new Set(packageAndAnalyteServices.map(service => service.serviceId));
+    const otherParaclinicalIdSet = new Set(otherParaclinicalServices.map(service => service.serviceId));
+
+    const toggleLabService = (service) => {
+        if (!service) return;
+        if (labOrders.selected.some((item) => item.id === service.serviceId)) {
+            labOrders.remove(service.serviceId);
+            return;
+        }
+        if (unavailableLabServiceIds.has(service.serviceId)
+                || sameDayResultByServiceId.has(service.serviceId)
+                || relatedLabConflictByServiceId.has(service.serviceId)) {
+            const conflictMessage = relatedLabConflictByServiceId.get(service.serviceId);
+            if (conflictMessage) toast.info(conflictMessage);
+            return;
+        }
+
+        const candidate = {
+            id: service.serviceId,
+            code: service.serviceCode,
+            name: service.name,
+            price: service.price,
+            durationMinutes: service.durationMinutes,
+            departmentName: service.departmentName,
+            requiredCapabilityName: service.requiredCapabilityName,
+            relations: service.relations || [],
+        };
+        const resolution = toggleServiceWithPolicy(
+            labOrders.selected,
+            candidate,
+            labServices.map((item) => ({
+                id: item.serviceId,
+                code: item.serviceCode,
+                name: item.name,
+                price: item.price,
+                durationMinutes: item.durationMinutes,
+                departmentName: item.departmentName,
+                requiredCapabilityName: item.requiredCapabilityName,
+                relations: item.relations || [],
+            }))
+        );
+        if (resolution.message) toast.info(resolution.message);
+        labOrders.setSelected(resolution.services);
+    };
+
+    const toLabSelectionItem = service => ({
+        id: service.serviceId || service.id,
+        code: service.serviceCode || service.code,
+        name: service.name,
+        price: service.price,
+        durationMinutes: service.durationMinutes,
+        departmentName: service.departmentName,
+        requiredCapabilityName: service.requiredCapabilityName,
+        relations: service.relations || [],
+    });
+
+    const customizeLabPanel = (panel, analytes, excludedAnalyteId) => {
+        const panelId = panel.serviceId || panel.id;
+        const analyteIds = new Set(analytes.map(item => item.serviceId || item.id));
+        labOrders.setSelected(current => [
+            ...current.filter(item => item.id !== panelId && !analyteIds.has(item.id)),
+            ...analytes
+                .filter(item => (item.serviceId || item.id) !== excludedAnalyteId)
+                .map(toLabSelectionItem),
+        ]);
+    };
+
+    const openLabPicker = () => {
+        setLabPickerSnapshot(labOrders.selected.map(item => ({ ...item })));
+        setLabPickerStep(1);
+        setLabPickerOpen(true);
+    };
+
+    const closeLabPicker = ({ restore = false } = {}) => {
+        if (restore) {
+            labOrders.setSelected(labPickerSnapshot.map(item => ({ ...item })));
+        }
+        setLabPickerOpen(false);
+        setLabPickerStep(1);
+    };
+
+    const selectedLabTotal = labOrders.selected.reduce(
+        (total, service) => total + Number(service.price || 0),
+        0
+    );
+    const selectedPackageCount = labOrders.selected.filter(item => {
+        const service = packageAndAnalyteServices.find(candidate => candidate.serviceId === item.id);
+        return service && !String(service.serviceCode || '').startsWith('AN-');
+    }).length;
+    const selectedAnalyteCount = labOrders.selected.filter(item => String(item.code || '').startsWith('AN-')).length;
+
     const [
         recordVersion,
         setRecordVersion,
     ] = useState(null);
+    const [recordVersionLoading, setRecordVersionLoading] = useState(false);
+    const [recordRefreshToken, setRecordRefreshToken] = useState(0);
+    const recordLoadSequence = useRef(0);
+    const recordMutationInFlight = useRef(false);
 
     const [
         previousRecords,
@@ -970,6 +1406,12 @@ export default function ExaminationPage() {
         setFollowUpServiceId,
     ] = useState('');
 
+    const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
+    const [followUpStep, setFollowUpStep] = useState(1);
+    const [followUpServiceQuery, setFollowUpServiceQuery] = useState('');
+    const [followUpSnapshot, setFollowUpSnapshot] = useState(null);
+    const [createdFollowUp, setCreatedFollowUp] = useState(null);
+
     /* =====================================================
        FETCH CURRENT RECORD
     ===================================================== */
@@ -978,8 +1420,32 @@ export default function ExaminationPage() {
         if (
             !examination?.recordId
         ) {
+            setRecordVersion(null);
+            setRecordVersionLoading(false);
+            setHeartRate('');
+            setBloodPressure('');
+            setTemperature('');
+            setHeight('');
+            setWeight('');
+            setVitalErrors({});
+            setVitalSource({ inherited: false, recordedAt: null });
+            setVitalsEdited(false);
             return;
         }
+
+        const requestedRecordId = examination.recordId;
+        const requestSequence = ++recordLoadSequence.current;
+        const controller = new AbortController();
+        setRecordVersion(null);
+        setRecordVersionLoading(true);
+        setHeartRate('');
+        setBloodPressure('');
+        setTemperature('');
+        setHeight('');
+        setWeight('');
+        setVitalErrors({});
+        setVitalSource({ inherited: false, recordedAt: null });
+        setVitalsEdited(false);
 
         const fetchTestRequests =
             async () => {
@@ -994,8 +1460,9 @@ export default function ExaminationPage() {
 
                     const res =
                         await fetch(
-                            `${apiBase}/api/v1/medical-records/${examination.recordId}`,
+                            `${apiBase}/api/v1/medical-records/${requestedRecordId}`,
                             {
+                                signal: controller.signal,
                                 headers:
                                     token
                                         ? {
@@ -1006,7 +1473,7 @@ export default function ExaminationPage() {
                         );
 
                     if (!res.ok) {
-                        return;
+                        throw new Error('Không thể tải phiên bản mới nhất của hồ sơ bệnh án.');
                     }
 
                     const data =
@@ -1016,6 +1483,10 @@ export default function ExaminationPage() {
                         data.data ??
                         data.result ??
                         data;
+
+                    if (controller.signal.aborted || requestSequence !== recordLoadSequence.current) {
+                        return;
+                    }
 
                     setRecordVersion(
                         record.version ??
@@ -1052,6 +1523,18 @@ export default function ExaminationPage() {
                         record.followUpNote ??
                         ''
                     );
+                    setFollowUpDate(record.followUpDate ?? '');
+                    setCreatedFollowUp(previous => {
+                        if (!record.followUpAppointmentId) {
+                            return null;
+                        }
+                        return previous ?? {
+                            date: record.followUpDate ?? '',
+                            note: record.followUpNote ?? '',
+                            serviceId: '',
+                            serviceName: examination?.serviceName || 'Dịch vụ tái khám',
+                        };
+                    });
 
                     const vitalSigns =
                         record.vitalSigns;
@@ -1080,6 +1563,24 @@ export default function ExaminationPage() {
                         vitalSigns?.weight?.toString() ??
                         ''
                     );
+
+                    const measuredAt = vitalSigns?.recordedAt
+                        ? Date.parse(vitalSigns.recordedAt)
+                        : Number.NaN;
+                    const recordCreatedAt = record.createdAt
+                        ? Date.parse(record.createdAt)
+                        : Number.NaN;
+                    const inheritedByTime = Number.isFinite(measuredAt)
+                        && Number.isFinite(recordCreatedAt)
+                        && measuredAt < recordCreatedAt;
+                    setVitalSource({
+                        inherited: Boolean(vitalSigns) && (
+                            inheritedByTime
+                            || Number(examination?.examinationPosition || 1) > 1
+                        ),
+                        recordedAt: vitalSigns?.recordedAt ?? null,
+                    });
+                    setVitalsEdited(false);
 
                     diagnosis.setSelected(
                         (
@@ -1157,19 +1658,32 @@ export default function ExaminationPage() {
                 } catch (
                     err
                     ) {
+                    if (err?.name === 'AbortError') {
+                        return;
+                    }
+                    if (requestSequence === recordLoadSequence.current) {
+                        setRecordVersion(null);
+                        setError(err.message || 'Không thể tải hồ sơ bệnh án.');
+                    }
                     console.error(
                         'Fetch test requests failed:',
                         err
                     );
+                } finally {
+                    if (!controller.signal.aborted && requestSequence === recordLoadSequence.current) {
+                        setRecordVersionLoading(false);
+                    }
                 }
             };
 
         fetchTestRequests();
+        return () => controller.abort();
     }, [
         examination?.recordId,
         examination
             ?.medicalRecord
             ?.version,
+        recordRefreshToken,
     ]);
 
     /* =====================================================
@@ -1262,7 +1776,7 @@ export default function ExaminationPage() {
 
                     const response =
                         await fetch(
-                            `${apiBase}/api/v1/medical-services/available?size=1000`,
+                            `${apiBase}/api/v1/medical-services?departmentType=EXAMINATION&status=ACTIVE&size=1000`,
                             {
                                 headers:
                                     authHeader(),
@@ -1362,6 +1876,34 @@ export default function ExaminationPage() {
        CREATE FOLLOW UP
     ===================================================== */
 
+    const selectedFollowUpService = followUpServices.find(service =>
+        String(service.serviceId) === String(followUpServiceId)
+    );
+    const normalizedFollowUpQuery = followUpServiceQuery.trim().toLocaleLowerCase('vi');
+    const visibleFollowUpServices = followUpServices.filter(service => !normalizedFollowUpQuery || [
+        service.name,
+        service.serviceCode,
+        service.requiredSpecializationName,
+        service.departmentName,
+    ].some(value => String(value || '').toLocaleLowerCase('vi').includes(normalizedFollowUpQuery)));
+
+    const openFollowUpModal = () => {
+        setFollowUpSnapshot({ note: followUpNote, date: followUpDate, serviceId: followUpServiceId });
+        setFollowUpServiceQuery('');
+        setFollowUpStep(1);
+        setFollowUpModalOpen(true);
+    };
+
+    const closeFollowUpModal = ({ restore = false } = {}) => {
+        if (restore && followUpSnapshot) {
+            setFollowUpNote(followUpSnapshot.note);
+            setFollowUpDate(followUpSnapshot.date);
+            setFollowUpServiceId(followUpSnapshot.serviceId);
+        }
+        setFollowUpModalOpen(false);
+        setFollowUpStep(1);
+    };
+
     const createFollowUpAppointment =
         async () => {
             if (
@@ -1373,8 +1915,20 @@ export default function ExaminationPage() {
                     'Vui lòng chọn ngày tái khám.'
                 );
 
-                return;
+                return false;
             }
+
+            if (recordVersionLoading || recordVersion === null) {
+                toast.info('Hồ sơ đang được đồng bộ. Vui lòng đợi trong giây lát.');
+                return false;
+            }
+
+            if (recordMutationInFlight.current) {
+                toast.info('Một thay đổi hồ sơ đang được xử lý.');
+                return false;
+            }
+
+            recordMutationInFlight.current = true;
 
             setCreatingFollowUp(
                 true
@@ -1434,14 +1988,24 @@ export default function ExaminationPage() {
                     );
                 }
 
-                toast.success(
-                    'Đã tạo lịch tái khám cho bệnh nhân.'
-                );
+                setRecordVersion(null);
+                setRecordVersionLoading(true);
+                setRecordRefreshToken(value => value + 1);
+                toast.success('Đã tạo lịch tái khám cho bệnh nhân.');
+                setCreatedFollowUp({
+                    date: followUpDate,
+                    note: followUpNote.trim(),
+                    serviceId: followUpServiceId,
+                    serviceName: selectedFollowUpService?.name || examination?.serviceName || 'Dịch vụ khám hiện tại',
+                    response: body,
+                });
+                closeFollowUpModal();
+                return true;
             } catch (err) {
-                toast.error(
-                    err.message
-                );
+                toast.error(err.message);
+                return false;
             } finally {
+                recordMutationInFlight.current = false;
                 setCreatingFollowUp(
                     false
                 );
@@ -1763,6 +2327,11 @@ export default function ExaminationPage() {
                 return;
             }
 
+            if (recordVersionLoading || recordVersion === null) {
+                toast.info('Hồ sơ đang được đồng bộ. Vui lòng đợi trong giây lát.');
+                return;
+            }
+
             const validationError =
                 validateExamination(
                     false
@@ -1783,6 +2352,13 @@ export default function ExaminationPage() {
                 setAllergyEditorSignal(value => value + 1);
                 return;
             }
+
+            if (recordMutationInFlight.current) {
+                toast.info('Một thay đổi hồ sơ đang được xử lý.');
+                return;
+            }
+
+            recordMutationInFlight.current = true;
 
             setSaving(true);
             setError('');
@@ -1990,6 +2566,7 @@ export default function ExaminationPage() {
                     )
                 );
             } finally {
+                recordMutationInFlight.current = false;
                 setSaving(false);
             }
         };
@@ -1997,6 +2574,19 @@ export default function ExaminationPage() {
     /* =====================================================
        COMPLETE
     ===================================================== */
+
+    const requestCompleteExam = () => {
+        if (!examination?.recordId) {
+            setError('Chưa có hồ sơ bệnh án');
+            toast.error('Chưa có hồ sơ bệnh án');
+            return;
+        }
+        if (recordVersionLoading || recordVersion === null) {
+            toast.info('Hồ sơ đang được đồng bộ. Vui lòng đợi trong giây lát.');
+            return;
+        }
+        setCompleteConfirmationOpen(true);
+    };
 
     const completeExam =
         async () => {
@@ -2011,6 +2601,11 @@ export default function ExaminationPage() {
                     'Chưa có hồ sơ bệnh án'
                 );
 
+                return;
+            }
+
+            if (recordVersionLoading || recordVersion === null) {
+                toast.info('Hồ sơ đang được đồng bộ. Vui lòng đợi trong giây lát.');
                 return;
             }
 
@@ -2091,13 +2686,20 @@ export default function ExaminationPage() {
                 return;
             }
 
+            if (recordMutationInFlight.current) {
+                toast.info('Một thay đổi hồ sơ đang được xử lý.');
+                return;
+            }
+
+            recordMutationInFlight.current = true;
+
             setCompleting(true);
             setError('');
 
             try {
                 const res =
                     await fetch(
-                        `${import.meta.env.VITE_API_URL}/api/v1/queue-tickets/${examination.ticketId}/complete`,
+                        `${import.meta.env.VITE_API_URL}/api/v1/queue-tickets/${examination.ticketId}/complete-transition`,
                         {
                             method:
                                 'POST',
@@ -2255,10 +2857,13 @@ export default function ExaminationPage() {
                     );
                 }
 
-                const completedRecord =
-                    responseBody.data ??
-                    responseBody.result ??
-                    responseBody;
+                const transition = responseBody.data ?? responseBody.result ?? responseBody;
+                const completedRecord = transition.completedRecord ?? transition;
+                const nextTicket = transition.nextTicket ?? null;
+
+                if (transition.chain) {
+                    setSameRoomChain(transition.chain);
+                }
 
                 const waitingForTests =
                     completedRecord.status !== 'COMPLETED';
@@ -2275,6 +2880,15 @@ export default function ExaminationPage() {
                         ),
                         { replace: true }
                     );
+                    return;
+                }
+
+                if (nextTicket?.ticketId) {
+                    toast.success(
+                        `Đã hoàn thành ${examination.serviceName || 'dịch vụ hiện tại'}. ` +
+                        `Tiếp tục ${nextTicket.serviceName || 'dịch vụ kế tiếp'} trong cùng phòng.`
+                    );
+                    await reload();
                     return;
                 }
 
@@ -2341,6 +2955,7 @@ export default function ExaminationPage() {
                     )
                 );
             } finally {
+                recordMutationInFlight.current = false;
                 setCompleting(
                     false
                 );
@@ -2379,9 +2994,9 @@ export default function ExaminationPage() {
 
     return (
         <MedicalStaffLayout>
-            <div className="flex-1 overflow-y-auto bg-gray-50 pb-24">
+            <div className="cares-exam-workspace flex-1 bg-gray-50 pb-24">
 
-                <div className="mx-auto w-full max-w-[1500px] space-y-4 px-5 py-5">
+                <div className="cares-exam-content w-full space-y-5">
 
                     {/* =================================================
                         TITLE
@@ -2391,12 +3006,62 @@ export default function ExaminationPage() {
                         Khám bệnh
                     </h1>
 
+                    {sameRoomChain?.totalServices > 1 && (
+                        <section className="rounded-2xl border border-teal-200 bg-teal-50/80 px-5 py-4">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <p className="font-bold text-teal-900">
+                                        Dịch vụ {sameRoomChain.currentPosition}/{sameRoomChain.totalServices} tại {sameRoomChain.departmentName || examination.departmentName || 'phòng khám'}
+                                    </p>
+                                    <p className="mt-1 text-sm text-teal-800">
+                                        Bệnh nhân được khám liên tiếp, không cần quay lại hàng chờ giữa các dịch vụ trong phòng này.
+                                    </p>
+                                </div>
+                                <span className="rounded-full border border-teal-200 bg-white px-3 py-1.5 text-sm font-semibold text-teal-800">
+                                    {sameRoomChain.completedServices}/{sameRoomChain.totalServices} đã hoàn thành
+                                </span>
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                {(sameRoomChain.services || []).map((item, index) => (
+                                    <span
+                                        key={item.ticketId || item.serviceId || index}
+                                        className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${
+                                            item.ticketId === examination.ticketId
+                                                ? 'border-teal-500 bg-teal-600 text-white'
+                                                : ['DONE', 'COMPLETED'].includes(item.status)
+                                                    ? 'border-emerald-200 bg-emerald-100 text-emerald-800'
+                                                    : 'border-slate-200 bg-white text-slate-600'
+                                        }`}
+                                    >
+                                        {index + 1}. {item.serviceName}
+                                    </span>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
                     {/* =================================================
                         PATIENT HEADER
                     ================================================= */}
 
                     {patient && (
-                        <section className="rounded-2xl border border-gray-200 bg-white px-6 py-5">
+                        <section className="cares-exam-patient-header rounded-2xl border border-gray-200 bg-white px-6 py-5">
+
+                            {vitalSource.inherited && (
+                                <div className="mb-4 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+                                    <p className="font-semibold">
+                                        Đã điền từ dấu hiệu sinh tồn của lần khám đầu tiên trong lượt này.
+                                    </p>
+                                    <p className="mt-1 text-teal-800">
+                                        {vitalSource.recordedAt && (
+                                            <>Đo lúc {new Date(vitalSource.recordedAt).toLocaleString('vi-VN')}. </>
+                                        )}
+                                        {vitalsEdited
+                                            ? 'Bạn đã điều chỉnh số đo cho bệnh án hiện tại; bệnh án đầu tiên không bị thay đổi.'
+                                            : 'Chỉ cập nhật khi bệnh nhân đã được đo lại.'}
+                                    </p>
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(420px,1.4fr)_repeat(5,minmax(110px,0.6fr))] xl:items-center">
 
@@ -2607,7 +3272,7 @@ export default function ExaminationPage() {
                         MAIN 2 COLUMNS
                     ================================================= */}
 
-                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.75fr)_minmax(390px,0.95fr)]">
+                    <div className="space-y-4">
 
                         {/* =================================================
                             LEFT
@@ -2621,6 +3286,7 @@ export default function ExaminationPage() {
 
                             <section className="rounded-2xl border border-gray-200 bg-white p-5">
 
+                                <div className="grid gap-4 lg:grid-cols-2">
                                 {/* SYMPTOMS */}
 
                                 <div>
@@ -2651,7 +3317,7 @@ export default function ExaminationPage() {
 
                                 {/* CLINICAL */}
 
-                                <div className="mt-4">
+                                <div>
                                     <p className={sectionTitle}>
                                         Khám lâm sàng
                                     </p>
@@ -2675,6 +3341,7 @@ export default function ExaminationPage() {
                                         rows={2}
                                         className="mt-2 w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-gray-400"
                                     />
+                                </div>
                                 </div>
 
                                 {isNurse && (
@@ -2736,6 +3403,9 @@ export default function ExaminationPage() {
                                             onRemove={
                                                 diagnosis.remove
                                             }
+                                            maxVisible={4}
+                                            expanded={diagnosisExpanded}
+                                            onToggleExpanded={() => setDiagnosisExpanded(current => !current)}
                                         />
                                     </div>
 
@@ -2789,7 +3459,7 @@ export default function ExaminationPage() {
 
                                         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-500">
                                             {
-                                                prescriptionItems.length
+                                                prescriptionItems.filter(item => item.name?.trim()).length
                                             }{' '}
                                             thuốc
                                         </span>
@@ -2799,9 +3469,10 @@ export default function ExaminationPage() {
 
                                         <button
                                             type="button"
-                                            onClick={
-                                                addPrescriptionRow
-                                            }
+                                            onClick={() => {
+                                                addPrescriptionRow();
+                                                setShowPrescription(true);
+                                            }}
                                             className="h-8 rounded-lg border border-gray-300 bg-white px-3 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
                                         >
                                             + Thêm thuốc
@@ -3170,135 +3841,78 @@ export default function ExaminationPage() {
                             ============================================= */}
 
                             <section
-                                className={`rounded-2xl border border-gray-200 bg-white p-4 ${
+                                className={`rounded-2xl border border-gray-200 bg-white p-3 sm:p-4 ${
                                     isNurse
                                         ? 'pointer-events-none select-none opacity-50'
                                         : ''
                                 }`}
                             >
-                                <div className="mb-3 flex items-center justify-between gap-3">
-
-                                    <h2 className="text-sm font-semibold text-gray-900">
-                                        Xét nghiệm / cận lâm sàng
-                                    </h2>
-
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+                                            <Beaker size={22} />
+                                        </span>
+                                        <div>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <h2 className="text-lg font-bold text-slate-900">Chỉ định cận lâm sàng</h2>
+                                                <span className="text-sm font-semibold text-teal-700">
+                                                    Đã chọn {selectedPackageCount} gói · {selectedAnalyteCount} chỉ số lẻ
+                                                </span>
+                                            </div>
+                                            <p className="mt-1 text-[15px] text-slate-500">
+                                                Chi tiết danh mục chỉ hiển thị khi thêm hoặc chỉnh sửa chỉ định.
+                                            </p>
+                                        </div>
+                                    </div>
                                     {!isNurse && (
-                                        <select
-                                            value={
-                                                labSelect
-                                            }
-                                            disabled={
-                                                loadingLabServices
-                                            }
-                                            onChange={(
-                                                event
-                                            ) => {
-                                                const service =
-                                                    labServices.find(
-                                                        (
-                                                            item
-                                                        ) =>
-                                                            item.serviceId ===
-                                                            event
-                                                                .target
-                                                                .value
-                                                    );
-
-                                                if (
-                                                    service &&
-                                                    !unavailableLabServiceIds.has(
-                                                        service.serviceId
-                                                    ) &&
-                                                    !sameDayResultByServiceId.has(service.serviceId)
-                                                ) {
-                                                    labOrders.add(
-                                                        {
-                                                            id:
-                                                            service.serviceId,
-
-                                                            name:
-                                                            service.name,
-                                                        }
-                                                    );
-                                                }
-
-                                                setLabSelect(
-                                                    ''
-                                                );
-                                            }}
-                                            className="h-8 max-w-[200px] rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-600 outline-none focus:border-gray-400"
+                                        <button
+                                            type="button"
+                                            onClick={openLabPicker}
+                                            className="min-h-11 shrink-0 rounded-xl bg-teal-600 px-5 text-[15px] font-bold text-white transition hover:bg-teal-700"
                                         >
-                                            <option value="">
-                                                + Yêu cầu dịch vụ
-                                            </option>
-
-                                            {labServices.map(
-                                                (
-                                                    service
-                                                ) => (
-                                                    <option
-                                                        key={
-                                                            service.serviceId
-                                                        }
-                                                        value={
-                                                            service.serviceId
-                                                        }
-                                                        disabled={
-                                                            unavailableLabServiceIds.has(
-                                                                service.serviceId
-                                                            ) || sameDayResultByServiceId.has(service.serviceId)
-                                                        }
-                                                    >
-                                                        {
-                                                            service.name
-                                                        }
-                                                        {(() => {
-                                                            const existing =
-                                                                visitTestRequestByServiceId.get(
-                                                                    service.serviceId
-                                                                );
-                                                            if (!existing) return '';
-                                                            if (existing.status === 'COMPLETED') {
-                                                                return ' (Đã có kết quả)';
-                                                            }
-                                                            if (existing.linkedToExamination) {
-                                                                return ' (Đã được bác sĩ chỉ định)';
-                                                            }
-                                                            return ' (Đã đặt trước - dùng cho ca khám này)';
-                                                        })()}
-                                                        {sameDayResultByServiceId.has(service.serviceId)
-                                                            ? ' (Đã có kết quả hôm nay)'
-                                                            : ''}
-                                                    </option>
-                                                )
-                                            )}
-                                        </select>
+                                            {labOrders.selected.length ? 'Thêm / chỉnh sửa chỉ định' : 'Thêm chỉ định'}
+                                        </button>
                                     )}
                                 </div>
 
                                 {/* NEW ORDERS */}
 
-                                {labOrders
-                                        .selected
-                                        .length >
-                                    0 && (
-                                        <div className="mb-3">
-
-                                            <p className="mb-2 text-[11px] font-medium text-gray-400">
-                                                Chỉ định mới
-                                            </p>
-
-                                            <TagList
-                                                items={
-                                                    labOrders.selected
-                                                }
-                                                labelKey="name"
-                                                onRemove={
-                                                    labOrders.remove
-                                                }
-                                            />
+                                {labOrders.selected.length > 0 && (
+                                    <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 lg:flex-row lg:items-center lg:justify-between">
+                                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                            {labOrders.selected.slice(0, 3).map(service => (
+                                                <span key={service.id} className="inline-flex min-h-9 max-w-[240px] items-center gap-2 rounded-full bg-slate-100 px-3 text-sm font-semibold text-slate-700">
+                                                    <span className="truncate">{service.name}</span>
+                                                    <button type="button" onClick={() => labOrders.remove(service.id)} aria-label={`Bỏ ${service.name}`} className="shrink-0 text-slate-400 hover:text-red-600">
+                                                        <X size={15} />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                            {labOrders.selected.length > 3 && (
+                                                <span className="inline-flex min-h-9 items-center rounded-full bg-slate-100 px-3 text-sm font-bold text-slate-600">
+                                                    +{labOrders.selected.length - 3}
+                                                </span>
+                                            )}
                                         </div>
-                                    )}
+                                        <div className="shrink-0 text-left lg:text-right">
+                                            <p className="text-sm text-slate-500">Tạm tính</p>
+                                            <strong className="text-xl text-teal-700">{formatServicePrice(selectedLabTotal)}</strong>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {(testRequests.length > 0 || loadingSameDayResults || sameDayResults.length > 0) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setExistingLabDataExpanded(current => !current)}
+                                        className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                                    >
+                                        {existingLabDataExpanded ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
+                                        {existingLabDataExpanded ? 'Thu gọn dữ liệu cận lâm sàng' : `Xem chỉ định và kết quả đã có (${existingLabGroups.length + sameDayResults.length})`}
+                                    </button>
+                                )}
+
+                                {existingLabDataExpanded && <div className="mt-4 space-y-3">
 
                                 {(loadingSameDayResults || sameDayResults.length > 0) && (
                                     <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
@@ -3366,7 +3980,7 @@ export default function ExaminationPage() {
 
                                 <div className="overflow-hidden rounded-xl border border-gray-200">
 
-                                    <div className="grid grid-cols-[minmax(0,1fr)_120px_24px] border-b border-gray-100 bg-gray-50 px-3 py-2">
+                                    <div className="hidden grid-cols-[minmax(0,1fr)_140px_150px] border-b border-gray-100 bg-gray-50 px-4 py-3 sm:grid">
 
                                         <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
                                             Tên xét nghiệm
@@ -3376,57 +3990,59 @@ export default function ExaminationPage() {
                                             Trạng thái
                                         </span>
 
-                                        <span />
+                                        <span className="text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400">Thao tác</span>
                                     </div>
 
                                     <div className="h-[330px] overflow-y-auto">
 
-                                        {testRequests.map(
-                                            (lab) => {
+                                        {existingLabGroups.map(
+                                            (group) => {
                                                 const statusMap = {
                                                     PENDING: { text: 'Chờ thực hiện', cls: 'border-amber-200 bg-amber-50 text-amber-700' },
                                                     IN_PROGRESS: { text: 'Đang thực hiện', cls: 'border-blue-200 bg-blue-50 text-blue-700' },
                                                     COMPLETED: { text: 'Hoàn thành', cls: 'border-green-200 bg-green-50 text-green-700' },
                                                     CANCELLED: { text: 'Đã hủy', cls: 'border-red-200 bg-red-50 text-red-700' },
                                                 };
-                                                const status = statusMap[lab.status] || statusMap.PENDING;
+                                                const status = statusMap[group.status] || statusMap.PENDING;
+                                                const total = group.requests.length;
                                                 return (
                                                     <button
-                                                        key={lab.testRequestId}
+                                                        key={group.key}
                                                         type="button"
-                                                        onClick={() =>
-                                                            navigate(
-                                                                ROUTES.DOCTOR_LAB_DETAIL.replace(
-                                                                    ':id',
-                                                                    lab.testRequestId
-                                                                ),
-                                                                { state: { from: 'examination' } }
-                                                            )
-                                                        }
-                                                        className="grid w-full grid-cols-[minmax(0,1fr)_120px_24px] items-center border-b border-gray-100 px-3 py-3 text-left transition last:border-b-0 hover:bg-gray-50"
+                                                        onClick={() => {
+                                                            if (group.grouped) setSelectedLabPanelId(group.representativeId);
+                                                            else setSelectedLabResultId(group.representativeId);
+                                                        }}
+                                                        className="grid w-full grid-cols-1 gap-2 border-b border-gray-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-gray-50 sm:grid-cols-[minmax(0,1fr)_140px_150px] sm:items-center"
                                                     >
-                                                        <span className="truncate pr-2 text-xs font-medium text-gray-700">
-                                                            {lab.serviceName || lab.testRequestId || 'â€”'}
+                                                        <span className="min-w-0 pr-2">
+                                                            <span className="block truncate text-[15px] font-semibold text-gray-800">
+                                                                {group.panelName}
+                                                            </span>
+                                                            {group.grouped && (
+                                                                <span className="mt-1 block text-sm text-slate-500">
+                                                                    {total} chỉ số đã đặt · Hoàn thành {group.completedCount}/{total}
+                                                                </span>
+                                                            )}
                                                         </span>
 
                                                         <span className="flex justify-center">
                                                             <span
-                                                                className={`inline-flex whitespace-nowrap rounded-md border px-2 py-1 text-[10px] font-medium ${status.cls}`}
+                                                                className={`inline-flex whitespace-nowrap rounded-md border px-2.5 py-1.5 text-sm font-semibold ${status.cls}`}
                                                             >
                                                                 {status.text}
                                                             </span>
                                                         </span>
 
-                                                        <ChevronRight
-                                                            size={15}
-                                                            className="justify-self-end text-gray-300"
-                                                        />
+                                                        <span className="inline-flex min-h-9 items-center justify-center gap-2 justify-self-start rounded-lg border border-teal-200 bg-white px-3 text-sm font-bold text-teal-700 sm:justify-self-end">
+                                                            {group.status === 'COMPLETED' ? 'Xem kết quả' : 'Xem trạng thái'} <ChevronRight size={15} />
+                                                        </span>
                                                     </button>
                                                 );
                                             }
                                         )}
 
-                                        {testRequests.length === 0 && (
+                                        {existingLabGroups.length === 0 && (
                                             <div className="flex h-full items-center justify-center px-6 text-center">
                                                 <p className="text-sm text-gray-400">
                                                     Chưa có xét nghiệm / cận lâm sàng nào.
@@ -3437,8 +4053,9 @@ export default function ExaminationPage() {
                                 </div>
 
                                 <p className="mt-2 text-[11px] text-gray-400">
-                                    Chọn một xét nghiệm để xem chi tiết kết quả.
+                                    Chọn một gói hoặc dịch vụ để xem trạng thái và kết quả đã công bố.
                                 </p>
+                                </div>}
                             </section>
 
                             {/* =============================================
@@ -3452,124 +4069,30 @@ export default function ExaminationPage() {
                                         : ''
                                 }`}
                             >
-                                <h2 className="text-sm font-semibold text-gray-900">
-                                    Yêu cầu tái khám
-                                </h2>
-
-                                <div className="mt-3 space-y-3">
-
-                                    <div>
-                                        <label className="mb-1.5 block text-xs text-gray-500">
-                                            Ghi chú / Yêu cầu
-                                        </label>
-
-                                        <textarea
-                                            value={
-                                                followUpNote
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
-                                                setFollowUpNote(
-                                                    event
-                                                        .target
-                                                        .value
-                                                )
-                                            }
-                                            placeholder="VD: Tái khám sau 1 tuần, tái khám sau khi hết thuốc..."
-                                            rows={3}
-                                            className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-xs outline-none transition focus:border-gray-400"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-1.5 block text-xs text-gray-500">
-                                            Ngày tái khám dự kiến
-                                        </label>
-
-                                        <input
-                                            type="date"
-                                            min={new Date()
-                                                .toISOString()
-                                                .slice(
-                                                    0,
-                                                    10
-                                                )}
-                                            value={
-                                                followUpDate
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
-                                                setFollowUpDate(
-                                                    event
-                                                        .target
-                                                        .value
-                                                )
-                                            }
-                                            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none focus:border-gray-400"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-1.5 block text-xs text-gray-500">
-                                            Dịch vụ tái khám
-                                        </label>
-
-                                        <select
-                                            value={
-                                                followUpServiceId
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
-                                                setFollowUpServiceId(
-                                                    event
-                                                        .target
-                                                        .value
-                                                )
-                                            }
-                                            className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none focus:border-gray-400"
-                                        >
-                                            <option value="">
-                                                Theo dịch vụ khám hiện tại
-                                            </option>
-
-                                            {followUpServices.map(
-                                                (
-                                                    service
-                                                ) => (
-                                                    <option
-                                                        key={
-                                                            service.serviceId
-                                                        }
-                                                        value={
-                                                            service.serviceId
-                                                        }
-                                                    >
-                                                        {
-                                                            service.name
-                                                        }
-                                                    </option>
-                                                )
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                    <div className="flex min-w-0 items-center gap-3">
+                                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700"><CalendarDays size={22} /></span>
+                                        <div className="min-w-0">
+                                            <h2 className="text-lg font-bold text-slate-900">Yêu cầu tái khám</h2>
+                                            {createdFollowUp ? (
+                                                <p className="mt-1 text-[15px] text-slate-600">
+                                                    Đã tạo ngày <strong>{new Date(`${createdFollowUp.date}T00:00:00`).toLocaleDateString('vi-VN')}</strong> · {createdFollowUp.serviceName}
+                                                </p>
+                                            ) : followUpDate ? (
+                                                <p className="mt-1 truncate text-[15px] text-slate-600">
+                                                    Dự kiến {new Date(`${followUpDate}T00:00:00`).toLocaleDateString('vi-VN')} · {selectedFollowUpService?.name || examination?.serviceName || 'Dịch vụ hiện tại'}
+                                                </p>
+                                            ) : (
+                                                <p className="mt-1 text-[15px] text-slate-500">Chưa thiết lập lịch tái khám cho bệnh nhân.</p>
                                             )}
-                                        </select>
+                                        </div>
                                     </div>
-
-                                    <button
-                                        type="button"
-                                        disabled={
-                                            creatingFollowUp
-                                        }
-                                        onClick={
-                                            createFollowUpAppointment
-                                        }
-                                        className="h-10 w-full rounded-lg bg-gray-900 px-4 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        {creatingFollowUp
-                                            ? 'Đang tạo...'
-                                            : 'Tạo lịch tái khám'}
-                                    </button>
+                                    {!createdFollowUp && !isNurse && (
+                                        <button type="button" onClick={openFollowUpModal} className="min-h-11 shrink-0 rounded-xl border border-teal-200 bg-white px-5 text-[15px] font-bold text-teal-700 hover:bg-teal-50">
+                                            {followUpDate ? 'Chỉnh sửa yêu cầu' : 'Thêm yêu cầu tái khám'}
+                                        </button>
+                                    )}
+                                    {createdFollowUp && <span className="inline-flex min-h-10 items-center rounded-full border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-700"><Check size={17} className="mr-2" />Đã tạo lịch</span>}
                                 </div>
                             </section>
                         </div>
@@ -3593,14 +4116,16 @@ export default function ExaminationPage() {
                 STICKY FOOTER
             ================================================= */}
 
-            <div className="fixed bottom-0 left-44 right-0 z-40 flex h-16 items-center justify-center gap-3 border-t border-gray-200 bg-white px-8">
+            <div className="cares-exam-actionbar fixed bottom-0 right-0 z-40 flex h-20 items-center justify-center gap-3 border-t border-gray-200 bg-white px-8">
 
                 <button
                     type="button"
                     onClick={saveDraft}
                     disabled={
                         saving ||
-                        completing
+                        completing ||
+                        recordVersionLoading ||
+                        recordVersion === null
                     }
                     className="h-10 min-w-[140px] rounded-xl bg-gray-200 px-7 text-sm font-semibold text-gray-700 transition hover:bg-gray-300 disabled:opacity-50"
                 >
@@ -3615,22 +4140,297 @@ export default function ExaminationPage() {
                     <button
                         type="button"
                         onClick={
-                            completeExam
+                            requestCompleteExam
                         }
                         disabled={
                             saving ||
-                            completing
+                            completing ||
+                            recordVersionLoading ||
+                            recordVersion === null
                         }
                         className="h-10 min-w-[160px] rounded-xl bg-gray-900 px-8 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:opacity-50"
                     >
                         {completing
                             ? 'Đang hoàn thành...'
-                            : tDoctor(
-                                'examination.actions.complete'
-                            )}
+                            : labOrders.selected.length === 0 && sameRoomChain?.currentPosition < sameRoomChain?.totalServices
+                                ? 'Hoàn thành và khám dịch vụ tiếp theo'
+                                : tDoctor('examination.actions.complete')}
                     </button>
                 )}
             </div>
+
+            <LabResultReviewModal
+                testRequestId={selectedLabResultId}
+                onClose={() => setSelectedLabResultId(null)}
+            />
+            <LabPanelResultReviewModal
+                representativeId={selectedLabPanelId}
+                onClose={() => setSelectedLabPanelId(null)}
+            />
+
+            {followUpModalOpen && (
+                <div
+                    className="fixed inset-0 z-[85] flex items-center justify-center bg-slate-950/45 p-3 sm:p-6"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="follow-up-modal-title"
+                    onMouseDown={event => {
+                        if (event.target === event.currentTarget && !creatingFollowUp) closeFollowUpModal({ restore: true });
+                    }}
+                >
+                    <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onMouseDown={event => event.stopPropagation()}>
+                        <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-7">
+                            <div className="flex items-start gap-3">
+                                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700"><CalendarDays size={22} /></span>
+                                <div>
+                                    <h2 id="follow-up-modal-title" className="text-2xl font-bold text-slate-900">Yêu cầu tái khám</h2>
+                                    <p className="mt-1 text-[15px] text-slate-500">Chọn thời gian, dịch vụ và ghi rõ hướng dẫn dành cho bệnh nhân.</p>
+                                </div>
+                            </div>
+                            <button type="button" disabled={creatingFollowUp} onClick={() => closeFollowUpModal({ restore: true })} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50" aria-label="Đóng và hủy thay đổi"><X size={22} /></button>
+                        </header>
+
+                        <div className="border-b border-slate-200 px-5 py-3 sm:px-7">
+                            <div className="mx-auto grid max-w-xl grid-cols-2 text-center text-sm font-semibold">
+                                <div className={`border-b-2 px-3 py-2 ${followUpStep === 1 ? 'border-teal-600 text-teal-700' : 'border-slate-200 text-slate-500'}`}>1. Thiết lập tái khám</div>
+                                <div className={`border-b-2 px-3 py-2 ${followUpStep === 2 ? 'border-teal-600 text-teal-700' : 'border-slate-200 text-slate-400'}`}>2. Xác nhận</div>
+                            </div>
+                        </div>
+
+                        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+                            {followUpStep === 1 ? (
+                                <div className="space-y-5">
+                                    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                                        <div className="flex items-center gap-3"><CalendarDays size={20} className="text-teal-700" /><h3 className="text-lg font-bold text-slate-900">Ngày tái khám dự kiến</h3></div>
+                                        <label className="mt-4 block text-[15px] font-semibold text-slate-700">Ngày tái khám <span className="text-red-600">*</span>
+                                            <input type="date" min={clinicToday()} value={followUpDate} onChange={event => setFollowUpDate(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100" />
+                                        </label>
+                                    </section>
+
+                                    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                                        <div className="flex items-center gap-3"><Stethoscope size={20} className="text-teal-700" /><div><h3 className="text-lg font-bold text-slate-900">Dịch vụ tái khám</h3><p className="mt-1 text-sm text-slate-500">Chọn một dịch vụ khám; không hiển thị dịch vụ xét nghiệm hoặc hình ảnh.</p></div></div>
+                                        <label className="relative mt-4 block">
+                                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                            <input value={followUpServiceQuery} onChange={event => setFollowUpServiceQuery(event.target.value)} placeholder="Tìm tên hoặc mã dịch vụ khám" className="min-h-12 w-full rounded-xl border border-slate-200 pl-10 pr-4 text-base outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100" />
+                                        </label>
+                                        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+                                            {visibleFollowUpServices.map(service => {
+                                                const checked = String(service.serviceId) === String(followUpServiceId);
+                                                return <label key={service.serviceId} className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${checked ? 'border-teal-400 bg-teal-50' : 'border-slate-200 hover:border-teal-200 hover:bg-slate-50'}`}>
+                                                    <input type="radio" name="follow-up-service" checked={checked} onChange={() => setFollowUpServiceId(service.serviceId)} className="h-5 w-5 shrink-0 accent-teal-600" />
+                                                    <span className="min-w-0 flex-1"><strong className="block text-[15px] text-slate-900">{service.name}</strong><span className="mt-0.5 block text-sm text-slate-500">{[service.serviceCode, service.requiredSpecializationName || service.departmentName].filter(Boolean).join(' · ')}</span></span>
+                                                </label>;
+                                            })}
+                                            {visibleFollowUpServices.length === 0 && <p className="rounded-xl bg-slate-50 p-5 text-center text-slate-500">Không tìm thấy dịch vụ khám phù hợp.</p>}
+                                        </div>
+                                    </section>
+
+                                    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                                        <h3 className="text-lg font-bold text-slate-900">Dặn dò tái khám</h3>
+                                        <textarea value={followUpNote} onChange={event => setFollowUpNote(event.target.value)} rows={4} maxLength={1000} placeholder="Ví dụ: Tái khám sau khi dùng hết thuốc; mang theo kết quả xét nghiệm gần nhất..." className="mt-3 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-base leading-6 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100" />
+                                        <p className="mt-2 text-right text-sm text-slate-400">{followUpNote.length}/1000</p>
+                                    </section>
+                                </div>
+                            ) : (
+                                <div className="mx-auto max-w-2xl rounded-2xl border border-teal-100 bg-teal-50/60 p-5">
+                                    <h3 className="text-xl font-bold text-slate-900">Kiểm tra yêu cầu trước khi tạo</h3>
+                                    <dl className="mt-4 divide-y divide-teal-100 rounded-xl border border-teal-100 bg-white px-4">
+                                        <div className="grid gap-1 py-4 sm:grid-cols-[180px_1fr]"><dt className="text-slate-500">Bệnh nhân</dt><dd className="font-bold text-slate-900">{patient?.fullName || examination?.patientName || '—'}</dd></div>
+                                        <div className="grid gap-1 py-4 sm:grid-cols-[180px_1fr]"><dt className="text-slate-500">Ngày tái khám</dt><dd className="font-bold text-slate-900">{followUpDate ? new Date(`${followUpDate}T00:00:00`).toLocaleDateString('vi-VN') : 'Chưa chọn'}</dd></div>
+                                        <div className="grid gap-1 py-4 sm:grid-cols-[180px_1fr]"><dt className="text-slate-500">Dịch vụ</dt><dd className="font-bold text-slate-900">{selectedFollowUpService?.name || examination?.serviceName || 'Dịch vụ khám hiện tại'}</dd></div>
+                                        <div className="grid gap-1 py-4 sm:grid-cols-[180px_1fr]"><dt className="text-slate-500">Dặn dò</dt><dd className="whitespace-pre-wrap text-slate-800">{followUpNote.trim() || 'Không có dặn dò bổ sung.'}</dd></div>
+                                    </dl>
+                                </div>
+                            )}
+                        </div>
+
+                        <footer className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
+                            <button type="button" disabled={creatingFollowUp} onClick={() => followUpStep === 2 ? setFollowUpStep(1) : closeFollowUpModal({ restore: true })} className="min-h-11 rounded-xl border border-slate-300 px-5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">{followUpStep === 2 ? 'Quay lại' : 'Hủy'}</button>
+                            <button
+                                type="button"
+                                disabled={creatingFollowUp || !followUpDate}
+                                onClick={() => {
+                                    if (followUpStep === 1) setFollowUpStep(2);
+                                    else createFollowUpAppointment();
+                                }}
+                                className="min-h-11 rounded-xl bg-teal-600 px-6 font-bold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {creatingFollowUp ? 'Đang tạo lịch...' : followUpStep === 1 ? 'Tiếp tục xác nhận' : 'Xác nhận tạo lịch tái khám'}
+                            </button>
+                        </footer>
+                    </div>
+                </div>
+            )}
+
+            {labPickerOpen && (
+                <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="lab-picker-title">
+                    <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-7">
+                            <div>
+                                <h2 id="lab-picker-title" className="text-2xl font-bold text-slate-900">Chỉ định cận lâm sàng</h2>
+                                <p className="mt-1 text-[15px] text-slate-500">Chọn gói hoặc chỉ số cần thực hiện.</p>
+                            </div>
+                            <button type="button" onClick={() => closeLabPicker({ restore: true })} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100" aria-label="Đóng và hủy thay đổi">
+                                <X size={22} />
+                            </button>
+                        </div>
+
+                        <div className="border-b border-slate-200 px-5 py-3 sm:px-7">
+                            <div className="mx-auto grid max-w-xl grid-cols-2 text-center text-sm font-semibold">
+                                <div className={`border-b-2 px-3 py-2 ${labPickerStep === 1 ? 'border-teal-600 text-teal-700' : 'border-slate-200 text-slate-500'}`}>1. Chọn dịch vụ</div>
+                                <div className={`border-b-2 px-3 py-2 ${labPickerStep === 2 ? 'border-teal-600 text-teal-700' : 'border-slate-200 text-slate-400'}`}>2. Xác nhận</div>
+                            </div>
+                        </div>
+
+                        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+                            {labPickerStep === 1 ? (
+                                <div className="space-y-4">
+                                    {packageAndAnalyteServices.length > 0 && (
+                                        <LabPackageAnalytePicker
+                                            services={packageAndAnalyteServices}
+                                            selectedIds={labOrders.selected.filter(item => packageAndAnalyteIdSet.has(item.id)).map(item => item.id)}
+                                            loading={loadingLabServices}
+                                            getServiceState={labSelectionState}
+                                            onToggle={toggleLabService}
+                                            onCustomizePanel={customizeLabPanel}
+                                            onReset={() => labOrders.setSelected([])}
+                                            compact
+                                            title="Gói và chỉ số xét nghiệm"
+                                            helper="Tìm kiếm rồi chọn gói đầy đủ hoặc các chỉ số thực sự cần làm."
+                                        />
+                                    )}
+                                    {otherParaclinicalServices.length > 0 && (
+                                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                            <h3 className="text-base font-bold text-slate-900">Chẩn đoán hình ảnh, ECG và dịch vụ khác</h3>
+                                            <div className="mt-3">
+                                                <LabServicePicker
+                                                    services={otherParaclinicalServices}
+                                                    selected={labOrders.selected.filter(item => otherParaclinicalIdSet.has(item.id))}
+                                                    loading={loadingLabServices}
+                                                    unavailableIds={unavailableLabServiceIds}
+                                                    sameDayResultIds={new Set(sameDayResultByServiceId.keys())}
+                                                    existingByServiceId={visitTestRequestByServiceId}
+                                                    relatedConflictByServiceId={relatedLabConflictByServiceId}
+                                                    onToggle={toggleLabService}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="mx-auto max-w-3xl">
+                                    <div className="rounded-2xl border border-teal-100 bg-teal-50/60 p-5">
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-sm text-slate-500">Danh sách sẽ tạo chỉ định</p>
+                                                <h3 className="mt-1 text-xl font-bold text-slate-900">{labOrders.selected.length} dịch vụ</h3>
+                                            </div>
+                                            <strong className="text-2xl text-teal-700">{formatServicePrice(selectedLabTotal)}</strong>
+                                        </div>
+                                        {labOrders.selected.length > 0 ? (
+                                            <div className="mt-4 max-h-[420px] divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200 bg-white">
+                                                {labOrders.selected.map((service, index) => (
+                                                    <div key={service.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                                                        <div className="min-w-0">
+                                                            <p className="truncate font-semibold text-slate-900">{index + 1}. {service.name}</p>
+                                                            <p className="mt-0.5 text-sm text-slate-500">{service.code || 'Không có mã'}</p>
+                                                        </div>
+                                                        <strong className="shrink-0 text-teal-700">{formatServicePrice(service.price)}</strong>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="mt-4 rounded-xl bg-white p-6 text-center text-slate-500">Chưa chọn dịch vụ cận lâm sàng.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+                            <div className="text-[15px] text-slate-600">
+                                Đã chọn <strong className="text-slate-900">{labOrders.selected.length}</strong> mục · <strong className="text-teal-700">{formatServicePrice(selectedLabTotal)}</strong>
+                            </div>
+                            <div className="flex gap-3">
+                                <button type="button" onClick={() => labPickerStep === 2 ? setLabPickerStep(1) : closeLabPicker({ restore: true })} className="min-h-11 rounded-xl border border-slate-300 bg-white px-5 font-semibold text-slate-700 hover:bg-slate-50">
+                                    {labPickerStep === 2 ? 'Quay lại' : 'Hủy'}
+                                </button>
+                                <button type="button" onClick={() => labPickerStep === 1 ? setLabPickerStep(2) : closeLabPicker()} className="min-h-11 rounded-xl bg-teal-600 px-6 font-bold text-white hover:bg-teal-700">
+                                    {labPickerStep === 1 ? 'Tiếp tục xác nhận' : 'Áp dụng chỉ định'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <ConfirmModal
+                isOpen={completeConfirmationOpen}
+                onClose={() => !completing && setCompleteConfirmationOpen(false)}
+                onConfirm={() => {
+                    setCompleteConfirmationOpen(false);
+                    completeExam();
+                }}
+                title={labOrders.selected.length > 0
+                    ? 'Xác nhận chỉ định cận lâm sàng'
+                    : sameRoomChain?.currentPosition < sameRoomChain?.totalServices
+                        ? 'Xác nhận chuyển sang dịch vụ tiếp theo'
+                    : 'Xác nhận hoàn thành khám'}
+                message={labOrders.selected.length > 0
+                    ? 'Vui lòng kiểm tra lại gói, chỉ số lẻ và chi phí. Sau khi xác nhận, hệ thống lưu chỉ định và chuyển người bệnh sang bước thanh toán/thực hiện.'
+                    : sameRoomChain?.currentPosition < sameRoomChain?.totalServices
+                        ? 'Bệnh án hiện tại sẽ được hoàn tất. Bệnh nhân tiếp tục dịch vụ kế tiếp ngay tại phòng này, không cần gọi lại.'
+                    : 'Sau khi xác nhận, bệnh án sẽ được hoàn tất và phòng được giải phóng cho bệnh nhân tiếp theo.'}
+                confirmText={labOrders.selected.length > 0
+                    ? 'Xác nhận và tạo chỉ định'
+                    : sameRoomChain?.currentPosition < sameRoomChain?.totalServices
+                        ? 'Hoàn thành và tiếp tục'
+                    : 'Xác nhận hoàn thành'}
+                cancelText="Kiểm tra lại"
+                isDanger={false}
+                isLoading={completing}
+                maxWidth="640px"
+                panelClassName="cares-ops-modal"
+            >
+                <div className="mt-4 grid gap-3 rounded-xl border border-teal-100 bg-teal-50/70 p-4 text-left text-sm text-slate-700 sm:grid-cols-2">
+                    <div><span className="block text-slate-500">Bệnh nhân</span><strong>{patient?.fullName || examination?.patientName || '—'}</strong></div>
+                    <div><span className="block text-slate-500">Dịch vụ khám</span><strong>{examination?.serviceName || '—'}</strong></div>
+                    <div><span className="block text-slate-500">Chẩn đoán ICD-10</span><strong>{diagnosis.selected.length} mã</strong></div>
+                    <div><span className="block text-slate-500">Đơn thuốc</span><strong>{prescriptionItems.filter(item => item.name?.trim()).length} thuốc</strong></div>
+                    <div className="sm:col-span-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="block text-slate-500">Chỉ định cận lâm sàng mới</span>
+                            <strong>{labOrders.selected.length} dịch vụ · {formatServicePrice(selectedLabTotal)}</strong>
+                        </div>
+                        {labOrders.selected.length > 0 ? (
+                            <div className="mt-2 max-h-48 space-y-1.5 overflow-y-auto rounded-lg border border-teal-100 bg-white p-2">
+                                {labOrders.selected.map((item, index) => (
+                                    <div key={item.id} className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2">
+                                        <span className="min-w-0">
+                                            <span className="block truncate font-semibold">{index + 1}. {item.name}</span>
+                                            <span className="mt-0.5 block text-xs text-slate-500">
+                                                {String(item.code || '').startsWith('AN-')
+                                                    ? `Chỉ số lẻ · ${item.code}`
+                                                    : (item.relations || []).some(relation => String(relation.targetServiceCode || '').startsWith('AN-'))
+                                                        ? `Gói xét nghiệm · ${item.code}`
+                                                        : `Dịch vụ cận lâm sàng · ${item.code || 'Không có mã'}`}
+                                            </span>
+                                        </span>
+                                        <span className="shrink-0 text-teal-700">{formatServicePrice(item.price)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <strong className="mt-1 block">Không có</strong>
+                        )}
+                        {labOrders.selected.length > 0 && (
+                            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                                Người bệnh cần thanh toán chỉ định trước khi vào phòng thực hiện. Dịch vụ đã xác nhận không thể bỏ trực tiếp tại màn khám.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </ConfirmModal>
 
             {/* =================================================
                 PREVIOUS RECORD MODAL

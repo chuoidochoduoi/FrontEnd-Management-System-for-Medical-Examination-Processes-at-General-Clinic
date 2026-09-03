@@ -6,6 +6,15 @@ import AdminLayout from '@/components/layout/AdminLayout';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import CashierLayout from '@/components/layout/CashierLayout';
+import styles from './StaffProfilePage.module.css';
+
+function ProfileField({ label, icon: Icon, id, wide, readOnly, children }) {
+    const Label = id ? 'label' : 'div';
+    return <div className={`${styles.field} ${wide ? styles.wide : ''}`}>
+        <Label className={styles.label} htmlFor={id}>{Icon && <Icon size={16}/>}<span>{label}</span>{readOnly && <small>Chỉ xem</small>}</Label>
+        {children}
+    </div>;
+}
 
 export default function StaffProfilePage() {
     const [profile, setProfile] = useState(null); // This is StaffResponse
@@ -20,7 +29,7 @@ export default function StaffProfilePage() {
     const DateDropdowns = ({ value, onChange, className }) => {
         const parts = (value || '').split('-');
         const year = parts[0] || '';
-        const month = parts[1] ? String(parseInt(parts[1], 10)) : ''; 
+        const month = parts[1] ? String(parseInt(parts[1], 10)) : '';
         const day = parts[2] ? String(parseInt(parts[2], 10)) : '';
 
         const handleUpdate = (y, m, d) => {
@@ -34,7 +43,7 @@ export default function StaffProfilePage() {
         const currentYear = new Date().getFullYear();
         const years = Array.from({ length: 120 }, (_, i) => currentYear - i);
         const months = Array.from({ length: 12 }, (_, i) => i + 1);
-        
+
         let daysInMonth = 31;
         if (month) {
             const m = parseInt(month, 10);
@@ -44,16 +53,16 @@ export default function StaffProfilePage() {
         const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
         return (
-            <div className="flex gap-2 w-full">
-                <select value={day} onChange={e => handleUpdate(year, month, e.target.value)} className={className}>
+            <div className={styles.dates}>
+                <select aria-label="Ngày sinh" value={day} onChange={e => handleUpdate(year, month, e.target.value)} className={className}>
                     <option value="">Ngày</option>
                     {days.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
-                <select value={month} onChange={e => handleUpdate(year, e.target.value, day)} className={className}>
+                <select aria-label="Tháng sinh" value={month} onChange={e => handleUpdate(year, e.target.value, day)} className={className}>
                     <option value="">Tháng</option>
                     {months.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
-                <select value={year} onChange={e => handleUpdate(e.target.value, month, day)} className={className}>
+                <select aria-label="Năm sinh" value={year} onChange={e => handleUpdate(e.target.value, month, day)} className={className}>
                     <option value="">Năm</option>
                     {years.map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
@@ -79,7 +88,7 @@ export default function StaffProfilePage() {
                 const staffRes = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/staff/account/${meData.accountId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                
+
                 if (staffRes.ok) {
                     const staffData = await staffRes.json();
                     setProfile(staffData);
@@ -124,13 +133,13 @@ export default function StaffProfilePage() {
             if (newPass !== confirmPass) {
                 return toast.error('Mật khẩu xác nhận không khớp');
             }
-            
+
             setChanging(true);
             try {
                 const token = localStorage.getItem('token') || sessionStorage.getItem('token');
                 const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/me/password`, {
                     method: 'PUT',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
@@ -218,132 +227,99 @@ export default function StaffProfilePage() {
         }
     };
 
+    const roleLabels = {
+        ADMIN: 'Quản trị viên', CLINIC_MANAGER: 'Quản lý phòng khám', CASHIER: 'Thu ngân',
+        RECEPTIONIST: 'Lễ tân', DOCTOR: 'Bác sĩ', GENERAL_DOCTOR: 'Bác sĩ đa khoa',
+        SPECIALIST_DOCTOR: 'Bác sĩ chuyên khoa', NURSE: 'Y tá',
+    };
+    const role = account?.systemRole || account?.role || '';
+    const roleLabel = roleLabels[role] || role || 'Nhân viên';
+    const beginEditing = () => {
+        setEditForm({
+            fullName: profile?.profile?.fullName || '', phone: profile?.profile?.phone || '',
+            email: profile?.profile?.email || '', gender: profile?.profile?.gender || '',
+            dateOfBirth: profile?.profile?.dateOfBirth || '', address: profile?.profile?.address || '',
+            highestDegree: profile?.highestDegree || '', university: profile?.university || '',
+        });
+        setEditing(true);
+    };
+
     const renderContent = () => {
-        if (loading) return <div className="p-8 text-center text-gray-500">Đang tải hồ sơ...</div>;
-        const inputCls = "w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-800 outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition-all";
+        if (loading) return <div className={styles.state} role="status">Đang tải hồ sơ...</div>;
+        if (!profile && !account) return <div className={styles.state} role="alert">Không thể hiển thị hồ sơ. Vui lòng tải lại trang.</div>;
+        const inputCls = styles.input;
+        const displayName = profile?.profile?.fullName || account?.username || 'Chưa cập nhật';
 
-        // ADMIN/CLINIC_MANAGER không có StaffInfo -> chỉ hiển thị tài khoản + đổi mật khẩu
-        if (!profile && account) {
-            const roleLabel = account.systemRole === 'ADMIN' ? 'Quản trị viên' : account.systemRole === 'CLINIC_MANAGER' ? 'Quản lý phòng khám' : (account.systemRole || account.role);
-            return (
-                <div className="max-w-2xl mx-auto">
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-50 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/3"></div>
-                        <div className="relative">
-                            <div className="w-28 h-28 rounded-full bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center shadow-inner">
-                                <UserCircle className="w-16 h-16 text-primary-400" />
-                            </div>
-                        </div>
-                        <div className="flex-1 z-10">
-                            <h1 className="text-2xl font-bold text-gray-900 mb-1">{account?.username}</h1>
-                            <p className="text-gray-500 flex items-center gap-2 text-sm mb-6">
-                                <Shield className="w-4 h-4" />
-                                Vai trò: <span className="font-semibold text-gray-700">{roleLabel}</span>
-                            </p>
-                            <button onClick={() => setShowPasswordModal(true)} className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-all active:scale-95 shadow-sm">
-                                <Key className="w-4 h-4" /> Đổi mật khẩu
-                            </button>
-                        </div>
-                    </div>
+        return <div className={styles.content}>
+            <header className={styles.heading}>
+                <div><span className={styles.eyebrow}>Tài khoản của bạn</span><h1>Hồ sơ nhân viên</h1><p>Thông tin cá nhân, liên hệ và chuyên môn.</p></div>
+                <div className={styles.actions}>
+                    {editing ? <>
+                        <button type="button" disabled={saving} onClick={() => setEditing(false)} className={styles.secondary}><X size={18}/>Hủy thay đổi</button>
+                        <button type="button" onClick={handleSaveProfile} disabled={saving} className={styles.primary}><Check size={18}/>{saving ? 'Đang lưu...' : 'Lưu hồ sơ'}</button>
+                    </> : <>
+                        <button type="button" onClick={() => setShowPasswordModal(true)} className={styles.secondary}><Key size={18}/>Đổi mật khẩu</button>
+                        {profile && <button type="button" onClick={beginEditing} className={styles.primary}><Edit2 size={18}/>Chỉnh sửa hồ sơ</button>}
+                    </>}
                 </div>
-            );
-        }
+            </header>
 
-        return (
-            <div className="max-w-4xl mx-auto space-y-6">
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary-50 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/3"></div>
-                    <div className="relative">
-                        <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center shadow-inner">
-                            <UserCircle className="w-20 h-20 text-primary-400" />
-                        </div>
+            <section className={styles.identity} aria-label="Thông tin tài khoản">
+                <span className={styles.avatar}><UserCircle size={38}/></span>
+                <div className={styles.identityName}><h2>{displayName}</h2><span className={styles.role}><Shield size={16}/>{roleLabel}</span></div>
+                <div className={styles.account}><span>Tên đăng nhập</span><strong>{account?.username || 'Chưa cập nhật'}</strong></div>
+            </section>
+
+            {!profile ? <section className={styles.card}>
+                <div className={styles.cardHeading}><Shield size={21}/><div><h2>Thông tin tài khoản quản trị</h2><p>Tài khoản này chưa có hồ sơ nhân viên liên kết. Bạn có thể đổi mật khẩu ở phía trên.</p></div></div>
+            </section> : <div className={styles.columns}>
+                <section className={styles.card}>
+                    <div className={styles.cardHeading}><User size={21}/><div><h2>Thông tin cá nhân</h2><p>Hồ sơ và thông tin liên hệ của bạn.</p></div></div>
+                    <div className={styles.fields}>
+                        <ProfileField label="Họ và tên" icon={UserCircle} id={editing ? 'staff-full-name' : undefined} wide>
+                            {editing ? <input id="staff-full-name" value={editForm.fullName} onChange={e => setEditForm(p => ({...p, fullName: e.target.value.replace(/\d/g, '')}))} className={inputCls} placeholder="Nhập họ tên"/> : <div className={styles.value}>{profile.profile?.fullName || 'Chưa cập nhật'}</div>}
+                        </ProfileField>
+                        <ProfileField label="Ngày sinh" icon={Calendar}>
+                            {editing ? <DateDropdowns value={editForm.dateOfBirth} onChange={value => setEditForm(p => ({...p, dateOfBirth: value}))} className={inputCls}/> : <div className={styles.value}>{profile.profile?.dateOfBirth ? new Date(profile.profile.dateOfBirth).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</div>}
+                        </ProfileField>
+                        <ProfileField label="Giới tính" icon={Users} id={editing ? 'staff-gender' : undefined}>
+                            {editing ? <select id="staff-gender" value={editForm.gender} onChange={e => setEditForm(p => ({...p, gender: e.target.value}))} className={inputCls}><option value="">Chưa cập nhật</option><option value="MALE">Nam</option><option value="FEMALE">Nữ</option></select> : <div className={styles.value}>{profile.profile?.gender === 'MALE' ? 'Nam' : profile.profile?.gender === 'FEMALE' ? 'Nữ' : 'Chưa cập nhật'}</div>}
+                        </ProfileField>
+                        <ProfileField label="Số điện thoại" icon={Phone} readOnly>
+                            <div className={styles.value}>{profile.profile?.phone || 'Chưa cập nhật'}</div>
+                        </ProfileField>
+                        <ProfileField label="Email" icon={Mail} readOnly>
+                            <div className={styles.value}>{profile.profile?.email || 'Chưa cập nhật'}</div>
+                        </ProfileField>
+                        <ProfileField label="Địa chỉ" icon={MapPin} id={editing ? 'staff-address' : undefined} wide>
+                            {editing ? <textarea id="staff-address" rows={2} value={editForm.address} onChange={e => setEditForm(p => ({...p, address: e.target.value}))} className={inputCls} placeholder="Địa chỉ"/> : <div className={styles.value}>{profile.profile?.address || 'Chưa cập nhật'}</div>}
+                        </ProfileField>
                     </div>
-                    <div className="flex-1 text-center md:text-left z-10">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h1 className="text-3xl font-bold text-gray-900 mb-2">{profile?.profile?.fullName || account?.username || 'Chưa cập nhật'}</h1>
-                                <p className="text-gray-500 flex items-center justify-center md:justify-start gap-2 text-sm">
-                                    <Shield className="w-4 h-4" />
-                                    Vai trò: <span className="font-semibold text-gray-700">{account?.systemRole || account?.role || 'Nhân viên'}</span>
-                                </p>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-3">
-                                {editing ? (
-                                    <>
-                                        <button onClick={() => setEditing(false)} className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all active:scale-95 shadow-sm"><X className="w-4 h-4" /> Hủy</button>
-                                        <button onClick={handleSaveProfile} disabled={saving} className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition-all active:scale-95 shadow-sm disabled:opacity-50"><Check className="w-4 h-4" /> {saving ? 'Đang lưu...' : 'Lưu hồ sơ'}</button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <button onClick={() => setEditing(true)} className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition-all active:scale-95 shadow-sm"><Edit2 className="w-4 h-4" /> Sửa hồ sơ</button>
-                                        <button onClick={() => setShowPasswordModal(true)} className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-all active:scale-95 shadow-sm"><Key className="w-4 h-4" /> Đổi mật khẩu</button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
+                    <p className={styles.note}><Shield size={17}/>Email và số điện thoại chỉ xem tại đây, không chỉnh sửa trong hồ sơ cá nhân.</p>
+                </section>
+
+                <section className={styles.card}>
+                    <div className={styles.cardHeading}><Briefcase size={21}/><div><h2>Thông tin công việc</h2><p>Chuyên khoa, học vị và nơi đào tạo.</p></div></div>
+                    <div className={styles.fields}>
+                        <ProfileField label="Vai trò" icon={Shield} readOnly><div className={styles.value}>{roleLabel}</div></ProfileField>
+                        <ProfileField label="Chuyên khoa" icon={Briefcase} readOnly><div className={styles.value}>{profile.specialization?.name || 'Không có'}</div></ProfileField>
+                        <ProfileField label="Học vị" id={editing ? 'staff-degree' : undefined} wide>
+                            {editing ? <input id="staff-degree" value={editForm.highestDegree || ''} onChange={e => setEditForm(p => ({...p, highestDegree: e.target.value}))} className={inputCls} placeholder="Ví dụ: Bác sĩ chuyên khoa I, Thạc sĩ" maxLength={100}/> : <div className={styles.value}>{profile.highestDegree || 'Chưa cập nhật'}</div>}
+                        </ProfileField>
+                        <ProfileField label="Trường đào tạo" id={editing ? 'staff-university' : undefined} wide>
+                            {editing ? <input id="staff-university" value={editForm.university || ''} onChange={e => setEditForm(p => ({...p, university: e.target.value}))} className={inputCls} placeholder="Tên trường đào tạo" maxLength={200}/> : <div className={styles.value}>{profile.university || 'Chưa cập nhật'}</div>}
+                        </ProfileField>
                     </div>
-                </div>
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-                        <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2"><User className="w-5 h-5 text-primary-500" />Thông tin cá nhân & Công việc</h2>
-                    </div>
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><User className="w-3.5 h-3.5"/> Tên Đăng Nhập</label>
-                                <div className="px-4 py-2.5 bg-gray-100 border border-gray-100 rounded-lg text-gray-600 text-sm opacity-80 cursor-not-allowed">{account?.username || 'N/A'}</div>
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><UserCircle className="w-3.5 h-3.5"/> Họ & Tên</label>
-                                {editing ? (<input value={editForm.fullName} onChange={e => setEditForm(p => ({...p, fullName: e.target.value.replace(/\d/g, '')}))} className={inputCls} placeholder="Nhập họ tên" />) : (<div className="px-4 py-2.5 bg-white border border-gray-100 rounded-lg text-gray-800 text-sm">{profile?.profile?.fullName || 'Chưa cập nhật'}</div>)}
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5"/> Số Điện Thoại</label>
-                                <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-gray-700 text-sm">{profile?.profile?.phone || 'Chưa cập nhật'}</div>
-                                {editing && <p className="mt-1 text-xs text-amber-600">Thông tin liên hệ không thể sửa tại hồ sơ cá nhân.</p>}
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5"/> Email</label>
-                                <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg text-gray-700 text-sm">{profile?.profile?.email || 'Chưa cập nhật'}</div>
-                                {editing && <p className="mt-1 text-xs text-amber-600">Thông tin liên hệ không thể sửa tại hồ sơ cá nhân.</p>}
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><Users className="w-3.5 h-3.5"/> Giới Tính</label>
-                                {editing ? (<select value={editForm.gender} onChange={e => setEditForm(p => ({...p, gender: e.target.value}))} className={inputCls}><option value="">Chưa cập nhật</option><option value="MALE">Nam</option><option value="FEMALE">Nữ</option></select>) : (<div className="px-4 py-2.5 bg-white border border-gray-100 rounded-lg text-gray-800 text-sm">{profile?.profile?.gender === 'MALE' ? 'Nam' : profile?.profile?.gender === 'FEMALE' ? 'Nữ' : 'Chưa cập nhật'}</div>)}
-                            </div>
-                        </div>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5"/> Ngày Sinh</label>
-                                {editing ? (<DateDropdowns value={editForm.dateOfBirth} onChange={val => setEditForm(p => ({...p, dateOfBirth: val}))} className={inputCls + " px-2"} />) : (<div className="px-4 py-2.5 bg-white border border-gray-100 rounded-lg text-gray-800 text-sm">{profile?.profile?.dateOfBirth ? new Date(profile.profile.dateOfBirth).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</div>)}
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5"/> Địa Chỉ</label>
-                                {editing ? (<input value={editForm.address} onChange={e => setEditForm(p => ({...p, address: e.target.value}))} className={inputCls} placeholder="Địa chỉ" />) : (<div className="px-4 py-2.5 bg-white border border-gray-100 rounded-lg text-gray-800 text-sm">{profile?.profile?.address || 'Chưa cập nhật'}</div>)}
-                            </div>
-                            <div className="pt-2">
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5"/> Chuyên Khoa</label>
-                                <div className="px-4 py-2.5 bg-gray-100 border border-gray-100 rounded-lg text-gray-600 text-sm opacity-80 cursor-not-allowed">{profile?.specialization?.name || 'Không có'}</div>
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Học vị (không bắt buộc)</label>
-                                {editing ? (<input value={editForm.highestDegree || ''} onChange={e => setEditForm(p => ({...p, highestDegree: e.target.value}))} className={inputCls} placeholder="Ví dụ: Bác sĩ chuyên khoa I, Thạc sĩ" maxLength={100} />) : (<div className="px-4 py-2.5 bg-white border border-gray-100 rounded-lg text-gray-800 text-sm">{profile?.highestDegree || 'Chưa cập nhật'}</div>)}
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Trường đào tạo (không bắt buộc)</label>
-                                {editing ? (<input value={editForm.university || ''} onChange={e => setEditForm(p => ({...p, university: e.target.value}))} className={inputCls} placeholder="Tên trường đào tạo" maxLength={200} />) : (<div className="px-4 py-2.5 bg-white border border-gray-100 rounded-lg text-gray-800 text-sm">{profile?.university || 'Chưa cập nhật'}</div>)}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
+                    <p className={styles.note}><Briefcase size={17}/>Học vị và trường đào tạo không bắt buộc. Vai trò và chuyên khoa do quản trị quản lý.</p>
+                </section>
+            </div>}
+        </div>;
     };
 
 
     // Chọn Layout dựa trên systemRole
     const systemRole = localStorage.getItem('systemRole') || sessionStorage.getItem('systemRole') || '';
-    
+
     let Layout = ReceptionistLayout; // fallback
     if (systemRole === 'ADMIN') {
         Layout = AdminLayout;
@@ -357,7 +333,7 @@ export default function StaffProfilePage() {
 
     return (
         <Layout>
-            <div className="p-4 md:p-8 min-h-screen bg-gray-50/50">
+            <div className={styles.page}>
                 {renderContent()}
                 {showPasswordModal && <ChangePasswordModal />}
             </div>

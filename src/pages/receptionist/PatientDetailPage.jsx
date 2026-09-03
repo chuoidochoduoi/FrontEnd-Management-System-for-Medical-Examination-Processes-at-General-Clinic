@@ -40,8 +40,8 @@ export default function PatientDetailPage() {
         load();
     }, [id]);
 
-    return <ReceptionistLayout><div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex items-center justify-between"><div><h1 className="text-xl font-bold text-gray-900">Chi tiết bệnh nhân</h1><p className="mt-1 text-sm text-gray-400">Thông tin cá nhân và các lượt khám trước đây.</p></div><div className="flex items-center gap-3"><button onClick={() => setShowUpdateModal(true)} className="flex h-9 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"><Edit2 size={16} />Cập nhật</button><button onClick={() => navigate(ROUTES.RECEPTIONIST_RECORDS)} className="flex items-center gap-2 text-sm text-gray-500"><ArrowLeft size={16}/> Quay lại</button></div></div>
+    return <ReceptionistLayout><div className="cares-reception-screen">
+        <div className="cares-reception-page-header"><div><h1 className="text-xl font-bold text-gray-900">Chi tiết bệnh nhân</h1><p className="mt-1 text-sm text-gray-400">Thông tin cá nhân và các lượt khám trước đây.</p></div><div className="flex flex-wrap items-center gap-3"><button onClick={() => setShowUpdateModal(true)} className="cares-reception-primary"><Edit2 size={18} />Cập nhật</button><button onClick={() => navigate(ROUTES.RECEPTIONIST_RECORDS)} className="flex min-h-12 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-500"><ArrowLeft size={18}/> Quay lại</button></div></div>
         {loading && <p className="py-16 text-center text-sm text-gray-400">Đang tải...</p>}
         {error && <p className="py-16 text-center text-sm text-red-500">{error}</p>}
         {patient && <>
@@ -50,7 +50,7 @@ export default function PatientDetailPage() {
             </div></section>
             <PatientAllergyBanner value={{ status: patient.allergyStatus, items: patient.allergies || [] }} currentLabel/>
             <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"><div className="border-b border-gray-100 px-6 py-4"><h2 className="text-sm font-bold text-gray-900">Các lượt khám trước đây ({visits.length})</h2></div>
-                {visits.length === 0 ? <p className="p-10 text-center text-sm text-gray-400">Chưa có lượt khám hoàn thành.</p> : visits.map(visit => <button key={visit.visitId || visit.id} onClick={() => navigate(ROUTES.RECEPTIONIST_PATIENT_VISIT_DETAIL.replace(':id', id).replace(':visitId', visit.visitId))} className="grid w-full grid-cols-[150px_120px_1fr_180px_24px] items-center gap-4 border-b border-gray-50 px-6 py-4 text-left hover:bg-gray-50">
+                {visits.length === 0 ? <p className="p-10 text-center text-sm text-gray-400">Chưa có lượt khám hoàn thành.</p> : visits.map(visit => <button key={visit.visitId || visit.id} onClick={() => navigate(ROUTES.RECEPTIONIST_PATIENT_VISIT_DETAIL.replace(':id', id).replace(':visitId', visit.visitId))} className="cares-reception-visit-row grid w-full grid-cols-[170px_140px_1fr_220px_24px] items-center gap-4 border-b border-gray-50 px-6 py-4 text-left hover:bg-gray-50">
                     <span className="text-sm font-semibold text-gray-800">{visit.date ? new Date(visit.date).toLocaleDateString('vi-VN') : '-'}</span><span className="text-sm text-gray-500">{visit.time || '-'}</span><span className="text-sm text-gray-700">{visit.specialty || 'Khám bệnh'}</span><span className="text-sm text-gray-500">{visit.doctor || '-'}</span><ChevronRight size={16} className="text-gray-300"/>
                 </button>)}
             </section>

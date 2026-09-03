@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAppointment } from '@/hooks/useAppointment';
+import { toggleServiceWithPolicy, serviceRelationHint } from '@/utils/serviceSelectionPolicy';
 import { useProfile } from '@/hooks/useProfile';
 import AppointmentConfirmModal from '@/components/ui/AppointmentConfirmModal';
 import { groupServicesBySpecialty } from '@/components/appointment/ServiceSelectionCard';
-import { Check, ChevronDown, ChevronLeft, Clock, Info, Search, Stethoscope, User } from 'lucide-react';
+import { ArrowRight, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, Clock, Info, Search, ShieldCheck, Stethoscope, User } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import logoUrl from '@/assets/logo.jpg';
+import styles from './AppointmentPage.module.css';
 
 const formatVND = (amount) =>
     new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
@@ -59,7 +61,6 @@ const appointmentDaysInMonth = (year, month) => {
 export default function AppointmentPage() {
     const { t } = useTranslation('appointment');
     const { t: tCommon } = useTranslation('common');
-    const navigate = useNavigate();
 
     const { services, loadingServices, book, loading: booking, error, shifts, shiftLoading, fetchShifts } = useAppointment();
     const { profile } = useProfile();
@@ -85,6 +86,7 @@ export default function AppointmentPage() {
     const [dateParts, setDateParts] = useState(splitAppointmentDate(''));
     const [timeSlot, setTimeSlot] = useState('');
     const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [bookingComplete, setBookingComplete] = useState(false);
 
     const selectedServiceKey = selectedServices.map(service => service.id).sort().join(',');
     useEffect(() => {
@@ -151,10 +153,9 @@ export default function AppointmentPage() {
 
     const toggleService = (service) => {
         setSelectedServices(prev => {
-            if (prev.find(s => s.id === service.id)) {
-                return prev.filter(s => s.id !== service.id);
-            }
-            return [...prev, service];
+            const resolution = toggleServiceWithPolicy(prev, service, services);
+            if (resolution.message) toast.info(resolution.message);
+            return resolution.services;
         });
     };
 
@@ -195,7 +196,8 @@ export default function AppointmentPage() {
         setShowConfirmModal(true);
     };
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
+        if (booking || bookingComplete) return;
         const computedAge = profile
             ? (profile.age ?? (profile.dateOfBirth ? calculateAge(profile.dateOfBirth) : age))
             : age;
@@ -209,453 +211,172 @@ export default function AppointmentPage() {
                 address: profile.address
             }
             : { fullName, phone, age, gender, address };
-        book({ ...patientInfo, selectedServices, date, shiftId: timeSlot });
-        setShowConfirmModal(false);
+        const success = await book({ ...patientInfo, selectedServices, date, shiftId: timeSlot });
+        if (success) {
+            setBookingComplete(true);
+            setShowConfirmModal(false);
+        }
     };
 
-    return (
-        <div className="min-h-screen font-jakarta text-slate-800 selection:bg-slate-900 selection:text-white relative bg-[#FAFAFA]">
-            {/* Background Image with Overlay */}
-            <div className="fixed inset-0 z-0">
-                <img 
-                    src="https://images.unsplash.com/photo-1516549655169-df83a0774514?q=80&w=2000&auto=format&fit=crop" 
-                    alt="Premium Clinic" 
-                    className="w-full h-full object-cover" 
-                />
-                <div className="absolute inset-0 bg-slate-900/85 backdrop-blur-md"></div>
-            </div>
+    const chosenShift = shifts?.find(shift => shift.id === timeSlot);
+    const patientName = profile?.fullName || fullName;
+    const stageLabels = ['Thông tin người khám', 'Chọn dịch vụ', 'Chọn ngày và ca'];
 
-            {/* Custom Header for Booking Page */}
-            <header className="relative z-10 w-full border-b border-white/10 py-6">
-                <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-                        <img src={logoUrl} alt="CareS" className="w-10 h-10 rounded-md object-contain" />
-                        <div className="flex flex-col">
-                            <span className="text-xl font-bold text-white tracking-widest uppercase leading-none">CareS</span>
-                            <span className="text-[10px] text-slate-400 tracking-[0.3em] uppercase mt-1">Phòng khám đa khoa</span>
-                        </div>
-                    </div>
-                    <button 
-                        onClick={() => navigate(profile ? ROUTES.MY_APPOINTMENTS : '/')}
-                        className="flex items-center gap-2 text-xs font-semibold tracking-[0.1em] uppercase text-white hover:text-primary-400 transition-colors"
-                    >
-                        <ChevronLeft className="w-4 h-4" />
-                        {profile ? 'Lịch hẹn của tôi' : 'Trang chủ'}
-                    </button>
-                </div>
+    return <div className={styles.site}>
+        <header className={styles.nav}>
+            <Link to="/" className={styles.brand}><img src={logoUrl} alt="" />CareS</Link>
+            <nav aria-label="Điều hướng đặt lịch">
+                <Link to="/">Trang chủ</Link>
+                <Link to={ROUTES.GUEST_JOURNEY}><Search size={17} /> Tra cứu lượt khám</Link>
+                <Link to={profile ? ROUTES.MY_APPOINTMENTS : '/login'}>{profile ? 'Lịch hẹn của tôi' : 'Đăng nhập'}</Link>
+            </nav>
+        </header>
+        <main className={styles.page}>
+            <header className={styles.heading}>
+                <span className={styles.eyebrow}><CalendarDays size={18} /> Đặt lịch cùng CareS</span>
+                <h1>Đặt lịch khám</h1>
+                <p>{profile ? 'Chọn dịch vụ và thời gian phù hợp cho lượt khám của bạn.' : 'Bạn có thể đặt lịch trực tiếp tại đây mà không cần tạo tài khoản.'}</p>
             </header>
 
-            {/* Main Content */}
-            <main className="relative z-10 py-12 px-6 lg:px-12">
-                <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-12 items-start">
-                    
-                    {/* Left Info Column */}
-                    <div className="w-full lg:w-1/3 text-white lg:sticky lg:top-32">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-12 h-[1px] bg-primary-500"></div>
-                            <span className="text-xs font-semibold tracking-[0.2em] uppercase text-primary-400">Welcome Guest</span>
+            <section className={styles.guestAccess} aria-label="Tra cứu dành cho khách">
+                <span className={styles.accessIcon}><Search size={25} /></span>
+                <div><h2>Đã được lễ tân check-in?</h2><p>Dùng mã lượt khám VIS và số điện thoại trên phiếu để xem phòng, vị trí chờ và hành trình. Không cần đăng nhập.</p></div>
+                <Link to={ROUTES.GUEST_JOURNEY} className={styles.secondary}>Tra cứu lượt khám <ArrowRight size={18} /></Link>
+            </section>
+
+            {bookingComplete ? <section className={styles.success} role="status">
+                <CheckCircle2 size={48} /><h2>Đặt lịch thành công</h2><p>Thông tin lịch khám của {patientName || 'bạn'} đã được gửi đến CareS.</p>
+                <p>Khi đến phòng khám, vui lòng gặp lễ tân để check-in. Mã lượt khám VIS dùng để theo dõi hành trình được cấp sau khi check-in, không phải mã lịch hẹn.</p>
+                <div><Link to={profile ? ROUTES.MY_APPOINTMENTS : '/'} className={styles.primary}>{profile ? 'Xem lịch hẹn của tôi' : 'Về trang chủ'}</Link>
+                    <Link to={ROUTES.GUEST_JOURNEY} className={styles.secondary}>Tra cứu hành trình sau check-in</Link></div>
+            </section> : <>
+                <ol className={styles.steps} aria-label="Tiến trình đặt lịch">
+                    {stageLabels.map((label, index) => <li key={label} className={currentStep === index + 1 ? styles.current : currentStep > index + 1 ? styles.done : ''}
+                        aria-current={currentStep === index + 1 ? 'step' : undefined}>
+                        <span>{currentStep > index + 1 ? <CheckCircle2 size={22} /> : index + 1}</span><div><strong>{label}</strong>
+                            <small>{currentStep > index + 1 ? 'Đã hoàn tất' : currentStep === index + 1 ? 'Đang thực hiện' : 'Bước tiếp theo'}</small></div>
+                    </li>)}
+                </ol>
+                <div className={styles.columns}>
+                    <form className={styles.formCard} noValidate onSubmit={event => { event.preventDefault(); if (!booking) { if (currentStep === 3) handleSubmit(); else if (currentStep === 1 || selectedServices.length) handleNext(); } }}>
+                        <header className={styles.cardHeading}><span className={styles.eyebrow}>Bước 0{currentStep}</span>
+                            <h2>{stageLabels[currentStep - 1]}</h2>
+                            <p>{currentStep === 1 ? 'Thông tin này giúp lễ tân chuẩn bị và liên hệ xác nhận lịch.' : currentStep === 2 ? 'Bạn có thể chọn nhiều dịch vụ. Lựa chọn được giữ khi đổi nhóm hoặc tìm kiếm.' : 'Chọn ngày khám trước, sau đó chọn ca còn khả dụng.'}</p>
+                        </header>
+                        <div className={styles.formBody}>
+                            {currentStep === 1 && <div className={styles.fields}>
+                                <label className={styles.wide} htmlFor="booking-name">Họ và tên <span className={styles.required}>*</span>
+                                    <input id="booking-name" autoComplete="name" maxLength={50} value={fullName} onChange={e => { setFullName(e.target.value); setStep1Errors(prev => ({...prev, fullName: ''})); }}
+                                        placeholder="Nhập họ tên người được khám" aria-invalid={!!step1Errors.fullName} aria-describedby={step1Errors.fullName ? 'booking-name-error' : undefined} />
+                                    {step1Errors.fullName && <small id="booking-name-error" className={styles.fieldError}>{step1Errors.fullName}</small>}
+                                </label>
+                                <label htmlFor="booking-phone">Số điện thoại <span className={styles.required}>*</span>
+                                    <input id="booking-phone" type="tel" inputMode="tel" autoComplete="tel" maxLength={20} value={phone} onChange={e => { setPhone(e.target.value); setStep1Errors(prev => ({...prev, phone: ''})); }}
+                                        placeholder="Số điện thoại để liên hệ" aria-invalid={!!step1Errors.phone} aria-describedby={step1Errors.phone ? 'booking-phone-error' : undefined} />
+                                    {step1Errors.phone && <small id="booking-phone-error" className={styles.fieldError}>{step1Errors.phone}</small>}
+                                </label>
+                                <div className={styles.ageGender}>
+                                    <label htmlFor="booking-age">Tuổi <span className={styles.required}>*</span><input id="booking-age" type="number" min={1} max={120} value={age}
+                                        onChange={e => { setAge(e.target.value); setStep1Errors(prev => ({...prev, age: ''})); }} placeholder="Nhập tuổi"
+                                        aria-invalid={!!step1Errors.age} aria-describedby={step1Errors.age ? 'booking-age-error' : undefined} />
+                                        {step1Errors.age && <small id="booking-age-error" className={styles.fieldError}>{step1Errors.age}</small>}
+                                    </label>
+                                    <label htmlFor="booking-gender">Giới tính <span className={styles.required}>*</span><select id="booking-gender" value={gender}
+                                        onChange={e => { setGender(e.target.value); setStep1Errors(prev => ({...prev, gender: ''})); }}
+                                        aria-invalid={!!step1Errors.gender} aria-describedby={step1Errors.gender ? 'booking-gender-error' : undefined}>
+                                        <option value="">Chọn giới tính</option><option value="male">Nam</option><option value="female">Nữ</option></select>
+                                        {step1Errors.gender && <small id="booking-gender-error" className={styles.fieldError}>{step1Errors.gender}</small>}
+                                    </label>
+                                </div>
+                                <label className={styles.wide} htmlFor="booking-address">Địa chỉ <span className={styles.optional}>(không bắt buộc)</span>
+                                    <input id="booking-address" autoComplete="street-address" maxLength={255} value={address} onChange={e => setAddress(e.target.value)} placeholder="Địa chỉ liên hệ" />
+                                </label>
+                                <p className={styles.note}><ShieldCheck size={20} /> Thông tin được sử dụng để tiếp nhận và phục vụ lượt khám của bạn.</p>
+                            </div>}
+
+                            {currentStep === 2 && <>
+                                <label className={styles.search}><Search size={19} /><input type="search" aria-label="Tìm dịch vụ" value={serviceSearch}
+                                    onChange={event => setServiceSearch(event.target.value)} placeholder="Tìm dịch vụ, chuyên khoa hoặc kỹ thuật…" /></label>
+                                <div className={styles.tabs} aria-label="Nhóm dịch vụ">
+                                    {[['EXAMINATION', 'Khám bệnh', examinationCount], ['PARACLINICAL', 'Cận lâm sàng', paraclinicalCount]].map(([type, label, count]) =>
+                                        <button key={type} type="button" aria-pressed={activeServiceTab === type} onClick={() => { setActiveServiceTab(type); setServiceSearch(''); }}
+                                            className={activeServiceTab === type ? styles.selectedTab : ''}>{label}{count > 0 ? ` · ${count} đã chọn` : ''}</button>)}
+                                </div>
+                                <p className={styles.notice}><Info size={20} />{activeServiceTab === 'EXAMINATION'
+                                    ? 'Có thể đặt nhiều dịch vụ khám trong một lịch hẹn. Các dịch vụ được thực hiện lần lượt, mỗi dịch vụ có bệnh án riêng.'
+                                    : 'Cận lâm sàng đặt sẵn là bước độc lập; chỉ quay lại bác sĩ khi được bác sĩ chỉ định trong lúc khám.'}</p>
+                                {loadingServices ? <p className={styles.empty} role="status">Đang tải dịch vụ…</p> : <div className={styles.serviceList}>
+                                    {!visibleServiceGroups.length && <p className={styles.empty}>Không tìm thấy dịch vụ phù hợp.</p>}
+                                    {visibleServiceGroups.map(([groupName, groupServices]) => {
+                                        const open = !!serviceSearch.trim() || expandedGroups[activeServiceTab] === groupName;
+                                        return <section className={styles.serviceGroup} key={groupName}>
+                                            <button type="button" aria-expanded={open} className={styles.groupHeading} onClick={() => setExpandedGroups(previous => ({...previous, [activeServiceTab]: open ? null : groupName}))}>
+                                                <strong>{groupName}</strong><span>{groupServices.length} dịch vụ <ChevronDown size={18} style={{transform: open ? 'rotate(180deg)' : undefined}} /></span>
+                                            </button>
+                                            {open && <div>{groupServices.map(service => {
+                                                const checked = selectedServices.some(item => item.id === service.id);
+                                                return <label className={`${styles.serviceRow} ${checked ? styles.checked : ''}`} key={service.id}>
+                                                    <input type="checkbox" checked={checked} onChange={() => toggleService(service)} />
+                                                    <span><strong>{service.name}</strong>{service.description && <small>{service.description}</small>}{serviceRelationHint(service) && <small>{serviceRelationHint(service)}</small>}</span>
+                                                    <b>{formatVND(service.price ?? 0)}</b>
+                                                </label>;
+                                            })}</div>}
+                                        </section>;
+                                    })}
+                                </div>}
+                            </>}
+
+                            {currentStep === 3 && <div className={styles.timeStep}>
+                                <fieldset><legend>Ngày khám</legend><div className={styles.dateFields}>
+                                    <label>Ngày<select aria-label="Ngày khám" value={dateParts.day} onChange={event => updateAppointmentDate('day', event.target.value)}>
+                                        <option value="">Ngày</option>{Array.from({length: appointmentDaysInMonth(dateParts.year, dateParts.month)}, (_, i) => String(i + 1).padStart(2, '0')).map(day => <option key={day} value={day}>{day}</option>)}</select></label>
+                                    <label>Tháng<select aria-label="Tháng khám" value={dateParts.month} onChange={event => updateAppointmentDate('month', event.target.value)}>
+                                        <option value="">Tháng</option>{Array.from({length: 12}, (_, i) => String(i + 1).padStart(2, '0')).map(month => <option key={month} value={month}>{month}</option>)}</select></label>
+                                    <label>Năm<select aria-label="Năm khám" value={dateParts.year} onChange={event => updateAppointmentDate('year', event.target.value)}>
+                                        <option value="">Năm</option>{bookingYears.map(year => <option key={year} value={year}>{year}</option>)}</select></label>
+                                </div>
+                                <p className={styles.dateHint}>Có thể đặt từ ngày mai đến tối đa 12 tháng tiếp theo.</p>
+                                {dateParts.day && dateParts.month && dateParts.year && !date && <p className={styles.fieldError}>Ngày khám phải từ ngày mai đến tối đa 12 tháng tiếp theo.</p>}
+                                </fieldset>
+                                <fieldset><legend>Ca khám</legend>
+                                    {!date ? <p className={styles.empty}>Vui lòng chọn ngày khám hợp lệ để xem ca phù hợp.</p> : shiftLoading ? <p className={styles.empty} role="status">Đang kiểm tra ca khám…</p>
+                                        : shifts?.length ? <div className={styles.shifts}>{shifts.map(shift => <button type="button" key={shift.id} disabled={!shift.available}
+                                            aria-pressed={timeSlot === shift.id} onClick={() => shift.available && setTimeSlot(shift.id)}
+                                            className={timeSlot === shift.id ? styles.selectedShift : ''}>
+                                            <Clock size={20} /><strong>{shift.name}</strong><span>{shift.startTime?.slice(0, 5)} – {shift.endTime?.slice(0, 5)}</span>
+                                            {!shift.available && <small>Ca chưa có đủ nhân sự</small>}
+                                            {shift.timeSource === 'SPECIAL' && <small>Giờ làm việc ngoại lệ</small>}
+                                        </button>)}</div> : <p className={styles.empty}>Chưa có ca khám khả dụng cho ngày và dịch vụ đã chọn.</p>}
+                                </fieldset>
+                            </div>}
+
+                            {error && <div className={styles.error} role="alert">{error}</div>}
                         </div>
-                        <h1 className="text-4xl lg:text-5xl font-light leading-tight mb-6">
-                            Đặt Lịch <br /> <span className="font-bold">Đặc Quyền</span>
-                        </h1>
-                        <p className="text-slate-400 font-light text-sm leading-relaxed mb-12 max-w-sm">
-                            Trải nghiệm dịch vụ y tế thượng lưu. Điền thông tin vào biểu mẫu bên cạnh để chúng tôi chuẩn bị đón tiếp bạn một cách chu đáo nhất.
-                        </p>
-                        
-                        <div className="space-y-8 hidden md:block relative">
-                            {/* Đường kẻ nối các step dọc */}
-                            <div className="absolute left-6 top-6 bottom-6 w-[1px] bg-white/10 z-0 hidden md:block"></div>
-                            
-                            <div className={`relative z-10 flex items-center gap-5 transition-all duration-300 ${currentStep >= 1 ? 'opacity-100' : 'opacity-40'} ${currentStep === 1 ? 'translate-x-2' : ''}`}>
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center border transition-colors ${currentStep >= 1 ? 'bg-primary-500 border-primary-400' : 'bg-white/5 border-white/10'}`}>
-                                    <User className="w-5 h-5 text-white" />
-                                </div>
-                                <div>
-                                    <p className="font-bold text-white uppercase tracking-wider text-xs mb-1">01. Thông tin</p>
-                                    <p className="text-slate-400 font-light text-sm">Chi tiết khách hàng</p>
-                                </div>
+                        <footer className={styles.formActions}>
+                            {currentStep > (profile ? 2 : 1) && <button className={styles.secondary} type="button" onClick={handleBack} disabled={booking}><ChevronLeft size={18} /> Quay lại</button>}
+                            <button className={styles.primary} type="submit" disabled={booking || (currentStep === 2 && !selectedServices.length) || (currentStep === 3 && (!date || !timeSlot || shiftLoading))}>
+                                {booking ? tCommon('loading') : currentStep === 3 ? 'Kiểm tra và xác nhận' : 'Tiếp tục'} <ArrowRight size={18} />
+                            </button>
+                        </footer>
+                    </form>
+
+                    <aside className={styles.sidebar} aria-label="Tổng kết lịch khám">
+                        <section className={styles.summary}>
+                            <h2>Lịch khám của bạn</h2>
+                            <dl><div><dt><User size={17} /> Người được khám</dt><dd>{patientName || 'Chưa nhập thông tin'}</dd></div>
+                                <div><dt><CalendarDays size={17} /> Ngày và ca khám</dt><dd>{date ? date.split('-').reverse().join('/') : 'Chưa chọn ngày'}{chosenShift ? ` · ${chosenShift.name}` : ''}</dd></div></dl>
+                            <div className={styles.summaryServices}><h3><Stethoscope size={18} /> Dịch vụ đã chọn <span>{selectedServices.length}</span></h3>
+                                {selectedServices.length ? <ul>{selectedServices.map(service => <li key={service.id}><span>{service.name}</span><strong>{formatVND(service.price ?? 0)}</strong></li>)}</ul> : <p>Chọn dịch vụ ở bước 2 để xem chi phí tạm tính.</p>}
                             </div>
-                            <div className={`relative z-10 flex items-center gap-5 transition-all duration-300 ${currentStep >= 2 ? 'opacity-100' : 'opacity-40'} ${currentStep === 2 ? 'translate-x-2' : ''}`}>
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center border transition-colors ${currentStep >= 2 ? 'bg-primary-500 border-primary-400' : 'bg-white/5 border-white/10'}`}>
-                                    <Stethoscope className="w-5 h-5 text-white" />
-                                </div>
-                                <div>
-                                    <p className="font-bold text-white uppercase tracking-wider text-xs mb-1">02. Dịch vụ</p>
-                                    <p className="text-slate-400 font-light text-sm">Lựa chọn chuyên khoa</p>
-                                </div>
-                            </div>
-                            <div className={`relative z-10 flex items-center gap-5 transition-all duration-300 ${currentStep >= 3 ? 'opacity-100' : 'opacity-40'} ${currentStep === 3 ? 'translate-x-2' : ''}`}>
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center border transition-colors ${currentStep >= 3 ? 'bg-primary-500 border-primary-400' : 'bg-white/5 border-white/10'}`}>
-                                    <Clock className="w-5 h-5 text-white" />
-                                </div>
-                                <div>
-                                    <p className="font-bold text-white uppercase tracking-wider text-xs mb-1">03. Thời gian</p>
-                                    <p className="text-slate-400 font-light text-sm">Khung giờ mong muốn</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right Form Column */}
-                    <div className="w-full lg:w-2/3 bg-white p-8 lg:p-12 shadow-2xl relative">
-                        {/* Decorative accent */}
-                        <div className="absolute top-0 left-0 w-full h-1 bg-slate-900"></div>
-
-                        <div className="relative min-h-[500px]">
-                            {/* ── Step 1: Thông tin khách hàng ── */}
-                            {currentStep === 1 && (
-                            <section className="animate-in fade-in duration-500">
-                                <div className="mb-8">
-                                    <h2 className="text-2xl font-light text-slate-900 mb-2">
-                                        <span className="font-bold">01.</span> {t('step1.heading')}
-                                    </h2>
-                                    <p className="text-sm font-light text-slate-500">Vui lòng cung cấp chính xác thông tin cá nhân của bạn.</p>
-                                </div>
-
-                                <div className="space-y-6">
-                                    {/* Họ và tên */}
-                                    <div>
-                                        <label className="block text-xs font-semibold tracking-[0.1em] uppercase text-slate-900 mb-2">
-                                            {t('step1.fullName')}
-                                        </label>
-                                        <input
-                                            type="text"
-                                            maxLength={50}
-                                            value={profile ? profile.fullName : fullName}
-                                            onChange={e => {
-                                                setFullName(e.target.value);
-                                                if (step1Errors.fullName) setStep1Errors({ ...step1Errors, fullName: '' });
-                                            }}
-                                            disabled={!!profile}
-                                            className={`w-full h-10 px-3 text-sm border ${step1Errors.fullName ? 'border-red-500 focus:ring-red-50' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-50'} rounded-md outline-none focus:ring-2 ${profile ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                            placeholder="Nhập họ và tên..."
-                                        />
-                                        {step1Errors.fullName && <p className="text-red-500 text-xs mt-1.5 font-medium">{step1Errors.fullName}</p>}
-                                    </div>
-
-                                    {/* SDT + Tuổi + Giới tính */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                        <div>
-                                            <label className="block text-xs font-semibold tracking-[0.1em] uppercase text-slate-900 mb-2">
-                                                {t('step1.phone')}
-                                            </label>
-                                            <input
-                                                type="tel"
-                                                maxLength={20}
-                                                value={profile ? profile.phone : phone}
-                                                onChange={e => {
-                                                    setPhone(e.target.value);
-                                                    if (step1Errors.phone) setStep1Errors({ ...step1Errors, phone: '' });
-                                                }}
-                                                disabled={!!profile}
-                                                className={`w-full h-10 px-3 text-sm border ${step1Errors.phone ? 'border-red-500 focus:ring-red-50' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-50'} rounded-md outline-none focus:ring-2 ${profile ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                                placeholder="Số điện thoại..."
-                                            />
-                                            {step1Errors.phone && <p className="text-red-500 text-xs mt-1.5 font-medium">{step1Errors.phone}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold tracking-[0.1em] uppercase text-slate-900 mb-2">
-                                                {t('step1.age')}
-                                            </label>
-                                            <input
-                                                type="number"
-                                                min={1}
-                                                max={120}
-                                                value={profile ? (profile.age ?? (profile.dateOfBirth ? calculateAge(profile.dateOfBirth) : '')) : age}
-                                                onChange={e => {
-                                                    setAge(e.target.value);
-                                                    if (step1Errors.age) setStep1Errors({ ...step1Errors, age: '' });
-                                                }}
-                                                disabled={!!profile}
-                                                className={`w-full h-10 px-3 text-sm border ${step1Errors.age ? 'border-red-500 focus:ring-red-50' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-50'} rounded-md outline-none focus:ring-2 ${profile ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                                placeholder="Tuổi..."
-                                            />
-                                            {step1Errors.age && <p className="text-red-500 text-xs mt-1.5 font-medium">{step1Errors.age}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold tracking-[0.1em] uppercase text-slate-900 mb-2">
-                                                {t('step1.gender')}
-                                            </label>
-                                            <select
-                                                value={profile ? (profile.gender === 'MALE' ? 'male' : profile.gender === 'FEMALE' ? 'female' : profile.gender === 'OTHER' ? 'other' : profile.gender) : gender}
-                                                onChange={e => {
-                                                    setGender(e.target.value);
-                                                    if (step1Errors.gender) setStep1Errors({ ...step1Errors, gender: '' });
-                                                }}
-                                                disabled={!!profile}
-                                                className={`w-full h-10 px-3 text-sm border ${step1Errors.gender ? 'border-red-500 focus:ring-red-50' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-50'} rounded-md outline-none focus:ring-2 bg-white ${profile ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                            >
-                                                <option value="" disabled>Chọn giới tính</option>
-                                                <option value="male">{t('step1.genderOptions.male')}</option>
-                                                <option value="female">{t('step1.genderOptions.female')}</option>
-                                            </select>
-                                            {step1Errors.gender && <p className="text-red-500 text-xs mt-1.5 font-medium">{step1Errors.gender}</p>}
-                                        </div>
-                                    </div>
-
-                                    {/* Địa chỉ */}
-                                    <div>
-                                        <label className="block text-xs font-semibold tracking-[0.1em] uppercase text-slate-900 mb-2">
-                                            {t('step1.address')}
-                                        </label>
-                                        <input
-                                            type="text"
-                                            maxLength={255}
-                                            value={profile ? profile.address : address}
-                                            onChange={e => {
-                                                setAddress(e.target.value);
-                                                if (step1Errors.address) setStep1Errors({ ...step1Errors, address: '' });
-                                            }}
-                                            disabled={!!profile}
-                                            className={`w-full h-10 px-3 text-sm border ${step1Errors.address ? 'border-red-500 focus:ring-red-50' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-50'} rounded-md outline-none focus:ring-2 ${profile ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                            placeholder="Địa chỉ liên hệ..."
-                                        />
-                                        {step1Errors.address && <p className="text-red-500 text-xs mt-1.5 font-medium">{step1Errors.address}</p>}
-                                    </div>
-                                </div>
-                                
-                                <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
-                                    <button 
-                                        onClick={handleNext}
-                                        className="h-12 px-8 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-xl transition-colors"
-                                    >
-                                        Tiếp tục
-                                    </button>
-                                </div>
-                            </section>
-                            )}
-
-                            {/* ── Step 2: Chọn dịch vụ ── */}
-                            {currentStep === 2 && (
-                            <section className="animate-in fade-in duration-500">
-                                <div className="flex items-end justify-between mb-8">
-                                    <div>
-                                        <h2 className="text-2xl font-light text-slate-900 mb-2">
-                                            <span className="font-bold">02.</span> {t('step2.heading')}
-                                        </h2>
-                                        <p className="text-sm font-light text-slate-500">{t('step2.selectMultiple')}</p>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                        <input type="search" value={serviceSearch}
-                                            onChange={event => setServiceSearch(event.target.value)}
-                                            placeholder="Tìm tên dịch vụ, chuyên khoa hoặc kỹ thuật..."
-                                            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none transition focus:border-primary-500 focus:bg-white focus:ring-4 focus:ring-primary-50" />
-                                    </div>
-                                    <div className="grid grid-cols-2 rounded-xl bg-slate-100 p-1">
-                                        {[
-                                            ['EXAMINATION', 'Khám bệnh'],
-                                            ['PARACLINICAL', 'Cận lâm sàng'],
-                                        ].map(([type, label]) => {
-                                            const selectedCount = type === 'EXAMINATION'
-                                                ? examinationCount : paraclinicalCount;
-                                            return <button key={type} type="button"
-                                                onClick={() => { setActiveServiceTab(type); setServiceSearch(''); }}
-                                                className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${activeServiceTab === type
-                                                    ? 'bg-white text-slate-950 shadow-sm'
-                                                    : 'text-slate-500 hover:text-slate-800'}`}>
-                                                {label}{selectedCount > 0 ? ` (${selectedCount})` : ''}
-                                            </button>;
-                                        })}
-                                    </div>
-                                    <div className={`flex gap-2 rounded-xl border px-3 py-2.5 text-xs leading-5 ${activeServiceTab === 'EXAMINATION'
-                                        ? 'border-blue-200 bg-blue-50 text-blue-800'
-                                        : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
-                                        <Info className="mt-0.5 h-4 w-4 shrink-0" />
-                                        {activeServiceTab === 'EXAMINATION'
-                                            ? <span>Bạn có thể đặt nhiều dịch vụ khám trong một lịch hẹn. Khi check-in, các dịch vụ được thực hiện lần lượt và mỗi dịch vụ có một bệnh án riêng.</span>
-                                            : <span>Dịch vụ cận lâm sàng đặt sẵn là bước độc lập; chỉ quay lại bác sĩ khi dịch vụ đó được bác sĩ chỉ định trong lúc khám.</span>}
-                                    </div>
-                                </div>
-
-                                {loadingServices ? (
-                                    <p className="py-8 text-center text-sm text-slate-400">{t('step2.loading')}</p>
-                                ) : (
-                                    <div className="custom-scrollbar mt-4 max-h-[390px] space-y-2 overflow-y-auto pr-1">
-                                        {visibleServiceGroups.length === 0 && (
-                                            <p className="py-8 text-center text-sm text-slate-400">Không tìm thấy dịch vụ phù hợp.</p>
-                                        )}
-                                        {visibleServiceGroups.map(([groupName, groupServices]) => {
-                                            const searching = serviceSearch.trim().length > 0;
-                                            const open = searching || expandedGroups[activeServiceTab] === groupName;
-                                            return <div key={groupName} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                                <button type="button"
-                                                    onClick={() => setExpandedGroups(previous => ({
-                                                        ...previous,
-                                                        [activeServiceTab]: open ? null : groupName,
-                                                    }))}
-                                                    className="flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-3 text-left">
-                                                    <span className="text-sm font-bold text-slate-900">{groupName}</span>
-                                                    <span className="flex items-center gap-2 text-xs text-slate-500">
-                                                        {groupServices.length} dịch vụ
-                                                        <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
-                                                    </span>
-                                                </button>
-                                                {open && <div className="divide-y divide-slate-100">
-                                                    {groupServices.map(service => {
-                                                        const checked = selectedServices.some(item => item.id === service.id);
-                                                        return <button key={service.id} type="button" onClick={() => toggleService(service)}
-                                                            className={`grid w-full grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left transition ${checked
-                                                                ? 'bg-primary-50' : 'hover:bg-slate-50'}`}>
-                                                            <span className={`flex h-5 w-5 items-center justify-center rounded border ${checked
-                                                                ? 'border-primary-600 bg-primary-600 text-white' : 'border-slate-300 bg-white text-transparent'}`}>
-                                                                <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                                                            </span>
-                                                            <span className="min-w-0">
-                                                                <span className="block truncate text-sm font-semibold text-slate-900">{service.name}</span>
-                                                                {service.description && <span className="mt-0.5 block line-clamp-1 text-xs text-slate-500">{service.description}</span>}
-                                                            </span>
-                                                            <span className="whitespace-nowrap text-sm font-bold text-primary-700">{formatVND(service.price)}</span>
-                                                        </button>;
-                                                    })}
-                                                </div>}
-                                            </div>;
-                                        })}
-                                    </div>
-                                )}
-
-                                {/* Tổng tiền */}
-                                <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center bg-slate-50 p-4 rounded-xl">
-                                    <div>
-                                        <p className="text-xs font-semibold tracking-[0.1em] uppercase text-slate-500 mb-1">{t('step2.total')}</p>
-                                        <p className="text-xs text-slate-400 font-light">{selectedServices.length === 0 ? t('step2.noService') : `${selectedServices.length} dịch vụ đã chọn · Khám bệnh: ${examinationCount} · Cận lâm sàng: ${paraclinicalCount}`}</p>
-                                    </div>
-                                    <span className="text-2xl font-bold text-slate-900">
-                                        {formatVND(totalCost)}
-                                    </span>
-                                </div>
-
-                                <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between">
-                                    <button 
-                                        onClick={handleBack}
-                                        className="h-12 px-6 text-slate-600 hover:text-slate-900 text-sm font-medium transition-colors"
-                                    >
-                                        Quay lại
-                                    </button>
-                                    <button 
-                                        onClick={handleNext}
-                                        disabled={selectedServices.length === 0}
-                                        className="h-12 px-8 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl transition-colors"
-                                    >
-                                        Tiếp tục
-                                    </button>
-                                </div>
-                            </section>
-                            )}
-
-                            {/* ── Step 3: Thời gian khám ── */}
-                            {currentStep === 3 && (
-                            <section className="animate-in fade-in duration-500">
-                                <div className="mb-8">
-                                    <h2 className="text-2xl font-light text-slate-900 mb-2">
-                                        <span className="font-bold">03.</span> {t('step3.heading')}
-                                    </h2>
-                                    <p className="text-sm font-light text-slate-500">Lựa chọn thời gian phù hợp với lịch trình của bạn.</p>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-xs font-semibold tracking-[0.1em] uppercase text-slate-900 mb-2">
-                                            {t('step3.chooseDate')}
-                                        </label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            <select aria-label="Ngày khám" value={dateParts.day}
-                                                onChange={event => updateAppointmentDate('day', event.target.value)}
-                                                className="h-10 rounded-md border border-gray-300 bg-white px-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50">
-                                                <option value="">Ngày</option>
-                                                {Array.from({ length: appointmentDaysInMonth(dateParts.year, dateParts.month) }, (_, index) => String(index + 1).padStart(2, '0'))
-                                                    .map(day => <option key={day} value={day}>{day}</option>)}
-                                            </select>
-                                            <select aria-label="Tháng khám" value={dateParts.month}
-                                                onChange={event => updateAppointmentDate('month', event.target.value)}
-                                                className="h-10 rounded-md border border-gray-300 bg-white px-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50">
-                                                <option value="">Tháng</option>
-                                                {Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0'))
-                                                    .map(month => <option key={month} value={month}>{month}</option>)}
-                                            </select>
-                                            <select aria-label="Năm khám" value={dateParts.year}
-                                                onChange={event => updateAppointmentDate('year', event.target.value)}
-                                                className="h-10 rounded-md border border-gray-300 bg-white px-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50">
-                                                <option value="">Năm</option>
-                                                {bookingYears.map(year => <option key={year} value={year}>{year}</option>)}
-                                            </select>
-                                        </div>
-                                        {dateParts.day && dateParts.month && dateParts.year && !date && (
-                                            <p className="mt-2 text-xs font-medium text-red-600">
-                                                Ngày khám phải từ ngày mai đến tối đa 12 tháng tiếp theo.
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold tracking-[0.1em] uppercase text-slate-900 mb-2">
-                                            {t('step3.timeSlot')}
-                                        </label>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                            {shiftLoading ? (
-                                                <p className="text-sm text-gray-500 col-span-full">Đang tải ca khám...</p>
-                                            ) : shifts?.length > 0 ? (
-                                                shifts.map(shift => (
-                                                    <button
-                                                        key={shift.id}
-                                                        type="button"
-                                                        disabled={!shift.available}
-                                                        onClick={() => shift.available && setTimeSlot(shift.id)}
-                                                        className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 ${
-                                                            timeSlot === shift.id
-                                                                ? 'bg-slate-900 border-slate-900 text-white shadow-md shadow-slate-900/20'
-                                                                : !shift.available
-                                                                    ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                                                                : 'bg-white border-gray-200 text-gray-700 hover:border-slate-400 hover:bg-slate-50'
-                                                        }`}
-                                                    >
-                                                        <span className="font-semibold text-sm mb-0.5">{shift.name}</span>
-                                                        <span className="text-xs opacity-80">
-                                                            {shift.startTime} – {shift.endTime}
-                                                        </span>
-                                                        {!shift.available && <span className="text-[10px] text-amber-700 mt-1">Ca chưa có đủ nhân sự</span>}
-                                                        {shift.timeSource === 'SPECIAL' && <span className="text-[10px] text-blue-600 mt-1">Giờ làm việc ngoại lệ</span>}
-                                                    </button>
-                                                ))
-                                            ) : (
-                                                <p className="text-sm text-gray-500 col-span-full">Chưa có cấu hình ca khám.</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Lỗi */}
-                                {error && (
-                                    <div className="mt-6 bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 text-sm">
-                                        {error}
-                                    </div>
-                                )}
-
-                                <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between">
-                                    <button 
-                                        onClick={handleBack}
-                                        className="h-12 px-6 text-slate-600 hover:text-slate-900 text-sm font-medium transition-colors"
-                                    >
-                                        Quay lại
-                                    </button>
-                                    <button
-                                        onClick={handleSubmit}
-                                        disabled={booking || !date || !timeSlot}
-                                        className="h-12 px-8 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl transition-colors flex items-center justify-center min-w-[160px]"
-                                    >
-                                        {booking ? tCommon('loading') : t('submit')}
-                                    </button>
-                                </div>
-                            </section>
-                            )}
-                        </div>
-                    </div>
+                            <div className={styles.total}><span>Chi phí tạm tính</span><strong>{formatVND(totalCost)}</strong><p>Khám bệnh: {examinationCount} · Cận lâm sàng: {paraclinicalCount}</p></div>
+                            <p className={styles.summaryNote}>Đây là chi phí dịch vụ đã chọn, không phải xác nhận đã thanh toán.</p>
+                        </section>
+                        <section className={styles.help}><Info size={22} /><div><h3>Không cần tài khoản</h3><p>Đặt lịch bằng thông tin người khám. Sau khi đến check-in, dùng mã VIS trên phiếu để theo dõi lượt khám.</p>
+                            <Link to={ROUTES.GUEST_JOURNEY}>Mở trang tra cứu Guest <ArrowRight size={16} /></Link></div></section>
+                    </aside>
                 </div>
-            </main>
-
+            </>}
+        </main>
             {/* Modal xác nhận */}
             {showConfirmModal && (
                 <AppointmentConfirmModal
@@ -675,10 +396,11 @@ export default function AppointmentPage() {
                         services: selectedServices,
                         reason: '',
                     }}
-                    onClose={() => setShowConfirmModal(false)}
+                    isLoading={booking}
+                    onClose={() => { if (!booking) setShowConfirmModal(false); }}
                     onConfirm={handleConfirm}
                 />
             )}
-        </div>
-    );
+
+    </div>;
 }

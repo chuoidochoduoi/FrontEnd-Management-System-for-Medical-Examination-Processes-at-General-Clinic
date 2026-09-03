@@ -63,7 +63,7 @@ export default function SettingsPage() {
 
     return (
         <Layout>
-            <div className="p-4 md:p-8 min-h-screen bg-gray-50/50">
+            <div className="cares-reception-shared-page p-4 md:p-8 min-h-screen bg-gray-50/50">
                 <div className="max-w-4xl mx-auto space-y-6">
                     
                     {/* Header */}

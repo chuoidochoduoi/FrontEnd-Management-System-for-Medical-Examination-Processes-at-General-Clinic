@@ -13,7 +13,7 @@ const fieldsFrom = schema => {
 const groupsFrom = fields => {
     const groups = new Map();
     [...fields].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)).forEach(field => {
-        const group = field.group || 'Thông tin chuyên khoa';
+        const group = field.group || 'Kết quả';
         groups.set(group, [...(groups.get(group) || []), field]);
     });
     return [...groups.entries()];
@@ -52,18 +52,27 @@ const referenceText = (field, flag) => {
     return '';
 };
 
+const omissionText = omission => omission?.reasonDetail || ({
+    INSUFFICIENT_SAMPLE: 'Không đủ mẫu',
+    UNACCEPTABLE_SAMPLE: 'Mẫu không đạt',
+    EQUIPMENT_ERROR: 'Lỗi thiết bị',
+    OTHER: 'Lý do khác',
+})[omission?.reasonCode] || 'Không thực hiện';
+
 export default function ClinicalDataDisplay({
     clinicalForm,
     schema = clinicalForm?.schema,
     values = clinicalForm?.values || {},
-    title = clinicalForm?.name || 'Thông tin chuyên khoa',
-    emptyMessage = 'Hồ sơ này chưa sử dụng biểu mẫu chuyên khoa',
+    title = clinicalForm?.name || 'Kết quả có cấu trúc',
+    emptyMessage = 'Chưa có dữ liệu biểu mẫu kết quả',
     compact = false,
 }) {
     const fields = useMemo(() => fieldsFrom(schema), [schema]);
     const groups = useMemo(() => groupsFrom(fields), [fields]);
     const [openGroups, setOpenGroups] = useState(() => new Set(groups[0] ? [groups[0][0]] : []));
     const flags = values?._meta?.flags || {};
+    const omissions = values?._omissions || {};
+    const partial = values?._meta?.completionStatus === 'PARTIAL' || Object.keys(omissions).length > 0;
 
     useEffect(() => {
         if (groups[0]) setOpenGroups(current => current.size ? current : new Set([groups[0][0]]));
@@ -80,9 +89,11 @@ export default function ClinicalDataDisplay({
     });
 
     return <section className={`rounded-2xl border border-slate-200 bg-white ${compact ? 'p-4' : 'p-5'}`}>
-        <div className="mb-4">
-            <h3 className="text-sm font-bold text-slate-900">{title}</h3>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div><h3 className="text-sm font-bold text-slate-900">{title}</h3>
             {clinicalForm?.versionNo && <p className="mt-1 text-xs text-slate-400">Phiên bản {clinicalForm.versionNo}</p>}
+            </div>
+            {partial && <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-bold text-amber-800">Hoàn thành một phần · {Object.keys(omissions).length} chỉ số không thực hiện</span>}
         </div>
         <div className="space-y-3">
             {groups.map(([group, groupFields]) => {
@@ -95,6 +106,7 @@ export default function ClinicalDataDisplay({
                     {open && <dl className="grid grid-cols-1 gap-x-6 px-4 py-1 md:grid-cols-2">
                         {groupFields.map(field => {
                             const raw = values?.[field.key];
+                            const omission = omissions[field.key];
                             const flagDetail = flags?.[field.key];
                             const flag = flagDetail?.status;
                             const abnormal = ['HIGH', 'LOW', 'ABNORMAL', 'CRITICAL_LOW', 'CRITICAL_HIGH'].includes(flag);
@@ -102,11 +114,11 @@ export default function ClinicalDataDisplay({
                             const reference = referenceText(field, flagDetail);
                             return <div key={field.key} className={field.type === 'TEXTAREA' ? 'border-b border-slate-100 py-3 md:col-span-2' : 'border-b border-slate-100 py-3'}>
                                 <dt className="text-xs text-slate-400">{field.label || field.key}</dt>
-                                <dd className={`mt-1 whitespace-pre-wrap text-sm font-medium ${raw === null || raw === undefined || raw === '' ? 'text-slate-400' : 'text-slate-800'}`}>
-                                    {displayValue(field, raw)}{field.unit && raw !== null && raw !== undefined && raw !== '' ? ` ${field.unit}` : ''}
+                                <dd className={`mt-1 whitespace-pre-wrap text-sm font-medium ${omission ? 'text-amber-700' : raw === null || raw === undefined || raw === '' ? 'text-slate-400' : 'text-slate-800'}`}>
+                                    {omission ? `Không thực hiện · ${omissionText(omission)}` : <>{displayValue(field, raw)}{field.unit && raw !== null && raw !== undefined && raw !== '' ? ` ${field.unit}` : ''}</>}
                                 </dd>
-                                {reference && <p className="mt-1 text-[11px] text-slate-400">Tham chiếu: {reference}</p>}
-                                {flag && <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${critical ? 'text-red-700' : abnormal ? 'text-amber-700' : flag === 'NORMAL' ? 'text-emerald-700' : 'text-slate-500'}`}>
+                                {reference && !omission && <p className="mt-1 text-[11px] text-slate-400">Tham chiếu: {reference}</p>}
+                                {flag && !omission && <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${critical ? 'text-red-700' : abnormal ? 'text-amber-700' : flag === 'NORMAL' ? 'text-emerald-700' : 'text-slate-500'}`}>
                                     {abnormal ? <AlertCircle size={12}/> : <CheckCircle2 size={12}/>} {flag}
                                 </span>}
                             </div>;

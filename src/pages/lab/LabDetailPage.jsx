@@ -1,14 +1,13 @@
 // src/pages/lab/LabDetailPage.jsx
 
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import {
     AlertTriangle,
     ArrowLeft,
     CheckCircle2,
-    ChevronDown,
     ChevronRight,
     ChevronUp,
     Circle,
@@ -17,8 +16,8 @@ import {
     FileText,
     FlaskConical,
     Info,
+    RefreshCw,
     Upload,
-    UserRound,
     X,
 } from 'lucide-react';
 
@@ -29,6 +28,7 @@ import DynamicClinicalForm, { validateClinicalForm } from '@/components/clinical
 import ClinicalDataDisplay from '@/components/clinical/ClinicalDataDisplay';
 import { useLabDetail } from '@/hooks/useLabDetail';
 import { ROUTES } from '@/constants/routes';
+import LabPanelDetailPage from '@/pages/lab/LabPanelDetailPage';
 
 /* =========================================================
    HELPERS
@@ -85,6 +85,24 @@ const SAMPLE_STATUSES = [
     },
 ];
 
+const clinicDateKey = () => new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
+}).format(new Date()).replaceAll('-', '');
+
+const defaultSpecimenType = (order) => {
+    const configured = order?.clinicalForm?.schema?.specimenType || order?.clinicalForm?.schema?.defaultSpecimenType;
+    if (configured) return configured;
+    const service = `${order?.serviceCode || ''} ${order?.serviceName || ''}`.toLowerCase();
+    if (service.includes('nước tiểu') || service.includes('urine')) return 'URINE';
+    if (service.includes('ngoáy') || service.includes('swab') || service.includes('cúm')) return 'SWAB';
+    return 'BLOOD';
+};
+
+const generatedSpecimenId = (order, fallbackId) => {
+    const rawId = String(order?.testRequestId || fallbackId || '').replaceAll('-', '').slice(0, 8).toUpperCase();
+    return rawId ? `SMP-${clinicDateKey()}-${rawId}` : '';
+};
+
 /* =========================================================
    FILE UPLOAD
 ========================================================= */
@@ -92,7 +110,6 @@ const SAMPLE_STATUSES = [
 function FileUpload({
                         file,
                         fileUrl,
-                        onFile,
                         onClear,
                         uploading,
                         disabled,
@@ -479,7 +496,7 @@ function ConfirmCompleteModal({
    MAIN PAGE
 ========================================================= */
 
-export default function LabDetailPage() {
+function SingleLabDetailPage() {
     const { id } = useParams();
 
     const navigate = useNavigate();
@@ -492,6 +509,9 @@ export default function LabDetailPage() {
         loading,
         saving,
         error,
+        clinicalFormError,
+        clinicalFormLoading,
+        reloadClinicalForm,
         saveDraft,
         save,
         uploadFile,
@@ -526,6 +546,7 @@ export default function LabDetailPage() {
 
     const [resultData, setResultData] = useState({});
     const [structuredErrors, setStructuredErrors] = useState({});
+    const [specimenEditing, setSpecimenEditing] = useState(false);
 
     const [file, setFile] =
         useState(null);
@@ -560,8 +581,6 @@ export default function LabDetailPage() {
         setConfirmOpen,
     ] = useState(false);
 
-    const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
-
     const [cancelModalOpen, setCancelModalOpen] = useState(false);
     const [cancelReason, setCancelReason] = useState('');
 
@@ -572,17 +591,12 @@ export default function LabDetailPage() {
     useEffect(() => {
         if (!order) return;
 
-        setSpecimenId(
-            order.specimenId ?? ''
-        );
+        setSpecimenId(order.specimenId || (order.requiresSpecimen ? generatedSpecimenId(order, id) : ''));
 
-        setSampleType(
-            order.sampleType ?? ''
-        );
+        setSampleType(order.sampleType || (order.requiresSpecimen ? defaultSpecimenType(order) : ''));
 
-        setSampleStatus(
-            order.sampleStatus ?? ''
-        );
+        setSampleStatus(order.sampleStatus || (order.requiresSpecimen ? 'ACCEPTED' : ''));
+        setSpecimenEditing(false);
 
         setNotes(
             order.notes ?? ''
@@ -596,7 +610,7 @@ export default function LabDetailPage() {
             order.resultFileUrl ?? ''
         );
 
-    }, [order]);
+    }, [order, id]);
 
     /* =========================================================
        LOAD SERVICES IN SAME QUEUE
@@ -649,6 +663,7 @@ export default function LabDetailPage() {
             );
     }, [
         order?.queueTicketId,
+        order,
         id,
     ]);
 
@@ -1454,207 +1469,29 @@ export default function LabDetailPage() {
 
                             {requiresSpecimen && (
                                 <section className="mb-4 rounded-xl border border-primary-100 bg-primary-50/20 p-4">
-
-                                    <div className="mb-4 flex items-center gap-2">
-
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50">
-                                            <FlaskConical
-                                                size={
-                                                    17
-                                                }
-                                                className="text-primary-600"
-                                            />
+                                    <div className="flex flex-wrap items-center justify-between gap-4">
+                                        <div className="flex min-w-0 items-center gap-3">
+                                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-50"><FlaskConical size={21} className="text-primary-600" /></div>
+                                            <div className="min-w-0">
+                                                <h2 className="text-base font-bold text-slate-900">Mẫu bệnh phẩm</h2>
+                                                <p className="mt-1 break-all text-sm font-semibold text-slate-700">Mã mẫu: {specimenId || 'Đang tạo tự động'}</p>
+                                                <p className="mt-1 text-sm text-slate-600">{SAMPLE_TYPES.find((item) => item.value === sampleType)?.label || 'Chưa xác định'} · <span className={sampleStatus === 'ACCEPTED' ? 'font-semibold text-emerald-700' : 'font-semibold text-amber-700'}>{SAMPLE_STATUSES.find((item) => item.value === sampleStatus)?.label || 'Chưa ghi nhận'}</span></p>
+                                            </div>
                                         </div>
-
-                                        <div>
-                                            <h2 className="text-sm font-semibold text-slate-900">
-                                                Thông tin mẫu vật
-                                            </h2>
-
-                                            <p className="text-xs text-slate-400">
-                                                Thông tin dành cho dịch vụ có lấy mẫu
-                                            </p>
-                                        </div>
-
+                                        {!isReadOnly && <button type="button" onClick={() => setSpecimenEditing((current) => !current)} className="min-h-10 rounded-lg border border-primary-200 bg-white px-4 text-sm font-bold text-primary-700 hover:bg-primary-50">{specimenEditing ? 'Thu gọn' : 'Chỉnh sửa thông tin mẫu'}</button>}
                                     </div>
 
-                                    {/* FIRST ROW */}
-
-                                    <div className="grid gap-3 lg:grid-cols-3">
-
-                                        {/* SAMPLE ID */}
-
-                                        <div>
-
-                                            <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                                                Mã mẫu vật
-                                            </label>
-
-                                            <input
-                                                type="text"
-                                                value={
-                                                    specimenId
-                                                }
-                                                disabled={
-                                                    isReadOnly
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    setSpecimenId(
-                                                        event
-                                                            .target
-                                                            .value
-                                                    )
-                                                }
-                                                placeholder="VD: SMP-20260811-A8F912"
-                                                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-primary-400 disabled:bg-slate-50 disabled:text-slate-500"
-                                            />
-
+                                    {(specimenEditing || isReadOnly) && <div className="mt-4 border-t border-primary-100 pt-4">
+                                        <div className="grid gap-3 lg:grid-cols-3">
+                                            <label className="text-sm font-semibold text-slate-600">Mã mẫu vật<input type="text" value={specimenId} disabled={isReadOnly} onChange={(event) => setSpecimenId(event.target.value)} placeholder="SMP-yyyyMMdd-XXXXXXXX" className="mt-2 min-h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-base outline-none focus:border-primary-400 disabled:bg-slate-50" /></label>
+                                            <label className="text-sm font-semibold text-slate-600">Loại mẫu<select value={sampleType} disabled={isReadOnly} onChange={(event) => setSampleType(event.target.value)} className="mt-2 min-h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-base disabled:bg-slate-50"><option value="">-- Chọn loại mẫu --</option>{SAMPLE_TYPES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+                                            <label className="text-sm font-semibold text-slate-600">Tình trạng mẫu<select value={sampleStatus} disabled={isReadOnly} onChange={(event) => setSampleStatus(event.target.value)} className="mt-2 min-h-12 w-full rounded-lg border border-slate-200 bg-white px-3 text-base disabled:bg-slate-50"><option value="">-- Chọn tình trạng --</option>{SAMPLE_STATUSES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
                                         </div>
-
-                                        {/* TYPE */}
-
-                                        <div>
-
-                                            <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                                                Loại mẫu
-                                            </label>
-
-                                            <select
-                                                value={
-                                                    sampleType
-                                                }
-                                                disabled={
-                                                    isReadOnly
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    setSampleType(
-                                                        event
-                                                            .target
-                                                            .value
-                                                    )
-                                                }
-                                                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none disabled:bg-slate-50"
-                                            >
-                                                <option value="">
-                                                    -- Chọn loại mẫu --
-                                                </option>
-
-                                                {SAMPLE_TYPES.map(
-                                                    (
-                                                        option
-                                                    ) => (
-                                                        <option
-                                                            key={
-                                                                option.value
-                                                            }
-                                                            value={
-                                                                option.value
-                                                            }
-                                                        >
-                                                            {
-                                                                option.label
-                                                            }
-                                                        </option>
-                                                    )
-                                                )}
-                                            </select>
-
+                                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                            <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5"><p className="text-sm font-medium text-slate-500">Thời gian lấy mẫu</p><p className="mt-1 text-base font-semibold text-slate-700">{order?.collectedAt ? new Date(order.collectedAt).toLocaleString('vi-VN') : 'Hệ thống tự ghi nhận khi lưu'}</p></div>
+                                            <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5"><p className="text-sm font-medium text-slate-500">Người lấy mẫu</p><p className="mt-1 text-base font-semibold text-slate-700">{order?.collectedByName || 'Nhân viên đang đăng nhập'}</p></div>
                                         </div>
-
-                                        {/* STATUS */}
-
-                                        <div>
-
-                                            <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                                                Tình trạng mẫu
-                                            </label>
-
-                                            <select
-                                                value={
-                                                    sampleStatus
-                                                }
-                                                disabled={
-                                                    isReadOnly
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    setSampleStatus(
-                                                        event
-                                                            .target
-                                                            .value
-                                                    )
-                                                }
-                                                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none disabled:bg-slate-50"
-                                            >
-                                                <option value="">
-                                                    -- Chọn tình trạng --
-                                                </option>
-
-                                                {SAMPLE_STATUSES.map(
-                                                    (
-                                                        option
-                                                    ) => (
-                                                        <option
-                                                            key={
-                                                                option.value
-                                                            }
-                                                            value={
-                                                                option.value
-                                                            }
-                                                        >
-                                                            {
-                                                                option.label
-                                                            }
-                                                        </option>
-                                                    )
-                                                )}
-                                            </select>
-
-                                        </div>
-
-                                    </div>
-
-                                    {/* AUTO INFO */}
-
-                                    <div className="mt-3 grid gap-3 md:grid-cols-2">
-
-                                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
-
-                                            <p className="text-[11px] font-medium text-slate-400">
-                                                Thời gian lấy mẫu
-                                            </p>
-
-                                            <p className="mt-1 text-sm font-semibold text-slate-700">
-                                                {order?.collectedAt
-                                                    ? new Date(
-                                                        order.collectedAt
-                                                    ).toLocaleString(
-                                                        'vi-VN'
-                                                    )
-                                                    : 'Hệ thống tự ghi nhận khi lưu'}
-                                            </p>
-
-                                        </div>
-
-                                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
-
-                                            <p className="text-[11px] font-medium text-slate-400">
-                                                Người lấy mẫu
-                                            </p>
-
-                                            <p className="mt-1 text-sm font-semibold text-slate-700">
-                                                {order?.collectedByName ||
-                                                    'Hệ thống tự lấy nhân viên đang đăng nhập'}
-                                            </p>
-
-                                        </div>
-
-                                    </div>
+                                    </div>}
 
                                 </section>
                             )}
@@ -1665,7 +1502,44 @@ export default function LabDetailPage() {
 
                             {!isCancelled && (
                                 <div className="mb-4">
-                                    {isReadOnly ? <ClinicalDataDisplay
+                                    {order?.clinicalForm?.schema && !isFinished && !canEditResult && (
+                                        <div className="mb-3 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-blue-800">
+                                            <Info className="mt-0.5 shrink-0" size={17} />
+                                            <p className="text-xs leading-5">
+                                                Các trường kết quả sẽ được mở để nhập sau khi bệnh nhân được
+                                                <strong> bắt đầu thực hiện</strong> tại phòng và tài khoản hiện tại có quyền xử lý.
+                                            </p>
+                                        </div>
+                                    )}
+                                    {clinicalFormLoading ? (
+                                        <div className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5">
+                                            <div className="h-4 w-48 rounded bg-slate-200" />
+                                            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                                                <div className="h-16 rounded-xl bg-slate-100" />
+                                                <div className="h-16 rounded-xl bg-slate-100" />
+                                            </div>
+                                        </div>
+                                    ) : clinicalFormError ? (
+                                        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-amber-900">
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div className="flex min-w-0 items-start gap-3">
+                                                    <AlertTriangle className="mt-0.5 shrink-0" size={18} />
+                                                    <div>
+                                                        <p className="text-sm font-bold">Chưa tải được biểu mẫu kết quả</p>
+                                                        <p className="mt-1 text-xs leading-5">{clinicalFormError}</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={reloadClinicalForm}
+                                                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 text-xs font-bold text-amber-800 hover:bg-amber-100"
+                                                >
+                                                    <RefreshCw size={14} />
+                                                    Tải lại biểu mẫu
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : isReadOnly ? <ClinicalDataDisplay
                                         clinicalForm={order?.clinicalForm}
                                         schema={order?.clinicalForm?.schema}
                                         values={resultData}
@@ -1940,4 +1814,9 @@ export default function LabDetailPage() {
 
         </MedicalStaffLayout>
     );
+}
+
+export default function LabDetailPage() {
+    const [searchParams] = useSearchParams();
+    return searchParams.get('panel') === '1' ? <LabPanelDetailPage /> : <SingleLabDetailPage />;
 }

@@ -1,0 +1,29 @@
+.page { min-width: 0; }
+.page > * { min-width: 0; }
+
+/* Reserve space for status/actions; service text gets the remaining width.
+   Scroll the table on laptops instead of squeezing readable 16px text. */
+.page .table { table-layout: fixed; min-width: 1380px; width: 100%; }
+.codeColumn { width: 180px; }
+.dateColumn { width: 165px; }
+.patientColumn { width: 205px; }
+.amountColumn { width: 190px; }
+.statusColumn { width: 180px; }
+.actionColumn { width: 170px; }
+.page .table :is(th, td) { white-space: normal; overflow-wrap: anywhere; line-height: 1.55; }
+.page .table :is(strong, small) { display: block; }
+.page .table small { margin-top: 5px; font-size: 15px; line-height: 1.5; color: var(--cares-text-muted); }
+.page .table :is(th, td):nth-child(5) { text-align: right; font-variant-numeric: tabular-nums; }
+.serviceSummary { display: grid; gap: 5px; min-width: 0; overflow-wrap: anywhere; }
+.serviceSummary :is(strong, small) { display: block; margin: 0 !important; line-height: 1.5; }
+.serviceSummary small { font-size: 15px; }
+.description { display: -webkit-box !important; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; color: var(--cares-text-muted); }
+.serviceSummary .moreServices { color: var(--cares-brand-strong); }
+.page :global(.cares-ops-badge), .page :global(.cares-ops-row-link) { max-width: 100%; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
+.page :global(.cares-ops-row-link) { padding-block: 8px; }
+.page :global(.cares-ops-row-link) svg { flex-shrink: 0; }
+.page :global(.cares-ops-mobile-list) article { min-width: 0; overflow-wrap: anywhere; }
+.page :global(.cares-ops-mobile-list) article :is(header, footer) { flex-wrap: wrap; }
+.page :global(.cares-ops-mobile-list) article header > strong { min-width: 0; flex: 1 1 140px; }
+.page :global(.cares-ops-mobile-list) article header > span { flex: 0 1 auto; }
+.page :global(.cares-ops-mobile-list) article .serviceSummary { margin-top: 12px; }

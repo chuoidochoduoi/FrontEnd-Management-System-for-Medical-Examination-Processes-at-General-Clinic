@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
-import ClinicalDataDisplay from '@/components/clinical/ClinicalDataDisplay';
 import PatientAllergyBanner from '@/components/clinical/PatientAllergyBanner';
 
 const value = input => input === null || input === undefined || input === '' ? '-' : input;
@@ -37,7 +36,7 @@ export default function RecordDetailPage() {
         ['Hướng điều trị', record.patientInstruction], ['Ghi chú đơn thuốc', record.prescriptionNote],
     ] : [];
 
-    return <ReceptionistLayout><div className="space-y-5 max-w-7xl mx-auto">
+    return <ReceptionistLayout><div className="cares-reception-screen">
         <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"><ArrowLeft size={16}/> Quay lại danh sách</button>
         <div className="bg-white border border-gray-200 rounded-2xl p-6">
             <h1 className="text-xl font-semibold text-gray-900">Chi tiết hồ sơ bệnh án</h1>
@@ -47,9 +46,6 @@ export default function RecordDetailPage() {
                 {fields.map(([label, content]) => <div key={label} className="border-b border-gray-100 pb-4"><p className="text-xs text-gray-500 mb-1">{label}</p><p className="text-sm text-gray-900 whitespace-pre-wrap">{value(content)}</p></div>)}
             </div>}
         </div>
-        {record && <>
-            <PatientAllergyBanner value={allergies} currentLabel/>
-            <ClinicalDataDisplay clinicalForm={record.clinicalForm} schema={record.clinicalForm?.schema} values={record.clinicalForm?.values || record.specialtyData || {}}/>
-        </>}
+        {record && <PatientAllergyBanner value={allergies} currentLabel/>}
     </div></ReceptionistLayout>;
 }

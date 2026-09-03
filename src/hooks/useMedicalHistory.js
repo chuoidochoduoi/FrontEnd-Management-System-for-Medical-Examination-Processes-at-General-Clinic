@@ -15,12 +15,13 @@ export function useMedicalHistory() {
     const [total,   setTotal]   = useState(0);
     const [page,    setPage]    = useState(1);
 
-    const fetchHistory = useCallback(async ({ search = '', page = 0 } = {}) => {
+    const fetchHistory = useCallback(async ({ search = '', patientProfileId = '', page = 0 } = {}) => {
         setLoading(true); setError('');
         try {
             const params = new URLSearchParams({ search, page: String(page), size: String(PAGE_SIZE) });
+            if (patientProfileId) params.set('patientProfileId', patientProfileId);
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/patient/medical-history?${params}`,
+                `${import.meta.env.VITE_API_URL}/api/patient/medical-history/visits?${params}`,
                 { headers: bearer() }
             );
             if (!res.ok) throw new Error(t('medicalHistory.errors.loadFailed'));
@@ -28,11 +29,12 @@ export function useMedicalHistory() {
             const rawItems = data.items ?? data;
             const normalizedVisits = rawItems.map(item => ({
                 ...item,
-                id: item.id,
-                recordCode: item.recordCode,
+                id: item.visitId || item.id,
                 visitCode: item.visitCode,
-                recordType: 'EXAMINATION',
-                serviceName: item.specialty,
+                recordType: 'VISIT',
+                serviceName: (item.completedServiceNames || item.serviceNames || []).join(', '),
+                doctor: (item.doctorNames || []).join(', '),
+                diagnosis: item.diagnosisSummary,
             }));
             setVisits(normalizedVisits);
             setTotal(data.total ?? normalizedVisits.length);
@@ -44,7 +46,7 @@ export function useMedicalHistory() {
     return { visits, loading, error, total, page, PAGE_SIZE, fetchHistory };
 }
 
-export function useVisitDetail(recordId) {
+export function useVisitDetail(recordId, patientProfileId = '') {
     const { t } = useTranslation('medicalHistory');
     const [visit,   setVisit]   = useState(null);
     const [loading, setLoading] = useState(false);
@@ -55,7 +57,7 @@ export function useVisitDetail(recordId) {
         setLoading(true); setError('');
         try {
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/patient/medical-history/${recordId}`,
+                `${import.meta.env.VITE_API_URL}/api/patient/medical-history/visits/${recordId}${patientProfileId ? `?patientProfileId=${encodeURIComponent(patientProfileId)}` : ''}`,
                 { headers: bearer() }
             );
             if (!res.ok) throw new Error(t('visitDetail.errors.loadFailed'));
@@ -69,14 +71,14 @@ export function useVisitDetail(recordId) {
             });
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
-    }, [recordId]);
+    }, [recordId, patientProfileId]);
 
     const rateVisit = async (feedback) => {
         if (!recordId) return false;
         try {
             const feedbackRecordId = visit?.id || recordId;
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/patient/medical-history/${feedbackRecordId}/feedback`,
+                `${import.meta.env.VITE_API_URL}/api/patient/medical-history/${feedbackRecordId}/feedback${patientProfileId ? `?patientProfileId=${encodeURIComponent(patientProfileId)}` : ''}`,
                 { method: 'POST', headers: { ...bearer(), 'Content-Type': 'application/json' }, body: JSON.stringify(feedback) }
             );
             if (!res.ok) throw new Error(t('visitDetail.errors.rateFailed', 'Đánh giá thất bại'));

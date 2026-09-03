@@ -100,7 +100,6 @@ const ENTITY_LABELS = {
   ServiceItem: "Dịch vụ y tế",
   Appointment: "Lịch hẹn",
   System: "Hệ thống",
-  Attendance: "Điểm danh",
   AuditLog: "Nhật ký hệ thống",
   Auth: "Xác thực tài khoản",
   Bhxh: "Bảo hiểm xã hội",

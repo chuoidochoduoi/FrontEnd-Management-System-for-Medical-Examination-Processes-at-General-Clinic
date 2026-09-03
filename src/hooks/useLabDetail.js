@@ -1,5 +1,5 @@
 // src/hooks/useLabDetail.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 
@@ -19,6 +19,51 @@ export function useLabDetail(orderId, departmentId = null) {
     const [loading,  setLoading]  = useState(false);
     const [saving,   setSaving]   = useState(false);
     const [error,    setError]    = useState('');
+    const [clinicalFormError, setClinicalFormError] = useState('');
+    const [clinicalFormLoading, setClinicalFormLoading] = useState(false);
+
+    const fetchClinicalForm = useCallback(async () => {
+        const response = await fetch(
+            `${import.meta.env.VITE_API_URL}/api/v1/test-requests/${orderId}/clinical-form`,
+            { headers: bearer() }
+        );
+        if (!response.ok) {
+            const body = await response.json().catch(() => null);
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('Bạn không có quyền xem biểu mẫu kết quả của phòng này.');
+            }
+            if (response.status === 404) {
+                throw new Error(body?.message || 'Dịch vụ chưa được cấu hình biểu mẫu kết quả.');
+            }
+            throw new Error(body?.message || 'Không thể tải biểu mẫu kết quả. Vui lòng kiểm tra kết nối.');
+        }
+        return response.json();
+    }, [orderId]);
+
+    const reloadClinicalForm = useCallback(async () => {
+        if (!orderId) return null;
+        setClinicalFormLoading(true);
+        setClinicalFormError('');
+        try {
+            const clinicalForm = await fetchClinicalForm();
+            setOrder((current) => {
+                const currentValues = current?.resultData;
+                const hasSavedValues = currentValues && Object.keys(currentValues).length > 0;
+                return {
+                    ...current,
+                    clinicalForm,
+                    resultData: hasSavedValues ? currentValues : (clinicalForm.values ?? {}),
+                    formTemplateVersionId: current?.formTemplateVersionId || clinicalForm.templateVersionId,
+                };
+            });
+            return clinicalForm;
+        } catch (formError) {
+            setClinicalFormError(formError.message);
+            return null;
+        } finally {
+            setClinicalFormLoading(false);
+        }
+    }, [fetchClinicalForm, orderId]);
 
     useEffect(() => {
         if (!orderId) return;
@@ -83,15 +128,16 @@ export function useLabDetail(orderId, departmentId = null) {
                         }
                     }
                 }
-                const formRes = await fetch(
-                    `${import.meta.env.VITE_API_URL}/api/v1/test-requests/${orderId}/clinical-form`,
-                    { headers: bearer() }
-                );
-                if (formRes.ok) {
-                    const clinicalForm = await formRes.json();
+                try {
+                    const clinicalForm = await fetchClinicalForm();
                     data.clinicalForm = clinicalForm;
-                    data.resultData = data.resultData || clinicalForm.values || {};
+                    const hasSavedValues = data.resultData && Object.keys(data.resultData).length > 0;
+                    data.resultData = hasSavedValues ? data.resultData : (clinicalForm.values ?? {});
                     data.formTemplateVersionId = data.formTemplateVersionId || clinicalForm.templateVersionId;
+                    setClinicalFormError('');
+                } catch (formError) {
+                    data.clinicalForm = null;
+                    setClinicalFormError(formError.message);
                 }
                 setOrder(data);
             } catch (err) {
@@ -99,7 +145,7 @@ export function useLabDetail(orderId, departmentId = null) {
             } finally { setLoading(false); }
         };
         load();
-    }, [orderId]);
+    }, [orderId, fetchClinicalForm, t]);
 
     // Upload file kết quả
     const uploadFile = async (file) => {
@@ -160,6 +206,9 @@ export function useLabDetail(orderId, departmentId = null) {
                 collectedByName: saved.collectedByName || previous?.collectedByName || '',
                 resultFileUrl: saved.imageUrl || '',
                 resultFileName: saved.fileName || previous?.resultFileName || '',
+                resultData: saved.resultData ?? payload.resultData ?? previous?.resultData ?? {},
+                formTemplateVersionId: saved.formTemplateVersionId
+                    || payload.formTemplateVersionId || previous?.formTemplateVersionId || null,
                 status: previous?.status === 'PENDING' ? 'IN_PROGRESS' : previous?.status,
             }));
             toast.success('Lưu nháp kết quả thành công!');
@@ -254,5 +303,9 @@ export function useLabDetail(orderId, departmentId = null) {
         }
     };
 
-    return { order, loading, saving, error, saveDraft, save, uploadFile, uploadAttachments, cancelRequest };
+    return {
+        order, loading, saving, error,
+        clinicalFormError, clinicalFormLoading, reloadClinicalForm,
+        saveDraft, save, uploadFile, uploadAttachments, cancelRequest,
+    };
 }

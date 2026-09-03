@@ -11,6 +11,7 @@ import {
     FileText,
     Info,
     Printer,
+    UserRound,
 } from 'lucide-react';
 
 import PatientLayout from '@/components/layout/CustomerLayout';
@@ -277,7 +278,7 @@ export default function AppointmentDetailPage() {
 
     return (
         <PatientLayout>
-            <div className="w-full space-y-5">
+            <div className="cares-appointment-detail-page w-full space-y-5">
 
                 {/* =================================================
                     BREADCRUMB
@@ -360,7 +361,7 @@ export default function AppointmentDetailPage() {
                                 onClick={
                                     handleReschedule
                                 }
-                                className="h-10 rounded-xl bg-gray-900 px-5 text-sm font-semibold text-white transition hover:bg-gray-700"
+                                className="cares-customer-primary-button"
                             >
                                 {t(
                                     'appointmentDetail.rescheduleBtn'
@@ -374,13 +375,13 @@ export default function AppointmentDetailPage() {
                     MAIN CARD
                 ================================================= */}
 
-                <div id="appointment-print-area" className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                <div id="appointment-print-area" className="cares-appointment-detail-card overflow-hidden rounded-2xl border border-gray-200 bg-white">
                     <div className="hidden border-b-2 border-gray-900 px-6 py-5 text-center print:block">
                         <p className="text-lg font-bold uppercase">CareS - Phòng khám đa khoa</p>
                         <h1 className="mt-2 text-2xl font-bold uppercase">Phiếu hẹn khám</h1>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-[0.95fr_1.15fr_0.95fr]">
+                    <div className="grid grid-cols-1 lg:grid-cols-[0.82fr_1.18fr]">
 
                         {/* =================================================
                             COLUMN 1 - APPOINTMENT INFO
@@ -401,6 +402,17 @@ export default function AppointmentDetailPage() {
                             </div>
 
                             <div className="space-y-4">
+
+                                <div className="rounded-xl border border-primary-100 bg-primary-50/60 p-5">
+                                    <div className="flex items-start gap-3">
+                                        <UserRound size={18} className="mt-0.5 shrink-0 text-primary-600" />
+                                        <div>
+                                            <p className="text-xs text-slate-500">Người được khám</p>
+                                            <p className="mt-1 text-base font-bold text-slate-900">{detail?.patientName || 'Chính chủ'}</p>
+                                            {detail?.relationship && <p className="mt-1 text-xs text-slate-500">{detail.relationship}</p>}
+                                        </div>
+                                    </div>
+                                </div>
 
                                 {/* DATE */}
 
@@ -531,7 +543,11 @@ export default function AppointmentDetailPage() {
 
                                     {/* SERVICES */}
 
-                                    <div className="divide-y divide-gray-100">
+                                    <div
+                                        className="max-h-[408px] divide-y divide-gray-100 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]"
+                                        tabIndex={services.length > 6 ? 0 : undefined}
+                                        aria-label="Danh sách dịch vụ đã đặt"
+                                    >
 
                                         {services.map(
                                             (
@@ -586,46 +602,26 @@ export default function AppointmentDetailPage() {
                             )}
                         </section>
 
-                        {/* =================================================
-                            COLUMN 3 - OTHER INFO
-                        ================================================= */}
-
-                        <section className="p-6">
-
-                            <div className="mb-5 flex items-center gap-2">
-
-                                <Info
-                                    size={18}
-                                    className="text-gray-500"
-                                />
-
-                                <h2 className="text-sm font-semibold text-gray-900">
-                                    Thông tin khác
-                                </h2>
-                            </div>
-
-                            <div className="border-t border-gray-100 pt-10">
-
-                                <div className="flex min-h-[260px] flex-col items-center justify-center text-center">
-
-                                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
-
-                                        <FileText
-                                            size={27}
-                                            className="text-gray-400"
+                        {detail?.status === 'cancelled' && detail?.reason?.trim() && (
+                            <section className="border-t border-gray-100 p-6 lg:col-span-2">
+                                <div className="rounded-xl border border-red-200 bg-red-50 p-5 dark:border-red-800/70 dark:bg-red-950/30">
+                                    <div className="flex items-start gap-3">
+                                        <Info
+                                            size={20}
+                                            className="mt-0.5 shrink-0 text-red-600 dark:text-red-400"
                                         />
+                                        <div>
+                                            <h2 className="font-semibold text-red-900 dark:text-red-200">
+                                                Lý do hủy lịch
+                                            </h2>
+                                            <p className="mt-2 whitespace-pre-wrap text-red-700 dark:text-red-300">
+                                                {detail.reason}
+                                            </p>
+                                        </div>
                                     </div>
-
-                                    <p className="mt-5 text-sm font-semibold text-gray-900">
-                                        Không có thông tin khác
-                                    </p>
-
-                                    <p className="mt-2 text-sm text-gray-400">
-                                        Hiện tại chưa có thông tin bổ sung.
-                                    </p>
                                 </div>
-                            </div>
-                        </section>
+                            </section>
+                        )}
                     </div>
 
                     {/* =================================================

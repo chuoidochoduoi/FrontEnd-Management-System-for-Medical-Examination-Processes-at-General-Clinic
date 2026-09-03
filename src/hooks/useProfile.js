@@ -30,7 +30,7 @@ export function useProfile() {
                 if (!res.ok) throw new Error(t('profile.errors.loadFailed'));
                 const data = await res.json();
                 // Map accountId thành id để sử dụng cho appointment
-                setProfile({ ...data, id: data.accountId || data.id });
+                setProfile({ ...data, id: data.accountId || data.id, profileId: data.profileId || data.patientProfileId });
             } catch (err) {
                 setError(err.message || t('profile.errors.unknown'));
             } finally {
@@ -57,7 +57,7 @@ export function useProfile() {
                 throw new Error(data?.message || data?.error || t('profile.errors.saveFailed'));
             }
             const data = await res.json();
-            setProfile({ ...data, id: data.accountId || data.id });
+            setProfile({ ...data, id: data.accountId || data.id, profileId: data.profileId || data.patientProfileId });
             return true;
         } catch (err) {
             setError(err.message || t('profile.errors.unknown'));

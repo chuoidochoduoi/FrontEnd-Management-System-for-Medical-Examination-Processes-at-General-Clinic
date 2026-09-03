@@ -7,7 +7,9 @@ import { toast } from 'react-toastify';
 const get = key => localStorage.getItem(key) || sessionStorage.getItem(key);
 const bearer = () => ({ Authorization: `Bearer ${get('token')}` });
 
-const mapInvoiceData = data => ({
+const mapInvoiceData = (data, printData = null) => {
+    const bhytAmount = (data.items || []).reduce((sum, item) => sum + Number(item.bhytAmount || 0), 0);
+    return ({
     id: data.invoiceId,
     code: data.invoiceCode,
     patientName: data.customerName,
@@ -16,7 +18,13 @@ const mapInvoiceData = data => ({
     visitDate: data.issueDate,
     status: data.status?.toLowerCase() || 'pending',
     totalServices: data.subtotal,
-    bhytDeduct: data.discount,
+    bhytDeduct: bhytAmount,
+    otherDiscount: Math.max(0, Number(data.discount || 0) - bhytAmount),
+    paymentMethod: printData?.paymentMethod || null,
+    paymentTransactionCode: printData?.paymentTransactionCode || null,
+    membershipCardCodeMasked: printData?.membershipCardCodeMasked || null,
+    membershipBenefitPercent: printData?.membershipBenefitPercent ?? null,
+    membershipBenefitAmount: printData?.membershipBenefitAmount || 0,
     vat: data.tax,
     grandTotal: data.totalAmount,
     inWords: data.note || '',
@@ -32,6 +40,7 @@ const mapInvoiceData = data => ({
         patientAmount: item.patientAmount
     }))
 });
+};
 
 export function useInvoiceDetail(invoiceId) {
     const { t } = useTranslation('cashier');
@@ -40,6 +49,8 @@ export function useInvoiceDetail(invoiceId) {
     const [insurances, setInsurances] = useState([]);
     const [loading, setLoading] = useState(false);
     const [confirming, setConfirming] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
+    const [payingByMembership, setPayingByMembership] = useState(false);
     const [applyingInsurance, setApplyingInsurance] = useState(false);
     const [error, setError] = useState('');
 
@@ -53,7 +64,13 @@ export function useInvoiceDetail(invoiceId) {
                     headers: bearer()
                 });
                 if (!res.ok) throw new Error(t('invoiceDetail.errors.loadFailed'));
-                setInvoice(mapInvoiceData(await res.json()));
+                const data = await res.json();
+                let printData = null;
+                if (data.status === 'PAID') {
+                    const printResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}/print`, { headers: bearer() });
+                    if (printResponse.ok) printData = await printResponse.json();
+                }
+                setInvoice(mapInvoiceData(data, printData));
             } catch (err) {
                 setError(err.message || t('invoiceDetail.errors.unknown'));
             } finally {
@@ -116,6 +133,48 @@ export function useInvoiceDetail(invoiceId) {
         }
     };
 
+    const cancelInvoice = async () => {
+        setCancelling(true);
+        setError('');
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}/cancel`, {
+                method: 'POST', headers: bearer()
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.message || 'Không thể hủy hóa đơn.');
+            setInvoice(mapInvoiceData(data));
+            toast.success('Đã hủy hóa đơn.');
+            return true;
+        } catch (err) {
+            setError(err.message || 'Không thể hủy hóa đơn.');
+            toast.error(err.message || 'Không thể hủy hóa đơn.');
+            return false;
+        } finally {
+            setCancelling(false);
+        }
+    };
+
+    const payByMembershipCard = async ({ cardCode, pin, useBenefit }) => {
+        setPayingByMembership(true);
+        setError('');
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/membership-cards/pay-at-counter`, {
+                method: 'POST', headers: { ...bearer(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cardCode, pin, useBenefit, invoiceId,
+                    idempotencyKey: crypto.randomUUID() })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.message || 'Không thể thanh toán bằng thẻ CareS.');
+            setInvoice(mapInvoiceData(data));
+            toast.success('Thanh toán bằng thẻ CareS thành công.');
+            return true;
+        } catch (err) {
+            setError(err.message || 'Không thể thanh toán bằng thẻ CareS.');
+            toast.error(err.message || 'Không thể thanh toán bằng thẻ CareS.');
+            return false;
+        } finally { setPayingByMembership(false); }
+    };
+
     const printReceipt = () => window.open(
         `${import.meta.env.VITE_API_URL}/api/v1/invoices/${invoiceId}/print`, '_blank'
     );
@@ -168,7 +227,7 @@ export function useInvoiceDetail(invoiceId) {
     };
 
     return {
-        invoice, insurances, loading, confirming, applyingInsurance, generatingQR, error,
-        confirmPayment, applyInsurance, printReceipt, checkQRPayment, generateQRPayment
+        invoice, insurances, loading, confirming, cancelling, payingByMembership, applyingInsurance, generatingQR, error,
+        confirmPayment, cancelInvoice, payByMembershipCard, applyInsurance, printReceipt, checkQRPayment, generateQRPayment
     };
 }

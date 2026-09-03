@@ -1,12 +1,15 @@
 // src/pages/patient/VisitDetailPage.jsx
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import {
     ArrowLeft,
+    CalendarPlus,
     ChevronRight,
+    CircleSlash2,
+    Download,
     FileText,
     FlaskConical,
     HeartPulse,
@@ -62,6 +65,12 @@ const statusConfig = (status) => {
             return {
                 label: 'Đã hoàn thành',
                 cls: 'border-green-200 bg-green-50 text-green-600',
+            };
+
+        case 'PARTIAL':
+            return {
+                label: 'Đã bỏ lượt một phần',
+                cls: 'border-amber-200 bg-amber-50 text-amber-800',
             };
 
         case 'IN_PROGRESS':
@@ -163,20 +172,19 @@ function ExaminationItem({
                              index,
                              active,
                              onClick,
+                             onPrint,
                          }) {
     const cfg = statusConfig(exam?.status);
 
     return (
-        <button
-            type="button"
-            onClick={onClick}
+        <div
             className={`w-full rounded-xl border p-3 text-left transition ${
                 active
                     ? 'border-primary-400 bg-primary-50'
                     : 'border-gray-200 bg-white hover:border-gray-300'
             }`}
         >
-            <div className="flex items-start gap-3">
+            <button type="button" onClick={onClick} className="flex w-full items-start gap-3 text-left">
                 <div
                     className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
                         active
@@ -211,8 +219,18 @@ function ExaminationItem({
                         {cfg.label}
                     </span>
                 </div>
-            </div>
-        </button>
+            </button>
+            {exam?.status === 'COMPLETED' && (
+                <button
+                    type="button"
+                    onClick={onPrint}
+                    className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-primary-200 bg-white px-3 text-xs font-semibold text-primary-600 transition hover:border-primary-400 hover:bg-primary-50"
+                >
+                    <Printer size={14}/>
+                    In bệnh án
+                </button>
+            )}
+        </div>
     );
 }
 
@@ -272,6 +290,12 @@ function TestItem({
                     {test?.orderingServiceName && (
                         <p className="mt-1 truncate text-[10px] text-primary-600">
                             Từ phiếu: {test.orderingServiceName}
+                        </p>
+                    )}
+
+                    {test?.isPanelGroup && (
+                        <p className="mt-1 text-[10px] font-medium text-gray-500">
+                            {test.purchasedCount || test.results?.length || 0} chỉ số đã thực hiện
                         </p>
                     )}
 
@@ -538,9 +562,16 @@ function TestDetail({
             {/* HEADER */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
                 <div className="flex items-center gap-3">
-                    <h2 className="text-sm font-bold uppercase text-gray-900">
-                        {test.name || 'Cận lâm sàng'}
-                    </h2>
+                    <div>
+                        <h2 className="text-sm font-bold uppercase text-gray-900">
+                            {test.name || 'Cận lâm sàng'}
+                        </h2>
+                        {test.isPanelGroup && (
+                            <p className="mt-1 text-xs font-medium text-gray-500">
+                                Phiếu kết quả gồm {test.purchasedCount || test.results?.length || 0} chỉ số
+                            </p>
+                        )}
+                    </div>
 
                     <span
                         className={`rounded border px-2 py-0.5 text-[10px] font-medium ${cfg.cls}`}
@@ -695,7 +726,7 @@ function TestDetail({
                             className="inline-flex h-10 items-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-medium text-white transition hover:bg-gray-700"
                         >
                             <FileText size={16} />
-                            Tải phiếu kết quả
+                            Xem trước phiếu kết quả
                         </button>
                     </div>
                 )}
@@ -713,12 +744,77 @@ function TestDetail({
     );
 }
 
+function groupTestsForPatient(tests) {
+    const groups = new Map();
+
+    (tests || []).forEach((test, index) => {
+        const panelScope = test.queueTicketId
+            || test.sampleId
+            || test.orderingRecordId
+            || test.createdAt?.slice(0, 16)
+            || 'visit';
+        const key = test.panelCode
+            ? `panel:${test.panelCode}:${panelScope}`
+            : `test:${test.id || test.testRequestId || index}`;
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                ...test,
+                id: key,
+                name: test.panelName || test.name,
+                isPanelGroup: Boolean(test.panelCode),
+                members: [],
+                results: [],
+                attachments: [],
+            });
+        }
+
+        const group = groups.get(key);
+        group.members.push(test);
+        group.hasAbnormal = group.hasAbnormal || Boolean(test.hasAbnormal);
+        if (!group.conclusion && test.conclusion) group.conclusion = test.conclusion;
+        if (!group.performedBy && test.performedBy) group.performedBy = test.performedBy;
+        if (!group.performedAt && test.performedAt) group.performedAt = test.performedAt;
+        if (!group.sampleId && test.sampleId) group.sampleId = test.sampleId;
+
+        (test.results || []).forEach((result) => {
+            const resultKey = `${result.name || ''}:${result.unit || ''}`;
+            if (!group.results.some(item => `${item.name || ''}:${item.unit || ''}` === resultKey)) {
+                group.results.push(result);
+            }
+        });
+        (test.attachments || []).forEach((attachment) => {
+            const attachmentKey = attachment.attachmentId || attachment.url;
+            if (!group.attachments.some(item => (item.attachmentId || item.url) === attachmentKey)) {
+                group.attachments.push(attachment);
+            }
+        });
+    });
+
+    return Array.from(groups.values()).map((group) => {
+        const fullPanelPurchased = group.members.some(
+            item => item.panelCode && item.serviceCode === item.panelCode
+        );
+        const purchasedCount = fullPanelPurchased
+            ? group.panelTotalAnalytes || group.results.length
+            : group.members.length;
+        const completedCount = group.members.filter(item => item.status === 'COMPLETED').length;
+        return {
+            ...group,
+            purchasedCount,
+            status: completedCount === group.members.length ? 'COMPLETED' : group.status,
+        };
+    });
+}
+
 /* =========================================================
    MAIN
 ========================================================= */
 
 export default function VisitDetailPage() {
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
+    const patientProfileId = searchParams.get('patientProfileId') || '';
     const navigate = useNavigate();
     const { t } = useTranslation(
         'medicalHistory'
@@ -730,7 +826,7 @@ export default function VisitDetailPage() {
         error,
         fetchVisit,
         rateVisit,
-    } = useVisitDetail(id);
+    } = useVisitDetail(id, patientProfileId);
 
     const [activeExam, setActiveExam] =
         useState(0);
@@ -743,6 +839,8 @@ export default function VisitDetailPage() {
 
     const [showRating, setShowRating] =
         useState(false);
+
+    const [activeTab, setActiveTab] = useState('EXAMINATIONS');
 
     useEffect(() => () => {
         if (previewPdf?.startsWith('blob:')) URL.revokeObjectURL(previewPdf);
@@ -758,11 +856,35 @@ export default function VisitDetailPage() {
     const tests =
         visit?.tests ?? [];
 
+    const testGroups = useMemo(
+        () => groupTestsForPatient(tests),
+        [tests]
+    );
+
+    const skippedServices = visit?.skippedServices ?? [];
+
     const selectedExam =
         examinations[activeExam] ?? null;
 
     const selectedTest =
-        tests[activeTest] ?? null;
+        testGroups[activeTest] ?? null;
+
+    const openRecordPrint = (exam) => {
+        if (!exam?.recordId || exam.status !== 'COMPLETED') return;
+        const params = new URLSearchParams();
+        if (patientProfileId) params.set('patientProfileId', patientProfileId);
+        const query = params.toString();
+        navigate(
+            `${ROUTES.CUSTOMER_MEDICAL_RECORD_PRINT.replace(':recordId', exam.recordId)}${query ? `?${query}` : ''}`,
+            {
+                state: {
+                    record: exam,
+                    visit,
+                    source: 'CUSTOMER',
+                },
+            },
+        );
+    };
 
     const sameDayReferencedResults = (visit?.sameDayReferencedResults ?? []).map(item => ({
         ...item,
@@ -786,10 +908,16 @@ export default function VisitDetailPage() {
     }, [id, examinations.length]);
 
     useEffect(() => {
-        if (activeTest >= tests.length) {
+        if (activeTest >= testGroups.length) {
             setActiveTest(0);
         }
-    }, [tests.length]);
+    }, [testGroups.length]);
+
+    useEffect(() => {
+        if (examinations.length > 0) setActiveTab('EXAMINATIONS');
+        else if (testGroups.length > 0) setActiveTab('TESTS');
+        else setActiveTab('SKIPPED');
+    }, [visit?.visitId]);
 
     const doctors = useMemo(() => {
         const names = new Set();
@@ -819,7 +947,7 @@ export default function VisitDetailPage() {
                 title: exam.serviceName || 'Khám bệnh',
                 subtitle: exam.doctorName ? `BS. ${exam.doctorName}` : 'Khám bệnh',
             });
-            const linkedTests = tests.filter(
+            const linkedTests = testGroups.filter(
                 test => String(test.orderingRecordId || '') === String(exam.recordId)
             );
             linkedTests.forEach((test) => {
@@ -840,7 +968,7 @@ export default function VisitDetailPage() {
                 });
             }
         });
-        tests.filter(test => !linkedTestIds.has(test.id || test.testRequestId)).forEach((test) => {
+        testGroups.filter(test => !linkedTestIds.has(test.id || test.testRequestId)).forEach((test) => {
             steps.push({
                 key: `standalone-${test.id || test.testRequestId}`,
                 type: 'PARACLINICAL',
@@ -849,22 +977,28 @@ export default function VisitDetailPage() {
             });
         });
         return steps;
-    }, [examinations, tests]);
+    }, [examinations, testGroups]);
 
     // Trang chi tiet phai tuan theo trang thai tong hop tu backend, thay vi
     // tu suy doan tu PDF (PDF co the da tai len khi yeu cau chua duoc ky xong).
-    const completed = visit?.status === 'COMPLETED';
+    const completed = visit?.status === 'COMPLETED' && examinations.length > 0;
 
     /* =====================================================
        PDF
     ===================================================== */
 
-    const openPdfPreview = (url) => {
+    const openPdfPreview = async (url) => {
+        if (!url || typeof url !== 'string') {
+            toast.error('Phiếu kết quả chưa có tệp PDF để xem trước');
+            return;
+        }
+
         try {
+            const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
             const fullUrl =
                 url.startsWith('http')
                     ? url
-                    : `${import.meta.env.VITE_API_URL}${
+                    : `${apiBase}${
                         url.startsWith('/')
                             ? ''
                             : '/'
@@ -874,11 +1008,26 @@ export default function VisitDetailPage() {
                 localStorage.getItem('token') ||
                 sessionStorage.getItem('token');
 
-            const separator = fullUrl.includes('?') ? '&' : '?';
-            const authUrl = token ? `${fullUrl}${separator}token=${token}` : fullUrl;
+            const response = await fetch(fullUrl, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+            });
+            if (!response.ok) {
+                let message = 'Không thể mở phiếu kết quả PDF';
+                try {
+                    const errorBody = await response.json();
+                    message = errorBody.message || message;
+                } catch {
+                    // Phản hồi lỗi không phải JSON.
+                }
+                throw new Error(message);
+            }
 
-            // Mở trực tiếp trong tab mới
-            window.open(authUrl, '_blank', 'noopener,noreferrer');
+            const downloadedBlob = await response.blob();
+            const blob = downloadedBlob.type.toLowerCase().includes('pdf')
+                ? downloadedBlob
+                : new Blob([downloadedBlob], { type: 'application/pdf' });
+            if (previewPdf?.startsWith('blob:')) URL.revokeObjectURL(previewPdf);
+            setPreviewPdf(URL.createObjectURL(blob));
         } catch (err) {
             console.error(err);
             toast.error(err?.message || 'Không thể mở phiếu kết quả PDF');
@@ -886,14 +1035,6 @@ export default function VisitDetailPage() {
     };
 
     const closePdfPreview = () => {
-        if (
-            previewPdf.startsWith('blob:')
-        ) {
-            URL.revokeObjectURL(
-                previewPdf
-            );
-        }
-
         setPreviewPdf('');
     };
 
@@ -1191,15 +1332,16 @@ export default function VisitDetailPage() {
 
     return (
         <PatientLayout>
-            <div className="w-full px-5 py-5 lg:px-6">
+            <div className="cares-visit-detail-page w-full">
 
                 {/* =================================================
                     HEADER
                 ================================================= */}
 
-                <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+                <div className="cares-customer-page-heading">
 
                     <div>
+                        <span className="cares-customer-eyebrow"><FileText size={15} /> Hồ sơ khám bệnh</span>
                         <h1 className="text-xl font-bold text-gray-900">
                             Chi tiết lượt khám
                         </h1>
@@ -1233,22 +1375,6 @@ export default function VisitDetailPage() {
                                 </button>
                             )}
 
-                        <button
-                            disabled={!selectedExam}
-                            onClick={() => selectedExam && navigate(
-                                ROUTES.DOCTOR_MEDICAL_RECORD_PRINT.replace(':recordId', selectedExam.recordId),
-                                { state: { record: selectedExam, patient: {
-                                    fullName: visit?.patientName, dateOfBirth: visit?.patientDateOfBirth,
-                                    gender: visit?.patientGender, phone: visit?.patientPhone, address: visit?.patientAddress,
-                                }, serviceName: selectedExam.serviceName, completedAt: selectedExam.completedAt,
-                                    departmentName: selectedExam.departmentName, patientAllergies: visit?.patientAllergies } }
-                            )}
-                            className="inline-flex h-10 items-center gap-2 rounded-xl bg-gray-900 px-5 text-sm font-medium text-white transition hover:bg-gray-700"
-                        >
-                            <Printer size={16} />
-
-                            In phiếu
-                        </button>
                     </div>
                 </div>
 
@@ -1256,7 +1382,7 @@ export default function VisitDetailPage() {
                     SUMMARY
                 ================================================= */}
 
-                <div className="mb-5 grid grid-cols-2 gap-5 rounded-xl border border-gray-200 bg-white px-6 py-5 sm:grid-cols-3 xl:grid-cols-6">
+                <div className="cares-visit-summary mb-5 grid grid-cols-2 gap-5 rounded-xl border border-gray-200 bg-white px-6 py-5 sm:grid-cols-3 xl:grid-cols-7">
 
                     <SummaryItem
                         label="Mã lượt khám"
@@ -1285,9 +1411,9 @@ export default function VisitDetailPage() {
 
                         <StatusBadge
                             status={
-                                completed
-                                    ? 'COMPLETED'
-                                    : visit?.status
+                                visit?.completionStatus === 'PARTIAL'
+                                    ? 'PARTIAL'
+                                    : 'COMPLETED'
                             }
                         />
                     </div>
@@ -1300,20 +1426,47 @@ export default function VisitDetailPage() {
                     />
 
                     <SummaryItem
-                        label="Số kết quả cận lâm sàng"
-                        value={tests.length}
+                        label="Số phiếu kết quả CLS"
+                        value={testGroups.length}
                     />
 
                     <SummaryItem
                         label="Bác sĩ tham gia"
                         value={doctors.length}
                     />
+
+                    <SummaryItem
+                        label="Dịch vụ bỏ lượt"
+                        value={skippedServices.length}
+                    />
                 </div>
 
                 <PatientAllergyBanner value={visit?.patientAllergies} currentLabel className="mb-5"/>
 
+                {visit?.completionStatus === 'PARTIAL' && (
+                    <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900">
+                        <div className="flex items-start gap-3">
+                            <CircleSlash2 size={22} className="mt-0.5 shrink-0"/>
+                            <div><h2 className="text-lg font-bold">Lượt khám kết thúc một phần</h2><p className="mt-1 text-base">Các nội dung chuyên môn đã hoàn thành vẫn được lưu riêng. {skippedServices.length} dịch vụ chưa thực hiện được liệt kê trong tab Dịch vụ bỏ lượt.</p></div>
+                        </div>
+                    </div>
+                )}
+
+                <div className="mb-5 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-2">
+                    <div className="flex min-w-max gap-2" role="tablist" aria-label="Nội dung lượt khám">
+                        {[
+                            { key: 'EXAMINATIONS', label: 'Bệnh án đã hoàn thành', count: examinations.length, icon: HeartPulse },
+                            { key: 'TESTS', label: 'Kết quả cận lâm sàng', count: testGroups.length, icon: FlaskConical },
+                            { key: 'SKIPPED', label: 'Dịch vụ bỏ lượt', count: skippedServices.length, icon: CircleSlash2 },
+                        ].map((tab) => {
+                            const Icon = tab.icon;
+                            return <button key={tab.key} type="button" role="tab" aria-selected={activeTab === tab.key} onClick={() => setActiveTab(tab.key)} className={`inline-flex min-h-12 items-center gap-2 rounded-xl px-5 text-base font-semibold transition ${activeTab === tab.key ? 'bg-teal-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}><Icon size={19}/>{tab.label}<span className={`rounded-full px-2 py-0.5 text-sm ${activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>{tab.count}</span></button>;
+                        })}
+                    </div>
+                </div>
+
                 {journeySteps.length > 0 && (
-                    <section className="mb-5 rounded-xl border border-gray-200 bg-white p-4">
+                    <section className="cares-visit-journey mb-5 rounded-xl border border-gray-200 bg-white p-4">
                         <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">
                             Hành trình của lượt khám
                         </h2>
@@ -1345,7 +1498,8 @@ export default function VisitDetailPage() {
                     EXAMINATION SECTION
                 ================================================= */}
 
-                <div className="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
+                {activeTab === 'EXAMINATIONS' && (
+                <div className="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
 
                     {/* EXAM LIST */}
                     <aside className="rounded-xl border border-gray-200 bg-white p-4">
@@ -1365,14 +1519,14 @@ export default function VisitDetailPage() {
                             </h2>
                         </div>
 
-                        {examinations.length > 1 ? (
+                        {examinations.length > 0 ? (
                             <>
                                 <div className="max-h-[340px] space-y-2 overflow-y-auto pr-1">
                                     {examinations.map(
                                         (
                                             exam,
                                             index
-                                        ) => String(exam.recordId) === String(id) ? null : (
+                                        ) => (
                                             <ExaminationItem
                                                 key={
                                                     exam.recordId ||
@@ -1384,10 +1538,9 @@ export default function VisitDetailPage() {
                                                 index={
                                                     index
                                                 }
-                                                active={false}
-                                                onClick={() => navigate(
-                                                    `${ROUTES.CUSTOMER_VISIT_HISTORY}/${exam.recordId}`
-                                                )}
+                                                active={activeExam === index}
+                                                onClick={() => setActiveExam(index)}
+                                                onPrint={() => openRecordPrint(exam)}
                                             />
                                         )
                                     )}
@@ -1402,7 +1555,7 @@ export default function VisitDetailPage() {
                             </>
                         ) : (
                             <div className="rounded-xl border border-dashed border-gray-200 p-5 text-center text-sm text-gray-400">
-                                Không có bệnh án khác trong lượt này.
+                                Lượt khám này không có bệnh án đã hoàn thành.
                             </div>
                         )}
                     </aside>
@@ -1412,12 +1565,14 @@ export default function VisitDetailPage() {
                         exam={selectedExam}
                     />
                 </div>
+                )}
 
                 {/* =================================================
                     TEST SECTION
                 ================================================= */}
 
-                <div className="grid grid-cols-1 gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
+                {activeTab === 'TESTS' && (
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-[340px_minmax(0,1fr)]">
 
                     {/* TEST LIST */}
                     <aside className="rounded-xl border border-gray-200 bg-white p-4">
@@ -1429,15 +1584,15 @@ export default function VisitDetailPage() {
                             />
 
                             <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                                Kết quả cận lâm sàng (
-                                {tests.length})
+                                Phiếu kết quả cận lâm sàng (
+                                {testGroups.length})
                             </h2>
                         </div>
 
-                        {tests.length > 0 ? (
+                        {testGroups.length > 0 ? (
                             <>
                                 <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
-                                    {tests.map(
+                                    {testGroups.map(
                                         (
                                             test,
                                             index
@@ -1468,7 +1623,7 @@ export default function VisitDetailPage() {
                                     )}
                                 </div>
 
-                                {tests.length >
+                                {testGroups.length >
                                     4 && (
                                         <p className="mt-3 text-center text-[11px] text-gray-400">
                                             ↓ Cuộn để xem
@@ -1492,8 +1647,9 @@ export default function VisitDetailPage() {
                         }
                     />
                 </div>
+                )}
 
-                {sameDayReferencedResults.length > 0 && (
+                {activeTab === 'TESTS' && sameDayReferencedResults.length > 0 && (
                     <section className="mt-5 space-y-4 rounded-xl border border-blue-200 bg-blue-50 p-5">
                         <div>
                             <h2 className="text-sm font-bold text-blue-900">
@@ -1511,6 +1667,33 @@ export default function VisitDetailPage() {
                                 <TestDetail test={item} onOpenPdf={openPdfPreview} />
                             </div>
                         ))}
+                    </section>
+                )}
+
+                {activeTab === 'SKIPPED' && (
+                    <section className="rounded-2xl border border-gray-200 bg-white p-5">
+                        {skippedServices.length > 0 ? (
+                            <div className="space-y-3">
+                                {skippedServices.map((service, index) => (
+                                    <article key={`${service.serviceId || service.serviceName}-${index}`} className="flex flex-col gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-amber-700"><CircleSlash2 size={20}/></div>
+                                            <div>
+                                                <h3 className="text-lg font-bold text-gray-900">{service.serviceName || 'Dịch vụ chưa thực hiện'}</h3>
+                                                <p className="mt-1 text-base text-gray-600">{service.departmentName || 'Chưa xác định khoa/phòng'}{service.roomCode ? ` · ${service.roomCode}` : ''}</p>
+                                                <p className="mt-1 text-sm font-medium text-amber-800">{service.reason || 'Đã bỏ lượt do kết thúc ngày làm việc'}</p>
+                                            </div>
+                                        </div>
+                                        <span className="shrink-0 text-sm text-gray-500">{service.workDate ? formatDate(service.workDate) : ''}</span>
+                                    </article>
+                                ))}
+                                <div className="flex justify-end pt-2">
+                                    <button type="button" onClick={() => navigate('/customer/appointment')} className="cares-customer-primary-button"><CalendarPlus size={18}/> Đặt lịch khám mới</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="py-12 text-center text-gray-500"><CircleSlash2 size={30} className="mx-auto mb-3 text-gray-300"/><p>Không có dịch vụ bỏ lượt trong lượt khám này.</p></div>
+                        )}
                     </section>
                 )}
 
@@ -1556,6 +1739,32 @@ export default function VisitDetailPage() {
             ================================================= */}
 
             {showRating && <RatingModal />}
+
+            {previewPdf && (
+                <div className="cares-pdf-preview-layer" role="dialog" aria-modal="true" aria-label="Xem trước phiếu kết quả">
+                    <button type="button" className="cares-pdf-preview-backdrop" onClick={closePdfPreview} aria-label="Đóng xem trước" />
+                    <section className="cares-pdf-preview-modal">
+                        <header>
+                            <div>
+                                <span className="cares-customer-eyebrow"><FileText size={15} /> Phiếu kết quả</span>
+                                <h2>Xem trước tài liệu</h2>
+                            </div>
+                            <div>
+                                <a href={previewPdf} download="phieu-ket-qua.pdf" className="cares-customer-secondary-button">
+                                    <Download size={16} /> Tải PDF
+                                </a>
+                                <button type="button" className="cares-customer-secondary-button" onClick={() => document.getElementById('customer-result-pdf-frame')?.contentWindow?.print()}>
+                                    <Printer size={16} /> In
+                                </button>
+                                <button type="button" className="cares-pdf-preview-close" onClick={closePdfPreview} aria-label="Đóng">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                        </header>
+                        <iframe id="customer-result-pdf-frame" src={previewPdf} title="Phiếu kết quả PDF" />
+                    </section>
+                </div>
+            )}
 
 
 

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Bell, UserCircle } from 'lucide-react';
+import { Bell, MonitorUp, UserCircle } from 'lucide-react';
 
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 
@@ -13,6 +13,7 @@ import { useAllDepartments } from '@/hooks/useAllDepartments';
 import { useWebSocket } from '@/hooks/useWebSocket';
 
 import { ROUTES } from '@/constants/routes';
+import { openAuthenticatedTab } from '@/utils/openAuthenticatedTab';
 
 const STATUS_MAP = {
     WAITING: 'waiting',
@@ -34,6 +35,14 @@ const STATUS_STYLES = {
     testDone: 'bg-green-50 text-green-700',
 };
 
+const PRIORITY_STYLES = {
+    RETURNING_FROM_TEST: 'border-violet-200 bg-violet-50 text-violet-700',
+    RETURNED_AFTER_ABSENCE: 'border-orange-300 bg-orange-50 text-orange-800',
+    APPOINTMENT_ON_TIME: 'border-teal-200 bg-teal-50 text-teal-700',
+    APPOINTMENT_LATE: 'border-orange-200 bg-orange-50 text-orange-700',
+    REGULAR: 'border-slate-200 bg-slate-50 text-slate-600',
+};
+
 const get = (key) =>
     localStorage.getItem(key) ||
     sessionStorage.getItem(key);
@@ -48,7 +57,7 @@ export default function DoctorDepartmentPage() {
     const [queueFilters, setQueueFilters] = useState({
         search: '',
         status: 'ALL',
-        sort: 'QUEUE_ASC',
+        sort: 'PRIORITY',
         showAll: false,
         workDate: new Date().toISOString().slice(0, 10),
     });
@@ -75,6 +84,29 @@ export default function DoctorDepartmentPage() {
         error: ticketError,
         reload: reloadInProgress,
     } = useInProgressPatient(departmentId);
+    const [sameRoomChain, setSameRoomChain] = useState(null);
+
+    useEffect(() => {
+        if (!inProgressTicket?.ticketId) {
+            setSameRoomChain(null);
+            return undefined;
+        }
+        const controller = new AbortController();
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+        fetch(`${apiBase}/api/v1/queue-tickets/${inProgressTicket.ticketId}/same-room-chain`, {
+            headers: { Authorization: `Bearer ${get('token')}` },
+            signal: controller.signal,
+        })
+            .then(async response => {
+                if (!response.ok) throw new Error('Không thể tải chuỗi dịch vụ');
+                return response.json();
+            })
+            .then(body => setSameRoomChain(body?.data ?? body?.result ?? body ?? null))
+            .catch(fetchError => {
+                if (fetchError.name !== 'AbortError') setSameRoomChain(null);
+            });
+        return () => controller.abort();
+    }, [inProgressTicket?.ticketId]);
 
     /* =========================================================
        WAITING QUEUE
@@ -241,7 +273,7 @@ export default function DoctorDepartmentPage() {
                 MAIN CONTENT
             ===================================================== */}
 
-            <div className="flex-1 overflow-y-auto bg-slate-50 px-5 py-5">
+            <div className="cares-doctor-queue flex-1 bg-slate-50">
 
                 {/* QUAN TRỌNG:
                     Không max-width.
@@ -255,7 +287,11 @@ export default function DoctorDepartmentPage() {
                         HEADER
                     ================================================= */}
 
-                    <div className="mb-4">
+                    <div className="cares-ops-header mb-4">
+
+                        <div>
+
+                        <span className="cares-ops-eyebrow">Phòng khám đang phụ trách</span>
 
                         <h1 className="text-2xl font-bold text-slate-900">
                             Hàng chờ khám bệnh
@@ -277,13 +313,22 @@ export default function DoctorDepartmentPage() {
 
                         </div>
 
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button type="button" onClick={() => openAuthenticatedTab(ROUTES.ROOM_QUEUE_DISPLAY.replace(':departmentId', departmentId))} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-primary-300 hover:text-primary-700">
+                                <MonitorUp size={18}/> Mở màn hình phòng
+                            </button>
+                            <span className="cares-ops-badge is-active">{waitingCount} bệnh nhân đang chờ</span>
+                        </div>
+
                     </div>
 
                     {/* =================================================
                         CURRENT PATIENT
                     ================================================= */}
 
-                    <section className="mb-4 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <section className="cares-doctor-current mb-4 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
                         {/* TITLE */}
 
@@ -333,7 +378,7 @@ export default function DoctorDepartmentPage() {
 
                                     <span className="mt-1 text-xl font-bold text-primary-700">
                                         {String(
-                                            inProgressTicket.queueNumber ??
+                                            sameRoomChain?.displayQueueNumber ?? inProgressTicket.queueNumber ??
                                             '—'
                                         ).padStart(
                                             3,
@@ -356,6 +401,12 @@ export default function DoctorDepartmentPage() {
                                         {inProgressTicket.serviceName ??
                                             '—'}
                                     </p>
+
+                                    {sameRoomChain?.totalServices > 1 && (
+                                        <p className="mt-1 text-sm font-semibold text-teal-700">
+                                            Dịch vụ {sameRoomChain.currentPosition}/{sameRoomChain.totalServices} tại phòng này
+                                        </p>
+                                    )}
 
                                     <div className="mt-2 flex flex-wrap items-center gap-2">
 
@@ -424,7 +475,7 @@ export default function DoctorDepartmentPage() {
                         FILTER
                     ================================================= */}
 
-                    <section className="mb-4 w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <section className="cares-doctor-filter mb-4 w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
 
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr_auto]">
 
@@ -574,6 +625,10 @@ export default function DoctorDepartmentPage() {
                                     className="h-9 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none"
                                 >
 
+                                    <option value="PRIORITY">
+                                        Ưu tiên phục vụ
+                                    </option>
+
                                     <option value="QUEUE_ASC">
                                         Theo số thứ tự
                                     </option>
@@ -635,7 +690,7 @@ export default function DoctorDepartmentPage() {
                         WAITING QUEUE
                     ================================================= */}
 
-                    <section className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <section className="cares-doctor-queue-card w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
 
                         {/* TABLE TITLE */}
 
@@ -756,6 +811,9 @@ export default function DoctorDepartmentPage() {
                                                                     '0'
                                                                 )}
                                                             </span>
+                                                            {ticket.waitingPosition != null && <p className="mt-1 text-xs font-semibold text-primary-600">
+                                                                Vị trí {ticket.waitingPosition}
+                                                            </p>}
 
                                                     </td>
 
@@ -788,6 +846,10 @@ export default function DoctorDepartmentPage() {
                                                                         Đang được phục vụ tại {ticket.busyDepartmentName || 'phòng khác'}
                                                                     </p>
                                                                 )}
+
+                                                                {ticket.priorityLabel && <span className={`mt-1.5 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${PRIORITY_STYLES[ticket.priorityCategory] || PRIORITY_STYLES.REGULAR}`}>
+                                                                    {ticket.priorityLabel}
+                                                                </span>}
 
                                                             </div>
 

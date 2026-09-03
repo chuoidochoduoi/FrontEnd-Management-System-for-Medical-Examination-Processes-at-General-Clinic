@@ -131,16 +131,16 @@ export default function FollowUpListPage() {
 
     return (
         <ReceptionistLayout>
-            <div className="flex-1 overflow-y-auto bg-gray-50/50 p-6">
-                <div className="mb-6 flex items-center justify-between">
+            <div className="cares-reception-screen">
+                <div className="cares-reception-page-header">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Danh sách tái khám</h1>
                         <p className="text-sm text-gray-500 mt-1">Các bệnh nhân được bác sĩ yêu cầu tái khám</p>
                     </div>
                 </div>
 
-                <div className="mb-4 bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center">
-                    <div className="relative w-80">
+                <div className="cares-reception-filter-bar !block">
+                    <div className="relative w-full max-w-xl">
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
@@ -155,8 +155,8 @@ export default function FollowUpListPage() {
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="grid grid-cols-[100px_1fr_120px_150px_120px_1fr_120px] px-6 py-4 bg-gray-50/80 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div className="cares-reception-table-card overflow-x-auto">
+                    <div className="grid min-w-[1180px] grid-cols-[130px_1fr_150px_180px_160px_1fr_170px] px-6 py-4 bg-gray-50/80 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wider">
                         <div>Mã bệnh án</div>
                         <div>Họ tên</div>
                         <div>Điện thoại</div>
@@ -176,7 +176,7 @@ export default function FollowUpListPage() {
                                 <p className="text-sm text-gray-500">Hiện tại không có bệnh nhân nào cần đặt lịch tái khám.</p>
                             </div>
                         ) : followUps.map((item) => (
-                            <div key={item.recordId} className="grid grid-cols-[100px_1fr_120px_150px_120px_1fr_120px] px-6 py-4 items-center hover:bg-gray-50/50 transition-colors">
+                            <div key={item.recordId} className="grid min-w-[1180px] grid-cols-[130px_1fr_150px_180px_160px_1fr_170px] px-6 py-4 items-center hover:bg-gray-50/50 transition-colors">
                                 <div className="text-sm font-medium text-gray-900">{item.recordCode || '—'}</div>
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-xs">

@@ -10,7 +10,6 @@ const ContactPage = () => {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [requestCode, setRequestCode] = useState('');
   const workingShifts = usePublicWorkingShifts();
   const { clinicInformation } = useClinicInformation();
   const hasCoordinates = clinicInformation.latitude !== null && clinicInformation.latitude !== undefined
@@ -55,10 +54,10 @@ const ContactPage = () => {
         }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || 'Không thể gửi yêu cầu liên hệ.');
-      setRequestCode(data.requestCode || '');
+      if (!response.ok) throw new Error(data.message || 'Không thể gửi thông tin liên hệ.');
       setForm(initialForm);
-      toast.success(`Đã gửi yêu cầu liên hệ${data.requestCode ? ` (${data.requestCode})` : ''}.`);
+      setErrors({});
+      toast.success('Thông tin liên hệ đã được gửi tới CareS. Chúng tôi sẽ liên hệ lại với bạn.');
     } catch (error) {
       toast.error(error.message === 'Failed to fetch'
         ? 'Không thể kết nối đến hệ thống. Vui lòng thử lại sau.' : error.message);
@@ -70,14 +69,14 @@ const ContactPage = () => {
   return (
     <InfoLayout>
       <div className="mb-10">
-        <h1 className="text-3xl font-bold text-slate-900 mb-4">Liên hệ</h1>
+        <h1 className="text-3xl font-bold text-slate-900 mb-4">Gửi thông tin liên hệ</h1>
         <p className="text-slate-500 font-light text-lg">Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ bạn. Mọi thắc mắc hoặc cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh bên dưới.</p>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8 xl:gap-12">
         {/* Contact Form */}
         <div className="bg-slate-50 p-8 rounded-2xl border border-slate-100">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">Gửi yêu cầu liên hệ</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-6">Gửi thông tin liên hệ</h2>
           <form className="space-y-5" onSubmit={handleSubmit} noValidate>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Họ và tên</label>
@@ -104,9 +103,8 @@ const ContactPage = () => {
               <textarea rows="4" value={form.message} onChange={e => updateField('message', e.target.value)} maxLength={1000} placeholder="Nhập nội dung tin nhắn của bạn..." className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500"></textarea>
               {errors.message && <p className="mt-1 text-sm text-red-600">{errors.message}</p>}
             </div>
-            {requestCode && <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">Mã yêu cầu của bạn: <strong>{requestCode}</strong></p>}
             <button type="submit" disabled={submitting} className="w-full bg-primary-700 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-2 hover:bg-primary-800 transition-colors disabled:cursor-not-allowed disabled:opacity-60">
-              {submitting ? 'Đang gửi...' : 'Gửi liên hệ'} <Send className="w-5 h-5" />
+              {submitting ? 'Đang gửi...' : 'Gửi thông tin'} <Send className="w-5 h-5" />
             </button>
           </form>
         </div>

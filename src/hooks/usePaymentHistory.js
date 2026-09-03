@@ -14,10 +14,11 @@ export function usePaymentHistory() {
     const [total,    setTotal]    = useState(0);
     const [page,     setPage]     = useState(1);
 
-    const fetchInvoices = useCallback(async ({ fromDate = '', toDate = '', method = '', page = 0 } = {}) => {
+    const fetchInvoices = useCallback(async ({ fromDate = '', toDate = '', method = '', patientProfileId = '', page = 0 } = {}) => {
         setLoading(true); setError('');
         try {
             const params = new URLSearchParams({ fromDate, toDate, method, page: String(page), size: String(PAGE_SIZE) });
+            if (patientProfileId) params.set('patientProfileId', patientProfileId);
             const res = await fetch(
                 `${import.meta.env.VITE_API_URL}/api/patient/payments?${params}`,
                 { headers: bearer() }
@@ -34,7 +35,7 @@ export function usePaymentHistory() {
     return { invoices, loading, error, total, page, PAGE_SIZE, fetchInvoices };
 }
 
-export function useReceiptDetail(invoiceId) {
+export function useReceiptDetail(invoiceId, patientProfileId = '') {
     const { t } = useTranslation('payment');
     const [receipt, setReceipt] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -45,14 +46,14 @@ export function useReceiptDetail(invoiceId) {
         setLoading(true); setError('');
         try {
             const res = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/patient/payments/${invoiceId}`,
+                `${import.meta.env.VITE_API_URL}/api/patient/payments/${invoiceId}${patientProfileId ? `?patientProfileId=${encodeURIComponent(patientProfileId)}` : ''}`,
                 { headers: bearer() }
             );
             if (!res.ok) throw new Error(t('receiptDetail.errors.loadFailed', 'Không thể tải phiếu thu.'));
             setReceipt(await res.json());
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
-    }, [invoiceId]);
+    }, [invoiceId, patientProfileId]);
 
     return { receipt, loading, error, fetchReceipt };
 }

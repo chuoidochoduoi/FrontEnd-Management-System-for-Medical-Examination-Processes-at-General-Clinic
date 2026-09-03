@@ -303,7 +303,7 @@ function EditRoomModal({ room, onClose, onSubmit, onDelete, t, doctors, nurses, 
         name: room.name ?? '',
         specializationId: room.specializationId ?? '',
         capabilityIds: room.capabilityIds ?? [],
-        description: room.equipment ?? room.description ?? '',
+        description: room.description ?? room.equipment ?? '',
         doctorId: room.headDoctorId ?? room.doctorId ?? '',
         doctorIds: room.doctors?.map(d => d.staffId) || [],
         nurseIds: room.nurses?.map(n => n.staffId) || [],
@@ -550,9 +550,9 @@ function RoomCard({ room, onConfigure, onQuickStatus, onOpenSchedule, t }) {
                     <span className="text-gray-500">Hỗ trợ: {room.nursesOnDuty.map(item => item.fullName).join(', ')}</span>
                 )}
             </div>
-            {room.equipment && (
+            {room.description && (
                 <p className="text-xs text-gray-400 leading-relaxed">
-                    <span className="font-medium">{t('roomManagement.card.equipment')}</span>{room.equipment}
+                    <span className="font-medium">{t('roomManagement.card.description')}</span>{room.description}
                 </p>
             )}
 

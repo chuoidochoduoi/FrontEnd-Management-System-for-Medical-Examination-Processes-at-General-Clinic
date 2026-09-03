@@ -49,7 +49,7 @@
     },
     "card": {
       "doctor": "Bác sĩ phụ trách",
-      "equipment": "Thiết bị",
+      "description": "Mô tả: ",
       "configure": "Cấu hình",
       "quickStatus": "Trạng thái nhanh"
     },
@@ -63,7 +63,7 @@
       "roomNamePlaceholder": "Ví dụ: Khoa Khám Nội",
       "doctor": "Bác sĩ phụ trách",
       "doctorPlaceholder": "Tên bác sĩ...",
-      "equipment": "Thiết bị",
+      "description": "Mô tả",
       "initialStatus": "Trạng thái ban đầu",
       "cancel": "Hủy",
       "submit": "Tạo khoa",
@@ -76,7 +76,7 @@
       "roomType": "Loại khoa",
       "roomName": "Tên khoa",
       "doctor": "Bác sĩ phụ trách",
-      "equipment": "Thiết bị",
+      "description": "Mô tả",
       "currentStatus": "Trạng thái hiện tại",
       "deleteBtn": "Xóa khoa",
       "cancel": "Hủy",

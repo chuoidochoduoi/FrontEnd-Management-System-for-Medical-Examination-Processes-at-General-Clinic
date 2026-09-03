@@ -102,7 +102,7 @@ export function useRoomManagement() {
                 nurses: d.nurses || [],
                 capabilityIds: (d.capabilities || []).map(c => c.capabilityId),
                 capabilities: d.capabilities || [],
-                equipment: d.description || '',
+                description: d.description || '',
             }));
 
             setRooms(mapped);
@@ -136,7 +136,7 @@ export function useRoomManagement() {
             departmentType: deptType,
             status: ({ available: 'AVAILABLE', occupied: 'IN_SESSION', maintenance: 'MAINTENANCE' })[payload.status]
                 || payload.status || 'AVAILABLE',
-            description: payload.description || payload.doctor || '',
+            description: payload.description || '',
             headDoctorId: payload.doctorId || payload.headDoctorId || null,
             doctorIds: payload.doctorIds || [],
             specializationId: payload.specializationId || null,
@@ -160,7 +160,7 @@ export function useRoomManagement() {
         const body = {};
         if (payload.roomCode) body.roomCode = payload.roomCode;
         if (payload.name) body.name = payload.name;
-        // description maps to equipment in old form, or description directly
+        // Keep the legacy equipment payload as a fallback for older callers.
         if (payload.description !== undefined || payload.equipment !== undefined) {
             body.description = payload.description || payload.equipment || '';
         }

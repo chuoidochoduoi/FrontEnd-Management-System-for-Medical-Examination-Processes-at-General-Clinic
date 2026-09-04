@@ -1,550 +1,132 @@
-// src/pages/owner/ReportPage.jsx
-import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useMemo, useState } from 'react';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import { useReport } from '@/hooks/useReport';
-import { toast } from 'react-toastify';
+import { Download, Printer, RefreshCw } from 'lucide-react';
+import ReportExportDialog from '@/features/reports/ReportExportDialog';
+import { filterReportRows, paginate } from '@/features/reports/reportExport';
 
-/* ── helpers ── */
-const fmt = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) : '—';
-const fmtVND = (n) => n != null ? new Intl.NumberFormat('vi-VN').format(n) + 'đ' : '—';
-const PERIODS = ['day', 'month', 'quarter', 'year', 'custom'];
+const money = n => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(n ?? 0) + ' đ';
+const number = n => new Intl.NumberFormat('vi-VN').format(n ?? 0);
+const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+const methods = { CASH: 'Tiền mặt', CARD: 'Thẻ ngân hàng', BANK_TRANSFER: 'Chuyển khoản', MEMBERSHIP_CARD: 'Thẻ trả trước CareS', MOMO: 'MoMo', VNPAY: 'VNPay', ZALOPAY: 'ZaloPay', OTHER: 'Khác' };
+const categories = { EXAMINATION: 'Khám bệnh', PARACLINICAL: 'Cận lâm sàng', LABORATORY: 'Xét nghiệm', IMAGING: 'Chẩn đoán hình ảnh', OTHER: 'Khác' };
+const panel = 'rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900';
+const control = 'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900';
+const tabs = [['overview', 'Tổng quan'], ['payments', 'Thu tiền & hóa đơn'], ['rooms', 'Hoạt động phòng']];
 
-/* ── Simple bar chart (SVG, no lib) ── */
-function BarChart({ data }) {
-    if (!data?.length) return <div className="h-48 flex items-center justify-center text-xs text-gray-300">Chưa có dữ liệu</div>;
-    const max = Math.max(...data.map(d => d.value), 1);
-    return (
-        <div className="flex gap-6 h-52 px-2">
-            {data.map((d, i) => {
-                const pct = (d.value / max) * 100;
-                return (
-                    <div key={i} className="flex flex-col items-center justify-end flex-1 gap-1 h-full">
-                        <span className="text-xs text-gray-500 font-medium">{fmt(d.value)}</span>
-                        <div className="w-full rounded-t-sm" style={{ height: `${Math.max(pct, 4)}%`, backgroundColor: '#1a1a2e' }} />
-                        <span className="text-xs text-gray-400 text-center leading-tight">{d.label}</span>
-                    </div>
-                );
-            })}
-        </div>
-    );
+function rangeFor(period, year, month, quarter) {
+    const day = today();
+    if (period === 'day') return { from: day, to: day };
+    let first = period === 'year' ? 1 : period === 'quarter' ? (quarter - 1) * 3 + 1 : month;
+    let last = period === 'year' ? 12 : period === 'quarter' ? first + 2 : month;
+    const lastDay = new Date(Date.UTC(year, last, 0)).getUTCDate();
+    return { from: `${year}-${String(first).padStart(2, '0')}-01`, to: `${year}-${String(last).padStart(2, '0')}-${lastDay}` };
+}
+function Stat({ label, value, note }) {
+    return <div className={panel}><p className="text-sm text-slate-500 dark:text-slate-400">{label}</p><p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p><p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{note}</p></div>;
+}
+function DataTable({ headers, rows, unit }) {
+    const [page, setPage] = useState(1);
+    const slice = paginate(rows, page);
+    return <><div className="overflow-x-auto"><table className="w-full text-left text-sm">
+        <thead className="bg-slate-50 text-slate-500 dark:bg-slate-800 dark:text-slate-300"><tr>{headers.map(h => <th className="whitespace-nowrap px-3 py-3 font-medium" key={h}>{h}</th>)}</tr></thead>
+        <tbody>{rows.length ? slice.rows.map((row, i) => <tr key={i} className="border-t border-slate-100 dark:border-slate-800">{row.map((value, j) => <td key={j} className="px-3 py-3 tabular-nums">{value}</td>)}</tr>) : <tr><td className="p-8 text-center text-slate-500" colSpan={headers.length}>Không có dữ liệu phù hợp với tìm kiếm và khoảng ngày đã chọn.</td></tr>}</tbody>
+    </table></div>{rows.length > 0 && <nav aria-label={'Phân trang ' + unit} className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+        <span>{slice.from}–{slice.to} / {slice.total} {unit}</span><div className="flex items-center gap-3"><button className={control + ' disabled:opacity-40'} disabled={slice.page === 1} onClick={() => setPage(slice.page - 1)}>Trang trước</button><span>Trang {slice.page} / {slice.pages}</span><button className={control + ' disabled:opacity-40'} disabled={slice.page === slice.pages} onClick={() => setPage(slice.page + 1)}>Trang sau</button></div>
+    </nav>}</>;
+}
+function Trend({ points }) {
+    const max = Math.max(1, ...points.map(p => Number(p.amount)));
+    return <div className="overflow-x-auto pb-2"><div className="flex h-52 items-end gap-3" style={{ minWidth: Math.max(280, points.length * 55) }}>
+        {points.map(p => <div key={p.label} className="flex h-full min-w-10 flex-1 flex-col justify-end text-center" title={p.label + ': ' + money(p.amount)}>
+            <div className="mx-auto w-7 rounded-t bg-teal-600" style={{ height: Number(p.amount) ? Math.max(2, Number(p.amount) / max * 165) : 0 }} />
+            <span className="mt-2 text-[10px] text-slate-500">{p.label.slice(5)}</span><span className="sr-only">{money(p.amount)}</span>
+        </div>)}
+    </div></div>;
 }
 
-/* ── Donut chart (SVG) ── */
-function DonutChart({ segments, total, label }) {
-    const SIZE = 140, CX = 70, CY = 70, R = 52, STROKE = 22;
-    const circ = 2 * Math.PI * R;
-    let offset = 0;
-    const colors = ['#1a1a2e', '#b0b8c9', '#5b8dee', '#f59e0b'];
-
-    // Filter out invalid segments
-    const validSegments = segments?.filter(seg => typeof seg.pct === 'number' && !isNaN(seg.pct)) || [];
-    const safeTotal = typeof total === 'number' && !isNaN(total) ? total : 0;
-
-    return (
-        <div className="flex flex-col items-center gap-3">
-            <svg width={SIZE} height={SIZE} className="-rotate-90">
-                {validSegments.map((seg, i) => {
-                    const pct = seg.pct || 0;
-                    const dash = (pct / 100) * circ;
-                    const gap = circ - dash;
-                    const el = (
-                        <circle key={i} cx={CX} cy={CY} r={R}
-                            fill="none" stroke={colors[i % colors.length]} strokeWidth={STROKE}
-                            strokeDasharray={`${dash} ${gap}`} strokeDashoffset={-(offset * circ) / 100} />
-                    );
-                    offset += pct;
-                    return el;
-                })}
-                {/* Center text */}
-                <text x={CX} y={CY + 1} textAnchor="middle" dominantBaseline="middle"
-                    className="rotate-90" style={{ transform: `rotate(90deg)`, transformOrigin: `${CX}px ${CY}px` }}>
-                    <tspan x={CX} dy="-6" fontSize="18" fontWeight="700" fill="#1a1a2e">{safeTotal}</tspan>
-                    <tspan x={CX} dy="16" fontSize="9" fill="#9ca3af">{label}</tspan>
-                </text>
-            </svg>
-            {/* Legend */}
-            <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center">
-                {validSegments.map((seg, i) => (
-                    <div key={i} className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: colors[i % colors.length] }} />
-                        <span className="text-xs text-gray-600">{seg.label} ({seg.pct || 0}%)</span>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-/* ── Progress bar breakdown ── */
-function BreakdownBar({ label, pct, amount, color = 'bg-gray-900' }) {
-    return (
-        <div className="mb-5">
-            <div className="flex justify-between text-sm mb-1.5">
-                <span className="text-gray-700 font-medium">{label}</span>
-                <span className="text-gray-500">{pct}% ({fmtVND(amount)})</span>
-            </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-            </div>
-        </div>
-    );
-}
-
-/* ── Stat card ── */
-function StatCard({ label, value, note, muted }) {
-    return (
-        <div className="bg-white border border-gray-100 rounded-2xl px-6 py-5">
-            <p className="text-xs text-gray-400 mb-2">{label}</p>
-            <p className={`text-2xl font-bold ${muted ? 'text-gray-300' : 'text-gray-900'}`}>{value}</p>
-            {note && <p className="text-xs text-gray-400 mt-1">{note}</p>}
-        </div>
-    );
-}
-
-/* ── Tab 1 content ── */
-function Tab1({ data, t }) {
-    if (!data) return null;
-    const { revenueChart = [], sessionChart = [], totalSessions = 0, table = [] } = data;
-
-    return (
-        <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-5">
-                {/* Bar chart */}
-                <div className="bg-white border border-gray-100 rounded-2xl p-6">
-                    <p className="text-xs font-medium text-gray-500 mb-4">{t('report.tab1.revenueChart')}</p>
-                    <BarChart data={revenueChart} />
-                </div>
-                {/* Donut */}
-                <div className="bg-white border border-gray-100 rounded-2xl p-6 flex flex-col">
-                    <p className="text-xs font-medium text-gray-500 mb-4">{t('report.tab1.sessionChart')}</p>
-                    <div className="flex-1 flex items-center justify-center">
-                        <DonutChart
-                            segments={sessionChart.map(s => ({
-                                label: s.label,
-                                pct: totalSessions ? Math.round((s.value / totalSessions) * 100) : 0,
-                                value: s.value
-                            }))}
-                            total={totalSessions}
-                            label={t('report.tab1.totalSessions')}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Table */}
-            <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100">
-                    <p className="text-sm font-semibold text-gray-800">{t('report.tab1.table.title')}</p>
-                </div>
-                <table className="w-full">
-                    <thead className="border-b border-gray-100 bg-gray-50">
-                        <tr>
-                            {[
-                                t('report.tab1.table.code'),
-                                t('report.tab1.table.dept'),
-                                t('report.tab1.table.revenue'),
-                                t('report.tab1.table.sessions'),
-                                t('report.tab1.table.occupancy'),
-                                t('report.tab1.table.csat'),
-                            ].map(col => (
-                                <th key={col} className="text-xs font-medium text-gray-400 text-left px-5 py-3">{col}</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                        {table.map((row, i) => (
-                            <tr key={i} className="hover:bg-gray-50 transition-colors">
-                                <td className="px-5 py-4 text-xs text-gray-400 font-mono">{row.code}</td>
-                                <td className="px-5 py-4 text-sm font-semibold text-gray-900">{row.dept}</td>
-                                <td className="px-5 py-4 text-sm text-gray-700 tabular-nums">{fmtVND(row.revenue)}</td>
-                                <td className="px-5 py-4 text-sm text-gray-600">{row.sessions} ca</td>
-                                <td className="px-5 py-4 text-sm">
-                                    <span className={row.occupancy >= 90 ? 'text-red-500 font-medium' : 'text-gray-700'}>
-                                        {row.occupancy}% {row.occupancy >= 90 && '(Quá tải)'}
-                                    </span>
-                                </td>
-                                <td className="px-5 py-4 text-sm font-semibold text-gray-800">{row.csat} / 5.0</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-}
-
-/* ── Tab 2 content ── */
-function Tab2({ data, t }) {
-    if (!data) return null;
-    const {
-        totalRevenue = 0, totalSessions = 0,
-        avgPerSession = 0, bhytTotal = 0, bhytRate = 0,
-        drugRevenue = 0,
-        breakdown = [],
-        table = [],
-    } = data;
-
-    const [filter, setFilter] = useState('');
-    const [sortDesc, setSortDesc] = useState(true);
-
-    const filtered = table
-        .filter(r => !filter || r.category === filter)
-        .sort((a, b) => sortDesc ? b.totalRevenue - a.totalRevenue : a.totalRevenue - b.totalRevenue);
-
-    const categories = [...new Set(table.map(r => r.category).filter(Boolean))];
-    const barColors = ['bg-gray-900', 'bg-gray-400', 'bg-gray-300'];
-
-    return (
-        <div className="space-y-5">
-            {/* Stats */}
-            <div className="grid grid-cols-4 gap-4">
-                <StatCard label={t('report.tab2.stats.totalRevenue')} value={fmtVND(totalRevenue)}
-                    note={t('report.tab2.stats.totalRevenueNote', { total: totalSessions })} />
-                <StatCard label={t('report.tab2.stats.avgPerSession')} value={fmtVND(avgPerSession)}
-                    note={t('report.tab2.stats.avgPerSessionNote')} />
-                <StatCard label={t('report.tab2.stats.bhytTotal')} value={fmtVND(bhytTotal)}
-                    note={t('report.tab2.stats.bhytNote', { rate: bhytRate })} />
-                <StatCard label={t('report.tab2.stats.drugRevenue')} value={fmtVND(drugRevenue)}
-                    note={t('report.tab2.stats.drugNote')} muted />
-            </div>
-
-            {/* Breakdown bars */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-6">
-                <p className="text-xs font-medium text-gray-500 mb-5">{t('report.tab2.breakdown.title')}</p>
-                {breakdown.map((b, i) => (
-                    <BreakdownBar key={i} label={b.label} pct={b.pct} amount={b.amount} color={barColors[i] ?? 'bg-gray-200'} />
-                ))}
-            </div>
-
-            {/* Detail table */}
-            <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <p className="text-sm font-semibold text-gray-800">{t('report.tab2.table.title')}</p>
-                    <div className="flex items-center gap-3">
-                        <select value={filter} onChange={e => setFilter(e.target.value)}
-                            className="h-8 px-3 text-xs border border-gray-200 rounded-lg outline-none bg-white">
-                            <option value="">{t('report.tab2.table.filterAll')}</option>
-                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                        <button onClick={() => setSortDesc(v => !v)}
-                            className="flex items-center gap-1.5 h-8 px-3 text-xs border border-gray-200 rounded-lg text-gray-500 hover:border-gray-400 transition-colors">
-                            {t('report.tab2.table.sort')} {sortDesc ? '↓' : '↑'}
-                        </button>
-                    </div>
-                </div>
-                <table className="w-full">
-                    <thead className="border-b border-gray-100 bg-gray-50">
-                        <tr>
-                            {[
-                                t('report.tab2.table.stt'),
-                                t('report.tab2.table.serviceName'),
-                                t('report.tab2.table.totalOrders'),
-                                t('report.tab2.table.unitPrice'),
-                                t('report.tab2.table.totalRevenue'),
-                                t('report.tab2.table.bhytQty'),
-                                t('report.tab2.table.bhytFund'),
-                            ].map(col => (
-                                <th key={col} className="text-xs font-medium text-gray-400 text-left px-5 py-3">{col}</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                        {filtered.map((row, i) => (
-                            <tr key={i} className="hover:bg-gray-50 transition-colors">
-                                <td className="px-5 py-4 text-xs text-gray-400">{String(i + 1).padStart(2, '0')}</td>
-                                <td className="px-5 py-4">
-                                    <p className="text-sm font-medium text-gray-900 leading-snug">{row.name}</p>
-                                    {row.note && <p className="text-xs text-gray-400 mt-0.5">{row.note}</p>}
-                                </td>
-                                <td className="px-5 py-4 text-sm text-gray-600 tabular-nums">{fmt(row.totalOrders)} đơn ca</td>
-                                <td className="px-5 py-4 text-sm text-gray-600 tabular-nums">{fmt(row.unitPrice)}</td>
-                                <td className="px-5 py-4 text-sm font-bold text-gray-900 tabular-nums">{fmt(row.totalRevenue)}</td>
-                                <td className="px-5 py-4 text-sm text-gray-600 tabular-nums">{fmt(row.bhytQty)}</td>
-                                <td className="px-5 py-4 text-sm text-gray-600 tabular-nums">{fmt(row.bhytFund)}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-}
-
-/* ── Print Layout ── */
-function PrintLayout({ activeTab, period, fromDate, toDate, tab1Data, tab2Data, t }) {
-    // Build period text
-    let periodText;
-    if (period === 'custom' && fromDate && toDate) {
-        const fmt = (d) => {
-            const [y, m, day] = d.split('-');
-            return `${day}/${m}/${y}`;
-        };
-        periodText = `Từ ngày ${fmt(fromDate)} đến ngày ${fmt(toDate)}`;
-    } else if (period === 'day') {
-        const today = new Date();
-        periodText = `Ngày ${today.getDate().toString().padStart(2,'0')}/${(today.getMonth()+1).toString().padStart(2,'0')}/${today.getFullYear()}`;
-    } else if (period === 'month') {
-        const today = new Date();
-        periodText = `Tháng ${today.getMonth()+1}/${today.getFullYear()}`;
-    } else if (period === 'quarter') {
-        const today = new Date();
-        const q = Math.floor(today.getMonth() / 3) + 1;
-        periodText = `Quý ${q} năm ${today.getFullYear()}`;
-    } else {
-        periodText = `Năm ${new Date().getFullYear()}`;
-    }
-    const isTab1 = activeTab === 'tab1';
-
-    return (
-        <div className="hidden print:block w-full text-black font-serif bg-white p-8">
-            <div className="flex justify-between items-start mb-8">
-                <div>
-                    <h2 className="font-bold text-lg">PHÒNG KHÁM CARES</h2>
-                    <p className="text-sm">Địa chỉ: 123 Đường Y Tế, TP. HCM</p>
-                </div>
-                <div className="text-right">
-                    <p className="text-sm italic">Mẫu biểu: BCH/2026</p>
-                </div>
-            </div>
-
-            <div className="text-center mb-8">
-                <h1 className="text-xl font-bold uppercase mb-2">
-                    BÁO CÁO THỐNG KÊ {isTab1 ? 'TỔNG QUAN & CÔNG SUẤT' : 'DOANH THU THEO DỊCH VỤ'}
-                </h1>
-                <p className="text-sm italic">Kỳ báo cáo: {periodText}</p>
-                <p className="text-sm italic">Đơn vị tính: VNĐ / Lượt</p>
-            </div>
-
-            {isTab1 && tab1Data?.table && (
-                <table className="w-full border-collapse border border-black mb-8 text-sm">
-                    <thead>
-                        <tr className="bg-gray-100">
-                            <th className="border border-black p-2">Mã phòng</th>
-                            <th className="border border-black p-2">Tên phòng ban</th>
-                            <th className="border border-black p-2">Doanh thu lũy kế</th>
-                            <th className="border border-black p-2">Tổng số ca</th>
-                            <th className="border border-black p-2">Công suất</th>
-                            <th className="border border-black p-2">CSAT</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {tab1Data.table.map((row, i) => (
-                            <tr key={i}>
-                                <td className="border border-black p-2 text-center">{row.code}</td>
-                                <td className="border border-black p-2">{row.dept}</td>
-                                <td className="border border-black p-2 text-right">{fmtVND(row.revenue)}</td>
-                                <td className="border border-black p-2 text-center">{row.sessions}</td>
-                                <td className="border border-black p-2 text-center">{row.occupancy}%</td>
-                                <td className="border border-black p-2 text-center">{row.csat}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
-
-            {!isTab1 && tab2Data?.table && (
-                <table className="w-full border-collapse border border-black mb-8 text-sm">
-                    <thead>
-                        <tr className="bg-gray-100">
-                            <th className="border border-black p-2">STT</th>
-                            <th className="border border-black p-2">Tên dịch vụ</th>
-                            <th className="border border-black p-2">Số ca</th>
-                            <th className="border border-black p-2">Đơn giá</th>
-                            <th className="border border-black p-2">Tổng doanh thu</th>
-                            <th className="border border-black p-2">Lượt BHYT</th>
-                            <th className="border border-black p-2">Quỹ BHYT trả</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {tab2Data.table.map((row, i) => (
-                            <tr key={i}>
-                                <td className="border border-black p-2 text-center">{i + 1}</td>
-                                <td className="border border-black p-2">{row.name}</td>
-                                <td className="border border-black p-2 text-center">{row.totalOrders}</td>
-                                <td className="border border-black p-2 text-right">{fmtVND(row.unitPrice)}</td>
-                                <td className="border border-black p-2 text-right font-bold">{fmtVND(row.totalRevenue)}</td>
-                                <td className="border border-black p-2 text-center">{row.bhytQty}</td>
-                                <td className="border border-black p-2 text-right">{fmtVND(row.bhytFund)}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
-
-            <div className="flex justify-between mt-12">
-                <div className="text-center w-1/3">
-                    <p className="font-bold">Người lập bảng</p>
-                    <p className="italic text-xs">(Ký, ghi rõ họ tên)</p>
-                </div>
-                <div className="text-center w-1/3">
-                    <p className="font-bold">Kế toán trưởng</p>
-                    <p className="italic text-xs">(Ký, ghi rõ họ tên)</p>
-                </div>
-                <div className="text-center w-1/3">
-                    <p className="italic mb-1">Ngày ..... tháng ..... năm 20.....</p>
-                    <p className="font-bold">Giám đốc</p>
-                    <p className="italic text-xs">(Ký, họ tên, đóng dấu)</p>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-/* ── Main Page ── */
 export default function ReportPage() {
-    const { t } = useTranslation('report');
-    const { tab1Data, tab2Data, loading, error, fetchTab1, fetchTab2, exportCSV } = useReport();
-
-    const [activeTab, setActiveTab] = useState('tab1');
+    const initialDay = today();
+    const [tab, setTab] = useState('overview');
     const [period, setPeriod] = useState('day');
-    const [fromDate, setFromDate] = useState('');
-    const [toDate, setToDate] = useState('');
-
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [selectedQuarter, setSelectedQuarter] = useState(Math.floor(new Date().getMonth() / 3) + 1);
-    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-
-    useEffect(() => {
-        if (period === 'day') {
-            fetchTab1('day');
-            fetchTab2('day');
-        } else if (period === 'year') {
-            const f = `${selectedYear}-01-01`;
-            const t = `${selectedYear}-12-31`;
-            fetchTab1('custom', f, t);
-            fetchTab2('custom', f, t);
-        } else if (period === 'quarter') {
-            const startMonth = (selectedQuarter - 1) * 3 + 1;
-            const endMonth = startMonth + 2;
-            const f = `${selectedYear}-${String(startMonth).padStart(2, '0')}-01`;
-            const daysInEndMonth = new Date(selectedYear, endMonth, 0).getDate();
-            const t = `${selectedYear}-${String(endMonth).padStart(2, '0')}-${daysInEndMonth}`;
-            fetchTab1('custom', f, t);
-            fetchTab2('custom', f, t);
-        } else if (period === 'month') {
-            const f = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
-            const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
-            const t = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${daysInMonth}`;
-            fetchTab1('custom', f, t);
-            fetchTab2('custom', f, t);
+    const [year, setYear] = useState(Number(initialDay.slice(0, 4)));
+    const [month, setMonth] = useState(Number(initialDay.slice(5, 7)));
+    const [quarter, setQuarter] = useState(Math.ceil(Number(initialDay.slice(5, 7)) / 3));
+    const [customFrom, setCustomFrom] = useState(initialDay);
+    const [customTo, setCustomTo] = useState(initialDay);
+    const [applied, setApplied] = useState({ from: initialDay, to: initialDay });
+    const [rangeError, setRangeError] = useState('');
+    const [search, setSearch] = useState('');
+    const [roomSearch, setRoomSearch] = useState('');
+    const [exportMode, setExportMode] = useState(null);
+    const range = period === 'custom' ? applied : rangeFor(period, year, month, quarter);
+    const { data, loading, error, refresh } = useReport(range.from, range.to);
+    const serviceRows = useMemo(() => filterReportRows(data?.services ?? [], search)
+        .sort((a, b) => Number(b.patientAmount) - Number(a.patientAmount)), [data, search]);
+    const roomHeaders = ['Phòng', 'Bệnh án hoàn thành', 'CLS hoàn thành', 'Chờ gọi / đã gọi', 'Đang xử lý', 'Bỏ lượt', 'Đánh giá'];
+    const roomRows = filterReportRows(data?.rooms ?? [], roomSearch).map(r => [r.code + ' · ' + r.name, r.completedExaminations, r.completedTests, r.waiting, r.inProgress, r.skipped,
+        r.ratingCount ? `${r.rating}/5 · ${r.ratingCount} đánh giá` : 'Chưa có đánh giá']);
+    const serviceHeaders = ['Dịch vụ', 'Nhóm', 'Số lượng', 'Giá trị niêm yết', 'BHYT ghi nhận', 'Sau giảm trừ tại dòng'];
+    const mappedServices = serviceRows.map(s => [s.code + ' · ' + s.name, categories[s.category] ?? s.category, s.quantity, money(s.gross), money(s.insurance), money(s.patientAmount)]);
+    const a = data?.activity;
+    const f = data?.finance;
+    const reconciliation = f ? [
+        ['Tổng giá trị hóa đơn', f.invoiceGross], ['BHYT ghi nhận (không phải tiền đã quyết toán)', f.insurance],
+        ['Ưu đãi thẻ CareS', f.caresBenefit], ['Giảm trừ khác (âm là phụ thu)', f.otherDiscount],
+        ['Thuế', f.tax], ['Người bệnh phải trả', f.invoicePayable], ['Đã thanh toán cho các hóa đơn này', f.invoicePaid], ['Còn phải thu hiện tại', f.outstanding],
+    ] : [];
+    function applyCustom() {
+        const days = (Date.parse(customTo) - Date.parse(customFrom)) / 86400000;
+        if (!customFrom || !customTo || !Number.isFinite(days) || days < 0 || days > 366) {
+            setRangeError('Chọn ngày bắt đầu và kết thúc hợp lệ, tối đa 367 ngày.'); return;
         }
-    }, [period, selectedYear, selectedQuarter, selectedMonth]);
-
-    const handlePeriod = (p) => {
-        setPeriod(p);
-    };
-
-    const handleApplyCustom = () => {
-        if (!fromDate || !toDate) {
-            toast.error('Vui lòng chọn đầy đủ từ ngày và đến ngày');
-            return;
-        }
-        if (new Date(fromDate) > new Date(toDate)) {
-            toast.error('Từ ngày không được lớn hơn đến ngày');
-            return;
-        }
-        fetchTab1('custom', fromDate, toDate);
-        fetchTab2('custom', fromDate, toDate);
-    };
-
-    return (
-        <OwnerLayout>
-            <div className="px-10 py-8 min-h-screen flex flex-col space-y-5 print:hidden">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                    <div>
-                        <h1 className="text-base font-semibold text-gray-900">{t('report.pageTitle')}</h1>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                            {activeTab === 'tab1' ? t('report.subtitle1') : t('report.subtitle2')}
-                        </p>
-                    </div>
-                    {/* Period switcher */}
-                    <div className="flex items-center gap-2 print:hidden">
-                        {period === 'custom' && (
-                            <div className="flex items-center gap-2 border border-gray-200 rounded-xl p-1 bg-white">
-                                <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="px-2 h-7 text-xs border border-gray-200 rounded-md outline-none" />
-                                <span className="text-gray-400 text-xs">-</span>
-                                <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="px-2 h-7 text-xs border border-gray-200 rounded-md outline-none" />
-                                <button onClick={handleApplyCustom} className="px-3 h-7 bg-blue-500 text-white text-xs font-medium rounded-lg ml-1 hover:bg-blue-600 transition-colors">Áp dụng</button>
-                            </div>
-                        )}
-                        {(period === 'year' || period === 'quarter' || period === 'month') && (
-                            <div className="flex items-center gap-2 border border-gray-200 rounded-xl p-1 bg-white">
-                                {period === 'month' && (
-                                    <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="px-2 h-7 text-xs border-r border-gray-200 outline-none bg-transparent">
-                                        {Array.from({length: 12}, (_, i) => i + 1).map(m => (
-                                            <option key={m} value={m}>Tháng {m}</option>
-                                        ))}
-                                    </select>
-                                )}
-                                {period === 'quarter' && (
-                                    <select value={selectedQuarter} onChange={e => setSelectedQuarter(Number(e.target.value))} className="px-2 h-7 text-xs border-r border-gray-200 outline-none bg-transparent">
-                                        {[1, 2, 3, 4].map(q => (
-                                            <option key={q} value={q}>Quý {q}</option>
-                                        ))}
-                                    </select>
-                                )}
-                                <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="px-2 h-7 text-xs outline-none bg-transparent">
-                                    {Array.from({length: 10}, (_, i) => new Date().getFullYear() - i).map(y => (
-                                        <option key={y} value={y}>Năm {y}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-                        <div className="flex items-center gap-1 border border-gray-200 rounded-xl p-1 bg-white">
-                            {PERIODS.map(p => (
-                                <button key={p} onClick={() => handlePeriod(p)}
-                                    className={`px-4 h-7 text-sm rounded-lg transition-colors ${period === p ? 'bg-gray-900 text-white font-medium' : 'text-gray-500 hover:text-gray-800'
-                                        }`}>
-                                    {p === 'custom' ? 'Tùy chỉnh' : t(`report.periods.${p}`)}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Tabs + Export */}
-                <div className="flex items-end justify-between border-b border-gray-200 print:hidden">
-                    <div className="flex">
-                        {[
-                            { key: 'tab1', label: t('report.tab1.label') },
-                            { key: 'tab2', label: t('report.tab2.label') },
-                        ].map(tab => (
-                            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                                className={`px-5 pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.key
-                                        ? 'border-gray-900 text-gray-900'
-                                        : 'border-transparent text-gray-400 hover:text-gray-700'
-                                    }`}>
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-                    <button onClick={() => window.print()}
-                        className="mb-3 px-4 h-9 bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium rounded-xl transition-colors whitespace-nowrap flex items-center gap-1.5">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                        In bản thống kê (Xem trước)
-                    </button>
-                </div>
-
-                {/* Content */}
-                {loading && <p className="text-sm text-gray-400 text-center py-12">{t('report.loading')}</p>}
-                {error && <p className="text-sm text-red-500 text-center py-4">{error}</p>}
-
-                {!loading && activeTab === 'tab1' && <Tab1 data={tab1Data} t={t} />}
-                {!loading && activeTab === 'tab2' && <Tab2 data={tab2Data} t={t} />}
-
-                {/* Footer */}
-                <div className="flex items-center justify-between pt-4 mt-auto border-t border-gray-100">
-                    <p className="text-xs text-gray-400">{t('report.footer1')}</p>
-                    <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-green-400" />
-                        <p className="text-xs text-gray-400">{t('report.footer2')}</p>
-                    </div>
-                </div>
-            </div>
-
-            <PrintLayout activeTab={activeTab} period={period} fromDate={fromDate} toDate={toDate} tab1Data={tab1Data} tab2Data={tab2Data} t={t} />
-        </OwnerLayout>
-    );
+        setRangeError('');
+        setApplied({ from: customFrom, to: customTo });
+    }
+    return <OwnerLayout><div id="cares-manager-report" className="space-y-5 p-4 text-slate-800 dark:text-slate-100 md:p-6">
+        {exportMode && data && !loading && !error && data.fromDate === range.from && data.toDate === range.to && <ReportExportDialog
+            data={data} mode={exportMode} serviceSearch={search} roomSearch={roomSearch}
+            defaultType={tab === 'payments' ? 'reconciliation' : tab} onClose={() => setExportMode(null)} />}
+        <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-xl font-semibold">Thống kê phòng khám</h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{range.from} – {range.to} · Giờ Việt Nam</p></div>
+            <div className="report-controls flex gap-2"><button className={control} onClick={refresh} disabled={loading} aria-label="Tải lại báo cáo"><RefreshCw size={16} /></button>
+                <button className={control + ' flex items-center gap-2'} disabled={!data || loading || !!error || data.fromDate !== range.from || data.toDate !== range.to} onClick={() => setExportMode('csv')}><Download size={16} />Xuất CSV</button>
+                <button className={control + ' flex items-center gap-2'} disabled={!data || loading || !!error || data.fromDate !== range.from || data.toDate !== range.to} onClick={() => setExportMode('print')}><Printer size={16} />In báo cáo</button></div>
+        </header>
+        <div className={panel + ' report-controls flex flex-wrap items-center gap-3'}>
+            <label className="text-sm">Khoảng thời gian <select className={control + ' ml-2'} value={period} onChange={e => { setPeriod(e.target.value); setRangeError(''); }}>
+                <option value="day">Hôm nay</option><option value="month">Tháng</option><option value="quarter">Quý</option><option value="year">Năm</option><option value="custom">Tùy chọn</option></select></label>
+            {!['day', 'custom'].includes(period) && <select aria-label="Năm" className={control} value={year} onChange={e => setYear(Number(e.target.value))}>{Array.from({ length: 10 }, (_, i) => Number(initialDay.slice(0, 4)) - i).map(y => <option key={y}>{y}</option>)}</select>}
+            {period === 'month' && <select aria-label="Tháng" className={control} value={month} onChange={e => setMonth(Number(e.target.value))}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i + 1}>Tháng {i + 1}</option>)}</select>}
+            {period === 'quarter' && <select aria-label="Quý" className={control} value={quarter} onChange={e => setQuarter(Number(e.target.value))}>{[1, 2, 3, 4].map(q => <option key={q} value={q}>Quý {q}</option>)}</select>}
+            {period === 'custom' && <><input aria-label="Từ ngày" className={control} type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} /><input aria-label="Đến ngày" className={control} type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} /><button className={control} onClick={applyCustom}>Áp dụng</button></>}
+            {rangeError && <p role="alert" className="text-sm text-red-600">{rangeError}</p>}
+        </div>
+        <nav className="report-controls flex gap-2 overflow-x-auto" aria-label="Nhóm thống kê">{tabs.map(([key, label]) => <button key={key} aria-current={tab === key ? 'page' : undefined} onClick={() => setTab(key)} className={'whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-medium ' + (tab === key ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200')}>{label}</button>)}</nav>
+        <h2 className="text-lg font-semibold">{tabs.find(([key]) => key === tab)[1]}</h2>
+        {loading && <p role="status" className={panel}>Đang tải số liệu…</p>}
+        {error && <div role="alert" className={panel + ' text-red-600'}>{error} <button className={control} onClick={refresh}>Thử lại</button></div>}
+        {data && !loading && <>
+            {tab === 'overview' && <><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <Stat label="Lượt đến khám" value={number(a.arrivals)} note="Số VIS check-in trong khoảng ngày; không phải số người duy nhất." />
+                <Stat label="Lượt đã kết thúc" value={number(a.closedVisits)} note={`Theo ngày checkout; gồm ${a.partialVisits} lượt bỏ dở một phần.`} />
+                <Stat label="Lượt đã hủy" value={number(a.cancelledVisits)} note="VIS CANCELLED theo ngày checkout; không phải lịch hẹn bị hủy." />
+                <Stat label="Bệnh án hoàn thành" value={number(a.completedExaminations)} note="Mỗi dịch vụ khám một bệnh án; tính theo completedAt." />
+                <Stat label="Yêu cầu CLS hoàn thành" value={number(a.completedTests)} note="Có bản kết quả đã ký; chỉ số lẻ là yêu cầu riêng, không phải lượt gọi." />
+                <Stat label="Thanh toán dịch vụ" value={money(f.collected)} note={`${f.successfulPayments} giao dịch thành công theo ngày thanh toán.`} />
+            </div><section className={panel}><h3 className="font-semibold">Thanh toán dịch vụ theo thời gian</h3><p className="my-2 text-xs text-slate-500">Di chuột vào cột để xem số tiền. Ngày không phát sinh giữ giá trị 0.</p><Trend points={data.paymentChart} /></section></>}
+            {tab === 'payments' && <><div className="grid gap-4 md:grid-cols-2"><Stat label="Thanh toán trong kỳ" value={money(f.collected)} note="Giao dịch SUCCESS theo paidAt, kể cả hóa đơn lập ngoài kỳ. Không tính giao dịch hủy/thất bại." />
+                <section className={panel}><h3 className="mb-3 font-semibold">Phương thức thanh toán</h3>{data.paymentMethods.length ? data.paymentMethods.map(p => <p key={p.label} className="flex justify-between gap-3 py-1 text-sm"><span>{methods[p.label] ?? p.label}</span><span>{money(p.amount)}</span></p>) : <p className="text-sm text-slate-500">Chưa có giao dịch thành công.</p>}</section></div>
+                <p className="text-sm text-slate-500">Bao gồm giá trị thanh toán bằng thẻ CareS, không cộng tiền nạp thẻ lần nữa. Đây không phải báo cáo tiền mặt ròng hoặc báo cáo hoàn tiền theo ngày.</p>
+                <section className={panel}><h3 className="font-semibold">Đối soát các hóa đơn lập trong kỳ</h3><p className="my-2 text-sm text-slate-500">Loại hóa đơn hủy. Số đã thanh toán/còn phải thu là trạng thái hiện tại của nhóm hóa đơn này, không phải số dư tại cuối kỳ.</p>
+                    <dl className="grid gap-x-8 md:grid-cols-2">{reconciliation.map(([label, amount]) => <div className="flex justify-between gap-4 border-b border-slate-100 py-3 text-sm dark:border-slate-800" key={label}><dt>{label}</dt><dd className="font-medium tabular-nums">{money(amount)}</dd></div>)}</dl>
+                    <p className="mt-3 text-xs text-slate-500">Phải trả = Tổng hóa đơn − BHYT − CareS − Giảm trừ khác + Thuế. Hai khối dùng ngày ghi nhận khác nhau nên không mặc định bằng nhau.</p></section>
+                <section className={panel}><div className="mb-3 flex flex-wrap justify-between gap-3"><h3 className="font-semibold">Dịch vụ trên hóa đơn trong kỳ</h3><input className={control + ' report-controls'} placeholder="Tìm mã hoặc tên dịch vụ…" aria-label="Tìm dịch vụ" value={search} onChange={e => setSearch(e.target.value)} /></div>
+                    <p className="mb-3 text-xs text-slate-500">Tìm kiếm chỉ lọc bảng chi tiết, không thay đổi tổng kết toàn kỳ. Giá lấy từ hóa đơn, không lấy giá danh mục hiện tại. Cột cuối chưa trừ ưu đãi CareS/điều chỉnh cấp hóa đơn, không gọi là thực thu.</p><DataTable key={`services-${search}-${range.from}-${range.to}`} headers={serviceHeaders} rows={mappedServices} unit="dịch vụ" /></section></>}
+            {tab === 'rooms' && <section className={panel}><p className="mb-4 text-sm text-slate-500">Hoàn thành tính theo ngày hoàn tất. Hàng chờ là trạng thái hiện tại của phiếu có ngày làm việc trong kỳ; “đang xử lý” gồm chờ CLS. Đánh giá là điểm bệnh án theo ngày đánh giá, không phải điểm riêng cho nhân viên.</p>
+                <input className={control + ' mb-3 w-full sm:max-w-sm'} placeholder="Tìm mã hoặc tên phòng…" aria-label="Tìm phòng" value={roomSearch} onChange={e => setRoomSearch(e.target.value)} />
+                <p className="mb-3 text-xs text-slate-500">Tìm kiếm chỉ áp dụng bảng phòng, không thay đổi tổng kết toàn kỳ.</p>
+                <DataTable key={`rooms-${roomSearch}-${range.from}-${range.to}`} headers={roomHeaders} rows={roomRows} unit="phòng" /><p className="mt-3 text-xs text-slate-500">Chưa có cơ sở tính công suất phòng nên không hiển thị phần trăm. Phòng chưa có phản hồi không bị chấm 0 sao.</p></section>}
+        </>}
+    </div></OwnerLayout>;
 }

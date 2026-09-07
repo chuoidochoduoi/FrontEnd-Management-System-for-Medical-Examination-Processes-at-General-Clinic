@@ -34,7 +34,7 @@ const noQueueMessages = {
 
 
 export default function QueuePanel({ queue, loading, error, updatedAt, patientName, status, retry, bookingPath,
-    endedWithSkipped = false, onRequestReturn, requestingReturn = false, returnMessage = '' }) {
+    endedWithSkipped = false }) {
     const closedForDay = endedWithSkipped || ['SKIPPED', 'CANCELLED', 'COMPLETED'].includes(queue?.currentStatus || status);
     const skipped = (queue?.currentStatus || status) === 'SKIPPED';
     return <section className={styles.card} aria-labelledby="room-queue-title" aria-busy={loading}>
@@ -59,15 +59,7 @@ export default function QueuePanel({ queue, loading, error, updatedAt, patientNa
             <div><h3>{queue.returnRequestStatus === 'EXPIRED' ? 'Bạn đã bỏ lượt' : 'Bạn đã được gọi nhưng chưa có mặt'}</h3>
                 <p>{queue.returnRequestStatus === 'EXPIRED'
                     ? `Phiếu số ${queue.queueNumber ?? '—'} ngày ${queue.workDate ? new Date(`${queue.workDate}T00:00:00`).toLocaleDateString('vi-VN') : 'trước'} đã kết thúc. Các dịch vụ chưa thực hiện được ghi nhận là bỏ lượt.`
-                    : queue.returnRequestStatus === 'PENDING'
-                        ? 'Bạn đã báo quay lại. Vui lòng đến quầy lễ tân để xác nhận có mặt trước khi được đưa lại vào hàng chờ.'
-                        : 'Nếu bạn đã quay lại phòng khám trong hôm nay, hãy báo cho lễ tân và xác nhận trực tiếp tại quầy.'}</p>
-                {returnMessage && <strong className={styles.returnMessage}>{returnMessage}</strong>}
-                {queue.returnRequestStatus === 'PENDING' && <span className={styles.pendingReturn}>Đang chờ lễ tân xác nhận</span>}
-                {queue.canRequestReturn && onRequestReturn && <button type="button" onClick={onRequestReturn} disabled={requestingReturn}>
-                    {requestingReturn ? <RefreshCw size={17} className={styles.spinning} /> : <RotateCcw size={17} />}
-                    {requestingReturn ? 'Đang gửi…' : 'Tôi đã quay lại'}
-                </button>}
+                    : 'Nếu bạn đã quay lại trong hôm nay, vui lòng đến quầy lễ tân. Lễ tân sẽ xác nhận có mặt và đưa bạn trở lại hàng chờ.'}</p>
                 {queue.returnRequestStatus === 'EXPIRED' && bookingPath && <Link className={styles.bookingLink} to={bookingPath}>Đặt lịch khám mới</Link>}
             </div>
         </div>}

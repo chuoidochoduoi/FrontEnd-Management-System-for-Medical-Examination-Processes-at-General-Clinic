@@ -7,7 +7,7 @@ const TermsPage = () => {
       <div className="mb-10">
         <p className="text-sm font-semibold text-slate-400 mb-2">Trang chủ &gt; Điều khoản dịch vụ</p>
         <h1 className="text-4xl font-bold text-slate-900 mb-6">Điều khoản dịch vụ</h1>
-        <p className="text-slate-600 font-light text-lg leading-relaxed max-w-3xl">
+        <p className="">
           Vui lòng đọc kỹ các điều khoản dưới đây khi sử dụng website và dịch vụ của Phòng khám đa khoa CARES.
         </p>
       </div>

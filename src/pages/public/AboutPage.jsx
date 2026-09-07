@@ -8,7 +8,7 @@ const AboutPage = () => {
       <div className="mb-10">
         <p className="text-sm font-semibold text-slate-400 mb-2">Trang chủ &gt; Về chúng tôi</p>
         <h1 className="text-4xl font-bold text-slate-900 mb-6">Về chúng tôi</h1>
-        <p className="text-slate-600 font-light text-lg leading-relaxed max-w-3xl">
+        <p className="">
           CARES được thành lập với sứ mệnh mang đến dịch vụ y tế chất lượng cao, an toàn và tận tâm cho mọi khách hàng.
         </p>
       </div>

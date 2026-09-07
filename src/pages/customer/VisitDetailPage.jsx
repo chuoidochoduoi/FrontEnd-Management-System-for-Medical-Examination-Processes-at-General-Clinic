@@ -1351,11 +1351,7 @@ export default function VisitDetailPage() {
                             />
 
                             <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                                Bệnh án khác trong cùng lượt (
-                                {
-                                    Math.max(0, examinations.length - 1)
-                                }
-                                )
+                                Bệnh án trong cùng lượt ({examinations.length})
                             </h2>
                         </div>
 

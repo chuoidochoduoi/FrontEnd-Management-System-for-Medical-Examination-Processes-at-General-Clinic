@@ -31,3 +31,11 @@ export const getPendingReturnRequests = (signal) => request('/api/v1/queue-retur
 export const confirmQueueReturn = (queueTicketId) => request(`/api/v1/queue-return-requests/${queueTicketId}/confirm`, {
   method: 'POST', headers: authHeaders(),
 });
+
+export const getSkippedReturnTickets = (signal) => request('/api/v1/queue-return-requests/skipped-today', {
+  signal, headers: authHeaders(),
+});
+
+export const restoreSkippedTicket = (queueTicketId) => request(`/api/v1/queue-return-requests/${queueTicketId}/restore`, {
+  method: 'POST', headers: authHeaders(),
+});

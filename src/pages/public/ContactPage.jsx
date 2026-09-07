@@ -70,7 +70,7 @@ const ContactPage = () => {
     <InfoLayout>
       <div className="mb-10">
         <h1 className="text-3xl font-bold text-slate-900 mb-4">Gửi thông tin liên hệ</h1>
-        <p className="text-slate-500 font-light text-lg">Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ bạn. Mọi thắc mắc hoặc cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh bên dưới.</p>
+        <p className="">Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ bạn. Mọi thắc mắc hoặc cần hỗ trợ, vui lòng liên hệ với chúng tôi qua các kênh bên dưới.</p>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8 xl:gap-12">

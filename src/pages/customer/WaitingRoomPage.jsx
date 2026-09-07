@@ -7,7 +7,6 @@ import { useProfile } from '@/hooks/useProfile';
 import styles from '@/components/journey/journey.module.css';
 import QueuePanel, { labels, completedStatuses, journeyPhaseLabel } from '@/components/journey/QueuePanel';
 import JourneyServiceProgress from '@/components/journey/JourneyServiceProgress';
-import { requestCustomerReturn } from '@/services/queueReturnRequestService';
 
 const stored = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -38,8 +37,6 @@ export default function WaitingRoomPage() {
     const listRequest = useRef(null);
     const [queueState, setQueueState] = useState({ key: '', data: null, loading: true, error: '', updatedAt: '' });
     const [queueRetry, setQueueRetry] = useState(0);
-    const [requestingReturn, setRequestingReturn] = useState(false);
-    const [returnMessage, setReturnMessage] = useState('');
 
     const load = useCallback(async (silent = false) => {
         listRequest.current?.abort();
@@ -123,20 +120,6 @@ export default function WaitingRoomPage() {
     const ownName = current?.patientName || 'Người được khám';
     const positionLabel = queueError || error ? 'Chưa cập nhật' : queue?.waitingPosition ? `Thứ ${queue.waitingPosition}`
         : status === 'CALLED' ? 'Đến phòng ngay' : status === 'IN_PROGRESS' ? 'Đang thực hiện' : '—';
-    const handleRequestReturn = async () => {
-        if (!current?.visitId || requestingReturn) return;
-        setRequestingReturn(true); setReturnMessage('');
-        try {
-            const result = await requestCustomerReturn(current.visitId);
-            setReturnMessage(result?.message || 'Đã báo lễ tân. Vui lòng đến quầy để xác nhận có mặt.');
-            await load(true);
-            setQueueRetry((value) => value + 1);
-        } catch (failure) {
-            setReturnMessage(failure.message || 'Không thể gửi yêu cầu quay lại. Vui lòng thử lại.');
-        } finally {
-            setRequestingReturn(false);
-        }
-    };
 
     return <CustomerLayout><div className={styles.page}>
         <header className="cares-customer-page-heading">
@@ -187,8 +170,7 @@ export default function WaitingRoomPage() {
             <div className={styles.columns}>
                 <QueuePanel queue={queue} loading={queueLoading} error={queueError}
                     updatedAt={queueState.key === queueKey ? queueState.updatedAt : ''} patientName={ownName} status={status}
-                    retry={() => setQueueRetry((value) => value + 1)} bookingPath="/customer/appointment" endedWithSkipped={endedWithSkipped}
-                    onRequestReturn={handleRequestReturn} requestingReturn={requestingReturn} returnMessage={returnMessage} />
+                    retry={() => setQueueRetry((value) => value + 1)} bookingPath="/customer/appointment" endedWithSkipped={endedWithSkipped} />
                 <section className={styles.card} aria-labelledby="journey-steps-title">
                     <header className={styles.cardHeader}><div><span className={styles.eyebrow}><Route size={18} /> {current.visitCode}</span>
                         <h2 id="journey-steps-title">Hành trình của bạn</h2><p>{ownName}</p></div></header>

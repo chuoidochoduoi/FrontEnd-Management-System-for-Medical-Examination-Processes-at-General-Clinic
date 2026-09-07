@@ -6,7 +6,6 @@ import QueuePanel, { labels, completedStatuses, journeyPhaseLabel } from '@/comp
 import JourneyServiceProgress from '@/components/journey/JourneyServiceProgress';
 import shared from '@/components/journey/journey.module.css';
 import styles from './GuestJourneyPage.module.css';
-import { requestGuestReturn } from '@/services/queueReturnRequestService';
 
 async function lookup(path, criteria, signal) {
     const params = new URLSearchParams(criteria);
@@ -33,8 +32,6 @@ export default function GuestJourneyPage() {
     const [error, setError] = useState('');
     const [fields, setFields] = useState({});
     const [updatedAt, setUpdatedAt] = useState('');
-    const [requestingReturn, setRequestingReturn] = useState(false);
-    const [returnMessage, setReturnMessage] = useState('');
     const request = useRef(null);
     const codeInput = useRef(null);
 
@@ -121,19 +118,6 @@ export default function GuestJourneyPage() {
     const visitDate = date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('vi-VN') : '';
     const currentRoom = queue?.roomName ? `${queue.roomName}${queue.roomCode ? ` (${queue.roomCode})` : ''}`
         : status === 'PAYMENT_PENDING' ? 'Quầy thu ngân' : status === 'RESULT_PENDING' ? 'Khu vực chờ kết quả' : journey?.currentRoom || 'Chưa phân phòng';
-    const handleRequestReturn = async () => {
-        if (!criteria || requestingReturn) return;
-        setRequestingReturn(true); setReturnMessage('');
-        try {
-            const response = await requestGuestReturn(criteria);
-            setReturnMessage(response?.message || 'Đã báo lễ tân. Vui lòng đến quầy để xác nhận có mặt.');
-            await load(criteria, true);
-        } catch (failure) {
-            setReturnMessage(failure.message || 'Không thể gửi yêu cầu quay lại. Vui lòng thử lại.');
-        } finally {
-            setRequestingReturn(false);
-        }
-    };
 
     return <div className={styles.site}>
         <header className={styles.nav}>
@@ -195,8 +179,7 @@ export default function GuestJourneyPage() {
                 </section>
                 <div className={shared.columns}>
                     <QueuePanel queue={queue} loading={loading} error="" updatedAt={updatedAt} patientName={journey.patientName || 'Người được khám'}
-                        status={status} retry={() => load(criteria, true)} bookingPath="/appointment" endedWithSkipped={endedWithSkipped}
-                        onRequestReturn={handleRequestReturn} requestingReturn={requestingReturn} returnMessage={returnMessage} />
+                        status={status} retry={() => load(criteria, true)} bookingPath="/appointment" endedWithSkipped={endedWithSkipped} />
                     <section className={shared.card} aria-labelledby="guest-timeline">
                         <header className={shared.cardHeader}><div><span className={shared.eyebrow}><Route size={18} /> Lượt khám {journey.visitCode}</span>
                             <h2 id="guest-timeline">Hành trình của bạn</h2></div></header>

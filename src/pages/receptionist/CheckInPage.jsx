@@ -5,7 +5,7 @@ import { CalendarDays, CheckCircle2, ChevronRight, ClipboardCheck, Clock3, FileP
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { useCheckIn } from '@/hooks/useCheckIn';
 import { ROUTES } from '@/constants/routes';
-import { confirmQueueReturn, getPendingReturnRequests } from '@/services/queueReturnRequestService';
+import { getSkippedReturnTickets, restoreSkippedTicket } from '@/services/queueReturnRequestService';
 import { useWebSocket } from '@/hooks/useWebSocket';
 
 const STATUS_LABEL = {
@@ -38,46 +38,46 @@ export default function CheckInPage() {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [timeSlot, setTimeSlot] = useState('');
     const [status, setStatus] = useState('');
-    const [returnRequests, setReturnRequests] = useState([]);
-    const [returnRequestsLoading, setReturnRequestsLoading] = useState(true);
-    const [returnRequestsError, setReturnRequestsError] = useState('');
-    const [confirmingTicketId, setConfirmingTicketId] = useState('');
+    const [skippedTickets, setSkippedTickets] = useState([]);
+    const [skippedTicketsLoading, setSkippedTicketsLoading] = useState(true);
+    const [skippedTicketsError, setSkippedTicketsError] = useState('');
+    const [restoringTicketId, setRestoringTicketId] = useState('');
 
     useEffect(() => { fetchAppointments({ date, status }); }, [date, status, fetchAppointments]);
 
-    const loadReturnRequests = useCallback(async (silent = false) => {
+    const loadSkippedTickets = useCallback(async (silent = false) => {
         const controller = new AbortController();
-        if (!silent) setReturnRequestsLoading(true);
+        if (!silent) setSkippedTicketsLoading(true);
         try {
-            const data = await getPendingReturnRequests(controller.signal);
-            setReturnRequests(Array.isArray(data) ? data : []);
-            setReturnRequestsError('');
+            const data = await getSkippedReturnTickets(controller.signal);
+            setSkippedTickets(Array.isArray(data) ? data : []);
+            setSkippedTicketsError('');
         } catch (failure) {
-            if (!controller.signal.aborted) setReturnRequestsError(failure.message);
+            if (!controller.signal.aborted) setSkippedTicketsError(failure.message);
         } finally {
-            if (!controller.signal.aborted) setReturnRequestsLoading(false);
+            if (!controller.signal.aborted) setSkippedTicketsLoading(false);
         }
         return () => controller.abort();
     }, []);
 
     useEffect(() => {
-        loadReturnRequests();
-        const timer = window.setInterval(() => { if (!document.hidden) loadReturnRequests(true); }, 20000);
+        loadSkippedTickets();
+        const timer = window.setInterval(() => { if (!document.hidden) loadSkippedTickets(true); }, 20000);
         return () => window.clearInterval(timer);
-    }, [loadReturnRequests]);
-    useWebSocket('/topic/queue-return-requests', null, () => loadReturnRequests(true), { authenticated: true });
+    }, [loadSkippedTickets]);
+    useWebSocket('/topic/queue-return-requests', null, () => loadSkippedTickets(true), { authenticated: true });
 
-    const confirmReturn = async (queueTicketId) => {
-        if (!queueTicketId || confirmingTicketId) return;
-        setConfirmingTicketId(queueTicketId); setReturnRequestsError('');
+    const restoreToQueue = async (queueTicketId) => {
+        if (!queueTicketId || restoringTicketId) return;
+        setRestoringTicketId(queueTicketId); setSkippedTicketsError('');
         try {
-            await confirmQueueReturn(queueTicketId);
-            setReturnRequests((current) => current.filter((item) => item.queueTicketId !== queueTicketId));
+            await restoreSkippedTicket(queueTicketId);
+            setSkippedTickets((current) => current.filter((item) => item.queueTicketId !== queueTicketId));
         } catch (failure) {
-            setReturnRequestsError(failure.message);
-            await loadReturnRequests(true);
+            setSkippedTicketsError(failure.message);
+            await loadSkippedTickets(true);
         } finally {
-            setConfirmingTicketId('');
+            setRestoringTicketId('');
         }
     };
 
@@ -128,24 +128,23 @@ export default function CheckInPage() {
             </section>
 
             <section className="cares-return-requests" aria-labelledby="return-request-title">
-                <header><div><span><UserCheck size={19} /> Xác nhận tại quầy</span><h2 id="return-request-title">Khách báo đã quay lại</h2>
-                    <p>Chỉ xác nhận sau khi đã đối chiếu người bệnh đang có mặt trực tiếp.</p></div>
-                    <strong>{returnRequests.length}</strong></header>
-                {returnRequestsError && <div className="cares-return-request-error" role="alert">{returnRequestsError}
-                    <button type="button" onClick={() => loadReturnRequests()}>Tải lại</button></div>}
-                {returnRequestsLoading && <div className="cares-return-request-empty"><span className="cares-reception-spinner" /> Đang tải yêu cầu...</div>}
-                {!returnRequestsLoading && !returnRequestsError && returnRequests.length === 0
-                    && <div className="cares-return-request-empty">Chưa có khách nào báo quay lại.</div>}
-                {!returnRequestsLoading && returnRequests.length > 0 && <div className="cares-return-request-list">
-                    {returnRequests.map((item) => <article key={item.queueTicketId}>
+                <header><div><span><UserCheck size={19} /> Hỗ trợ tại quầy</span><h2 id="return-request-title">Khách vắng trong ngày</h2>
+                    <p>Khi khách quay lại, Lễ tân đối chiếu người bệnh có mặt rồi đưa phiếu trở lại hàng chờ.</p></div>
+                    <strong>{skippedTickets.length}</strong></header>
+                {skippedTicketsError && <div className="cares-return-request-error" role="alert">{skippedTicketsError}
+                    <button type="button" onClick={() => loadSkippedTickets()}>Tải lại</button></div>}
+                {skippedTicketsLoading && <div className="cares-return-request-empty"><span className="cares-reception-spinner" /> Đang tải phiếu vắng...</div>}
+                {!skippedTicketsLoading && !skippedTicketsError && skippedTickets.length === 0
+                    && <div className="cares-return-request-empty">Hôm nay chưa có bệnh nhân bị đánh dấu vắng.</div>}
+                {!skippedTicketsLoading && skippedTickets.length > 0 && <div className="cares-return-request-list">
+                    {skippedTickets.map((item) => <article key={item.queueTicketId}>
                         <div><strong>{item.patientName || 'Người được khám'}</strong><span>{item.visitCode} · Phiếu {item.queueNumber ?? '—'}</span></div>
                         <div><strong>{item.roomName || 'Chưa xác định phòng'}</strong><span>{item.roomCode || '—'}</span></div>
-                        <div><small>Được gọi</small><span>{formatMoment(item.calledAt)}</span>
-                            <small className="mt-1">Báo quay lại</small><span>{formatMoment(item.requestedAt)}</span></div>
-                        <button type="button" disabled={confirmingTicketId === item.queueTicketId}
-                            onClick={() => confirmReturn(item.queueTicketId)}>
-                            {confirmingTicketId === item.queueTicketId ? <span className="cares-reception-spinner" /> : <UserCheck size={18} />}
-                            {confirmingTicketId === item.queueTicketId ? 'Đang xác nhận...' : 'Xác nhận có mặt'}
+                        <div><small>Đã gọi lúc</small><span>{formatMoment(item.calledAt)}</span></div>
+                        <button type="button" disabled={restoringTicketId === item.queueTicketId}
+                            onClick={() => restoreToQueue(item.queueTicketId)}>
+                            {restoringTicketId === item.queueTicketId ? <span className="cares-reception-spinner" /> : <UserCheck size={18} />}
+                            {restoringTicketId === item.queueTicketId ? 'Đang xử lý...' : 'Đưa lại hàng chờ'}
                         </button>
                     </article>)}
                 </div>}

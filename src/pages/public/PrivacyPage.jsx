@@ -7,7 +7,7 @@ const PrivacyPage = () => {
       <div className="mb-10">
         <p className="text-sm font-semibold text-slate-400 mb-2">Trang chủ &gt; Chính sách bảo mật</p>
         <h1 className="text-4xl font-bold text-slate-900 mb-6">Chính sách bảo mật</h1>
-        <p className="text-slate-600 font-light text-lg leading-relaxed max-w-3xl">
+        <p className="">
           CARES cam kết bảo vệ thông tin cá nhân và quyền riêng tư của bạn khi sử dụng website và dịch vụ của chúng tôi.
         </p>
       </div>

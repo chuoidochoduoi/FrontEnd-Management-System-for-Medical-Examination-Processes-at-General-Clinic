@@ -1,12 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarDays, CheckCircle2, ChevronRight, ClipboardCheck, Clock3, FilePlus, RotateCcw, Search, UserCheck, UsersRound } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ChevronRight, ClipboardCheck, Clock3, FilePlus, RotateCcw, Search, UsersRound } from 'lucide-react';
 
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { useCheckIn } from '@/hooks/useCheckIn';
 import { ROUTES } from '@/constants/routes';
-import { getSkippedReturnTickets, restoreSkippedTicket } from '@/services/queueReturnRequestService';
-import { useWebSocket } from '@/hooks/useWebSocket';
 
 const STATUS_LABEL = {
     pending: 'Chờ check-in',
@@ -38,52 +36,8 @@ export default function CheckInPage() {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [timeSlot, setTimeSlot] = useState('');
     const [status, setStatus] = useState('');
-    const [skippedTickets, setSkippedTickets] = useState([]);
-    const [skippedTicketsLoading, setSkippedTicketsLoading] = useState(true);
-    const [skippedTicketsError, setSkippedTicketsError] = useState('');
-    const [restoringTicketId, setRestoringTicketId] = useState('');
 
     useEffect(() => { fetchAppointments({ date, status }); }, [date, status, fetchAppointments]);
-
-    const loadSkippedTickets = useCallback(async (silent = false) => {
-        const controller = new AbortController();
-        if (!silent) setSkippedTicketsLoading(true);
-        try {
-            const data = await getSkippedReturnTickets(controller.signal);
-            setSkippedTickets(Array.isArray(data) ? data : []);
-            setSkippedTicketsError('');
-        } catch (failure) {
-            if (!controller.signal.aborted) setSkippedTicketsError(failure.message);
-        } finally {
-            if (!controller.signal.aborted) setSkippedTicketsLoading(false);
-        }
-        return () => controller.abort();
-    }, []);
-
-    useEffect(() => {
-        loadSkippedTickets();
-        const timer = window.setInterval(() => { if (!document.hidden) loadSkippedTickets(true); }, 20000);
-        return () => window.clearInterval(timer);
-    }, [loadSkippedTickets]);
-    useWebSocket('/topic/queue-return-requests', null, () => loadSkippedTickets(true), { authenticated: true });
-
-    const restoreToQueue = async (queueTicketId) => {
-        if (!queueTicketId || restoringTicketId) return;
-        setRestoringTicketId(queueTicketId); setSkippedTicketsError('');
-        try {
-            await restoreSkippedTicket(queueTicketId);
-            setSkippedTickets((current) => current.filter((item) => item.queueTicketId !== queueTicketId));
-        } catch (failure) {
-            setSkippedTicketsError(failure.message);
-            await loadSkippedTickets(true);
-        } finally {
-            setRestoringTicketId('');
-        }
-    };
-
-    const formatMoment = (value) => value ? new Date(value).toLocaleString('vi-VN', {
-        hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric',
-    }) : '—';
 
     const filteredAppointments = useMemo(() => (Array.isArray(appointments) ? appointments : []).filter((appointment) => {
         const keyword = search.trim().toLowerCase();
@@ -125,29 +79,6 @@ export default function CheckInPage() {
                 <article><span className="is-warning"><Clock3 size={21} /></span><div><small>Chờ check-in</small><strong>{summary.pending}</strong></div></article>
                 <article><span className="is-info"><CheckCircle2 size={21} /></span><div><small>Đã check-in</small><strong>{summary.checkedIn}</strong></div></article>
                 <article><span className="is-purple"><RotateCcw size={21} /></span><div><small>Cần tái khám</small><strong>{summary.followUp}</strong></div></article>
-            </section>
-
-            <section className="cares-return-requests" aria-labelledby="return-request-title">
-                <header><div><span><UserCheck size={19} /> Hỗ trợ tại quầy</span><h2 id="return-request-title">Khách vắng trong ngày</h2>
-                    <p>Khi khách quay lại, Lễ tân đối chiếu người bệnh có mặt rồi đưa phiếu trở lại hàng chờ.</p></div>
-                    <strong>{skippedTickets.length}</strong></header>
-                {skippedTicketsError && <div className="cares-return-request-error" role="alert">{skippedTicketsError}
-                    <button type="button" onClick={() => loadSkippedTickets()}>Tải lại</button></div>}
-                {skippedTicketsLoading && <div className="cares-return-request-empty"><span className="cares-reception-spinner" /> Đang tải phiếu vắng...</div>}
-                {!skippedTicketsLoading && !skippedTicketsError && skippedTickets.length === 0
-                    && <div className="cares-return-request-empty">Hôm nay chưa có bệnh nhân bị đánh dấu vắng.</div>}
-                {!skippedTicketsLoading && skippedTickets.length > 0 && <div className="cares-return-request-list">
-                    {skippedTickets.map((item) => <article key={item.queueTicketId}>
-                        <div><strong>{item.patientName || 'Người được khám'}</strong><span>{item.visitCode} · Phiếu {item.queueNumber ?? '—'}</span></div>
-                        <div><strong>{item.roomName || 'Chưa xác định phòng'}</strong><span>{item.roomCode || '—'}</span></div>
-                        <div><small>Đã gọi lúc</small><span>{formatMoment(item.calledAt)}</span></div>
-                        <button type="button" disabled={restoringTicketId === item.queueTicketId}
-                            onClick={() => restoreToQueue(item.queueTicketId)}>
-                            {restoringTicketId === item.queueTicketId ? <span className="cares-reception-spinner" /> : <UserCheck size={18} />}
-                            {restoringTicketId === item.queueTicketId ? 'Đang xử lý...' : 'Đưa lại hàng chờ'}
-                        </button>
-                    </article>)}
-                </div>}
             </section>
 
             <section className="cares-reception-filter-bar">

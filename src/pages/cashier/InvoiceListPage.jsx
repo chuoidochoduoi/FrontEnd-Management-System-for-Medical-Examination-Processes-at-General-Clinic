@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, FileText, Search, WalletCards } from 'lucide-react';
+import { Eye, FileText, RotateCcw, Search, WalletCards } from 'lucide-react';
 import CashierLayout from '@/components/layout/CashierLayout';
 import { useInvoiceList } from '@/hooks/useInvoiceList';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -30,7 +30,17 @@ export default function InvoiceListPage() {
     const [toDate, setToDate] = useState('');
     const pageSize = 7;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const hasFilters = Boolean(search.trim() || status || category.trim() || fromDate || toDate);
     const query = (nextPage = 0) => ({ search, status, category, fromDate, toDate, page: nextPage, size: pageSize });
+
+    const clearFilters = () => {
+        setSearch('');
+        setStatus('');
+        setCategory('');
+        setFromDate('');
+        setToDate('');
+        fetchInvoices({ search: '', status: '', category: '', fromDate: '', toDate: '', page: 0, size: pageSize });
+    };
 
     useEffect(() => { fetchInvoices({ page: 0, size: pageSize }); }, []);
     useWebSocket('/topic/cashier-invoices', null, (message) => {
@@ -53,7 +63,10 @@ export default function InvoiceListPage() {
             <label><span>Dịch vụ</span><input value={category} onChange={(event) => setCategory(event.target.value)} placeholder="Tên dịch vụ..."/></label>
             <label><span>Từ ngày</span><input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)}/></label>
             <label><span>Đến ngày</span><input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)}/></label>
-            <button type="button" className="cares-ops-primary" onClick={() => fetchInvoices(query(0))}><Search size={18}/>Tìm kiếm</button>
+            <div className={styles.filterActions}>
+                <button type="button" className="cares-ops-primary" onClick={() => fetchInvoices(query(0))}><Search size={18}/>Tìm kiếm</button>
+                <button type="button" className={`cares-ops-secondary ${styles.clearFilterButton}`} disabled={!hasFilters || loading} onClick={clearFilters} aria-label="Xóa bộ lọc" title="Xóa bộ lọc"><RotateCcw size={18}/></button>
+            </div>
         </section>
 
         <section className="cares-ops-card">

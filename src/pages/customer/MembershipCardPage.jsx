@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CreditCard, History, RefreshCw, ShieldCheck, WalletCards } from 'lucide-react';
 import { toast } from 'react-toastify';
 import CustomerLayout from '@/components/layout/CustomerLayout';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import { useWebSocket } from '@/hooks/useWebSocket';
 
 const get = key => localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -15,6 +16,8 @@ export default function MembershipCardPage() {
     const [history, setHistory] = useState([]);
     const [pin, setPin] = useState('');
     const [accepted, setAccepted] = useState(false);
+    const [confirmingRegistration, setConfirmingRegistration] = useState(false);
+    const [registering, setRegistering] = useState(false);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [syncError, setSyncError] = useState('');
@@ -93,13 +96,22 @@ export default function MembershipCardPage() {
     });
 
     const register = async () => {
-        const res = await fetch(`${api}/api/v1/membership-cards/my/register`, {
-            method: 'POST', headers: headers(), body: JSON.stringify({ pin, acceptedTerms: accepted })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) return toast.error(data.message || 'Không thể đăng ký thẻ.');
-        toast.success('Đăng ký thẻ thành công. Vui lòng nạp tiền tại quầy để kích hoạt.');
-        setPin(''); setCard(data); load();
+        if (registering || pin.length !== 6 || !accepted) return;
+        setRegistering(true);
+        try {
+            const res = await fetch(`${api}/api/v1/membership-cards/my/register`, {
+                method: 'POST', headers: headers(), body: JSON.stringify({ pin, acceptedTerms: accepted })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) return toast.error(data.message || 'Không thể đăng ký thẻ.');
+            setConfirmingRegistration(false);
+            toast.success('Đăng ký thẻ thành công. Vui lòng nạp tiền tại quầy để kích hoạt.');
+            setPin(''); setCard(data); load();
+        } catch {
+            toast.error('Không thể kết nối để đăng ký thẻ.');
+        } finally {
+            setRegistering(false);
+        }
     };
 
     return <CustomerLayout><div className="space-y-6">
@@ -113,8 +125,8 @@ export default function MembershipCardPage() {
                 <div className="rounded-2xl border bg-white p-7"><WalletCards className="text-primary-600" size={34}/><h2 className="mt-4 text-2xl font-bold">Đăng ký thẻ điện tử</h2>
                     <p className="mt-2 text-gray-600">Số tiền nạp được ghi nhận đúng 1:1. Nạp lần đầu từ {money(policy?.minimumTopUp || 1000000)} để kích hoạt ưu đãi {policy?.discountPercent || 15}% trong {policy?.validityMonths || 12} tháng.</p>
                     <label className="mt-5 block font-medium">Tạo mã PIN 6 số<input value={pin} onChange={e => setPin(e.target.value.replace(/\D/g,'').slice(0,6))} type="password" inputMode="numeric" className="mt-2 h-12 w-full rounded-xl border px-4" placeholder="••••••"/></label>
-                    <label className="mt-4 flex gap-3"><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)}/><span>Tôi xác nhận có quyền quản lý thẻ và đồng ý thẻ không hỗ trợ rút/chuyển số dư thành tiền mặt.</span></label>
-                    <button onClick={register} disabled={pin.length!==6 || !accepted} className="mt-5 rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white disabled:opacity-50">Đăng ký thẻ</button>
+                    <label className="mt-4 flex items-start gap-3"><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)} className="mt-1"/><span>Tôi đã đọc và đồng ý với <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-700 underline underline-offset-2" onClick={event => event.stopPropagation()}>Điều khoản dịch vụ</a> của CareS.</span></label>
+                    <button type="button" onClick={() => setConfirmingRegistration(true)} disabled={pin.length!==6 || !accepted || registering} className="mt-5 rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white disabled:opacity-50">Đăng ký thẻ</button>
                 </div>
                 <div className="rounded-2xl border border-primary-200 bg-gradient-to-br from-primary-50 via-white to-cyan-50 p-7 text-slate-800 shadow-sm">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-100 text-primary-700">
@@ -145,5 +157,27 @@ export default function MembershipCardPage() {
             </section>
             <section className="rounded-2xl border bg-white"><div className="flex items-center gap-2 border-b p-5"><History/><h2 className="text-xl font-bold">Lịch sử số dư</h2></div><div className="overflow-x-auto"><table className="w-full"><thead><tr className="bg-gray-50 text-left"><th className="p-4">Thời gian</th><th className="p-4">Nội dung</th><th className="p-4">Số tiền</th><th className="p-4">Số dư sau</th></tr></thead><tbody>{history.map(row=><tr key={row.ledgerId} className="border-t"><td className="p-4">{new Date(row.createdAt).toLocaleString('vi-VN')}</td><td className="p-4">{row.type==='TOP_UP'?'Nạp tiền':row.type==='PAYMENT'?'Thanh toán':'Hoàn tác thanh toán'}</td><td className="p-4 font-semibold">{row.type==='PAYMENT'?'-':'+'}{money(row.amount)}</td><td className="p-4">{money(row.balanceAfter)}</td></tr>)}</tbody></table>{!history.length&&<p className="p-8 text-center text-gray-500">Chưa có giao dịch.</p>}</div></section>
         </>}
+        <ConfirmModal
+            isOpen={confirmingRegistration}
+            onClose={() => { if (!registering) setConfirmingRegistration(false); }}
+            onConfirm={register}
+            isLoading={registering}
+            isDanger={false}
+            maxWidth="560px"
+            title="Xác nhận đăng ký thẻ CareS"
+            message="Vui lòng kiểm tra quyền lợi và điều kiện sử dụng trước khi tạo thẻ."
+            confirmText="Xác nhận đăng ký"
+            cancelText="Quay lại kiểm tra"
+        >
+            <div className="mt-5 text-left">
+                <dl className="grid gap-3 rounded-xl border border-primary-100 bg-primary-50/60 p-4 text-sm">
+                    <div><dt className="text-gray-500">Mã PIN</dt><dd className="mt-1 font-semibold tracking-[0.3em]">••••••</dd></div>
+                    <div><dt className="text-gray-500">Mức nạp lần đầu để kích hoạt ưu đãi</dt><dd className="mt-1 font-semibold">{money(policy?.minimumTopUp || 1000000)}</dd></div>
+                    <div><dt className="text-gray-500">Quyền lợi dự kiến</dt><dd className="mt-1 font-semibold">Ưu đãi {policy?.discountPercent || 15}% trong {policy?.validityMonths || 12} tháng</dd></div>
+                </dl>
+                <p className="mt-4 text-sm text-gray-600">Số dư thẻ không được rút hoặc chuyển thành tiền mặt.</p>
+                <p className="mt-2 text-sm font-medium text-gray-700">Bằng việc xác nhận, bạn đồng ý với <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary-700 underline underline-offset-2">Điều khoản dịch vụ</a> của CareS.</p>
+            </div>
+        </ConfirmModal>
     </div></CustomerLayout>;
 }

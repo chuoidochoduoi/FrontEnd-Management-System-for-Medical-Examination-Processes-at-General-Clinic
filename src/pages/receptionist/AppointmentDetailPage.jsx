@@ -21,6 +21,7 @@ import { ROUTES } from '@/constants/routes';
 import AppointmentConfirmModal from '@/components/ui/AppointmentConfirmModal';
 import { toggleServiceWithPolicy } from '@/utils/serviceSelectionPolicy';
 import LabPackageAnalytePicker, {
+    countLaboratoryOfferings,
     isPackageOrAnalyteService,
 } from '@/components/clinical/LabPackageAnalytePicker';
 
@@ -1562,13 +1563,18 @@ export default function AppointmentDetailPage() {
                                                 ].map(([type, label]) => {
                                                     const count = servicesToShow.filter(service => {
                                                         if (type === 'LABORATORY') {
-                                                            return service.departmentType === 'PARACLINICAL' && isPackageOrAnalyteService(service);
+                                                            return false;
                                                         }
                                                         if (type === 'PARACLINICAL_OTHER') {
                                                             return service.departmentType === 'PARACLINICAL' && !isPackageOrAnalyteService(service);
                                                         }
                                                         return service.departmentType === type;
                                                     }).length;
+                                                    const displayCount = type === 'LABORATORY'
+                                                        ? countLaboratoryOfferings(servicesToShow.filter(service =>
+                                                            service.departmentType === 'PARACLINICAL'
+                                                            && isPackageOrAnalyteService(service)))
+                                                        : count;
                                                     return (
                                                         <button
                                                             key={type}
@@ -1581,7 +1587,7 @@ export default function AppointmentDetailPage() {
                                                                 ? 'bg-white text-gray-900 shadow-sm'
                                                                 : 'text-gray-500 hover:text-gray-800'}`}
                                                         >
-                                                            {label} · {count}
+                                                            {label} · {displayCount}
                                                         </button>
                                                     );
                                                 })}

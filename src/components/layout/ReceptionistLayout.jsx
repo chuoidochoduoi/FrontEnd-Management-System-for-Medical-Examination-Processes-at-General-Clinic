@@ -73,7 +73,6 @@ export default function ReceptionistLayout({ children }) {
             { to: ROUTES.QUEUE_DISPLAY_LAUNCHER, icon: MonitorUp, label: 'Màn hình gọi tên' },
         ] },
         { label: 'Sau khám', items: [
-            { to: ROUTES.RECEPTIONIST_FOLLOW_UPS, icon: CalendarDays, label: 'Quản lý tái khám' },
             { to: ROUTES.RECEPTIONIST_FEEDBACKS, icon: MessageSquare, label: 'Đánh giá liên quan', badge: feedbackCount },
             { to: ROUTES.RECEPTIONIST_SUPPORT, icon: LifeBuoy, label: 'Hỗ trợ trực tuyến', badge: hasNewChat ? '•' : null },
         ] },

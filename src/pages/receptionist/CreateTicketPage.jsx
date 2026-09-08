@@ -19,6 +19,7 @@ import { toggleServiceWithPolicy, serviceRelationHint } from '@/utils/serviceSel
 import { useToast } from '@/hooks/useToast';
 import CreateTicketConfirmModal from '@/components/ui/CreateTicketConfirmModal';
 import LabPackageAnalytePicker, {
+    countLaboratoryOfferings,
     isPackageOrAnalyteService,
 } from '@/components/clinical/LabPackageAnalytePicker';
 import {
@@ -1292,7 +1293,11 @@ export default function CreateTicketPage() {
                                                     ['EXAMINATION', 'Khám bệnh'],
                                                     ['PARACLINICAL', 'Cận lâm sàng'],
                                                 ].map(([type, label]) => {
-                                                    const count = services.filter(service => service.departmentType === type).length;
+                                                    const servicesOfType = services.filter(service => service.departmentType === type);
+                                                    const count = type === 'PARACLINICAL'
+                                                        ? countLaboratoryOfferings(servicesOfType.filter(isPackageOrAnalyteService))
+                                                            + servicesOfType.filter(service => !isPackageOrAnalyteService(service)).length
+                                                        : servicesOfType.length;
                                                     return (
                                                         <button
                                                             key={type}

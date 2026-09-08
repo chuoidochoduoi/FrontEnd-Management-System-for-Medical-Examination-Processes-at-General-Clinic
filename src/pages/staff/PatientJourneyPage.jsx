@@ -5,8 +5,9 @@ import { useTranslation } from 'react-i18next';
 import OwnerLayout from '@/components/layout/OwnerLayout';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { createJourneyLoader } from '@/services/patientJourneyService';
-import { formatClinicDateTime, formatTodayCheckInDuration, isJourneyCompleted, journeyFilters, journeyStatus, journeyWarnings, sortJourneyPage } from '@/utils/patientJourneyPresentation';
+import { formatClinicDateTime, formatTodayCheckInDuration, isJourneyCompleted, journeyFilters, journeyStatus, journeyWarnings, liveWaitingMinutes, sortJourneyPage } from '@/utils/patientJourneyPresentation';
 import JourneyServiceProgress from '@/components/journey/JourneyServiceProgress';
+import SkippedQueueSupport from '@/components/journey/SkippedQueueSupport';
 import { journeyPhaseLabel } from '@/components/journey/QueuePanel';
 import styles from './PatientJourneyPage.module.css';
 
@@ -20,9 +21,7 @@ function StatusBadge({ value }) {
 
 function PriorityBadge({ item }) {
     if (!item?.priorityLabel) return null;
-    const tone = { RETURNING_FROM_TEST: 'deepPurple', APPOINTMENT_ON_TIME: 'teal',
-        APPOINTMENT_LATE: 'deepOrange', REGULAR: 'gray' }[item.priorityCategory] || 'gray';
-    return <span className={[styles.badge, styles[tone], styles.priorityBadge].join(' ')}>{item.priorityLabel}</span>;
+    return <span className={styles.contextNote}>{item.priorityLabel}</span>;
 }
 
 function Warnings({ item, overdue = false }) {
@@ -90,6 +89,12 @@ export default function PatientJourneyPage() {
     const [detailLoading, setDetailLoading] = useState(false);
     const [detailError, setDetailError] = useState('');
     const [detailRevision, setDetailRevision] = useState(0);
+    const [now, setNow] = useState(Date.now());
+
+    useEffect(() => {
+        const timer = window.setInterval(() => setNow(Date.now()), 30000);
+        return () => window.clearInterval(timer);
+    }, []);
 
     const changeQuery = (changes, delay = 0) => {
         listLoader.cancel();
@@ -169,12 +174,16 @@ export default function PatientJourneyPage() {
             <div><h1>Hành trình bệnh nhân</h1><p>Theo dõi vị trí hiện tại và bước tiếp theo của bệnh nhân. Không thao tác chuyển bước tại màn hình này.</p></div>
             <button type="button" onClick={refresh} className={styles.button} disabled={loading}><RefreshCw size={18} />Làm mới</button>
         </header>
+        <SkippedQueueSupport />
         <nav className={styles.tabs} aria-label="Phạm vi hành trình" role="tablist">
             <button type="button" role="tab" aria-selected={!overdue} className={!overdue ? styles.activeTab : ''}
                 onClick={() => { closeDetails(); changeQuery({ scope: 'TODAY', page: 0 }); }}>Hôm nay</button>
             <button type="button" role="tab" aria-selected={overdue} className={overdue ? styles.activeTab : ''}
                 onClick={() => { closeDetails(); changeQuery({ scope: 'OVERDUE', page: 0 }); }}>Tồn đọng qua ngày <span>{overdueTotal}</span></button>
         </nav>
+        <p className={styles.scopeExplanation}>{overdue
+            ? 'Tồn đọng qua ngày chỉ gồm lượt đã phát sinh chuyên môn nhưng chưa kết thúc, cần bác sĩ hoặc phòng cận lâm sàng tiếp tục xử lý.'
+            : 'Hôm nay dùng để điều phối các lượt check-in trong ngày, từ lúc tiếp nhận đến khi hoàn thành.'}</p>
         <section className={styles.filters} aria-label="Bộ lọc hành trình">
             <label>Tìm bệnh nhân<div className={styles.search}><Search size={18} aria-hidden="true" /><input value={query.search} onChange={event => changeQuery({ search: event.target.value, page: 0 }, 300)} placeholder="Tên, số điện thoại hoặc mã lượt khám" /></div></label>
             <label>Trạng thái<select value={query.status} onChange={event => changeQuery({ status: event.target.value, page: 0 })}><option value="">Tất cả trạng thái</option>{journeyFilters.map(value => <option key={value} value={value}>{journeyStatus(value).label}{value === 'PENDING' ? ' (yêu cầu CLS)' : ''}</option>)}</select></label>
@@ -190,7 +199,7 @@ export default function PatientJourneyPage() {
                     <td><StatusBadge value={item.currentStatus} /><PriorityBadge item={item} /><Warnings item={item} overdue={overdue} />{overdue && item.responsibleDoctorName && <p className={styles.metadata}>Bác sĩ: {item.responsibleDoctorName}</p>}</td>
                     <td>{isJourneyCompleted(item.currentStatus) ? '—' : overdue
                         ? <span className={styles.overdueTime}><strong>Quá ngày</strong><small>{formatClinicDateTime(item.checkInTime)}</small></span>
-                        : formatTodayCheckInDuration(item.waitingMinutes)}</td><td>{item.nextStep || '—'}</td>
+                        : formatTodayCheckInDuration(liveWaitingMinutes(item.checkInTime, item.waitingMinutes, now))}</td><td>{item.nextStep || '—'}</td>
                     <td><button type="button" onClick={() => openDetails(item)} className={styles.detailButton} aria-label={'Xem chi tiết ' + (item.patientName || item.visitCode)}><Eye size={18} aria-hidden="true" />Xem chi tiết</button></td>
                 </tr>)}</tbody>
             </table></div>

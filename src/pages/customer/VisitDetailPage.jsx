@@ -1281,7 +1281,7 @@ export default function VisitDetailPage() {
                     />
                 </div>
 
-                <PatientAllergyBanner value={visit?.patientAllergies} currentLabel className="mb-5"/>
+                <PatientAllergyBanner value={visit?.patientAllergies} currentLabel audience="customer" className="mb-5"/>
 
                 {visit?.completionStatus === 'PARTIAL' && (
                     <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900">

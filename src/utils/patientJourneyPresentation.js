@@ -46,6 +46,12 @@ export function formatTodayCheckInDuration(value) {
   return minutes > 0 ? `${hours} giờ ${minutes} phút` : `${hours} giờ`;
 }
 
+export function liveWaitingMinutes(checkInTime, serverMinutes, now = Date.now()) {
+  const parsed = Date.parse(checkInTime);
+  const elapsed = Number.isFinite(parsed) ? Math.floor((now - parsed) / 60000) : 0;
+  return Math.max(0, Number(serverMinutes) || 0, elapsed);
+}
+
 export function formatClinicDateTime(value) {
   const matched = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
   if (!matched) return '—';

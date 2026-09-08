@@ -18,6 +18,21 @@ export const isLaboratoryPanel = service => relationsOf(service).some(relation =
     && String(relation.targetServiceCode || '').toUpperCase().startsWith('AN-'));
 export const isPackageOrAnalyteService = service => isAnalyteService(service) || isLaboratoryPanel(service);
 
+// Count what the user sees in the catalogue: one panel is one offering, while
+// standalone analytes that do not belong to any panel remain individual items.
+export const countLaboratoryOfferings = services => {
+    const normalized = (services || []).filter(Boolean);
+    const panels = normalized.filter(isLaboratoryPanel);
+    const analyteCodesInPanels = new Set(
+        panels.flatMap(panel => relationsOf(panel)
+            .filter(relation => relation.type === 'INCLUDES')
+            .map(relation => String(relation.targetServiceCode || '').toUpperCase()))
+    );
+    const standaloneAnalytes = normalized.filter(service =>
+        isAnalyteService(service) && !analyteCodesInPanels.has(serviceCodeOf(service)));
+    return panels.length + standaloneAnalytes.length;
+};
+
 const panelMeta = service => {
     const capability = service?.requiredCapabilityName || service?.capabilityName || '';
     return [

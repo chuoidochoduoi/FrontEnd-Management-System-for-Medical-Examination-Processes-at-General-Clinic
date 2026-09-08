@@ -38,14 +38,23 @@ const TermsPage = () => {
         </section>
 
         <section>
-          <h2 className="text-xl font-bold text-slate-900 mb-4">4. Thanh toán và hoàn tiền</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-4">4. Thanh toán</h2>
           <p>
-            Các chi phí dịch vụ sẽ được thông báo rõ ràng trước khi thanh toán. CARES chỉ hoàn tiền trong các trường hợp được quy định cụ thể theo chính sách hoàn tiền của phòng khám.
+            Các chi phí dịch vụ được thông báo rõ ràng trước khi thanh toán. Hệ thống CareS hiện không hỗ trợ hoàn tiền trực tuyến. Trường hợp cần điều chỉnh giao dịch, khách hàng vui lòng liên hệ trực tiếp phòng khám để được xem xét theo quy định áp dụng. Việc hoàn tác giao dịch lỗi, nếu có, chỉ nhằm khôi phục trạng thái thanh toán và không phải là chức năng hoàn tiền cho hóa đơn đã thanh toán.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-bold text-slate-900 mb-4">5. Điều khoản khác</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-4">5. Thẻ trả trước CareS</h2>
+          <ul className="list-disc pl-5 space-y-2">
+            <li>Thẻ được sử dụng để thanh toán các dịch vụ đủ điều kiện tại CareS theo chính sách áp dụng tại từng thời điểm.</li>
+            <li>Số dư thẻ không được rút hoặc chuyển thành tiền mặt.</li>
+            <li>Chủ thẻ có trách nhiệm bảo mật mã PIN và chỉ chia sẻ quyền sử dụng với thành viên gia đình được quản lý trên hệ thống.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-bold text-slate-900 mb-4">6. Điều khoản khác</h2>
           <p>
             Mọi tranh chấp phát sinh sẽ được giải quyết trên tinh thần hợp tác. Trường hợp không thể thương lượng, tranh chấp sẽ được giải quyết theo quy định của pháp luật Việt Nam.
           </p>

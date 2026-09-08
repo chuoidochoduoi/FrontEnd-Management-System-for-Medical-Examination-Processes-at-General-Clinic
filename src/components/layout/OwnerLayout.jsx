@@ -55,7 +55,6 @@ export default function OwnerLayout({ children }) {
             { to: ROUTES.RECEPTIONIST_VISITS, icon: ClipboardList, label: 'Quản lý phiếu khám' },
             { to: ROUTES.MANAGER_PATIENTS, icon: UserRound, label: t('sidebar.patients') },
             { to: ROUTES.RECEPTIONIST_RECORDS, icon: FolderOpen, label: 'Quản lý bệnh nhân' },
-            { to: ROUTES.RECEPTIONIST_FOLLOW_UPS, icon: CalendarDays, label: 'Quản lý tái khám' },
             { to: ROUTES.PATIENT_JOURNEYS, icon: MapPinned, label: 'Điều phối bệnh nhân' },
             { to: ROUTES.QUEUE_DISPLAY_LAUNCHER, icon: MonitorUp, label: 'Màn hình gọi tên' },
             { to: ROUTES.CASHIER_INVOICES, icon: FileText, label: 'Hóa đơn & thanh toán' },

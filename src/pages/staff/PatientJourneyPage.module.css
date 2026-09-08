@@ -15,6 +15,7 @@
 .tabs button span { min-width: 26px; padding: 2px 7px; border-radius: 999px; color: var(--cares-text); background: var(--cares-surface); font-size: 15px; text-align: center; }
 .tabs .activeTab { color: white; background: var(--cares-brand-strong); }
 .tabs .activeTab span { color: var(--cares-brand-strong); background: white; }
+.scopeExplanation { margin-top: -12px !important; padding: 11px 14px; border-left: 3px solid var(--cares-brand); border-radius: 0 9px 9px 0; color: var(--cares-text-muted); background: var(--cares-brand-soft); font-size: 15px; }
 .filters { display: grid; grid-template-columns: minmax(260px,1.5fr) minmax(220px,1fr) minmax(290px,1.2fr); gap: 16px; padding: 18px; border: 1px solid var(--cares-border); border-radius: 14px; background: var(--cares-surface); }
 .filters label { min-width: 0; font-size: 16px; font-weight: 650; }
 .filters :is(input,select) { display: block; width: 100%; min-width: 0; min-height: 48px; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--cares-border); border-radius: 10px; color: var(--cares-text); background: var(--cares-surface); font: inherit; font-size: 16px; font-weight: 400; }
@@ -31,6 +32,8 @@
 .detailButton { padding: 8px; color: var(--cares-brand-strong); white-space: normal; text-align: left; }
 .badge { display: inline-flex; max-width: 100%; align-items: center; padding: 5px 9px; border: 1px solid var(--status-border); border-radius: 9px; background: var(--status-bg); color: var(--status-fg); font-size: 15px; line-height: 1.5; font-weight: 700; overflow-wrap: anywhere; }
 .priorityBadge { display: flex; width: fit-content; margin-top: 7px; }
+.contextNote { display: block; width: fit-content; margin-top: 7px; color: var(--cares-text-muted); font-size: 14px; font-weight: 650; line-height: 1.4; }
+.contextNote::before { content: '•'; margin-right: 6px; color: var(--cares-brand); }
 .orange { --status-bg: #fff7ed; --status-fg: #9a3412; --status-border: #fdba74; }
 .amber { --status-bg: #fffbeb; --status-fg: #854d0e; --status-border: #fcd34d; }
 .blue { --status-bg: #eff6ff; --status-fg: #1d4ed8; --status-border: #93c5fd; }

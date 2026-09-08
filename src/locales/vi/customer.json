@@ -70,7 +70,7 @@
       "viewAll": "Xem tất cả kết quả"
     },
     "appointments": {
-      "title": "Các cuộc hẹn khám gần đây",
+      "title": "Lịch hẹn sắp tới",
       "viewAll": "Xem tất cả",
       "date": "Ngày khám",
       "doctor": "Bác sĩ phụ trách",
@@ -78,6 +78,7 @@
       "status": "Trạng thái",
       "statusDone": "HOÀN THÀNH",
       "statusUpcoming": "SẮP DIỄN RA",
+      "statusScheduled": "ĐÃ ĐẶT LỊCH",
       "statusCancelled": "ĐÃ HỦY",
       "statusCheckedIn": "ĐÃ CHECK-IN"
     },

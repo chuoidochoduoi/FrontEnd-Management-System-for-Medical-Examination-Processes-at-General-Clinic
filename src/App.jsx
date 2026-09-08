@@ -36,7 +36,6 @@ const PrescriptionPreviewPage = lazy(() => import('@/pages/doctor/PrescriptionPr
 const ExamCompletionPage = lazy(() => import('@/pages/doctor/ExamCompletionPage'))
 const MedicalRecordPrintPage = lazy(() => import('@/pages/doctor/MedicalRecordPrintPage'))
 const ReceptionistSupportPage = lazy(() => import('@/pages/receptionist/ReceptionistSupportPage'))
-const FollowUpListPage = lazy(() => import('@/pages/receptionist/FollowUpListPage'))
 const DoctorDepartmentPage = lazy(() => import('@/pages/doctor/DoctorDepartmentPage'))
 const RoomListPage = lazy(() => import('@/pages/doctor/RoomListPage'))
 const LabRequestListPage = lazy(() => import('@/pages/lab/LabRequestListPage.jsx'))
@@ -168,11 +167,6 @@ function App() {
         <Route path={ROUTES.RECEPTIONIST_VISITS} element={
           <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CLINIC_MANAGER']}>
             <VisitManagementPage />
-          </ProtectedRoute>
-        } />
-        <Route path={ROUTES.RECEPTIONIST_FOLLOW_UPS} element={
-          <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CLINIC_MANAGER']}>
-            <FollowUpListPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.RECEPTIONIST_SUPPORT} element={

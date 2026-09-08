@@ -12,6 +12,26 @@ const STATUS_STYLE = {
     UPCOMING: 'text-primary-500 font-semibold text-xs tracking-wide',
 };
 
+const parseAppointmentDate = (value) => {
+    if (!value) return null;
+    const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return null;
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+};
+
+const getUpcomingAppointments = (appointments = []) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return appointments
+        .filter((appointment) => ['PENDING', 'SCHEDULED', 'RESCHEDULED']
+            .includes(String(appointment?.status || '').toUpperCase()))
+        .map((appointment) => ({ appointment, date: parseAppointmentDate(appointment.date) }))
+        .filter(({ date }) => date && date >= today)
+        .sort((left, right) => left.date - right.date)
+        .slice(0, 4)
+        .map(({ appointment }) => appointment);
+};
+
 const capitalizeWords = (str) => {
     if (!str) return '';
     return str.split(' ').map(word => word ? word.charAt(0).toUpperCase() + word.slice(1) : '').join(' ');
@@ -160,6 +180,7 @@ export default function ProfilePage() {
     const bmi = height && weight
         ? (weight / ((height / 100) ** 2)).toFixed(1)
         : profile?.bmi ?? '—';
+    const upcomingAppointments = getUpcomingAppointments(profile?.appointments);
 
     const inputCls = 'w-full h-10 px-3 text-sm border border-gray-300 rounded-lg outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-50 transition-colors';
     const fieldLabel = 'flex items-center gap-2 text-xs font-medium text-gray-500 mb-1.5';
@@ -744,10 +765,10 @@ export default function ProfilePage() {
                             </div>
 
                             <div className="space-y-3">
-                                {(profile?.appointments ?? []).length === 0 ? (
-                                    <p className="text-sm text-gray-400 py-4 text-center">Chưa có lịch hẹn nào</p>
+                                {upcomingAppointments.length === 0 ? (
+                                    <p className="text-sm text-gray-400 py-4 text-center">Chưa có lịch hẹn sắp tới</p>
                                 ) : (
-                                    (profile?.appointments ?? []).map((appt, i) => (
+                                    upcomingAppointments.map((appt, i) => (
                                         <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-primary-100 hover:bg-primary-50/50 transition-colors group">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:text-primary-500 shadow-sm transition-colors shrink-0">
@@ -765,11 +786,15 @@ export default function ProfilePage() {
                                                         ? 'bg-red-50 text-red-600 border border-red-100'
                                                         : 'bg-green-50 text-green-600 border border-green-100'
                                                     }`}>
-                                                    {['PENDING', 'SCHEDULED', 'RESCHEDULED', 'CHECKED_IN'].includes((appt.status || '').toUpperCase())
-                                                        ? t('profile.appointments.statusUpcoming')
-                                                        : (appt.status || '').toUpperCase() === 'CANCELLED'
-                                                            ? t('profile.appointments.statusCancelled')
-                                                            : t('profile.appointments.statusDone')}
+                                                    {(() => {
+                                                        const appointmentDate = parseAppointmentDate(appt.date);
+                                                        const tomorrow = new Date();
+                                                        tomorrow.setHours(0, 0, 0, 0);
+                                                        tomorrow.setDate(tomorrow.getDate() + 1);
+                                                        return appointmentDate && appointmentDate <= tomorrow
+                                                            ? t('profile.appointments.statusUpcoming')
+                                                            : t('profile.appointments.statusScheduled', 'ĐÃ ĐẶT LỊCH');
+                                                    })()}
                                                 </span>
                                             </div>
                                         </div>

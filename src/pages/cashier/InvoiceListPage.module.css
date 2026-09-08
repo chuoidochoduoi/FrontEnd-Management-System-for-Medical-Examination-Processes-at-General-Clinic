@@ -9,6 +9,18 @@
 .patientColumn { width: 205px; }
 .amountColumn { width: 190px; }
 .statusColumn { width: 180px; }
+.filterActions { display:flex; align-items:center; gap:10px; }
+.filterActions button { white-space:nowrap; }
+.clearFilterButton { width:48px; min-width:48px; padding:0; }
+
+@media (max-width: 1180px) {
+    .filterActions { justify-content:flex-end; }
+}
+
+@media (max-width: 560px) {
+    .filterActions { align-items:stretch; flex-direction:column; }
+    .clearFilterButton { width:100%; }
+}
 .actionColumn { width: 170px; }
 .page .table :is(th, td) { white-space: normal; overflow-wrap: anywhere; line-height: 1.55; }
 .page .table :is(strong, small) { display: block; }

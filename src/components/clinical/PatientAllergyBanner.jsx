@@ -10,6 +10,7 @@ export default function PatientAllergyBanner({
     editable = false,
     currentLabel = false,
     historicalContext = false,
+    audience = 'staff',
     onChange,
     openEditorSignal,
     className = '',
@@ -71,6 +72,7 @@ export default function PatientAllergyBanner({
     };
 
     const status = allergy?.status || 'UNVERIFIED';
+    const customerView = audience === 'customer';
     const styles = status === 'REPORTED'
         ? { wrap: 'border-red-200 bg-red-50', icon: <AlertTriangle className="text-red-600" size={21}/>, title: 'Có ghi nhận dị ứng', text: 'text-red-800' }
         : status === 'NONE_REPORTED'
@@ -86,9 +88,17 @@ export default function PatientAllergyBanner({
                         <p className={`text-sm font-bold ${styles.text}`}>{currentLabel ? `Dị ứng hiện tại — ${styles.title}` : styles.title}</p>
                         {historicalContext && <p className="mt-1 text-xs text-slate-500">Đây là dữ liệu hiện tại, không phải thông tin được chụp lại tại thời điểm khám cũ.</p>}
                         {status === 'REPORTED' && <div className="mt-2 flex flex-wrap gap-2">{(allergy.items || []).map(item => <span key={item} className="rounded-full border border-red-200 bg-white px-2.5 py-1 text-xs font-semibold text-red-700">{item}</span>)}</div>}
-                        {status === 'UNVERIFIED' && <p className="mt-1 text-xs text-amber-700">Cần xác minh trước khi lưu đơn thuốc.</p>}
+                        {status === 'UNVERIFIED' && <p className="mt-1 text-xs text-amber-700">
+                            {customerView
+                                ? 'Bạn chưa xác nhận thông tin dị ứng. Vui lòng thông báo cho nhân viên y tế khi đến khám.'
+                                : 'Cần xác minh trước khi lưu đơn thuốc.'}
+                        </p>}
                         <p className={`mt-2 text-xs font-semibold leading-5 ${styles.text}`}>
-                            An toàn kê đơn: hỏi lại bệnh nhân hoặc người giám hộ về tác nhân, biểu hiện và thời điểm phản ứng; không dựa duy nhất vào dữ liệu đã khai báo.
+                            {customerView
+                                ? status === 'REPORTED'
+                                    ? 'Nếu danh sách trên chưa đầy đủ hoặc không còn chính xác, hãy báo cho nhân viên y tế để được cập nhật.'
+                                    : 'Thông tin dị ứng giúp nhân viên y tế lựa chọn thuốc và phương pháp điều trị an toàn hơn cho bạn.'
+                                : 'An toàn kê đơn: hỏi lại bệnh nhân hoặc người giám hộ về tác nhân, biểu hiện và thời điểm phản ứng; không dựa duy nhất vào dữ liệu đã khai báo.'}
                         </p>
                     </div>
                 </div>

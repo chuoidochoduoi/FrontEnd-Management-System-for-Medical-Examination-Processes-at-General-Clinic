@@ -48,6 +48,8 @@ const TermsPage = () => {
           <h2 className="text-xl font-bold text-slate-900 mb-4">5. Thẻ trả trước CareS</h2>
           <ul className="list-disc pl-5 space-y-2">
             <li>Thẻ được sử dụng để thanh toán các dịch vụ đủ điều kiện tại CareS theo chính sách áp dụng tại từng thời điểm.</li>
+            <li>Số dư được sử dụng ngay sau khi nạp thành công; quyền lợi ưu đãi của kỳ mới có hiệu lực từ 00:00 ngày kế tiếp theo giờ Việt Nam.</li>
+            <li>Ưu đãi không áp dụng hồi tố cho hóa đơn được tạo trước ngày quyền lợi có hiệu lực.</li>
             <li>Số dư thẻ không được rút hoặc chuyển thành tiền mặt.</li>
             <li>Chủ thẻ có trách nhiệm bảo mật mã PIN và chỉ chia sẻ quyền sử dụng với thành viên gia đình được quản lý trên hệ thống.</li>
           </ul>

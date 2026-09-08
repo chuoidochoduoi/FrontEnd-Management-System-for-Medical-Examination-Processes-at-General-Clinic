@@ -8,6 +8,7 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 const get = key => localStorage.getItem(key) || sessionStorage.getItem(key);
 const headers = () => ({ Authorization: `Bearer ${get('token')}`, 'Content-Type': 'application/json' });
 const money = value => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} đ`;
+const dateTime = value => value ? new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : null;
 const api = import.meta.env.VITE_API_URL;
 
 export default function MembershipCardPage() {
@@ -25,6 +26,7 @@ export default function MembershipCardPage() {
     const inFlight = useRef(false);
     const mounted = useRef(true);
     const pendingRefresh = useRef(false);
+    const benefitPending = Boolean(card?.benefitStartsAt && new Date(card.benefitStartsAt) > new Date());
 
     const load = useCallback(async ({ initial = false, invalidate = false } = {}) => {
         if (inFlight.current) {
@@ -123,7 +125,7 @@ export default function MembershipCardPage() {
         {loading ? <div className="h-64 animate-pulse rounded-2xl bg-gray-100" /> : !card ? (
             <section className="grid gap-6 lg:grid-cols-[1.2fr_.8fr]">
                 <div className="rounded-2xl border bg-white p-7"><WalletCards className="text-primary-600" size={34}/><h2 className="mt-4 text-2xl font-bold">Đăng ký thẻ điện tử</h2>
-                    <p className="mt-2 text-gray-600">Số tiền nạp được ghi nhận đúng 1:1. Nạp lần đầu từ {money(policy?.minimumTopUp || 1000000)} để kích hoạt ưu đãi {policy?.discountPercent || 15}% trong {policy?.validityMonths || 12} tháng.</p>
+                    <p className="mt-2 text-gray-600">Số tiền nạp được ghi nhận đúng 1:1. Nạp lần đầu từ {money(policy?.minimumTopUp || 1000000)} để kích hoạt ưu đãi {policy?.discountPercent || 15}% trong {policy?.validityMonths || 12} tháng, có hiệu lực từ ngày kế tiếp.</p>
                     <label className="mt-5 block font-medium">Tạo mã PIN 6 số<input value={pin} onChange={e => setPin(e.target.value.replace(/\D/g,'').slice(0,6))} type="password" inputMode="numeric" className="mt-2 h-12 w-full rounded-xl border px-4" placeholder="••••••"/></label>
                     <label className="mt-4 flex items-start gap-3"><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)} className="mt-1"/><span>Tôi đã đọc và đồng ý với <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-700 underline underline-offset-2" onClick={event => event.stopPropagation()}>Điều khoản dịch vụ</a> của CareS.</span></label>
                     <button type="button" onClick={() => setConfirmingRegistration(true)} disabled={pin.length!==6 || !accepted || registering} className="mt-5 rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white disabled:opacity-50">Đăng ký thẻ</button>
@@ -152,8 +154,8 @@ export default function MembershipCardPage() {
             </section>
         ) : <>
             <section className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-700 to-teal-500 p-8 text-white shadow-xl"><CreditCard size={34}/><p className="mt-8 text-sm tracking-[.2em]">{card.cardCode}</p><p className="mt-3 text-4xl font-bold">{money(card.balance)}</p><div className="mt-8 flex flex-wrap justify-between gap-3"><span>Trạng thái: {card.status === 'ACTIVE' ? 'Đang hoạt động' : 'Chờ nạp tiền kích hoạt'}</span><span>Ưu đãi: {card.benefitActive ? `${card.benefitPercent}%` : 'Không áp dụng'}</span></div></div>
-                <div className="rounded-2xl border bg-white p-6"><h2 className="text-xl font-bold">Thời hạn quyền lợi</h2><p className="mt-3 text-gray-600">{card.benefitExpiresAt ? new Date(card.benefitExpiresAt).toLocaleString('vi-VN') : 'Chưa kích hoạt'}</p><p className="mt-5 rounded-xl bg-amber-50 p-4 text-amber-800">Nạp tiền tại quầy thu ngân. Mỗi lần nạp từ {money(policy?.minimumTopUp)} sẽ gia hạn quyền lợi.</p></div>
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-700 to-teal-500 p-8 text-white shadow-xl"><CreditCard size={34}/><p className="mt-8 text-sm tracking-[.2em]">{card.cardCode}</p><p className="mt-3 text-4xl font-bold">{money(card.balance)}</p><div className="mt-8 flex flex-wrap justify-between gap-3"><span>Trạng thái: {card.status === 'ACTIVE' ? 'Đang hoạt động' : 'Chờ nạp tiền kích hoạt'}</span><span>Ưu đãi: {card.benefitActive ? `${card.benefitPercent}%` : benefitPending ? 'Chờ hiệu lực' : 'Không áp dụng'}</span></div></div>
+                <div className="rounded-2xl border bg-white p-6"><h2 className="text-xl font-bold">Thời hạn quyền lợi</h2><p className="mt-3 text-gray-600">{benefitPending ? `Có hiệu lực từ ${dateTime(card.benefitStartsAt)}` : card.benefitActive ? `Đang áp dụng đến ${dateTime(card.benefitExpiresAt)}` : card.benefitExpiresAt ? `Đã hết hạn lúc ${dateTime(card.benefitExpiresAt)}` : 'Chưa kích hoạt'}</p><p className="mt-5 rounded-xl bg-amber-50 p-4 text-amber-800">Số dư dùng được ngay. Ưu đãi của kỳ mới bắt đầu từ 00:00 ngày kế tiếp và không áp dụng cho hóa đơn đã tạo trước ngày hiệu lực.</p></div>
             </section>
             <section className="rounded-2xl border bg-white"><div className="flex items-center gap-2 border-b p-5"><History/><h2 className="text-xl font-bold">Lịch sử số dư</h2></div><div className="overflow-x-auto"><table className="w-full"><thead><tr className="bg-gray-50 text-left"><th className="p-4">Thời gian</th><th className="p-4">Nội dung</th><th className="p-4">Số tiền</th><th className="p-4">Số dư sau</th></tr></thead><tbody>{history.map(row=><tr key={row.ledgerId} className="border-t"><td className="p-4">{new Date(row.createdAt).toLocaleString('vi-VN')}</td><td className="p-4">{row.type==='TOP_UP'?'Nạp tiền':row.type==='PAYMENT'?'Thanh toán':'Hoàn tác thanh toán'}</td><td className="p-4 font-semibold">{row.type==='PAYMENT'?'-':'+'}{money(row.amount)}</td><td className="p-4">{money(row.balanceAfter)}</td></tr>)}</tbody></table>{!history.length&&<p className="p-8 text-center text-gray-500">Chưa có giao dịch.</p>}</div></section>
         </>}
@@ -173,7 +175,7 @@ export default function MembershipCardPage() {
                 <dl className="grid gap-3 rounded-xl border border-primary-100 bg-primary-50/60 p-4 text-sm">
                     <div><dt className="text-gray-500">Mã PIN</dt><dd className="mt-1 font-semibold tracking-[0.3em]">••••••</dd></div>
                     <div><dt className="text-gray-500">Mức nạp lần đầu để kích hoạt ưu đãi</dt><dd className="mt-1 font-semibold">{money(policy?.minimumTopUp || 1000000)}</dd></div>
-                    <div><dt className="text-gray-500">Quyền lợi dự kiến</dt><dd className="mt-1 font-semibold">Ưu đãi {policy?.discountPercent || 15}% trong {policy?.validityMonths || 12} tháng</dd></div>
+                    <div><dt className="text-gray-500">Quyền lợi dự kiến</dt><dd className="mt-1 font-semibold">Ưu đãi {policy?.discountPercent || 15}% trong {policy?.validityMonths || 12} tháng, bắt đầu từ ngày kế tiếp sau khi nạp đủ điều kiện</dd></div>
                 </dl>
                 <p className="mt-4 text-sm text-gray-600">Số dư thẻ không được rút hoặc chuyển thành tiền mặt.</p>
                 <p className="mt-2 text-sm font-medium text-gray-700">Bằng việc xác nhận, bạn đồng ý với <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary-700 underline underline-offset-2">Điều khoản dịch vụ</a> của CareS.</p>

@@ -11,6 +11,31 @@ import { toast } from 'react-toastify';
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
 
+const legacyVietnameseReplacements = [
+    ['Co hoa don moi', 'Có hóa đơn mới'],
+    ['Hoa don moi', 'Hóa đơn mới'],
+    ['Cap nhat lich hen', 'Cập nhật lịch hẹn'],
+    ['Lich hen cua ban vao luc', 'Lịch hẹn của bạn vào lúc'],
+    ['da duoc tiep nhan', 'đã được tiếp nhận'],
+    ['bi huy', 'bị hủy'],
+    ['duoc doi lich', 'được đổi lịch'],
+    ['Co benh nhan moi', 'Có bệnh nhân mới'],
+    ['xep hang cho kham tai phong', 'xếp hàng chờ khám tại phòng'],
+    ['Ket qua xet nghiem', 'Kết quả xét nghiệm'],
+    ['can thanh toan tu benh nhan', 'cần thanh toán từ bệnh nhân'],
+    ['da co ket qua', 'đã có kết quả'],
+    ['Benh nhan', 'Bệnh nhân'],
+    ['Dich vu can lam sang', 'Dịch vụ cận lâm sàng'],
+    ['Can lam sang', 'Cận lâm sàng'],
+    ['(Ma:', '(Mã:'],
+    ['(Ten:', '(Tên:'],
+];
+
+const displayText = (value = '') => legacyVietnameseReplacements.reduce(
+    (text, [legacy, localized]) => text.replaceAll(legacy, localized),
+    value,
+);
+
 export default function NotificationBell() {
     const { t } = useTranslation('common');
     const [open, setOpen] = useState(false);
@@ -18,6 +43,7 @@ export default function NotificationBell() {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(false);
     const dropdownRef = useRef(null);
+    const receivedNotificationIdsRef = useRef(new Set());
 
     const fetchUnreadCount = async () => {
         try {
@@ -81,9 +107,16 @@ export default function NotificationBell() {
     useWebSocket(accountId ? `/topic/notifications-${accountId}` : null, null, (msgStr) => {
         try {
             const notif = JSON.parse(msgStr);
+            const notificationKey = notif.notificationId
+                || `${notif.relatedEntity || 'notification'}:${notif.relatedEntityId || ''}:${notif.title || ''}:${notif.content || ''}`;
+            if (receivedNotificationIdsRef.current.has(notificationKey)) return;
+            receivedNotificationIdsRef.current.add(notificationKey);
             setUnreadCount(prev => prev + 1);
-            setNotifications(prev => [notif, ...prev]);
-            toast.info(`🔔 ${notif.title}: ${notif.content}`, {
+            setNotifications(prev => prev.some(item => item.notificationId === notif.notificationId)
+                ? prev
+                : [notif, ...prev]);
+            toast.info(`🔔 ${displayText(notif.title)}: ${displayText(notif.content)}`, {
+                toastId: `notification:${notificationKey}`,
                 position: "top-right",
                 autoClose: 5000,
             });
@@ -153,10 +186,10 @@ export default function NotificationBell() {
                                         <div className="flex gap-3">
                                             <div className="flex-1 min-w-0">
                                                 <p className={`text-sm font-medium ${notif.status !== 'READ' ? 'text-gray-900' : 'text-gray-700'}`}>
-                                                    {notif.title}
+                                                    {displayText(notif.title)}
                                                 </p>
                                                 <p className={`text-xs mt-0.5 line-clamp-2 ${notif.status !== 'READ' ? 'text-gray-600' : 'text-gray-500'}`}>
-                                                    {notif.content}
+                                                    {displayText(notif.content)}
                                                 </p>
                                                 <p className="text-[11px] text-gray-400 mt-1.5 flex items-center gap-1">
                                                     {dayjs(notif.createdAt || new Date()).fromNow()}

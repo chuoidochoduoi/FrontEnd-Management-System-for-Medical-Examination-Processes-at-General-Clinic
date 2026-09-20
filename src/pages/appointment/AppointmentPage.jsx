@@ -240,15 +240,15 @@ export default function AppointmentPage() {
 
             <section className={styles.guestAccess} aria-label="Tra cứu dành cho khách">
                 <span className={styles.accessIcon}><Search size={25} /></span>
-                <div><h2>Đã được lễ tân check-in?</h2><p>Dùng mã lượt khám VIS và số điện thoại trên phiếu để xem phòng, vị trí chờ và hành trình. Không cần đăng nhập.</p></div>
+                <div><h2>Đã được lễ tân tiếp nhận?</h2><p>Dùng mã lượt khám VIS và số điện thoại trên phiếu để xem phòng, vị trí chờ và hành trình. Không cần đăng nhập.</p></div>
                 <Link to={ROUTES.GUEST_JOURNEY} className={styles.secondary}>Tra cứu lượt khám <ArrowRight size={18} /></Link>
             </section>
 
             {bookingComplete ? <section className={styles.success} role="status">
                 <CheckCircle2 size={48} /><h2>Đặt lịch thành công</h2><p>Thông tin lịch khám của {patientName || 'bạn'} đã được gửi đến CareS.</p>
-                <p>Khi đến phòng khám, vui lòng gặp lễ tân để check-in. Mã lượt khám VIS dùng để theo dõi hành trình được cấp sau khi check-in, không phải mã lịch hẹn.</p>
+                <p>Khi đến phòng khám, vui lòng gặp lễ tân để được tiếp nhận. Mã lượt khám VIS dùng để theo dõi hành trình được cấp sau khi tiếp nhận, không phải mã lịch hẹn.</p>
                 <div><Link to={profile ? ROUTES.MY_APPOINTMENTS : '/'} className={styles.primary}>{profile ? 'Xem lịch hẹn của tôi' : 'Về trang chủ'}</Link>
-                    <Link to={ROUTES.GUEST_JOURNEY} className={styles.secondary}>Tra cứu hành trình sau check-in</Link></div>
+                    <Link to={ROUTES.GUEST_JOURNEY} className={styles.secondary}>Tra cứu hành trình sau tiếp nhận</Link></div>
             </section> : <>
                 <ol className={styles.steps} aria-label="Tiến trình đặt lịch">
                     {stageLabels.map((label, index) => <li key={label} className={currentStep === index + 1 ? styles.current : currentStep > index + 1 ? styles.done : ''}
@@ -371,7 +371,7 @@ export default function AppointmentPage() {
                             <div className={styles.total}><span>Chi phí tạm tính</span><strong>{formatVND(totalCost)}</strong><p>Khám bệnh: {examinationCount} · Cận lâm sàng: {paraclinicalCount}</p></div>
                             <p className={styles.summaryNote}>Đây là chi phí dịch vụ đã chọn, không phải xác nhận đã thanh toán.</p>
                         </section>
-                        <section className={styles.help}><Info size={22} /><div><h3>Không cần tài khoản</h3><p>Đặt lịch bằng thông tin người khám. Sau khi đến check-in, dùng mã VIS trên phiếu để theo dõi lượt khám.</p>
+                        <section className={styles.help}><Info size={22} /><div><h3>Không cần tài khoản</h3><p>Đặt lịch bằng thông tin người khám. Sau khi được tiếp nhận, dùng mã VIS trên phiếu để theo dõi lượt khám.</p>
                             <Link to={ROUTES.GUEST_JOURNEY}>Mở trang tra cứu Guest <ArrowRight size={16} /></Link></div></section>
                     </aside>
                 </div>

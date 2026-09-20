@@ -51,7 +51,7 @@ export function useServiceManagement() {
             query.append('size', PAGE_SIZE);
 
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services?${query.toString()}`, { headers: bearer() });
-            if (!res.ok) throw new Error('Failed to load services');
+            if (!res.ok) throw new Error('Không thể tải danh sách dịch vụ');
             const data = await res.json();
 
             // API returns array directly (not paged) or wrapped in content

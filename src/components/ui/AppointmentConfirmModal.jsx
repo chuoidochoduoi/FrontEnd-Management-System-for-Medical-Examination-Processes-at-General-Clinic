@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, User, UsersRound, Clock, FileText, Phone, X, Info, LoaderCircle } from 'lucide-react';
+import { CheckCircle2, ChevronDown, User, UsersRound, Clock, FileText, Phone, X, Info, LoaderCircle } from 'lucide-react';
 import styles from './AppointmentConfirmModal.module.css';
 
 const money = value => new Intl.NumberFormat('vi-VN').format(value || 0) + ' đ';
@@ -15,6 +15,37 @@ const serviceKind = service => {
         return `Gói xét nghiệm · ${code}`;
     }
     return service.departmentType === 'EXAMINATION' ? 'Dịch vụ khám' : 'Cận lâm sàng';
+};
+
+const serviceCode = service => String(service?.code || service?.serviceCode || '').toUpperCase();
+const serviceId = service => service?.id || service?.serviceId;
+const isAnalyte = service => serviceCode(service).startsWith('AN-');
+
+const groupedServices = (services, catalogue = []) => {
+    const panels = catalogue.filter(service => (service.relations || []).some(relation =>
+        relation.type === 'INCLUDES'
+        && String(relation.targetServiceCode || '').toUpperCase().startsWith('AN-')));
+    const panelByAnalyteCode = new Map();
+    panels.forEach(panel => (panel.relations || []).forEach(relation => {
+        if (relation.type === 'INCLUDES') {
+            panelByAnalyteCode.set(String(relation.targetServiceCode || '').toUpperCase(), panel);
+        }
+    }));
+
+    const rows = [];
+    const analytesByPanel = new Map();
+    services.forEach(service => {
+        if (!isAnalyte(service)) {
+            rows.push({ type: 'SERVICE', service });
+            return;
+        }
+        const panel = panelByAnalyteCode.get(serviceCode(service));
+        const key = panel ? String(serviceId(panel)) : 'OTHER_ANALYTES';
+        if (!analytesByPanel.has(key)) analytesByPanel.set(key, { panel, analytes: [] });
+        analytesByPanel.get(key).analytes.push(service);
+    });
+    analytesByPanel.forEach(group => rows.push({ type: 'ANALYTE_GROUP', ...group }));
+    return rows;
 };
 
 function Details({ rows }) {
@@ -35,6 +66,7 @@ export default function AppointmentConfirmModal({ data, onClose, onConfirm, name
     const pendingRef = useRef(false);
     const tConfirm = key => t('confirmModal.' + key);
     const services = data.services || [];
+    const serviceRows = groupedServices(services, data.serviceCatalog || services);
     const groupMembers = data.groupMembers || [];
     const isGroup = groupMembers.length > 0;
 
@@ -158,12 +190,30 @@ export default function AppointmentConfirmModal({ data, onClose, onConfirm, name
                         </div>
                         <div className={styles.serviceLabels}><span>Dịch vụ đã chọn</span><span>Chi phí</span></div>
                         <ul className={styles.services}>
-                            {services.map((service, index) => <li key={service.id || service.serviceId || index}>
+                            {serviceRows.map((row, index) => row.type === 'SERVICE' ? <li key={serviceId(row.service) || index}>
                                 <span className={styles.serviceName}>
                                     <span className={styles.number}>{index + 1}</span>
-                                    <span>{service.name}<small className="mt-1 block text-sm font-normal text-slate-500">{serviceKind(service)}</small></span>
+                                    <span>{row.service.name}<small className="mt-1 block text-sm font-normal text-slate-500">{serviceKind(row.service)}</small></span>
                                 </span>
-                                <strong>{money(service.price)}</strong>
+                                <strong>{money(row.service.price)}</strong>
+                            </li> : <li key={serviceId(row.panel) || `analytes-${index}`} className={styles.analyteGroupRow}>
+                                <span className={styles.number}>{index + 1}</span>
+                                <details className={styles.analyteGroup}>
+                                    <summary>
+                                        <span>
+                                            <span className={styles.analyteGroupTitle}>{row.panel?.name || 'Chỉ số xét nghiệm khác'}</span>
+                                            <small>{row.analytes.length} chỉ số lẻ đã chọn</small>
+                                        </span>
+                                        <span className={styles.analyteGroupPrice}>{money(row.analytes.reduce((sum, item) => sum + Number(item.price || 0), 0))}</span>
+                                        <ChevronDown size={18} className={styles.analyteChevron} aria-hidden="true" />
+                                    </summary>
+                                    <div className={styles.analyteList}>
+                                        {row.analytes.map(analyte => <div key={serviceId(analyte) || serviceCode(analyte)}>
+                                            <span>{analyte.name}<small>{serviceCode(analyte)}</small></span>
+                                            <strong>{money(analyte.price)}</strong>
+                                        </div>)}
+                                    </div>
+                                </details>
                             </li>)}
                         </ul>
                         {!services.length && <p className={styles.hint}>Chưa chọn dịch vụ.</p>}

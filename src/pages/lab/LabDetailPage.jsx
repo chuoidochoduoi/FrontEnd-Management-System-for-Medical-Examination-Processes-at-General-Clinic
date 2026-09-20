@@ -110,14 +110,13 @@ const generatedSpecimenId = (order, fallbackId) => {
 function FileUpload({
                         file,
                         fileUrl,
+                        onFile,
                         onClear,
                         uploading,
                         disabled,
                         pdfUrl,
                         fileName,
                         onOpenPdf,
-                        attachments = [],
-                        onFiles,
                     }) {
     const inputRef = useRef(null);
 
@@ -132,10 +131,10 @@ function FileUpload({
         setDragging(false);
 
         const selectedFiles = Array.from(event.dataTransfer.files || []);
-        if (selectedFiles.length) onFiles?.(selectedFiles);
+        if (selectedFiles.length) onFile?.(selectedFiles[0]);
     };
 
-    const hasFile = !!file || !!fileUrl || attachments.length > 0;
+    const hasFile = !!file || !!fileUrl;
 
     return (
         <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -171,7 +170,6 @@ function FileUpload({
 
                                 <p className="truncate text-sm font-semibold text-slate-800">
                                     {file?.name ||
-                                        attachments[0]?.originalName ||
                                         fileName ||
                                         'Phiếu kết quả'}
                                 </p>
@@ -305,29 +303,15 @@ function FileUpload({
                 </p>
             )}
 
-            {attachments.length > 0 && (
-                <div className="mt-3 space-y-2">
-                    {attachments.map((attachment) => (
-                        <button key={attachment.attachmentId} type="button"
-                                onClick={() => onOpenPdf(attachment.url)}
-                                className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left text-xs hover:bg-slate-50">
-                            <span className="truncate font-medium text-slate-700">{attachment.originalName}</span>
-                            <span className="shrink-0 text-slate-400">{(attachment.fileSize / 1024 / 1024).toFixed(2)} MB</span>
-                        </button>
-                    ))}
-                </div>
-            )}
-
             <input
                 ref={inputRef}
                 type="file"
                 className="hidden"
-                accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp"
-                multiple
+                accept="application/pdf,.pdf"
                 disabled={disabled}
                 onChange={(event) => {
                     const selectedFiles = Array.from(event.target.files || []);
-                    if (selectedFiles.length) onFiles?.(selectedFiles);
+                    if (selectedFiles.length) onFile?.(selectedFiles[0]);
                 }}
             />
 
@@ -515,7 +499,6 @@ function SingleLabDetailPage() {
         saveDraft,
         save,
         uploadFile,
-        uploadAttachments,
         cancelRequest,
     } = useLabDetail(id);
 
@@ -550,8 +533,6 @@ function SingleLabDetailPage() {
 
     const [file, setFile] =
         useState(null);
-
-    const [attachments, setAttachments] = useState([]);
 
     const [fileUrl, setFileUrl] =
         useState('');
@@ -604,8 +585,6 @@ function SingleLabDetailPage() {
 
         setResultData(order.resultData ?? order.clinicalForm?.values ?? {});
         setStructuredErrors({});
-        setAttachments(order.attachments ?? []);
-
         setFileUrl(
             order.resultFileUrl ?? ''
         );
@@ -804,24 +783,6 @@ function SingleLabDetailPage() {
         }
     };
 
-    const handleFiles = async (selectedFiles) => {
-        if (!canUpload) return toast.error('Bạn không có quyền tải kết quả tại phòng thực hiện này');
-        if (selectedFiles.length + attachments.length > 10) return toast.error('Mỗi kết quả chỉ được tối đa 10 tệp');
-        const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
-        if (selectedFiles.some((selected) => !allowed.includes(selected.type) || selected.size > 10 * 1024 * 1024))
-            return toast.error('Chỉ nhận PDF/JPEG/PNG/WebP, tối đa 10 MB mỗi tệp');
-        setUploading(true);
-        try {
-            const saved = await saveDraft(buildPayload());
-            if (!saved) throw new Error('Không thể tạo bản nháp kết quả');
-            const uploaded = await uploadAttachments(selectedFiles);
-            setAttachments((current) => [...current, ...uploaded]);
-            toast.success(`Đã tải ${uploaded.length} tệp`);
-        } catch (uploadError) {
-            toast.error(uploadError.message || 'Không thể tải tệp');
-        } finally { setUploading(false); }
-    };
-
     const handleClearFile = () => {
         if (localPreviewUrl) {
             URL.revokeObjectURL(
@@ -895,8 +856,12 @@ function SingleLabDetailPage() {
             setStructuredErrors(formErrors);
             const firstInvalidKey = Object.keys(formErrors)[0];
             if (firstInvalidKey) {
-                window.setTimeout(() => document.getElementById(`clinical-${firstInvalidKey}`)?.focus(), 0);
-                return formErrors[firstInvalidKey];
+                window.setTimeout(() => {
+                    const control = document.getElementById(`clinical-${firstInvalidKey}`);
+                    control?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    window.setTimeout(() => control?.focus(), 250);
+                }, 0);
+                return `Không thể lưu: ${formErrors[firstInvalidKey]}`;
             }
         }
         if (
@@ -934,7 +899,7 @@ function SingleLabDetailPage() {
         }
 
         const structuredValues = Object.keys(resultData || {}).filter((key) => key !== '_meta');
-        if (finalize && targetStatus === 'COMPLETED' && !fileUrl && attachments.length === 0 && structuredValues.length === 0)
+        if (finalize && targetStatus === 'COMPLETED' && !fileUrl && structuredValues.length === 0)
             return 'Vui lòng nhập kết quả có cấu trúc hoặc tải tệp kết quả';
 
         return '';
@@ -1547,9 +1512,15 @@ function SingleLabDetailPage() {
                                     /> : <DynamicClinicalForm
                                         schema={order?.clinicalForm?.schema}
                                         value={resultData}
-                                        onChange={(nextValue) => {
+                                        onChange={(nextValue, changedFieldKey) => {
                                             setResultData(nextValue);
-                                            setStructuredErrors({});
+                                            setStructuredErrors((current) => {
+                                                if (!changedFieldKey) return {};
+                                                const nextErrors = { ...current };
+                                                delete nextErrors[changedFieldKey];
+                                                delete nextErrors._form;
+                                                return nextErrors;
+                                            });
                                         }}
                                         disabled={isReadOnly}
                                         errors={structuredErrors}
@@ -1590,8 +1561,6 @@ function SingleLabDetailPage() {
                                         onOpenPdf={
                                             openSecurePdf
                                         }
-                                        attachments={attachments}
-                                        onFiles={handleFiles}
                                     />
 
                                 </div>

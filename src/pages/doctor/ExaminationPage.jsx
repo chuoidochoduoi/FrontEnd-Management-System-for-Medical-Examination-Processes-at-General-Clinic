@@ -26,6 +26,10 @@ import LabPackageAnalytePicker, {
     isPackageOrAnalyteService,
 } from '@/components/clinical/LabPackageAnalytePicker';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import {
+    groupTestsForPatient,
+    testStatusConfig,
+} from '@/features/medical-history/visitDetailUtils';
 
 import { toast } from 'react-toastify';
 import { ROUTES } from '@/constants/routes';
@@ -3960,15 +3964,7 @@ export default function ExaminationPage() {
                                                             </div>
                                                         )}
                                                         {item.conclusion && <p className="mt-2 text-xs text-slate-700">{item.conclusion}</p>}
-                                                        {item.attachments?.length > 0 && (
-                                                            <div className="mt-2 flex flex-wrap gap-2">
-                                                                {item.attachments.map(file => (
-                                                                    <button key={file.attachmentId} type="button" onClick={() => openHistoryAttachment(file.url)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-primary-700">
-                                                                        {file.originalName || 'Mở tệp kết quả'}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        )}
+                                                        {item.pdfUrl && <div className="mt-2"><button type="button" onClick={() => openHistoryAttachment(item.pdfUrl)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-primary-700">Mở phiếu kết quả</button></div>}
                                                     </article>
                                                 ))}
                                             </div>
@@ -4606,14 +4602,27 @@ export default function ExaminationPage() {
                                         <h3 className="mb-3 text-sm font-bold text-slate-900">Cận lâm sàng và kết quả</h3>
                                         {previousRecordDetail.visitDetail?.tests?.length ? (
                                             <div className="space-y-3">
-                                                {previousRecordDetail.visitDetail.tests.map((item, index) => (
-                                                    <div key={item.testRequestId || index} className="rounded-lg bg-slate-50 p-3 text-sm">
-                                                        <div className="flex flex-wrap items-center justify-between gap-2"><b>{item.name || 'Dịch vụ cận lâm sàng'}</b><span className="text-xs font-semibold text-slate-500">{item.status || '-'}</span></div>
+                                                {groupTestsForPatient(previousRecordDetail.visitDetail.tests).map((item, index) => {
+                                                    const status = testStatusConfig(item);
+                                                    return (
+                                                    <div key={item.id || item.testRequestId || index} className="rounded-lg bg-slate-50 p-3 text-sm">
+                                                        <div className="flex flex-wrap items-start justify-between gap-2">
+                                                            <div>
+                                                                <b>{item.name || 'Dịch vụ cận lâm sàng'}</b>
+                                                                {item.isPanelGroup && (
+                                                                    <p className="mt-1 text-xs text-slate-500">
+                                                                        Gói gồm {item.purchasedCount || item.results?.length || 0} chỉ số · {item.reportedCount ?? item.results?.length ?? 0} đã ghi nhận{item.missingResultCount ? ` · ${item.missingResultCount} chưa có dữ liệu` : ''}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <span className={`rounded border px-2 py-0.5 text-xs font-semibold ${status.cls}`}>{status.label}</span>
+                                                        </div>
                                                         {item.results?.length > 0 && <div className="mt-3 grid gap-2 sm:grid-cols-2">{item.results.map((result, resultIndex) => <div key={`${result.name}-${resultIndex}`} className="rounded-md bg-white p-2"><span className="text-xs text-slate-400">{result.name}{result.referenceRange ? ` · ${result.referenceRange}` : ''}</span><p className="font-semibold">{result.result} {result.unit || ''} <span className={['HIGH','LOW','ABNORMAL'].includes(result.assessment) ? 'text-amber-700' : 'text-emerald-700'}>{result.assessment || ''}</span></p></div>)}</div>}
                                                         <p className="mt-3 whitespace-pre-wrap text-xs text-slate-600">Kết luận: {item.conclusion || '-'}</p>
-                                                        {(item.attachments?.length > 0 || item.pdfUrl) && <div className="mt-3 flex flex-wrap gap-2">{(item.attachments || []).map(file => <button key={file.attachmentId} type="button" onClick={() => openHistoryAttachment(file.url)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-primary-700 hover:border-primary-300">{file.originalName || 'Mở tệp kết quả'}</button>)}{item.pdfUrl && !item.attachments?.length && <button type="button" onClick={() => openHistoryAttachment(item.pdfUrl)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-primary-700 hover:border-primary-300">Mở tệp kết quả</button>}</div>}
+                                                        {item.pdfUrl && <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => openHistoryAttachment(item.pdfUrl)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-primary-700 hover:border-primary-300">Mở phiếu kết quả</button></div>}
                                                     </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         ) : <p className="text-sm text-slate-400">Không có chỉ định cận lâm sàng.</p>}
                                     </section>

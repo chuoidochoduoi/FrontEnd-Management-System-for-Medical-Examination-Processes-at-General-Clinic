@@ -737,7 +737,7 @@ export default function CustomerAppointmentPage() {
                                 : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
                                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
                                 {activeServiceTab === 'EXAMINATION' ? (
-                                    <p><strong>Lưu ý:</strong> Bạn có thể đặt nhiều dịch vụ khám trong một lịch hẹn. Khi check-in, các dịch vụ được thực hiện lần lượt và mỗi dịch vụ có một bệnh án riêng.</p>
+                                    <p><strong>Lưu ý:</strong> Bạn có thể đặt nhiều dịch vụ khám trong một lịch hẹn. Khi được tiếp nhận, các dịch vụ được thực hiện lần lượt và mỗi dịch vụ có một bệnh án riêng.</p>
                                 ) : (
                                     <p>Có thể chọn nhiều dịch vụ cận lâm sàng. Dịch vụ khách tự đặt là bước độc lập; chỉ yêu cầu được bác sĩ chỉ định mới cần quay lại phòng khám.</p>
                                 )}

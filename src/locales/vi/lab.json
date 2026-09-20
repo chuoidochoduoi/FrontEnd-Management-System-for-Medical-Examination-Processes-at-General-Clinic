@@ -53,15 +53,15 @@
   },
   "labDetail": {
     "pageTitle": "Xét nghiệm",
-    "collectionDate": "Collection Date",
-    "specimenId": "ID mẫu vật",
-    "specimenIdPlaceholder": "Nhập ID mẫu vật...",
+    "collectionDate": "Ngày lấy mẫu",
+    "specimenId": "Mã mẫu bệnh phẩm",
+    "specimenIdPlaceholder": "Nhập mã mẫu bệnh phẩm...",
     "labType": "Loại",
     "labTypes": {
-      "blood": "Blood",
-      "urine": "Urine",
-      "liver": "Liver Function",
-      "lipid": "Lipid Panel",
+      "blood": "Máu",
+      "urine": "Nước tiểu",
+      "liver": "Chức năng gan",
+      "lipid": "Mỡ máu",
       "other": "Khác"
     },
     "status": {
@@ -76,10 +76,10 @@
       "reasonPlaceholder": "Nhập lý do hủy xét nghiệm..."
     },
     "result": {
-      "label": "Result",
-      "uploadBtn": "Upload file",
-      "uploadHint": "Kéo thả hoặc click để tải file kết quả (Excel, PDF, ảnh)",
-      "fileUploaded": "Đã tải file"
+      "label": "Kết quả",
+      "uploadBtn": "Tải tệp lên",
+      "uploadHint": "Kéo thả hoặc nhấn để tải tệp kết quả (Excel, PDF, ảnh)",
+      "fileUploaded": "Đã tải tệp"
     },
     "notes": {
       "label": "NHẬN XÉT/GHI CHÚ",

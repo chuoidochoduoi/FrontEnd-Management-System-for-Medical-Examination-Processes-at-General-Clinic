@@ -1146,7 +1146,7 @@ function AddModal({
                                     <p className="mt-1 text-xs text-gray-400">
                                         Hệ thống sẽ chọn
                                         phòng phù hợp khi
-                                        bệnh nhân check-in.
+                                        bệnh nhân được tiếp nhận.
                                     </p>
                                 </div>
                             )}

@@ -25,7 +25,7 @@ export default function ReceiptDetailPage() {
         </header>
         {loading || clinicLoading || (!receipt && !error) ? <p role="status" className="py-16 text-center">Đang tải phiếu thu...</p>
             : error ? <div role="alert" className="space-y-3"><p className="text-red-600">{error}</p><button type="button" onClick={fetchReceipt} className="cares-customer-primary-button"><RotateCcw size={18}/>Tải lại</button></div>
-                : receipt?.printData ? <ReceiptPreview receipt={serviceReceipt(receipt.printData)} clinic={clinicInformation}/>
+                : receipt?.printData ? <ReceiptPreview receipt={serviceReceipt(receipt.printData)} clinic={clinicInformation} downloadPdf/>
                     : <div role="alert" className="rounded-xl border p-5"><p>Máy chủ chưa trả đủ dữ liệu phiếu thu mới. Vui lòng cập nhật/khởi động lại backend rồi tải lại; không in số BHYT ước tính từ tỷ lệ phần trăm.</p><button type="button" onClick={fetchReceipt} className="cares-customer-primary-button mt-3">Tải lại phiếu thu</button></div>}
     </div></CustomerLayout>;
 }

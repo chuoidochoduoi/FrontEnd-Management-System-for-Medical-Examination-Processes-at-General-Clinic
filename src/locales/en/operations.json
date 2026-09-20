@@ -14,9 +14,9 @@
     "roles": { "ADMIN": "Administrator", "CLINIC_MANAGER": "Clinic manager", "NURSE": "Nurse", "DOCTOR": "Doctor", "GENERAL_DOCTOR": "Doctor", "SPECIALIST_DOCTOR": "Doctor", "RECEPTIONIST": "Receptionist", "CASHIER": "Cashier" }
   },
   "feedback": {
-    "title": "Customer feedback", "managerSubtitle": "Track feedback, add internal notes and respond to customers in the system.", "doctorSubtitle": "Feedback related to visits under your care.",
+    "title": "Customer feedback", "managerSubtitle": "Track feedback and respond to customers in the system.",
     "all": "All", "loading": "Loading feedback...", "empty": "No matching feedback.", "doctor": "Doctor", "noComment": "No comment.",
-    "responsePlaceholder": "Official response (visible to the customer)", "internalPlaceholder": "Internal note (not visible to the customer)", "doctorExplanation": "Doctor's explanation:",
-    "save": "Save response", "explanationPlaceholder": "Explanation for the clinic manager", "sendExplanation": "Send explanation", "updated": "Feedback updated.", "requestFailed": "Unable to process the request."
+    "responsePlaceholder": "Official response (visible to the customer)",
+    "save": "Save response", "updated": "Feedback updated.", "requestFailed": "Unable to process the request."
   }
 }

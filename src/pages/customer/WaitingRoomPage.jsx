@@ -148,7 +148,7 @@ export default function WaitingRoomPage() {
         {error && <div className={styles.error} role="alert"><span>{error} {current ? 'Hành trình bên dưới là dữ liệu lần cập nhật trước.' : ''}</span>
             <button type="button" onClick={() => load(true)} disabled={refreshing}>Thử lại</button></div>}
         {loading && <div className={styles.empty} role="status"><RefreshCw size={28} className={styles.spinning} /><p>Đang tải hành trình…</p></div>}
-        {!loading && !current && !error && <div className={styles.empty}><Route size={34} /><h2>Chưa có hành trình</h2><p>Hành trình sẽ xuất hiện sau khi lễ tân check-in cho người được khám.</p></div>}
+        {!loading && !current && !error && <div className={styles.empty}><Route size={34} /><h2>Chưa có hành trình</h2><p>Hành trình sẽ xuất hiện sau khi lễ tân tiếp nhận người được khám.</p></div>}
         {!loading && current && <>
             <section className={styles.overview} aria-label="Thông tin hiện tại">
                 <div><span>Việc cần làm</span><strong>{endedWithSkipped ? 'Lượt khám trong ngày đã kết thúc'
@@ -158,7 +158,7 @@ export default function WaitingRoomPage() {
                     ? `${queue.roomName}${queue.roomCode ? ` (${queue.roomCode})` : ''}`
                     : status === 'PAYMENT_PENDING' ? 'Quầy thu ngân' : status === 'RESULT_PENDING' ? 'Khu vực chờ kết quả' : current.currentRoom || 'Chưa phân phòng'}</strong></div>
                 <div className={styles.yourPosition} aria-live="polite" aria-atomic="true"><span>Vị trí hàng chờ</span><strong>{positionLabel}</strong>
-                    <p>{queue?.queueNumber != null ? `Số phiếu ${queue.queueNumber}. ` : ''}{!queueError && !error && queue?.peopleAhead != null ? (queue.peopleAhead === 0 ? 'Bạn đứng đầu danh sách chờ.' : `Còn ${queue.peopleAhead} người chờ trước bạn.`)
+                    <p>{!queueError && !error && queue?.peopleAhead != null ? (queue.peopleAhead === 0 ? 'Bạn đứng đầu danh sách chờ.' : `Còn ${queue.peopleAhead} người chờ trước bạn.`)
                         : queueLoading ? 'Đang cập nhật vị trí…' : 'Vị trí được cập nhật theo phòng hiện tại.'}</p></div>
             </section>
             {endedWithSkipped && (

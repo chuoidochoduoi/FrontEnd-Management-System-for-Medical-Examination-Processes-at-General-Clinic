@@ -1352,13 +1352,11 @@ export default function CreateTicketPage() {
                                                                 {result.sourceVisitCode} · {result.performingDepartmentName || 'Phòng cận lâm sàng'}
                                                             </p>
                                                             {result.conclusion && <p className="mt-1 text-xs text-slate-700">{result.conclusion}</p>}
-                                                            {result.attachments?.length > 0 && (
+                                                            {result.pdfUrl && (
                                                                 <div className="mt-2 flex flex-wrap gap-2">
-                                                                    {result.attachments.map(file => (
-                                                                        <button key={file.attachmentId} type="button" onClick={() => openSameDayAttachment(file.url)} className="inline-flex items-center gap-1.5 rounded-md border border-blue-200 px-2 py-1 text-[11px] font-medium text-blue-700">
-                                                                            <FileText size={12}/>{file.originalName || 'Xem tệp'}
-                                                                        </button>
-                                                                    ))}
+                                                                    <button type="button" onClick={() => openSameDayAttachment(result.pdfUrl)} className="inline-flex items-center gap-1.5 rounded-md border border-blue-200 px-2 py-1 text-[11px] font-medium text-blue-700">
+                                                                        <FileText size={12}/>Xem phiếu kết quả
+                                                                    </button>
                                                                 </div>
                                                             )}
                                                         </div>

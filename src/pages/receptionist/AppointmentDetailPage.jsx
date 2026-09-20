@@ -81,7 +81,7 @@ const DEPARTMENT_TYPE_LABELS = {
 
 const STATUS_LABELS = {
     PENDING: 'Chờ tiếp nhận',
-    CHECKED_IN: 'Đã check-in',
+    CHECKED_IN: 'Đã tiếp nhận',
     WAITING_EXAMINATION: 'Chờ khám',
     IN_EXAMINATION: 'Đang khám',
     COMPLETED: 'Hoàn thành',
@@ -716,7 +716,7 @@ export default function AppointmentDetailPage() {
     // =========================================================
     const handleSaveClick = () => {
         if (!isEditable) {
-            toast.info('Lịch hẹn đã check-in nên không thể chỉnh sửa.');
+            toast.info('Lịch hẹn đã được tiếp nhận nên không thể chỉnh sửa.');
             return;
         }
         const validationError =
@@ -740,7 +740,7 @@ export default function AppointmentDetailPage() {
     // =========================================================
     const handleSave = async () => {
         if (!isEditable) {
-            toast.info('Lịch hẹn đã check-in nên không thể chỉnh sửa.');
+            toast.info('Lịch hẹn đã được tiếp nhận nên không thể chỉnh sửa.');
             setShowConfirmModal(false);
             return;
         }
@@ -889,7 +889,7 @@ export default function AppointmentDetailPage() {
         }
 
         if (isPastAppointment) {
-            toast.error('Không thể check-in lịch hẹn đã quá ngày.');
+            toast.error('Không thể tiếp nhận lịch hẹn đã quá ngày.');
             return;
         }
 
@@ -899,7 +899,7 @@ export default function AppointmentDetailPage() {
                 'CHECKED_IN'
             ) {
                 toast.info(
-                    'Lịch hẹn này đã được check-in.'
+                    'Lịch hẹn này đã được tiếp nhận.'
                 );
             } else {
                 toast.error(
@@ -938,14 +938,14 @@ export default function AppointmentDetailPage() {
         }
 
         if (isPastAppointment) {
-            toast.error('Không thể check-in lịch hẹn đã quá ngày.');
+            toast.error('Không thể tiếp nhận lịch hẹn đã quá ngày.');
             setShowConfirmModal(false);
             return;
         }
 
         if (!canCheckIn) {
             toast.error(
-                'Chỉ có thể check-in lịch hẹn đang chờ tiếp nhận.'
+                'Chỉ có thể tiếp nhận lịch hẹn đang chờ.'
             );
 
             setShowConfirmModal(
@@ -1019,12 +1019,12 @@ export default function AppointmentDetailPage() {
                 throw new Error(
                     result?.message ||
                     result?.error ||
-                    'Check-in thất bại.'
+                    'Tiếp nhận thất bại.'
                 );
             }
 
             toast.success(
-                'Check-in thành công. Bệnh nhân đã được tiếp nhận.'
+                'Tiếp nhận thành công. Bệnh nhân đã được đưa vào lượt khám.'
             );
 
             navigate(
@@ -1034,7 +1034,7 @@ export default function AppointmentDetailPage() {
         } catch (err) {
             toast.error(
                 err?.message ||
-                'Không thể check-in bệnh nhân.'
+                'Không thể tiếp nhận bệnh nhân.'
             );
 
         } finally {
@@ -1140,8 +1140,8 @@ export default function AppointmentDetailPage() {
 
                                 <p className="mt-1 text-sm text-gray-400">
                                     {isEditable
-                                        ? 'Kiểm tra và cập nhật thông tin bệnh nhân trước khi check-in'
-                                        : 'Thông tin đã được khóa sau khi bệnh nhân check-in'}
+                                        ? 'Kiểm tra và cập nhật thông tin bệnh nhân trước khi tiếp nhận'
+                                        : 'Thông tin đã được khóa sau khi bệnh nhân được tiếp nhận'}
                                 </p>
                             </div>
 
@@ -1505,8 +1505,8 @@ export default function AppointmentDetailPage() {
 
                                                     <p className="mt-0.5 text-xs text-gray-400">
                                                         {isEditable
-                                                            ? 'Có thể thêm hoặc bỏ dịch vụ trước khi check-in'
-                                                            : 'Danh sách dịch vụ đã được khóa sau khi check-in'}
+                                                            ? 'Có thể thêm hoặc bỏ dịch vụ trước khi tiếp nhận'
+                                                            : 'Danh sách dịch vụ đã được khóa sau khi tiếp nhận'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -1892,21 +1892,21 @@ export default function AppointmentDetailPage() {
                                     <LogIn size={15} />
 
                                     {checkingIn
-                                        ? 'Đang check-in...'
-                                        : 'Xác nhận Check-in'}
+                                        ? 'Đang tiếp nhận...'
+                                        : 'Xác nhận tiếp nhận'}
                                 </button>
                             )}
 
                             {currentStatus ===
                                 'CHECKED_IN' && (
                                     <div className="flex h-10 items-center rounded-xl border border-green-200 bg-green-50 px-4 text-sm font-semibold text-green-600">
-                                        Bệnh nhân đã check-in
+                                        Bệnh nhân đã được tiếp nhận
                                     </div>
                                 )}
 
                             {isAwaitingCheckIn && isPastAppointment && (
                                 <div className="flex h-10 items-center rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-600">
-                                    Lịch hẹn đã quá ngày, không thể check-in
+                                    Lịch hẹn đã quá ngày, không thể tiếp nhận
                                 </div>
                             )}
                         </div>
@@ -1921,13 +1921,13 @@ export default function AppointmentDetailPage() {
                         namespace="receptionist"
                         data={{
                             title: confirmAction === 'checkin'
-                                ? 'Xác nhận thông tin check-in'
+                                ? 'Xác nhận thông tin tiếp nhận'
                                 : 'Xác nhận thông tin cập nhật',
                             subtitle: 'Đối chiếu người được khám, ngày/ca và dịch vụ trước khi xác nhận.',
-                            confirmLabel: confirmAction === 'checkin' ? 'Xác nhận check-in' : 'Xác nhận lưu',
+                            confirmLabel: confirmAction === 'checkin' ? 'Xác nhận tiếp nhận' : 'Xác nhận lưu',
                             note: confirmAction === 'checkin'
                                 ? 'Xác nhận để tiếp nhận bệnh nhân với các dịch vụ đã chọn. Thao tác này không xác nhận thanh toán. Thông tin liên hệ và địa chỉ còn thiếu có thể bổ sung sau.'
-                                : 'Chỉ lưu các thay đổi của lịch hẹn, chưa thực hiện check-in. Thông tin liên hệ và địa chỉ còn thiếu có thể bổ sung sau.',
+                                : 'Chỉ lưu các thay đổi của lịch hẹn, chưa tiếp nhận bệnh nhân. Thông tin liên hệ và địa chỉ còn thiếu có thể bổ sung sau.',
                             dateOfBirth: dob ? new Date(`${dob}T00:00:00`).toLocaleDateString('vi-VN') : '',
                             contactManager: appointment.contactManagerName ? {
                                 name: appointment.contactManagerName,
@@ -1984,6 +1984,9 @@ export default function AppointmentDetailPage() {
 
                             services:
                             selectedServices,
+
+                            serviceCatalog:
+                            servicesToShow,
 
                             reason:
                                 appointment.reason ||

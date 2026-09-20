@@ -473,7 +473,9 @@ export default function LabRequestListPage() {
                                                                 className="max-w-[150px] truncate font-medium text-slate-700"
                                                                 title={order.representativeId ?? order.testRequestId ?? order.id}
                                                             >
-                                                                {order.grouped ? `Phiếu ${order.panelCode}` : (order.testRequestId ?? order.id ?? '—')}
+                                                                {order.panelCode
+                                                                    ? `Phiếu ${order.panelCode}`
+                                                                    : (order.testRequestId ?? order.id ?? '—')}
                                                             </p>
 
                                                         </td>

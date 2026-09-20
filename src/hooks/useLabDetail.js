@@ -112,21 +112,6 @@ export function useLabDetail(orderId, departmentId = null) {
                         data.resultData = result.resultData || {};
                         data.formTemplateVersionId = result.formTemplateVersionId || null;
                     }
-                    const historyRes = await fetch(
-                        `${import.meta.env.VITE_API_URL}/api/v1/test-requests/${orderId}/result/history`,
-                        { headers: bearer() }
-                    );
-                    if (historyRes.ok) {
-                        const history = await historyRes.json();
-                        const latest = history[0];
-                        if (latest) {
-                            const attachmentRes = await fetch(
-                                `${import.meta.env.VITE_API_URL}/api/v1/test-requests/${orderId}/result/revisions/${latest.revisionId}/attachments`,
-                                { headers: bearer() }
-                            );
-                            if (attachmentRes.ok) data.attachments = await attachmentRes.json();
-                        }
-                    }
                 }
                 try {
                     const clinicalForm = await fetchClinicalForm();
@@ -219,26 +204,6 @@ export function useLabDetail(orderId, departmentId = null) {
         } finally { setSaving(false); }
     };
 
-    const uploadAttachments = async (files) => {
-        const historyRes = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/v1/test-requests/${orderId}/result/history`,
-            { headers: bearer() }
-        );
-        if (!historyRes.ok) throw new Error('Không tìm thấy bản nháp để đính kèm tệp');
-        const history = await historyRes.json();
-        const draft = history.find((revision) => revision.status === 'DRAFT');
-        if (!draft) throw new Error('Kết quả đã ký không thể thêm tệp trực tiếp');
-        const form = new FormData();
-        files.forEach((file) => form.append('files', file));
-        const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/v1/test-requests/${orderId}/result/revisions/${draft.revisionId}/attachments`,
-            { method: 'POST', headers: bearer(), body: form }
-        );
-        const body = await response.json().catch(() => []);
-        if (!response.ok) throw new Error(body?.message || 'Không thể tải tệp đính kèm');
-        return body;
-    };
-
     // Lưu hoàn thành
     const save = async (payload) => {
         setSaving(true); setError('');
@@ -306,6 +271,6 @@ export function useLabDetail(orderId, departmentId = null) {
     return {
         order, loading, saving, error,
         clinicalFormError, clinicalFormLoading, reloadClinicalForm,
-        saveDraft, save, uploadFile, uploadAttachments, cancelRequest,
+        saveDraft, save, uploadFile, cancelRequest,
     };
 }

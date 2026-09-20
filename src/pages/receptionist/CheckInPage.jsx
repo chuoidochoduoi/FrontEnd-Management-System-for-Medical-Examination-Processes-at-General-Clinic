@@ -7,8 +7,8 @@ import { useCheckIn } from '@/hooks/useCheckIn';
 import { ROUTES } from '@/constants/routes';
 
 const STATUS_LABEL = {
-    pending: 'Chờ check-in',
-    checked_in: 'Đã check-in',
+    pending: 'Chờ tiếp nhận',
+    checked_in: 'Đã tiếp nhận',
     cancelled: 'Đã hủy',
     rescheduled: 'Đã đổi lịch',
 };
@@ -66,7 +66,7 @@ export default function CheckInPage() {
             <header className="cares-reception-page-header">
                 <div>
                     <span className="cares-reception-eyebrow"><ClipboardCheck size={17} /> Quầy tiếp đón</span>
-                    <h1>Tiếp đón & Check-in</h1>
+                    <h1>Tiếp đón và tiếp nhận</h1>
                     <p>Tra cứu lịch hẹn, xác nhận thông tin và tiếp nhận bệnh nhân trong ngày.</p>
                 </div>
                 <button type="button" className="cares-reception-primary" onClick={() => navigate(ROUTES.RECEPTIONIST_CREATE_TICKET)}>
@@ -76,8 +76,8 @@ export default function CheckInPage() {
 
             <section className="cares-reception-stats" aria-label="Tổng hợp lịch hẹn">
                 <article><span><CalendarDays size={21} /></span><div><small>Tổng lịch hẹn</small><strong>{summary.total}</strong></div></article>
-                <article><span className="is-warning"><Clock3 size={21} /></span><div><small>Chờ check-in</small><strong>{summary.pending}</strong></div></article>
-                <article><span className="is-info"><CheckCircle2 size={21} /></span><div><small>Đã check-in</small><strong>{summary.checkedIn}</strong></div></article>
+                <article><span className="is-warning"><Clock3 size={21} /></span><div><small>Chờ tiếp nhận</small><strong>{summary.pending}</strong></div></article>
+                <article><span className="is-info"><CheckCircle2 size={21} /></span><div><small>Đã tiếp nhận</small><strong>{summary.checkedIn}</strong></div></article>
                 <article><span className="is-purple"><RotateCcw size={21} /></span><div><small>Cần tái khám</small><strong>{summary.followUp}</strong></div></article>
             </section>
 
@@ -85,7 +85,7 @@ export default function CheckInPage() {
                 <label className="is-search"><span>Tìm bệnh nhân hoặc mã lịch</span><div><Search size={19} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tên, số điện thoại hoặc mã lịch..." /></div></label>
                 <label><span>Ngày tiếp đón</span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
                 <label><span>Ca khám</span><select value={timeSlot} onChange={(event) => setTimeSlot(event.target.value)}><option value="">Tất cả ca</option><option value="MORNING">Ca sáng</option><option value="AFTERNOON">Ca chiều</option><option value="EVENING">Ca tối</option></select></label>
-                <label><span>Trạng thái</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Tất cả trạng thái</option><option value="PENDING">Chờ check-in</option><option value="CHECKED_IN">Đã check-in</option><option value="CANCELLED">Đã hủy</option></select></label>
+                <label><span>Trạng thái</span><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Tất cả trạng thái</option><option value="PENDING">Chờ tiếp nhận</option><option value="CHECKED_IN">Đã tiếp nhận</option><option value="CANCELLED">Đã hủy</option></select></label>
             </section>
 
             <section className="cares-reception-table-card">

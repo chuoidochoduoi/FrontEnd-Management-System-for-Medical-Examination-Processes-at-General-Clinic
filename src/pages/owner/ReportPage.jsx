@@ -108,7 +108,7 @@ export default function ReportPage() {
         {error && <div role="alert" className={panel + ' text-red-600'}>{error} <button className={control} onClick={refresh}>Thử lại</button></div>}
         {data && !loading && <>
             {tab === 'overview' && <><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <Stat label="Lượt đến khám" value={number(a.arrivals)} note="Số VIS check-in trong khoảng ngày; không phải số người duy nhất." />
+                <Stat label="Lượt đến khám" value={number(a.arrivals)} note="Số lượt VIS được tiếp nhận trong khoảng ngày; không phải số người duy nhất." />
                 <Stat label="Lượt đã kết thúc" value={number(a.closedVisits)} note={`Theo ngày checkout; gồm ${a.partialVisits} lượt bỏ dở một phần.`} />
                 <Stat label="Lượt đã hủy" value={number(a.cancelledVisits)} note="VIS CANCELLED theo ngày checkout; không phải lịch hẹn bị hủy." />
                 <Stat label="Bệnh án hoàn thành" value={number(a.completedExaminations)} note="Mỗi dịch vụ khám một bệnh án; tính theo completedAt." />

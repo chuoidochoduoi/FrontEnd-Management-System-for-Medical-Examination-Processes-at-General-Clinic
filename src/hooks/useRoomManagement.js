@@ -241,7 +241,7 @@ export function useRoomManagement() {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/departments/doctors`, {
             headers: bearer(),
         });
-        if (!res.ok) throw new Error('Failed to fetch doctors');
+        if (!res.ok) throw new Error('Không thể tải danh sách bác sĩ');
         const data = await res.json();
         return Array.isArray(data) ? data : (data.content ?? []);
     }, [t]);
@@ -251,7 +251,7 @@ export function useRoomManagement() {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/departments/nurses`, {
             headers: bearer(),
         });
-        if (!res.ok) throw new Error('Failed to fetch nurses');
+        if (!res.ok) throw new Error('Không thể tải danh sách y tá');
         const data = await res.json();
         return Array.isArray(data) ? data : (data.content ?? []);
     }, [t]);

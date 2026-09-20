@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CreditCard, History, RefreshCw, ShieldCheck, WalletCards } from 'lucide-react';
+import { CreditCard, Eye, EyeOff, History, RefreshCw, ShieldCheck, WalletCards } from 'lucide-react';
 import { toast } from 'react-toastify';
 import CustomerLayout from '@/components/layout/CustomerLayout';
 import ConfirmModal from '@/components/ui/ConfirmModal';
@@ -16,9 +16,17 @@ export default function MembershipCardPage() {
     const [policy, setPolicy] = useState(null);
     const [history, setHistory] = useState([]);
     const [pin, setPin] = useState('');
+    const [showPin, setShowPin] = useState(false);
     const [accepted, setAccepted] = useState(false);
     const [confirmingRegistration, setConfirmingRegistration] = useState(false);
     const [registering, setRegistering] = useState(false);
+    const [confirmingPinReset, setConfirmingPinReset] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPin, setNewPin] = useState('');
+    const [confirmPin, setConfirmPin] = useState('');
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPin, setShowNewPin] = useState(false);
+    const [resettingPin, setResettingPin] = useState(false);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [syncError, setSyncError] = useState('');
@@ -108,11 +116,40 @@ export default function MembershipCardPage() {
             if (!res.ok) return toast.error(data.message || 'Không thể đăng ký thẻ.');
             setConfirmingRegistration(false);
             toast.success('Đăng ký thẻ thành công. Vui lòng nạp tiền tại quầy để kích hoạt.');
-            setPin(''); setCard(data); load();
+            setPin(''); setShowPin(false); setCard(data); load();
         } catch {
             toast.error('Không thể kết nối để đăng ký thẻ.');
         } finally {
             setRegistering(false);
+        }
+    };
+
+    const closePinReset = (force = false) => {
+        if (resettingPin && !force) return;
+        setConfirmingPinReset(false);
+        setCurrentPassword('');
+        setNewPin('');
+        setConfirmPin('');
+        setShowCurrentPassword(false);
+        setShowNewPin(false);
+    };
+
+    const resetPin = async () => {
+        if (resettingPin || !currentPassword || !/^\d{6}$/.test(newPin) || newPin !== confirmPin) return;
+        setResettingPin(true);
+        try {
+            const res = await fetch(`${api}/api/v1/membership-cards/my/reset-pin`, {
+                method: 'POST', headers: headers(), body: JSON.stringify({ currentPassword, newPin, confirmPin })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) return toast.error(data.message || 'Không thể đặt lại mã PIN.');
+            setCard(data);
+            closePinReset(true);
+            toast.success('Đặt lại mã PIN thành công. Bạn có thể dùng mã mới ngay bây giờ.');
+        } catch {
+            toast.error('Không thể kết nối để đặt lại mã PIN.');
+        } finally {
+            setResettingPin(false);
         }
     };
 
@@ -126,7 +163,14 @@ export default function MembershipCardPage() {
             <section className="grid gap-6 lg:grid-cols-[1.2fr_.8fr]">
                 <div className="rounded-2xl border bg-white p-7"><WalletCards className="text-primary-600" size={34}/><h2 className="mt-4 text-2xl font-bold">Đăng ký thẻ điện tử</h2>
                     <p className="mt-2 text-gray-600">Số tiền nạp được ghi nhận đúng 1:1. Nạp lần đầu từ {money(policy?.minimumTopUp || 1000000)} để kích hoạt ưu đãi {policy?.discountPercent || 15}% trong {policy?.validityMonths || 12} tháng, có hiệu lực từ ngày kế tiếp.</p>
-                    <label className="mt-5 block font-medium">Tạo mã PIN 6 số<input value={pin} onChange={e => setPin(e.target.value.replace(/\D/g,'').slice(0,6))} type="password" inputMode="numeric" className="mt-2 h-12 w-full rounded-xl border px-4" placeholder="••••••"/></label>
+                    <label className="mt-5 block font-medium">Tạo mã PIN 6 số
+                        <span className="relative mt-2 block">
+                            <input value={pin} onChange={e => setPin(e.target.value.replace(/\D/g,'').slice(0,6))} type={showPin ? 'text' : 'password'} inputMode="numeric" autoComplete="new-password" className="h-12 w-full rounded-xl border px-4 pr-12" placeholder="••••••"/>
+                            <button type="button" onClick={() => setShowPin(value => !value)} aria-label={showPin ? 'Ẩn mã PIN' : 'Hiện mã PIN'} aria-pressed={showPin} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-500 transition hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500">
+                                {showPin ? <EyeOff size={20}/> : <Eye size={20}/>}
+                            </button>
+                        </span>
+                    </label>
                     <label className="mt-4 flex items-start gap-3"><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)} className="mt-1"/><span>Tôi đã đọc và đồng ý với <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-700 underline underline-offset-2" onClick={event => event.stopPropagation()}>Điều khoản dịch vụ</a> của CareS.</span></label>
                     <button type="button" onClick={() => setConfirmingRegistration(true)} disabled={pin.length!==6 || !accepted || registering} className="mt-5 rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white disabled:opacity-50">Đăng ký thẻ</button>
                 </div>
@@ -155,7 +199,7 @@ export default function MembershipCardPage() {
         ) : <>
             <section className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
                 <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-700 to-teal-500 p-8 text-white shadow-xl"><CreditCard size={34}/><p className="mt-8 text-sm tracking-[.2em]">{card.cardCode}</p><p className="mt-3 text-4xl font-bold">{money(card.balance)}</p><div className="mt-8 flex flex-wrap justify-between gap-3"><span>Trạng thái: {card.status === 'ACTIVE' ? 'Đang hoạt động' : 'Chờ nạp tiền kích hoạt'}</span><span>Ưu đãi: {card.benefitActive ? `${card.benefitPercent}%` : benefitPending ? 'Chờ hiệu lực' : 'Không áp dụng'}</span></div></div>
-                <div className="rounded-2xl border bg-white p-6"><h2 className="text-xl font-bold">Thời hạn quyền lợi</h2><p className="mt-3 text-gray-600">{benefitPending ? `Có hiệu lực từ ${dateTime(card.benefitStartsAt)}` : card.benefitActive ? `Đang áp dụng đến ${dateTime(card.benefitExpiresAt)}` : card.benefitExpiresAt ? `Đã hết hạn lúc ${dateTime(card.benefitExpiresAt)}` : 'Chưa kích hoạt'}</p><p className="mt-5 rounded-xl bg-amber-50 p-4 text-amber-800">Số dư dùng được ngay. Ưu đãi của kỳ mới bắt đầu từ 00:00 ngày kế tiếp và không áp dụng cho hóa đơn đã tạo trước ngày hiệu lực.</p></div>
+                <div className="rounded-2xl border bg-white p-6"><h2 className="text-xl font-bold">Thời hạn quyền lợi</h2><p className="mt-3 text-gray-600">{benefitPending ? `Có hiệu lực từ ${dateTime(card.benefitStartsAt)}` : card.benefitActive ? `Đang áp dụng đến ${dateTime(card.benefitExpiresAt)}` : card.benefitExpiresAt ? `Đã hết hạn lúc ${dateTime(card.benefitExpiresAt)}` : 'Chưa kích hoạt'}</p><p className="mt-5 rounded-xl bg-amber-50 p-4 text-amber-800">Số dư dùng được ngay. Ưu đãi của kỳ mới bắt đầu từ 00:00 ngày kế tiếp và không áp dụng cho hóa đơn đã tạo trước ngày hiệu lực.</p><button type="button" onClick={() => setConfirmingPinReset(true)} className="mt-4 font-semibold text-primary-700 underline underline-offset-2 hover:text-primary-900">Quên mã PIN? Đặt lại mã PIN</button></div>
             </section>
             <section className="rounded-2xl border bg-white"><div className="flex items-center gap-2 border-b p-5"><History/><h2 className="text-xl font-bold">Lịch sử số dư</h2></div><div className="overflow-x-auto"><table className="w-full"><thead><tr className="bg-gray-50 text-left"><th className="p-4">Thời gian</th><th className="p-4">Nội dung</th><th className="p-4">Số tiền</th><th className="p-4">Số dư sau</th></tr></thead><tbody>{history.map(row=><tr key={row.ledgerId} className="border-t"><td className="p-4">{new Date(row.createdAt).toLocaleString('vi-VN')}</td><td className="p-4">{row.type==='TOP_UP'?'Nạp tiền':row.type==='PAYMENT'?'Thanh toán':'Hoàn tác thanh toán'}</td><td className="p-4 font-semibold">{row.type==='PAYMENT'?'-':'+'}{money(row.amount)}</td><td className="p-4">{money(row.balanceAfter)}</td></tr>)}</tbody></table>{!history.length&&<p className="p-8 text-center text-gray-500">Chưa có giao dịch.</p>}</div></section>
         </>}
@@ -179,6 +223,39 @@ export default function MembershipCardPage() {
                 </dl>
                 <p className="mt-4 text-sm text-gray-600">Số dư thẻ không được rút hoặc chuyển thành tiền mặt.</p>
                 <p className="mt-2 text-sm font-medium text-gray-700">Bằng việc xác nhận, bạn đồng ý với <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary-700 underline underline-offset-2">Điều khoản dịch vụ</a> của CareS.</p>
+            </div>
+        </ConfirmModal>
+        <ConfirmModal
+            isOpen={confirmingPinReset}
+            onClose={closePinReset}
+            onConfirm={resetPin}
+            isLoading={resettingPin}
+            confirmDisabled={!currentPassword || !/^\d{6}$/.test(newPin) || newPin !== confirmPin}
+            isDanger={false}
+            maxWidth="560px"
+            title="Đặt lại mã PIN thẻ CareS"
+            message="Để bảo vệ số dư thẻ, hãy xác minh bằng mật khẩu tài khoản trước khi tạo mã PIN mới. PIN cũ không thể được xem lại."
+            confirmText="Đặt lại mã PIN"
+            cancelText="Hủy"
+        >
+            <div className="mt-5 space-y-4 text-left">
+                <label className="block text-sm font-medium text-gray-700">Mật khẩu tài khoản
+                    <span className="relative mt-2 block">
+                        <input value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} type={showCurrentPassword ? 'text' : 'password'} autoComplete="current-password" className="h-12 w-full rounded-xl border border-gray-300 px-4 pr-12 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100" placeholder="Nhập mật khẩu đăng nhập" />
+                        <button type="button" onClick={() => setShowCurrentPassword(value => !value)} aria-label={showCurrentPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-500 hover:text-primary-700">{showCurrentPassword ? <EyeOff size={20}/> : <Eye size={20}/>}</button>
+                    </span>
+                </label>
+                <label className="block text-sm font-medium text-gray-700">Mã PIN mới gồm 6 số
+                    <span className="relative mt-2 block">
+                        <input value={newPin} onChange={event => setNewPin(event.target.value.replace(/\D/g, '').slice(0, 6))} type={showNewPin ? 'text' : 'password'} inputMode="numeric" autoComplete="new-password" className="h-12 w-full rounded-xl border border-gray-300 px-4 pr-12 tracking-[0.3em] focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100" placeholder="••••••" />
+                        <button type="button" onClick={() => setShowNewPin(value => !value)} aria-label={showNewPin ? 'Ẩn mã PIN mới' : 'Hiện mã PIN mới'} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-500 hover:text-primary-700">{showNewPin ? <EyeOff size={20}/> : <Eye size={20}/>}</button>
+                    </span>
+                </label>
+                <label className="block text-sm font-medium text-gray-700">Xác nhận mã PIN mới
+                    <input value={confirmPin} onChange={event => setConfirmPin(event.target.value.replace(/\D/g, '').slice(0, 6))} type={showNewPin ? 'text' : 'password'} inputMode="numeric" autoComplete="new-password" className="mt-2 h-12 w-full rounded-xl border border-gray-300 px-4 tracking-[0.3em] focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100" placeholder="••••••" />
+                </label>
+                {confirmPin && newPin !== confirmPin && <p className="text-sm font-medium text-red-600">Xác nhận mã PIN chưa khớp.</p>}
+                <p className="rounded-xl bg-gray-50 p-3 text-sm text-gray-600">Nếu quên mật khẩu đăng nhập, hãy đặt lại mật khẩu trước rồi quay lại đây để đặt lại PIN.</p>
             </div>
         </ConfirmModal>
     </div></CustomerLayout>;

@@ -13,7 +13,6 @@ import {
     FileText,
     FlaskConical,
     HeartPulse,
-    Printer,
     RotateCcw,
     Star,
     Stethoscope,
@@ -129,8 +128,8 @@ function ExaminationItem({
                     onClick={onPrint}
                     className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-primary-200 bg-white px-3 text-xs font-semibold text-primary-600 transition hover:border-primary-400 hover:bg-primary-50"
                 >
-                    <Printer size={14}/>
-                    In bệnh án
+                    <Download size={14}/>
+                    Tải bệnh án PDF
                 </button>
             )}
         </div>
@@ -198,7 +197,7 @@ function TestItem({
 
                     {test?.isPanelGroup && (
                         <p className="mt-1 text-[10px] font-medium text-gray-500">
-                            {test.purchasedCount || test.results?.length || 0} chỉ số đã thực hiện
+                            {test.purchasedCount || test.results?.length || 0} chỉ số đã mua · {test.reportedCount ?? test.results?.length ?? 0} đã ghi nhận
                         </p>
                     )}
 
@@ -471,7 +470,7 @@ function TestDetail({
                         </h2>
                         {test.isPanelGroup && (
                             <p className="mt-1 text-xs font-medium text-gray-500">
-                                Phiếu kết quả gồm {test.purchasedCount || test.results?.length || 0} chỉ số
+                                Phiếu gồm {test.purchasedCount || test.results?.length || 0} chỉ số đã mua · {test.reportedCount ?? test.results?.length ?? 0} đã ghi nhận{test.missingResultCount ? ` · ${test.missingResultCount} chưa có dữ liệu` : ''}
                             </p>
                         )}
                     </div>
@@ -613,10 +612,6 @@ function TestDetail({
                         )}
                     </div>
                 )}
-
-                {test?.attachments?.length > 0 && <div className="mt-5 flex flex-wrap gap-2">
-                    {test.attachments.map(attachment => <button key={attachment.attachmentId} type="button" onClick={() => onOpenPdf(attachment.url)} className="inline-flex items-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-3 py-2 text-sm font-medium text-primary-700"><FileText size={15}/>{attachment.originalName || 'Xem tệp kết quả'}</button>)}
-                </div>}
 
                 {/* PDF */}
                 {test.pdfUrl && (
@@ -1589,9 +1584,6 @@ export default function VisitDetailPage() {
                                 <a href={previewPdf} download="phieu-ket-qua.pdf" className="cares-customer-secondary-button">
                                     <Download size={16} /> Tải PDF
                                 </a>
-                                <button type="button" className="cares-customer-secondary-button" onClick={() => document.getElementById('customer-result-pdf-frame')?.contentWindow?.print()}>
-                                    <Printer size={16} /> In
-                                </button>
                                 <button type="button" className="cares-pdf-preview-close" onClick={closePdfPreview} aria-label="Đóng">
                                     <X size={20} />
                                 </button>

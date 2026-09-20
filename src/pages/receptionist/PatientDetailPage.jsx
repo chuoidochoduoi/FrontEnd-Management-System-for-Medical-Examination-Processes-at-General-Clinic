@@ -27,8 +27,10 @@ export default function PatientDetailPage() {
                 fetch(`${import.meta.env.VITE_API_URL}/api/receptionist/records/customers/${id}/visits?page=0&size=100&sort=createdAt,desc`, { headers }),
             ]);
             if (!patientRes.ok || !visitsRes.ok) throw new Error('Không thể tải hồ sơ bệnh nhân.');
-            const patientData = await patientRes.json();
-            const visitData = await visitsRes.json();
+            const patientRaw = await patientRes.json();
+            const visitRaw = await visitsRes.json();
+            const patientData = patientRaw.data ?? patientRaw;
+            const visitData = visitRaw.data ?? visitRaw;
             const rows = visitData.items ?? visitData.content ?? (Array.isArray(visitData) ? visitData : []);
             setPatient(patientData);
             setVisits(Array.from(new Map(rows.map(item => [item.visitId || item.id, item])).values()));

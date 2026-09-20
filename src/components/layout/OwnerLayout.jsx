@@ -50,7 +50,7 @@ export default function OwnerLayout({ children }) {
             { to: ROUTES.ADMIN_AUDIT_LOGS, icon: Activity, label: 'Nhật ký hệ thống' },
         ] },
         { label: 'Vận hành', items: [
-            { to: ROUTES.RECEPTIONIST_CHECKIN, icon: ClipboardList, label: 'Tiếp đón & Check-in' },
+            { to: ROUTES.RECEPTIONIST_CHECKIN, icon: ClipboardList, label: 'Tiếp đón và tiếp nhận' },
             { to: ROUTES.RECEPTIONIST_CREATE_TICKET, icon: FilePlus, label: 'Tạo phiếu khám' },
             { to: ROUTES.RECEPTIONIST_VISITS, icon: ClipboardList, label: 'Quản lý phiếu khám' },
             { to: ROUTES.MANAGER_PATIENTS, icon: UserRound, label: t('sidebar.patients') },

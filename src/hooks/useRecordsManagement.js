@@ -38,7 +38,7 @@ export function useRecordsManagement() {
             const data = await res.json();
             const items = data.items ?? data.content ?? (Array.isArray(data) ? data : []);
             setRecords(items.map(item => ({
-                id: item.customerId,
+                id: item.customerId || item.id,
                 code: item.patientCode,
                 fullName: item.fullName,
                 phone: item.phone,

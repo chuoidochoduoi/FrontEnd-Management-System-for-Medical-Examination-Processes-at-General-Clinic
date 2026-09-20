@@ -61,7 +61,7 @@ export function serviceReceipt(data) {
     const membershipBenefit = number(data.membershipBenefitAmount) || 0;
     const patientBeforeMembership = number(data.patientPayableBeforeMembership) ?? (due == null ? null : due + membershipBenefit);
     return {
-        kind: 'services', title: 'PHIẾU THU DỊCH VỤ Y TẾ', code: data.receiptNumber || data.invoiceCode,
+        kind: 'services', title: 'PHIẾU THANH TOÁN DỊCH VỤ', code: data.receiptNumber || data.invoiceCode,
         invoiceCode: data.invoiceCode, date: data.paidAt || data.issuedAt, dateLabel: data.paidAt ? 'Ngày thu' : 'Ngày lập',
         name: data.patientName, patientCode: data.patientCode, dob: data.dateOfBirth,
         gender: ({ Nu: 'Nữ', Khac: 'Khác' })[data.gender] || data.gender, address: data.patientAddress,

@@ -50,7 +50,7 @@ export function buildReport(data, type, { serviceSearch = '', roomSearch = '', a
                 ['Trong đó bỏ lượt một phần', a.partialVisits, 'VIS'], ['Lượt đã hủy', a.cancelledVisits, 'VIS'],
                 ['Bệnh án hoàn thành', a.completedExaminations, 'Bệnh án'], ['CLS hoàn thành và có bản ký', a.completedTests, 'Yêu cầu'],
                 ['Thanh toán dịch vụ', Number(f.collected), 'VND'], ['Giao dịch thành công', f.successfulPayments, 'Giao dịch']];
-            report.note = 'VIS theo ngày check-in/checkout; bệnh án và CLS theo ngày hoàn tất. Chỉ số lẻ là yêu cầu riêng, không phải lượt gọi. Thanh toán theo paidAt, trạng thái SUCCESS hiện tại; không phải tiền mặt ròng.';
+            report.note = 'Lượt khám theo ngày tiếp nhận/kết thúc; bệnh án và cận lâm sàng theo ngày hoàn tất. Chỉ số lẻ là yêu cầu riêng, không phải lượt gọi. Thanh toán theo ngày ghi nhận, chỉ tính giao dịch thành công; không phải tiền mặt ròng.';
             break;
         case 'timeline':
             report.headers = ['Ngày / tháng thanh toán', 'Số tiền (VND)']; report.moneyColumns = [1];

@@ -61,7 +61,7 @@ export default function ReceptionistLayout({ children }) {
     const initials = displayName.trim().split(/\s+/).slice(-2).map((part) => part[0]).join('').toUpperCase();
     const navigationGroups = [
         { label: 'Tiếp đón', items: [
-            { to: ROUTES.RECEPTIONIST_CHECKIN, icon: ClipboardCheck, label: 'Tiếp đón & Check-in' },
+            { to: ROUTES.RECEPTIONIST_CHECKIN, icon: ClipboardCheck, label: 'Tiếp đón và tiếp nhận' },
             { to: ROUTES.RECEPTIONIST_CREATE_TICKET, icon: FilePlus, label: t('sidebar.createTicket') },
             { to: ROUTES.RECEPTIONIST_VISITS, icon: ClipboardList, label: 'Quản lý phiếu khám' },
         ] },

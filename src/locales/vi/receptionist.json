@@ -3,10 +3,10 @@
   "sidebar": {
     "logo": "Logo",
     "subtitle": "Hệ thống Y tế v2.1",
-    "checkIn": "Tiếp đón & Check-in",
+    "checkIn": "Tiếp đón và tiếp nhận",
     "createTicket": "Tạo phiếu khám",
     "manageRecords": "Quản lý hồ sơ",
-    "settings": "Settings",
+    "settings": "Cài đặt",
     "support": "Hỗ trợ",
     "onlineSupport": "Hỗ trợ trực tuyến"
   },
@@ -41,8 +41,8 @@
       "printTicket": "In phiếu khám"
     },
     "status": {
-      "waiting": "Chờ Check-in",
-      "pending": "pending",
+      "waiting": "Chờ tiếp nhận",
+      "pending": "Đang chờ",
       "done": "Hoàn thành"
     },
     "slots": {
@@ -107,20 +107,20 @@
     "errors": {
       "loadFailed": "Không thể tải thông tin ca hẹn.",
       "saveFailed": "Lưu thất bại. Vui lòng thử lại.",
-      "checkInFailed": "Check-in thất bại. Vui lòng thử lại.",
+      "checkInFailed": "Tiếp nhận thất bại. Vui lòng thử lại.",
       "unknown": "Có lỗi xảy ra.",
       "validation": {
         "fullNameRequired": "Vui lòng nhập họ và tên bệnh nhân.",
         "phoneRequired": "Vui lòng nhập số điện thoại.",
         "serviceRequired": "Vui lòng chọn ít nhất một dịch vụ.",
-        "serviceRequiredCheckin": "Vui lòng chọn ít nhất một dịch vụ để check-in.",
+        "serviceRequiredCheckin": "Vui lòng chọn ít nhất một dịch vụ để tiếp nhận.",
         "dateRequired": "Vui lòng chọn ngày khám."
       }
     },
     "actions": {
       "save": "Lưu cập nhật hẹn",
       "saving": "Đang lưu...",
-      "checkIn": "Check in",
+      "checkIn": "Tiếp nhận",
       "checkingIn": "Đang xử lý..."
     }
   },

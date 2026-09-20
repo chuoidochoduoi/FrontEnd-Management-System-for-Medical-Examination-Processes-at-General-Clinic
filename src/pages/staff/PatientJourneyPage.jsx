@@ -7,7 +7,6 @@ import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { createJourneyLoader } from '@/services/patientJourneyService';
 import { formatClinicDateTime, formatTodayCheckInDuration, isJourneyCompleted, journeyFilters, journeyStatus, journeyWarnings, liveWaitingMinutes, sortJourneyPage } from '@/utils/patientJourneyPresentation';
 import JourneyServiceProgress from '@/components/journey/JourneyServiceProgress';
-import SkippedQueueSupport from '@/components/journey/SkippedQueueSupport';
 import { journeyPhaseLabel } from '@/components/journey/QueuePanel';
 import styles from './PatientJourneyPage.module.css';
 
@@ -51,7 +50,7 @@ function JourneyDetails({ selected, detail, loading, error, refresh, retry, clos
                         <p>{detail.guest ? 'Khách vãng lai' : 'Có tài khoản'} · {detail.phone || '—'} · {detail.visitCode}</p>
                         <p>Vị trí: {detail.currentRoom || '—'}</p>
                         {detail.responsibleDoctorName && <p>Bác sĩ phụ trách: {detail.responsibleDoctorName}</p>}
-                        {overdue && <p>Check-in: {formatClinicDateTime(detail.checkInTime)}</p>}
+                        {overdue && <p>Thời điểm tiếp nhận: {formatClinicDateTime(detail.checkInTime)}</p>}
                         {detail.queueNumber != null && <p>Số phiếu: {detail.queueNumber}{detail.waitingPosition != null ? ` · Vị trí hiện tại: ${detail.waitingPosition}` : ''}</p>}
                         <StatusBadge value={detail.currentStatus} /><PriorityBadge item={detail} /><Warnings item={detail} overdue={overdue} />
                     </section>
@@ -174,7 +173,6 @@ export default function PatientJourneyPage() {
             <div><h1>Hành trình bệnh nhân</h1><p>Theo dõi vị trí hiện tại và bước tiếp theo của bệnh nhân. Không thao tác chuyển bước tại màn hình này.</p></div>
             <button type="button" onClick={refresh} className={styles.button} disabled={loading}><RefreshCw size={18} />Làm mới</button>
         </header>
-        <SkippedQueueSupport />
         <nav className={styles.tabs} aria-label="Phạm vi hành trình" role="tablist">
             <button type="button" role="tab" aria-selected={!overdue} className={!overdue ? styles.activeTab : ''}
                 onClick={() => { closeDetails(); changeQuery({ scope: 'TODAY', page: 0 }); }}>Hôm nay</button>
@@ -183,16 +181,16 @@ export default function PatientJourneyPage() {
         </nav>
         <p className={styles.scopeExplanation}>{overdue
             ? 'Tồn đọng qua ngày chỉ gồm lượt đã phát sinh chuyên môn nhưng chưa kết thúc, cần bác sĩ hoặc phòng cận lâm sàng tiếp tục xử lý.'
-            : 'Hôm nay dùng để điều phối các lượt check-in trong ngày, từ lúc tiếp nhận đến khi hoàn thành.'}</p>
+            : 'Hôm nay dùng để điều phối các lượt tiếp nhận trong ngày đến khi hoàn thành.'}</p>
         <section className={styles.filters} aria-label="Bộ lọc hành trình">
             <label>Tìm bệnh nhân<div className={styles.search}><Search size={18} aria-hidden="true" /><input value={query.search} onChange={event => changeQuery({ search: event.target.value, page: 0 }, 300)} placeholder="Tên, số điện thoại hoặc mã lượt khám" /></div></label>
             <label>Trạng thái<select value={query.status} onChange={event => changeQuery({ status: event.target.value, page: 0 })}><option value="">Tất cả trạng thái</option>{journeyFilters.map(value => <option key={value} value={value}>{journeyStatus(value).label}{value === 'PENDING' ? ' (yêu cầu CLS)' : ''}</option>)}</select></label>
-            <label>Sắp xếp trong trang<select value={sort} onChange={event => setSort(event.target.value)}><option value="newest">Check-in mới nhất</option><option value="waiting">{overdue ? 'Tồn đọng lâu nhất' : 'Thời gian từ check-in lâu nhất'}</option><option value="name">Tên A–Z</option></select></label>
+            <label>Sắp xếp trong trang<select value={sort} onChange={event => setSort(event.target.value)}><option value="newest">Tiếp nhận mới nhất</option><option value="waiting">{overdue ? 'Tồn đọng lâu nhất' : 'Thời gian từ lúc tiếp nhận lâu nhất'}</option><option value="name">Tên A–Z</option></select></label>
         </section>
         <section className={styles.card} aria-label="Danh sách hành trình" aria-busy={loading}>
             <div className={styles.tableScroll}><table className={styles.table}>
                 <colgroup><col style={{ width: '20%' }} /><col style={{ width: '14%' }} /><col style={{ width: '13%' }} /><col style={{ width: '17%' }} /><col style={{ width: '10%' }} /><col style={{ width: '14%' }} /><col style={{ width: '12%' }} /></colgroup>
-                <thead><tr>{['Bệnh nhân', 'Bước hiện tại', 'Vị trí', 'Trạng thái', overdue ? 'Thời điểm check-in' : 'Từ lúc check-in', 'Bước tiếp theo', 'Thao tác'].map(title => <th scope="col" key={title}>{title}</th>)}</tr></thead>
+                <thead><tr>{['Bệnh nhân', 'Bước hiện tại', 'Vị trí', 'Trạng thái', overdue ? 'Thời điểm tiếp nhận' : 'Từ lúc tiếp nhận', 'Bước tiếp theo', 'Thao tác'].map(title => <th scope="col" key={title}>{title}</th>)}</tr></thead>
                 <tbody>{!loading && !listError && shown.map(item => <tr key={item.visitId}>
                     <td><strong>{item.patientName || '—'}</strong><p className={styles.metadata}>{item.guest ? 'Khách vãng lai' : 'Có tài khoản'} · {item.phone || '—'}</p><p className={styles.metadata}>{item.visitCode}</p></td>
                     <td>{item.currentStep || '—'}</td><td>{item.currentRoom || '—'}</td>

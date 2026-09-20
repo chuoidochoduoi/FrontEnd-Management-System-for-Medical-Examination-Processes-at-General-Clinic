@@ -81,7 +81,6 @@ export function groupTestsForPatient(tests) {
                 isPanelGroup: Boolean(test.panelCode),
                 members: [],
                 results: [],
-                attachments: [],
             });
         }
 
@@ -99,15 +98,18 @@ export function groupTestsForPatient(tests) {
                 group.results.push(result);
             }
         });
-        (test.attachments || []).forEach((attachment) => {
-            const attachmentKey = attachment.attachmentId || attachment.url;
-            if (!group.attachments.some(item => (item.attachmentId || item.url) === attachmentKey)) {
-                group.attachments.push(attachment);
-            }
-        });
     });
 
     return Array.from(groups.values()).map((group) => {
+        const missingMembers = group.isPanelGroup
+            ? group.members.filter(item => item.serviceCode !== item.panelCode && !(item.results || []).length)
+            : [];
+        missingMembers.forEach((item) => group.results.push({
+            name: item.name || item.serviceName || item.serviceCode,
+            result: 'Chưa có dữ liệu',
+            assessment: 'NOT_REPORTED',
+            missing: true,
+        }));
         const fullPanelPurchased = group.members.some(
             item => item.panelCode && item.serviceCode === item.panelCode
         );
@@ -118,6 +120,8 @@ export function groupTestsForPatient(tests) {
         return {
             ...group,
             purchasedCount,
+            reportedCount: group.results.filter(item => !item.missing).length,
+            missingResultCount: missingMembers.length,
             status: completedCount === group.members.length ? 'COMPLETED' : group.status,
         };
     });

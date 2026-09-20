@@ -1,13 +1,13 @@
 {
   "sidebar": {
     "logo": "CareS",
-    "subtitle": "Admin Workspace",
+    "subtitle": "Không gian quản trị",
     "topLevel": "Quản trị tối cao",
-    "clinicOverview": "🏥 Tổng quan & Cấu hình Clinic",
+    "clinicOverview": "🏥 Tổng quan và cấu hình phòng khám",
     "staffList": "👥 Quản lý danh sách nhân sự",
-    "adminSection": "Quản trị Admin",
+    "adminSection": "Quản trị hệ thống",
     "deptManagement": "🗂️ Quản lý Khoa/Phòng",
-    "staffSchedule": "📅 Staff Schedule",
+    "staffSchedule": "📅 Lịch làm việc nhân sự",
     "admin": "Quản trị viên",
     "logout": "Đăng xuất hệ thống"
   },

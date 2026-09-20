@@ -10,6 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import { useLabQueue } from '@/hooks/useLabQueue';
 import { ROUTES } from '@/constants/routes';
 import { openAuthenticatedTab } from '@/utils/openAuthenticatedTab';
@@ -46,6 +47,8 @@ export default function LabCallQueuePage() {
     } = useLabQueue(departmentId);
 
     const [search, setSearch] = useState('');
+    const [showReleaseConfirm, setShowReleaseConfirm] = useState(false);
+    const [releasing, setReleasing] = useState(false);
 
     /* =========================================================
        GROUP TEST REQUESTS BY QUEUE TICKET
@@ -114,6 +117,23 @@ export default function LabCallQueuePage() {
         [groups]
     );
 
+    const currentReleaseState = useMemo(() => {
+        if (!currentPatient) return { mode: null, ready: false };
+        const activeRequests = currentPatient.requests.filter(
+            (request) => !['COMPLETED', 'DONE', 'CANCELLED'].includes(request.status)
+        );
+        const specimenRequests = activeRequests.filter(
+            (request) => request.requiresSpecimen === true
+        );
+        return {
+            mode: specimenRequests.length === activeRequests.length && activeRequests.length > 0
+                ? 'SPECIMEN'
+                : 'PROCEDURE',
+            ready: activeRequests.length > 0
+                && activeRequests.every((request) => request.serviceReadyForRelease === true),
+        };
+    }, [currentPatient]);
+
     /* =========================================================
        WAITING LIST
        Không hiển thị IN_PROGRESS lần nữa trong danh sách dưới
@@ -170,12 +190,34 @@ export default function LabCallQueuePage() {
                 'Không thể cập nhật hàng chờ.'
             );
 
-            return;
+            return false;
         }
 
         toast.success(success);
 
         refetch();
+        return true;
+    };
+
+    const releaseCurrentPatient = async () => {
+        if (!currentPatient?.ticketId || releasing) return;
+        setReleasing(true);
+        try {
+            const succeeded = await action(
+                currentPatient.ticketId,
+                'finish-service',
+                currentReleaseState.mode === 'SPECIMEN'
+                    ? 'Đã hoàn tất lấy mẫu và chuyển bệnh nhân sang bước tiếp theo.'
+                    : 'Đã hoàn tất thực hiện và chuyển bệnh nhân sang bước tiếp theo.'
+            );
+            if (succeeded) setShowReleaseConfirm(false);
+        } catch {
+            toast.error(currentReleaseState.mode === 'SPECIMEN'
+                ? 'Không thể kết nối để hoàn tất lấy mẫu. Vui lòng thử lại.'
+                : 'Không thể kết nối để hoàn tất thực hiện. Vui lòng thử lại.');
+        } finally {
+            setReleasing(false);
+        }
     };
 
     return (
@@ -342,11 +384,17 @@ export default function LabCallQueuePage() {
 
                                     </div>
 
+                                    <p className="mt-2 text-xs text-slate-500">
+                                        {currentReleaseState.mode === 'SPECIMEN'
+                                            ? 'Hoàn tất lấy mẫu để bệnh nhân sang bước tiếp theo; kết quả có thể được nhập và ký sau.'
+                                            : 'Hoàn tất thực hiện để bệnh nhân sang bước tiếp theo; kết quả có thể được đọc và ký sau.'}
+                                    </p>
+
                                 </div>
 
                                 {/* Current action */}
 
-                                <div className="shrink-0">
+                                <div className="flex shrink-0 flex-wrap justify-end gap-2">
 
                                     <button
                                         onClick={() => {
@@ -360,8 +408,28 @@ export default function LabCallQueuePage() {
                                             !['COMPLETED', 'DONE', 'CANCELLED'].includes(request.status))}
                                         className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
                                     >
-                                        Nhập kết quả dịch vụ
+                                        Nhập kết quả
                                     </button>
+
+                                    {currentReleaseState.mode && (
+                                        <button
+                                            type="button"
+                                            disabled={!currentReleaseState.ready}
+                                            title={currentReleaseState.ready
+                                                ? (currentReleaseState.mode === 'SPECIMEN'
+                                                    ? 'Kết thúc phục vụ tại phòng sau khi đã lấy mẫu'
+                                                    : 'Kết thúc phục vụ tại phòng sau khi đã thực hiện kỹ thuật')
+                                                : (currentReleaseState.mode === 'SPECIMEN'
+                                                    ? 'Hãy lưu mẫu đạt yêu cầu trước khi hoàn tất lấy mẫu'
+                                                    : 'Hãy lưu thông tin thực hiện hoặc kết quả nháp trước khi hoàn tất')}
+                                            onClick={() => setShowReleaseConfirm(true)}
+                                            className="rounded-xl border border-primary-500 px-5 py-2.5 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 disabled:hover:bg-transparent"
+                                        >
+                                            {currentReleaseState.mode === 'SPECIMEN'
+                                                ? 'Hoàn tất lấy mẫu'
+                                                : 'Hoàn tất thực hiện'}
+                                        </button>
+                                    )}
 
                                 </div>
 
@@ -770,6 +838,18 @@ export default function LabCallQueuePage() {
                 </div>
 
             </div>
+            <ConfirmModal
+                isOpen={showReleaseConfirm}
+                onClose={() => !releasing && setShowReleaseConfirm(false)}
+                onConfirm={releaseCurrentPatient}
+                title={currentReleaseState.mode === 'SPECIMEN' ? 'Hoàn tất lấy mẫu' : 'Hoàn tất thực hiện'}
+                message={currentReleaseState.mode === 'SPECIMEN'
+                    ? 'Bệnh nhân sẽ rời hàng chờ phòng và có thể sang bước tiếp theo. Kết quả vẫn có thể được nhập và ký sau.'
+                    : 'Bệnh nhân sẽ rời hàng chờ phòng sau khi kỹ thuật đã được thực hiện. Kết quả vẫn có thể được đọc, cập nhật và ký sau.'}
+                confirmText="Xác nhận hoàn tất"
+                isDanger={false}
+                isLoading={releasing}
+            />
         </MedicalStaffLayout>
     );
 }

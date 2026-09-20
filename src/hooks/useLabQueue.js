@@ -79,6 +79,7 @@ export function useLabQueue(initialDepartmentId = null) {
                 const mappedOrders = rawOrders.map(order => ({
                     ...order,
                     testRequestId: order.representativeId ?? order.testRequestId ?? order.id,
+                    serviceName: order.panelName ?? order.serviceName ?? 'Dịch vụ cận lâm sàng',
                     status: typeof order.status === 'object' && order.status?.name
                         ? order.status.name
                         : (typeof order.status === 'string' ? order.status : String(order.status || 'PENDING')),

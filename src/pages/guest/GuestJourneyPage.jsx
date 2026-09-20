@@ -85,7 +85,7 @@ export default function GuestJourneyPage() {
     const discardResult = () => {
         request.current?.abort();
         request.current = null;
-        setCriteria(null); setResult(null); setUpdatedAt(''); setLoading(false); setError(''); setFields({}); setReturnMessage('');
+        setCriteria(null); setResult(null); setUpdatedAt(''); setLoading(false); setError(''); setFields({});
     };
     const clear = () => { discardResult(); setVisitCode(''); setPhone(''); codeInput.current?.focus(); };
     const submit = (event) => {
@@ -131,14 +131,14 @@ export default function GuestJourneyPage() {
             <form className={styles.searchForm} onSubmit={submit} noValidate autoComplete="off">
                 <div className={styles.searchFields}>
                     <label htmlFor="guest-visit-code">Mã lượt khám
-                        <input ref={codeInput} id="guest-visit-code" value={visitCode} onChange={(event) => { discardResult(); setVisitCode(event.target.value.toUpperCase()); }}
+                        <input ref={codeInput} id="guest-visit-code" value={visitCode} onChange={(event) => { const val = event.target.value.toUpperCase(); discardResult(); setVisitCode(val); }}
                             placeholder="Ví dụ: VIS-12AB34CD" maxLength={12} spellCheck={false} required
                             aria-invalid={!!fields.visitCode} aria-describedby={fields.visitCode ? 'guest-code-error' : undefined} />
                         {fields.visitCode && <span id="guest-code-error" className={styles.fieldError}>{fields.visitCode}</span>}
                     </label>
                     <label htmlFor="guest-phone">Số điện thoại
                         <input id="guest-phone" type={result ? 'password' : 'tel'} inputMode="tel" value={phone}
-                            onChange={(event) => { discardResult(); setPhone(event.target.value); }}
+                            onChange={(event) => { const val = event.target.value; discardResult(); setPhone(val); }}
                             placeholder="Số điện thoại trên phiếu khám" maxLength={30} required
                             aria-invalid={!!fields.phone} aria-describedby={fields.phone ? 'guest-phone-error' : undefined} />
                         {fields.phone && <span id="guest-phone-error" className={styles.fieldError}>{fields.phone}</span>}
@@ -174,7 +174,7 @@ export default function GuestJourneyPage() {
                     <div><span><MapPin size={17} /> Phòng hiện tại</span><strong>{currentRoom}</strong></div>
                     <div className={shared.yourPosition} aria-live="polite" aria-atomic="true"><span>Vị trí hàng chờ</span>
                         <strong>{error ? 'Chưa cập nhật' : queue.waitingPosition ? `Thứ ${queue.waitingPosition}` : status === 'CALLED' ? 'Đến phòng ngay' : status === 'IN_PROGRESS' ? 'Đang thực hiện' : '—'}</strong>
-                        <p>{queue.queueNumber != null ? `Số phiếu ${queue.queueNumber}. ` : ''}{!error && queue.peopleAhead != null ? queue.peopleAhead === 0 ? 'Bạn đứng đầu danh sách chờ.' : `Còn ${queue.peopleAhead} người chờ trước bạn.` : 'Vị trí được cập nhật theo phòng hiện tại.'}</p>
+                        <p>{!error && queue.peopleAhead != null ? queue.peopleAhead === 0 ? 'Bạn đứng đầu danh sách chờ.' : `Còn ${queue.peopleAhead} người chờ trước bạn.` : 'Vị trí được cập nhật theo phòng hiện tại.'}</p>
                     </div>
                 </section>
                 <div className={shared.columns}>

@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 
 import api from '@/lib/axios';
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
+import ConfirmModal from '@/components/ui/ConfirmModal';
 import DynamicClinicalForm, { validateClinicalForm } from '@/components/clinical/DynamicClinicalForm';
 import { ROUTES } from '@/constants/routes';
 
@@ -13,6 +14,7 @@ const SAMPLE_TYPES = [
     ['SWAB', 'Mẫu ngoáy'], ['BODY_FLUID', 'Dịch cơ thể'], ['TISSUE', 'Mô'], ['OTHER', 'Khác'],
 ];
 const SAMPLE_STATUSES = [['ACCEPTED', 'Đạt yêu cầu'], ['REJECTED', 'Không đạt yêu cầu'], ['RECOLLECT', 'Cần lấy lại']];
+const sampleTypeLabel = (value) => SAMPLE_TYPES.find(([key]) => key === value)?.[1] || value || 'Chưa xác định';
 const getStaffId = () => localStorage.getItem('staffId') || sessionStorage.getItem('staffId');
 
 export default function LabPanelDetailPage() {
@@ -27,7 +29,9 @@ export default function LabPanelDetailPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [saveError, setSaveError] = useState('');
     const [formErrors, setFormErrors] = useState({});
+    const [confirmCompleteOpen, setConfirmCompleteOpen] = useState(false);
 
     const hydrate = useCallback((data) => {
         setPanel(data);
@@ -36,6 +40,7 @@ export default function LabPanelDetailPage() {
         setSampleType(data?.sampleType || '');
         setSampleStatus(data?.sampleStatus || 'ACCEPTED');
         setConclusion(data?.conclusion || '');
+        setSaveError('');
     }, []);
 
     const load = useCallback(async () => {
@@ -60,7 +65,7 @@ export default function LabPanelDetailPage() {
         .filter((item) => !item.purchased)
         .map((item) => item.fieldKey), [panel]);
     const completed = panel?.completedCount === panel?.purchasedCount && panel?.purchasedCount > 0;
-    const canEdit = !completed && panel?.queueStatus === 'IN_PROGRESS';
+    const canEdit = !completed && ['IN_PROGRESS', 'DONE'].includes(panel?.queueStatus);
 
     const payload = () => ({
         resultData: values,
@@ -72,32 +77,40 @@ export default function LabPanelDetailPage() {
         performedById: getStaffId(),
     });
 
-    const submit = async (complete) => {
+    const validateSubmission = (complete) => {
+        const nextErrors = validateClinicalForm(panel?.clinicalForm?.schema, values, complete, purchasedFieldKeys);
+        if (complete && !conclusion.trim()) nextErrors.conclusion = 'Vui lòng nhập kết luận';
+        if (!Object.keys(nextErrors).length) return true;
+        setFormErrors(nextErrors);
+        const firstInvalidKey = Object.keys(nextErrors)[0];
+        window.setTimeout(() => {
+            const control = document.getElementById(`clinical-${firstInvalidKey}`);
+            control?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            window.setTimeout(() => control?.focus(), 250);
+        }, 0);
+        toast.error(`${complete ? 'Không thể hoàn thành' : 'Không thể lưu nháp'}: ${nextErrors[firstInvalidKey]}`);
+        return false;
+    };
+
+    const submit = async (complete, alreadyValidated = false) => {
         if (!getStaffId()) {
             toast.error('Không xác định được nhân viên đang thực hiện. Vui lòng đăng nhập lại.');
             return;
         }
-        if (complete) {
-            const nextErrors = validateClinicalForm(panel?.clinicalForm?.schema, values, true, purchasedFieldKeys);
-            if (!conclusion.trim()) nextErrors.conclusion = 'Vui lòng nhập kết luận';
-            if (Object.keys(nextErrors).length) {
-                setFormErrors(nextErrors);
-                toast.error('Vui lòng hoàn thành các chỉ số đã mua hoặc đánh dấu không thực hiện.');
-                return;
-            }
-        }
+        if (!alreadyValidated && !validateSubmission(complete)) return;
         setSaving(true);
-        setError('');
+        setSaveError('');
         try {
             const response = complete
                 ? await api.post(`/api/v1/test-requests/${id}/panel-workbench/complete`, payload())
                 : await api.put(`/api/v1/test-requests/${id}/panel-workbench/result`, payload());
             hydrate(response.data);
             setFormErrors({});
+            setConfirmCompleteOpen(false);
             toast.success(complete ? 'Đã hoàn thành phiếu xét nghiệm.' : 'Đã lưu nháp phiếu xét nghiệm.');
         } catch (requestError) {
             const message = requestError.response?.data?.message || 'Không thể lưu phiếu xét nghiệm.';
-            setError(message);
+            setSaveError(message);
             toast.error(message);
         } finally {
             setSaving(false);
@@ -129,13 +142,22 @@ export default function LabPanelDetailPage() {
                         </section>
 
                         <section className="mt-5 grid gap-5 xl:grid-cols-[330px_minmax(0,1fr)]">
-                            <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h2 className="font-bold text-slate-900">Mẫu bệnh phẩm dùng chung</h2><p className="mt-1 text-sm text-slate-500">Một thông tin mẫu được dùng nhất quán cho các chỉ số đã mua trong phiếu này.</p><label className="mt-4 block text-sm font-semibold text-slate-700">Mã mẫu<input disabled={!canEdit} value={sampleId} onChange={(event) => setSampleId(event.target.value)} placeholder="SMP-..." className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-200 px-3 text-sm disabled:bg-slate-100" /></label><label className="mt-3 block text-sm font-semibold text-slate-700">Loại mẫu<select disabled={!canEdit} value={sampleType} onChange={(event) => setSampleType(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-200 px-3 text-sm disabled:bg-slate-100"><option value="">Chọn loại mẫu</option>{SAMPLE_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label className="mt-3 block text-sm font-semibold text-slate-700">Tình trạng mẫu<select disabled={!canEdit} value={sampleStatus} onChange={(event) => setSampleStatus(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-200 px-3 text-sm disabled:bg-slate-100">{SAMPLE_STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><div className="mt-5 rounded-xl bg-slate-50 p-3 text-xs text-slate-600"><LockKeyhole className="mb-1 text-slate-500" size={15} /> Những chỉ số chưa mua vẫn hiện trong bảng để đối chiếu phạm vi gói, nhưng không thể nhập hoặc ký.</div></aside>
-                            <div><DynamicClinicalForm schema={panel?.clinicalForm?.schema} value={values} onChange={(next) => { setValues(next); setFormErrors({}); }} disabled={!canEdit} lockedFieldKeys={lockedFieldKeys} errors={formErrors} title={`Chỉ số ${panel?.panelName}`} emptyMessage="Chưa cấu hình biểu mẫu cho gói này" /></div>
+                            <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h2 className="font-bold text-slate-900">Mẫu bệnh phẩm dùng chung</h2><p className="mt-1 text-sm text-slate-500">Một thông tin mẫu được dùng nhất quán cho các chỉ số đã mua trong phiếu này.</p><label className="mt-4 block text-sm font-semibold text-slate-700">Mã mẫu<input disabled={!canEdit} value={sampleId} onChange={(event) => setSampleId(event.target.value)} placeholder="SMP-..." className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-200 px-3 text-sm disabled:bg-slate-100" /></label><div className="mt-3 text-sm font-semibold text-slate-700">Loại mẫu<div className="mt-1.5 flex min-h-11 items-center rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-medium text-slate-700">{sampleTypeLabel(sampleType)}</div><p className="mt-1 text-xs font-normal text-slate-500">Được xác định tự động theo dịch vụ xét nghiệm.</p></div><label className="mt-3 block text-sm font-semibold text-slate-700">Tình trạng mẫu<select disabled={!canEdit} value={sampleStatus} onChange={(event) => setSampleStatus(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-200 px-3 text-sm disabled:bg-slate-100">{SAMPLE_STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><div className="mt-5 rounded-xl bg-slate-50 p-3 text-xs text-slate-600"><LockKeyhole className="mb-1 text-slate-500" size={15} /> Những chỉ số chưa mua vẫn hiện trong bảng để đối chiếu phạm vi gói, nhưng không thể nhập hoặc ký.</div></aside>
+                            <div><DynamicClinicalForm schema={panel?.clinicalForm?.schema} value={values} onChange={(next, changedFieldKey) => { setValues(next); setSaveError(''); setFormErrors((current) => {
+                                if (!changedFieldKey) return {};
+                                const nextErrors = { ...current };
+                                delete nextErrors[changedFieldKey];
+                                delete nextErrors._form;
+                                return nextErrors;
+                            }); }} disabled={!canEdit} lockedFieldKeys={lockedFieldKeys} errors={formErrors} title={`Chỉ số ${panel?.panelName}`} emptyMessage="Chưa cấu hình biểu mẫu cho gói này" /></div>
                         </section>
 
-                        <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><label className="block text-sm font-bold text-slate-800">Kết luận <span className="text-red-600">*</span><textarea disabled={!canEdit} value={conclusion} onChange={(event) => { setConclusion(event.target.value); setFormErrors((current) => ({ ...current, conclusion: undefined })); }} rows={3} placeholder="Nhập nhận xét và kết luận kết quả..." className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100" />{formErrors.conclusion && <p className="mt-1 text-sm text-red-600">{formErrors.conclusion}</p>}</label><div className="mt-5 flex flex-wrap justify-end gap-3"><button type="button" onClick={back} className="min-h-11 rounded-xl border border-slate-200 px-5 text-sm font-bold text-slate-600">Quay lại</button>{canEdit && <><button type="button" disabled={saving} onClick={() => submit(false)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-teal-300 px-5 text-sm font-bold text-teal-700 disabled:opacity-50"><Save size={16} /> Lưu nháp</button><button type="button" disabled={saving} onClick={() => submit(true)} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-teal-600 px-5 text-sm font-bold text-white disabled:opacity-50"><CheckCircle2 size={16} /> {saving ? 'Đang xử lý...' : 'Hoàn thành phiếu'}</button></>}</div></section>
+                        <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><label className="block text-sm font-bold text-slate-800">Kết luận <span className="text-red-600">*</span><textarea id="clinical-conclusion" disabled={!canEdit} value={conclusion} onChange={(event) => { setConclusion(event.target.value); setSaveError(''); setFormErrors((current) => { const nextErrors = { ...current }; delete nextErrors.conclusion; return nextErrors; }); }} rows={3} placeholder="Nhập nhận xét và kết luận kết quả..." className={`mt-2 w-full rounded-xl border px-3 py-2 text-sm disabled:bg-slate-100 ${formErrors.conclusion ? 'border-red-500 bg-red-50' : 'border-slate-200'}`} />{formErrors.conclusion && <p className="mt-1 text-sm text-red-600">{formErrors.conclusion}</p>}</label>{saveError && <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">{saveError} Dữ liệu bạn đang nhập vẫn được giữ nguyên.</div>}<div className="mt-5 flex flex-wrap justify-end gap-3"><button type="button" onClick={back} className="min-h-11 rounded-xl border border-slate-200 px-5 text-sm font-bold text-slate-600">Quay lại</button>{canEdit && <><button type="button" disabled={saving} onClick={() => submit(false)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-teal-300 px-5 text-sm font-bold text-teal-700 disabled:opacity-50"><Save size={16} /> Lưu nháp</button><button type="button" disabled={saving} onClick={() => { if (validateSubmission(true)) setConfirmCompleteOpen(true); }} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-teal-600 px-5 text-sm font-bold text-white disabled:opacity-50"><CheckCircle2 size={16} /> {saving ? 'Đang xử lý...' : 'Hoàn thành phiếu'}</button></>}</div></section>
                     </>}
             </div>
+            <ConfirmModal isOpen={confirmCompleteOpen} onClose={() => { if (!saving) setConfirmCompleteOpen(false); }} onConfirm={() => submit(true, true)} isLoading={saving} isDanger={false} maxWidth="560px" title="Xác nhận hoàn thành xét nghiệm" message="Sau khi xác nhận, kết quả được ký hoàn thành và không thể chỉnh sửa như bản nháp." confirmText="Ký và hoàn thành" cancelText="Quay lại kiểm tra">
+                <div className="mt-4 rounded-xl border border-teal-100 bg-teal-50 p-4 text-sm text-slate-700"><p><span className="font-semibold">Gói xét nghiệm:</span> {panel?.panelName}</p><p className="mt-2"><span className="font-semibold">Bệnh nhân:</span> {panel?.patientName}</p><p className="mt-2"><span className="font-semibold">Chỉ số:</span> {panel?.purchasedCount} chỉ số đã mua</p><p className="mt-2"><span className="font-semibold">Mẫu:</span> {sampleId || 'Chưa có mã'} · {sampleTypeLabel(sampleType)}</p></div>
+            </ConfirmModal>
         </main>
     </MedicalStaffLayout>;
 }

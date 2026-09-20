@@ -54,7 +54,6 @@ function ResultContent({ testRequestId, onClose, onRetry }) {
     const status = STATUS[order?.status] || STATUS.PENDING;
     const StatusIcon = status.icon;
     const completed = order?.status === 'COMPLETED';
-    const files = order?.attachments || [];
 
     const openFile = async (url) => {
         if (!url) return;
@@ -148,11 +147,10 @@ function ResultContent({ testRequestId, onClose, onRetry }) {
 
                     {order.notes && <section className="rounded-2xl border border-slate-200 bg-white p-5"><h3 className="font-bold text-slate-900">Kết luận</h3><p className="mt-2 whitespace-pre-wrap leading-7 text-slate-700">{order.notes}</p></section>}
 
-                    {(files.length > 0 || order.resultFileUrl) && <section className="rounded-2xl border border-slate-200 bg-white p-5">
+                    {order.resultFileUrl && <section className="rounded-2xl border border-slate-200 bg-white p-5">
                         <h3 className="font-bold text-slate-900">Tệp kết quả</h3>
                         <div className="mt-3 flex flex-wrap gap-2">
-                            {files.map(file => <button key={file.attachmentId || file.url} type="button" onClick={() => openFile(file.url)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-teal-700 hover:border-teal-300"><FileText size={17} />{file.originalName || 'Mở tệp kết quả'}<ExternalLink size={14} /></button>)}
-                            {order.resultFileUrl && files.length === 0 && <button type="button" onClick={() => openFile(order.resultFileUrl)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-teal-700 hover:border-teal-300"><FileText size={17} />{order.resultFileName || 'Mở tệp kết quả'}<ExternalLink size={14} /></button>}
+                            <button type="button" onClick={() => openFile(order.resultFileUrl)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-teal-700 hover:border-teal-300"><FileText size={17} />{order.resultFileName || 'Mở tệp kết quả'}<ExternalLink size={14} /></button>
                         </div>
                         {fileError && <p className="mt-3 text-sm font-semibold text-red-600">{fileError}</p>}
                     </section>}

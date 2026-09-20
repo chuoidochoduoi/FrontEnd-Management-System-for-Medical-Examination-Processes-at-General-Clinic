@@ -65,7 +65,7 @@ export function journeyWarnings(item, { overdue = false } = {}) {
   }
   if (item.currentStatus === 'UNASSIGNED') warnings.push('Lượt khám chưa được phân luồng.');
   if (!overdue && !isJourneyCompleted(item.currentStatus) && Number(item.waitingMinutes) >= 60) {
-    warnings.push('Đã qua 60 phút từ lúc check-in.');
+    warnings.push('Đã qua 60 phút từ lúc tiếp nhận.');
   }
   if (item.warning && !warnings.length && !isJourneyCompleted(item.currentStatus)) {
     warnings.push('Lượt khám cần được kiểm tra.');

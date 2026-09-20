@@ -38,15 +38,16 @@ export default function ReceiptDocument({ receipt: r, clinic }) {
             </>}
         </section>
         <p className="cr-units">Đơn vị tiền: đồng (VND)</p>
-        {r.kind === 'services' ? <table className="cr-table">
-            <colgroup>{[10, 59, 8, 27, 28, 29, 29].map((width, i) => <col key={i} style={{ width: `${width / 190 * 100}%` }}/>)}</colgroup>
-            <thead><tr>{['STT', 'Tên dịch vụ', 'SL', 'Đơn giá', 'Thành tiền', 'BHYT trả', 'Người bệnh trả'].map((name, i) => <th scope="col" key={name} className={i === 1 ? '' : i < 3 ? 'cr-center' : 'cr-number'}>{name}</th>)}</tr></thead>
+        {r.kind === 'services' ? <table className="cr-table cr-service-table">
+            <colgroup>{[10, 76, 18, 31, 28, 37].map((width, i) => <col key={i} style={{ width: `${width / 200 * 100}%` }}/>)}</colgroup>
+            <thead><tr>{['STT', 'Dịch vụ', 'Số lượng', 'Đơn giá', 'Giảm giá', 'Thành tiền'].map((name, i) => <th scope="col" key={name} className={i === 1 ? '' : i === 0 || i === 2 ? 'cr-center' : 'cr-number'}>{name}</th>)}</tr></thead>
             <tbody>{r.items.map((item, i) => <tr key={item.id}>
                 <td className="cr-center">{i + 1}</td><td>{item.name}
-                    {!!item.adjustment && <span className="cr-line-note">{item.adjustment > 0 ? 'Ưu đãi khác' : 'Điều chỉnh tăng'}: <Amount value={Math.abs(item.adjustment)}/></span>}
                 </td><td className="cr-center">{receiptText(item.qty)}</td>
-                {[item.unitPrice, item.total, item.insurance, item.due].map((value, j) => <td key={j} className="cr-number"><Amount value={value}/></td>)}</tr>)}
-                {!r.items.length && <tr><td colSpan={7} className="cr-center">Không có dữ liệu dịch vụ.</td></tr>}
+                <td className="cr-number"><Amount value={item.unitPrice}/></td>
+                <td className="cr-number"><Amount value={item.adjustment > 0 ? item.adjustment : 0}/></td>
+                <td className="cr-number"><Amount value={item.due ?? item.total}/></td></tr>)}
+                {!r.items.length && <tr><td colSpan={6} className="cr-center">Không có dữ liệu dịch vụ.</td></tr>}
             </tbody>
         </table> : <table className="cr-table cr-topup-table"><thead><tr><th scope="col">Nội dung thu</th><th scope="col" className="cr-number">Số tiền</th></tr></thead><tbody><tr><td>Nạp tiền vào thẻ trả trước CareS · {receiptText(r.cardCode)}</td><td className="cr-number"><Amount value={r.due}/></td></tr></tbody></table>}
         <section className="cr-ending">
@@ -61,8 +62,9 @@ export default function ReceiptDocument({ receipt: r, clinic }) {
                 </div>
                 <dl className="cr-totals">{totals.map(([label, value, strong]) => <div key={label} className={strong ? 'cr-total-strong' : ''}><dt>{label}</dt><dd><Amount value={value}/> đ</dd></div>)}</dl>
             </div>
-            <div className="cr-signature"><b>Người thu tiền</b><p>(Ký, ghi rõ họ tên)</p><div className="cr-signature-space"/>{r.cashier && r.cashier !== '—' && <p>{r.cashier}</p>}</div>
-            <p className="cr-footer">Phiếu thu được lưu trữ điện tử tại {receiptText(clinic.clinicName)}. Không thay thế hóa đơn điện tử.</p>
+            {r.kind === 'services' ? <div className="cr-signatures"><div><b>Người bệnh</b><p>(Ký, ghi rõ họ tên)</p></div><div><b>Thu ngân</b><p>(Ký, ghi rõ họ tên)</p>{r.cashier && r.cashier !== '—' && <p className="cr-cashier-name">{r.cashier}</p>}</div></div>
+                : <div className="cr-signature"><b>Người thu tiền</b><p>(Ký, ghi rõ họ tên)</p><div className="cr-signature-space"/>{r.cashier && r.cashier !== '—' && <p>{r.cashier}</p>}</div>}
+            <p className="cr-footer">Phiếu thanh toán được lưu trữ điện tử tại {receiptText(clinic.clinicName)}.</p>
         </section>
     </article>;
 }

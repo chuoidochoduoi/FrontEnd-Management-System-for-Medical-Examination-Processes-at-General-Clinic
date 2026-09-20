@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarDays, Eye, FilePlus, Filter, LoaderCircle, Printer, Search } from 'lucide-react';
+import { CalendarDays, Eye, FilePlus, Filter, LoaderCircle, Printer, Search, X } from 'lucide-react';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { ROUTES } from '@/constants/routes';
 
@@ -8,7 +8,7 @@ const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const PAGE_SIZE = 10;
 
 const STATUS_LABELS = {
-    CHECKED_IN: 'Đã check-in',
+    CHECKED_IN: 'Đã tiếp nhận',
     IN_PROGRESS: 'Đang khám',
     COMPLETED: 'Hoàn tất',
     CANCELLED: 'Đã hủy',
@@ -54,6 +54,7 @@ export default function VisitManagementPage() {
     const [status, setStatus] = useState('');
     const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
     const [page, setPage] = useState(0);
+    const [selectedVisit, setSelectedVisit] = useState(null);
 
     const loadVisits = useCallback(async () => {
         setLoading(true); setError('');
@@ -100,18 +101,55 @@ export default function VisitManagementPage() {
 
             <div className="cares-reception-table-card">
                 <div className="cares-reception-visit-table overflow-x-auto"><table className="min-w-[1050px] w-full text-left text-sm"><thead className="border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500"><tr><th className="px-5 py-4">Mã phiếu</th><th className="px-5 py-4">Bệnh nhân</th><th className="px-5 py-4">Số điện thoại</th><th className="px-5 py-4">Dịch vụ</th><th className="px-5 py-4">Ngày tạo</th><th className="px-5 py-4">Trạng thái</th><th className="px-5 py-4 text-right">Thao tác</th></tr></thead>
-                    <tbody className="divide-y divide-gray-100">{loading ? <tr><td colSpan="7" className="px-5 py-14 text-center text-gray-400"><LoaderCircle className="mx-auto mb-2 animate-spin" size={22} />Đang tải phiếu khám...</td></tr> : error ? <tr><td colSpan="7" className="px-5 py-12 text-center text-red-600">{error}</td></tr> : visibleVisits.length === 0 ? <tr><td colSpan="7" className="px-5 py-14 text-center text-gray-400">Không có phiếu khám phù hợp.</td></tr> : visibleVisits.map(visit => <tr key={visit.visitId} className="hover:bg-gray-50/70"><td className="px-5 py-4 font-semibold text-gray-700">{visitCode(visit)}<p className="mt-1 text-[11px] font-normal text-gray-400">{visit.patientCode || '—'}</p></td><td className="px-5 py-4"><p className="font-semibold text-gray-900">{visit.customerName || 'Khách vãng lai'}</p></td><td className="px-5 py-4 text-gray-600">{visit.patientPhone || '—'}</td><td className="max-w-[220px] px-5 py-4 text-gray-700"><p className="line-clamp-2" title={visit.serviceSummary || ''}>{visit.serviceSummary || 'Chưa có dịch vụ'}</p></td><td className="px-5 py-4 text-gray-600">{formatDateTime(visit.checkInTime || visit.createdAt)}</td><td className="px-5 py-4"><StatusBadge visit={visit} /></td><td className="px-5 py-4 text-right"><div className="flex justify-end gap-1"><button disabled={!visit.customerId} onClick={() => visit.customerId && navigate(ROUTES.RECEPTIONIST_PATIENT_DETAIL.replace(':id', visit.customerId))} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50 disabled:cursor-not-allowed disabled:text-gray-300"><Eye size={16} />Xem chi tiết</button><button onClick={() => printVisit(visit)} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"><Printer size={16} />In phiếu</button></div></td></tr>)}</tbody></table></div>
+                    <tbody className="divide-y divide-gray-100">{loading ? <tr><td colSpan="7" className="px-5 py-14 text-center text-gray-400"><LoaderCircle className="mx-auto mb-2 animate-spin" size={22} />Đang tải phiếu khám...</td></tr> : error ? <tr><td colSpan="7" className="px-5 py-12 text-center text-red-600">{error}</td></tr> : visibleVisits.length === 0 ? <tr><td colSpan="7" className="px-5 py-14 text-center text-gray-400">Không có phiếu khám phù hợp.</td></tr> : visibleVisits.map(visit => <tr key={visit.visitId} className="hover:bg-gray-50/70"><td className="px-5 py-4 font-semibold text-gray-700">{visitCode(visit)}<p className="mt-1 text-[11px] font-normal text-gray-400">{visit.patientCode || '—'}</p></td><td className="px-5 py-4"><p className="font-semibold text-gray-900">{visit.customerName || 'Khách vãng lai'}</p></td><td className="px-5 py-4 text-gray-600">{visit.patientPhone || '—'}</td><td className="max-w-[220px] px-5 py-4 text-gray-700"><p className="line-clamp-2" title={visit.serviceSummary || ''}>{visit.serviceSummary || 'Chưa có dịch vụ'}</p></td><td className="px-5 py-4 text-gray-600">{formatDateTime(visit.checkInTime || visit.createdAt)}</td><td className="px-5 py-4"><StatusBadge visit={visit} /></td><td className="px-5 py-4 text-right"><div className="flex justify-end gap-1"><button onClick={() => setSelectedVisit(visit)} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50"><Eye size={16} />Xem chi tiết</button><button onClick={() => printVisit(visit)} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"><Printer size={16} />In phiếu</button></div></td></tr>)}</tbody></table></div>
                 <div className="cares-reception-visit-mobile-list">
                     {loading ? <div className="cares-reception-state"><LoaderCircle className="animate-spin" size={24} />Đang tải phiếu khám...</div> : error ? <div className="cares-reception-state is-error"><strong>{error}</strong></div> : visibleVisits.length === 0 ? <div className="cares-reception-state"><strong>Không có phiếu khám phù hợp.</strong></div> : visibleVisits.map(visit => <article key={visit.visitId}>
                         <div><strong>{visitCode(visit)}</strong><StatusBadge visit={visit} /></div>
                         <h3>{visit.customerName || 'Khách vãng lai'}</h3>
                         <p>{visit.patientPhone || 'Chưa có SĐT'} · {formatDateTime(visit.checkInTime || visit.createdAt)}</p>
                         <small>{visit.serviceSummary || 'Chưa có dịch vụ'}</small>
-                        <footer><button disabled={!visit.customerId} onClick={() => visit.customerId && navigate(ROUTES.RECEPTIONIST_PATIENT_DETAIL.replace(':id', visit.customerId))}><Eye size={17} />Xem chi tiết</button><button onClick={() => printVisit(visit)}><Printer size={17} />In phiếu</button></footer>
+                        <footer><button onClick={() => setSelectedVisit(visit)}><Eye size={17} />Xem chi tiết</button><button onClick={() => printVisit(visit)}><Printer size={17} />In phiếu</button></footer>
                     </article>)}
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-5 py-3 text-sm text-gray-500"><span>Hiển thị {total ? `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, total)} trên tổng số ${total}` : '0'} kết quả</span><div className="flex gap-2"><button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="rounded-lg border px-3 py-1.5 disabled:opacity-40">Trước</button><span className="rounded-lg bg-gray-900 px-3 py-1.5 text-white">{page + 1}</span><button disabled={page + 1 >= totalPages} onClick={() => setPage(p => p + 1)} className="rounded-lg border px-3 py-1.5 disabled:opacity-40">Sau</button></div></div>
             </div>
         </div>
+
+        {selectedVisit && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/40 px-4 backdrop-blur-sm">
+                <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
+                    <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+                        <h2 className="text-lg font-bold text-gray-900">Chi tiết Phiếu Khám</h2>
+                        <button onClick={() => setSelectedVisit(null)} className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"><X size={20}/></button>
+                    </div>
+                    <div className="p-5 space-y-4 text-sm text-gray-600">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div><span className="block text-xs font-medium text-gray-400">Mã phiếu</span><strong className="text-gray-900">{visitCode(selectedVisit)}</strong></div>
+                            <div><span className="block text-xs font-medium text-gray-400">Ngày tạo</span><strong className="text-gray-900">{formatDateTime(selectedVisit.checkInTime || selectedVisit.createdAt)}</strong></div>
+                            <div><span className="block text-xs font-medium text-gray-400">Bệnh nhân</span><strong className="text-gray-900">{selectedVisit.customerName || 'Khách vãng lai'}</strong></div>
+                            <div><span className="block text-xs font-medium text-gray-400">SĐT</span><strong className="text-gray-900">{selectedVisit.patientPhone || '—'}</strong></div>
+                        </div>
+                        <div className="rounded-xl bg-gray-50 p-4 border border-gray-100">
+                            <span className="block text-xs font-medium text-gray-500 mb-1">Dịch vụ đăng ký</span>
+                            <p className="font-medium text-gray-900">{selectedVisit.serviceSummary || 'Chưa có dịch vụ'}</p>
+                        </div>
+                        <div className="flex items-center justify-between rounded-xl bg-gray-50 p-4 border border-gray-100">
+                            <div>
+                                <span className="block text-xs font-medium text-gray-500 mb-1">Trạng thái khám</span>
+                                <StatusBadge visit={selectedVisit} />
+                            </div>
+                            {selectedVisit.customerId && selectedVisit.visitId && (
+                                <button onClick={() => navigate(ROUTES.RECEPTIONIST_PATIENT_VISIT_DETAIL.replace(':id', selectedVisit.customerId).replace(':visitId', selectedVisit.visitId))} className="rounded-lg bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-100 transition-colors">
+                                    Vào hồ sơ bệnh án &rarr;
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                    <div className="border-t border-gray-100 px-5 py-4 text-right">
+                        <button onClick={() => setSelectedVisit(null)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50">Đóng</button>
+                    </div>
+                </div>
+            </div>
+        )}
     </ReceptionistLayout>;
 }

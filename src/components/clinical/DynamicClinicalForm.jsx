@@ -44,6 +44,7 @@ export const validateClinicalForm = (schema, values = {}, requireComplete = true
     const errors = {};
     const fields = clinicalFieldList(schema);
     const omissions = values?._omissions || {};
+    const isEnabled = (key) => !enabledFieldKeys || enabledFieldKeys.includes(key);
     fields.forEach((field) => {
         if (enabledFieldKeys && !enabledFieldKeys.includes(field.key)) return;
         if (!fieldVisible(field, values) || field.calculatorKey) return;
@@ -63,9 +64,15 @@ export const validateClinicalForm = (schema, values = {}, requireComplete = true
         if (empty(value)) return;
         if (field.type === 'NUMBER') {
             const numeric = Number(value);
-            if (!Number.isFinite(numeric)) errors[field.key] = `${field.label} phải là số`;
-            else if (field.min != null && numeric < Number(field.min)) errors[field.key] = `${field.label} không được nhỏ hơn ${field.min}`;
-            else if (field.max != null && numeric > Number(field.max)) errors[field.key] = `${field.label} không được lớn hơn ${field.max}`;
+            const unit = field.unit ? ` ${field.unit}` : '';
+            if (!Number.isFinite(numeric)) errors[field.key] = `${field.label}: giá trị đã nhập phải là số`;
+            else if (field.min != null && field.max != null && (numeric < Number(field.min) || numeric > Number(field.max))) {
+                errors[field.key] = `${field.label}: ${numeric}${unit} nằm ngoài khoảng cho phép ${field.min}–${field.max}${unit}`;
+            } else if (field.min != null && numeric < Number(field.min)) {
+                errors[field.key] = `${field.label}: ${numeric}${unit} nhỏ hơn mức tối thiểu ${field.min}${unit}`;
+            } else if (field.max != null && numeric > Number(field.max)) {
+                errors[field.key] = `${field.label}: ${numeric}${unit} lớn hơn mức tối đa ${field.max}${unit}`;
+            }
         } else if (field.pattern) {
             try {
                 if (!(new RegExp(field.pattern)).test(String(value))) errors[field.key] = field.patternMessage || `${field.label} không đúng định dạng`;
@@ -78,17 +85,22 @@ export const validateClinicalForm = (schema, values = {}, requireComplete = true
         if (rule.severity !== 'ERROR') return;
         if (rule.onSignOnly && !requireComplete) return;
         if (rule.type === 'LESS_THAN_OR_EQUAL') {
+            if (!isEnabled(rule.left) || !isEnabled(rule.right)) return;
             const left = Number(values?.[rule.left]), right = Number(values?.[rule.right]);
             if (Number.isFinite(left) && Number.isFinite(right) && left > right)
                 errors[rule.left] = rule.message || 'Giá trị không hợp lệ';
         } else if (rule.type === 'AT_LEAST_ONE_TRUE') {
-            if (!(rule.keys || []).some((key) => values?.[key] === true)) {
-                const target = rule.keys?.[0] || '_form';
+            const applicableKeys = (rule.keys || []).filter(isEnabled);
+            if (!applicableKeys.length) return;
+            if (!applicableKeys.some((key) => values?.[key] === true)) {
+                const target = applicableKeys[0] || '_form';
                 errors[target] = rule.message || 'Vui lòng chọn ít nhất một mục';
             }
         } else if (rule.type === 'BOOLEAN_MUST_BE_TRUE_WHEN' && conditionMatches(rule.when, values)) {
+            if (!isEnabled(rule.field) || (rule.when?.field && !isEnabled(rule.when.field))) return;
             if (values?.[rule.field] !== true) errors[rule.field] = rule.message || 'Giá trị xác nhận chưa hợp lệ';
         } else if (rule.type === 'VALUE_NOT_ALLOWED_WHEN' && conditionMatches(rule.when, values)) {
+            if (!isEnabled(rule.field) || (rule.when?.field && !isEnabled(rule.when.field))) return;
             if (values?.[rule.field] === rule.value) errors[rule.field] = rule.message || 'Giá trị không được phép khi ký';
         }
     });
@@ -145,6 +157,18 @@ const referenceText = (field, flag, values, patientAge, patientGender) => {
     if (range.low != null) return `≥ ${range.low}`;
     if (range.high != null) return `≤ ${range.high}`;
     return 'Theo nhận định chuyên môn';
+};
+
+const validationHint = (field) => {
+    if (field.calculatorKey) return 'Hệ thống tự tính';
+    if (field.type === 'NUMBER') {
+        const unit = field.unit ? ` ${field.unit}` : '';
+        if (field.min != null && field.max != null) return `Nhập: ${field.min}–${field.max}${unit}`;
+        if (field.min != null) return `Nhập: ≥ ${field.min}${unit}`;
+        if (field.max != null) return `Nhập: ≤ ${field.max}${unit}`;
+    }
+    if (field.patternMessage) return `Định dạng: ${field.patternMessage}`;
+    return '';
 };
 
 const statusStyle = (status) => {
@@ -221,6 +245,16 @@ export default function DynamicClinicalForm({
         });
     }, [schema, laboratoryTable, groupNamesKey]);
 
+    useEffect(() => {
+        const invalidKeys = Object.keys(errors);
+        if (!invalidKeys.length) return;
+        setResultFilter('ALL');
+        const invalidGroups = fields
+            .filter((field) => invalidKeys.includes(field.key))
+            .map((field) => field.group || 'Kết quả');
+        setOpenGroups((current) => new Set([...current, ...invalidGroups]));
+    }, [errors, fields]);
+
     if (!fields.length) return <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">{emptyMessage}</div>;
 
     const setField = (field, nextValue) => {
@@ -234,7 +268,7 @@ export default function DynamicClinicalForm({
         fields.forEach((candidate) => {
             if (!fieldVisible(candidate, clean)) delete clean[candidate.key];
         });
-        onChange?.(previewCalculations(clean, fields, patientAge, patientGender));
+        onChange?.(previewCalculations(clean, fields, patientAge, patientGender), field.key);
     };
 
     const setOmission = (field, reasonCode = 'INSUFFICIENT_SAMPLE', reasonDetail = '') => {
@@ -245,7 +279,7 @@ export default function DynamicClinicalForm({
             ...(clean._omissions || {}),
             [field.key]: { reasonCode, ...(reasonDetail.trim() ? { reasonDetail: reasonDetail.trim() } : {}) },
         };
-        onChange?.(previewCalculations(clean, fields, patientAge, patientGender));
+        onChange?.(previewCalculations(clean, fields, patientAge, patientGender), field.key);
     };
 
     const restoreField = (field) => {
@@ -255,7 +289,7 @@ export default function DynamicClinicalForm({
         delete nextOmissions[field.key];
         if (Object.keys(nextOmissions).length) clean._omissions = nextOmissions;
         else delete clean._omissions;
-        onChange?.(previewCalculations(clean, fields, patientAge, patientGender));
+        onChange?.(previewCalculations(clean, fields, patientAge, patientGender), field.key);
     };
 
     const applyNormalPreset = () => {
@@ -279,12 +313,25 @@ export default function DynamicClinicalForm({
         .filter(([, groupFields]) => groupFields.length > 0);
     return <section className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div><h3 className="text-sm font-bold text-slate-900">{title}</h3><p className="mt-1 text-xs text-slate-500">Các trường được cấu hình, kiểm tra và tính cờ bởi backend.</p></div>
+            <div><h3 className="text-sm font-bold text-slate-900">{title}</h3><p className="mt-1 text-xs text-slate-500">Giới hạn nhập và khoảng tham chiếu được hiển thị riêng cho từng chỉ số.</p></div>
             {hasNormalPreset && !disabled && <button type="button" onClick={applyNormalPreset} className="inline-flex h-9 items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-3 text-xs font-semibold text-primary-700 hover:bg-primary-100"><Sparkles size={15} /> Điền mẫu bình thường</button>}
         </div>
 
         {warnings.length > 0 && <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
             {warnings.map((warning) => <p key={warning} className="flex items-center gap-2"><TriangleAlert size={14} />{warning}</p>)}
+        </div>}
+
+        {Object.keys(errors).length > 0 && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-800">
+            <p className="font-bold">Có {Object.keys(errors).length} chỉ số cần kiểm tra</p>
+            <ul className="mt-2 space-y-1 text-sm">
+                {Object.entries(errors).map(([key, message]) => <li key={key}>
+                    <button type="button" className="text-left font-medium underline underline-offset-2" onClick={() => {
+                        const control = document.getElementById(`clinical-${key}`);
+                        control?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        window.setTimeout(() => control?.focus(), 250);
+                    }}>{message}</button>
+                </li>)}
+            </ul>
         </div>}
 
         {laboratoryTable && <div className="mb-5 space-y-3 rounded-xl border border-teal-100 bg-teal-50/60 p-4">
@@ -318,7 +365,7 @@ export default function DynamicClinicalForm({
                             const current = rawValue(field, value), flag = flags[field.key], error = errors[field.key], omission = omissions[field.key], locked = lockedFieldKeys.includes(field.key);
                             return <tr key={field.key} className={`border-b border-slate-100 last:border-0 align-top ${locked ? 'bg-slate-50 text-slate-400 opacity-75' : omission ? 'bg-amber-50/60' : ''}`}>
                                 <td className="px-4 py-3"><p className="text-base font-semibold text-slate-800">{field.code || field.label}{!locked && (field.required || field.requiredOnSign || field.requiredWhen) ? <span className="text-red-500"> *</span> : ''}</p>{locked && <span className="mt-1 inline-flex rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">Chưa mua · không nhập</span>}{field.code && field.label !== field.code && <p className="mt-1 text-sm text-slate-500">{field.label}</p>}{field.loincCode && <p className="mt-1 text-xs text-slate-400">LOINC {field.loincCode}</p>}</td>
-                                <td className="px-3 py-2">{omission ? <div className="min-h-10 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-800">— Không có kết quả</div> : <FieldControl field={field} current={current} setField={setField} disabled={disabled || locked} error={error} compact />}{error && <p className="mt-1 text-sm font-medium text-red-600">{error}</p>}</td>
+                                <td className="px-3 py-2">{omission ? <div className="min-h-10 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-800">— Không có kết quả</div> : <FieldControl field={field} current={current} setField={setField} disabled={disabled || locked} error={error} compact />}{!omission && validationHint(field) && <p className={`mt-1 text-xs ${error ? 'text-red-700' : 'text-slate-500'}`}>{validationHint(field)}</p>}{error && <p className="mt-1 text-sm font-medium text-red-600">{error}</p>}</td>
                                 <td className="px-3 py-3 text-sm text-slate-600">{field.unit || '—'}</td>
                                 <td className="px-3 py-3 text-sm text-slate-700">{referenceText(field, flag, value, patientAge, patientGender)}</td>
                                 <td className="px-3 py-2">
@@ -343,6 +390,7 @@ export default function DynamicClinicalForm({
                         <span className="text-xs font-semibold text-slate-700">{field.label}{(field.required || field.requiredOnSign) ? ' *' : ''}</span>
                         <FieldControl field={field} current={current} setField={setField} disabled={disabled} error={error} />
                         {field.unit && <span className="mt-1 block text-[11px] text-slate-400">Đơn vị: {field.unit}</span>}
+                        {validationHint(field) && <span className={`mt-1 block text-[11px] ${error ? 'text-red-700' : 'text-slate-500'}`}>{validationHint(field)}</span>}
                         {error && <span className="mt-1 block text-[11px] font-medium text-red-600">{error}</span>}
                         {flag && <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${abnormal ? 'text-amber-700' : 'text-emerald-700'}`}>{abnormal ? <AlertCircle size={12} /> : <CheckCircle2 size={12} />}{flag}</span>}
                     </label>;

@@ -979,7 +979,7 @@ export default function MedicalHistoryPage() {
                                                         <span className={`inline-flex rounded-full border px-3 py-1 text-sm font-semibold ${statusClass(visitStatus)}`}>{recordStatusLabel(visitStatus)}</span>
                                                     </div>
                                                     <p className="mt-1 text-base text-gray-600">{visit.date || '-'} {visit.time ? `· ${visit.time}` : ''}</p>
-                                                    <p className="mt-1 line-clamp-2 text-base text-gray-700">{completedServices.join(', ') || 'Kết quả cận lâm sàng đã được công bố'}</p>
+                                                    <p className="mt-1 line-clamp-1 text-base text-gray-700">{completedServices.join(' · ') || 'Kết quả cận lâm sàng đã được công bố'}</p>
                                                     <p className="mt-1 text-sm text-gray-500">Bác sĩ: {visit.doctor || '—'}</p>
                                                 </div>
                                             </div>

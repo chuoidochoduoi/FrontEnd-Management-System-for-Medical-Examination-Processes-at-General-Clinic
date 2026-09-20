@@ -58,14 +58,13 @@ export default function QueuePanel({ queue, loading, error, updatedAt, patientNa
             <RotateCcw size={25} />
             <div><h3>{queue.returnRequestStatus === 'EXPIRED' ? 'Bạn đã bỏ lượt' : 'Bạn đã được gọi nhưng chưa có mặt'}</h3>
                 <p>{queue.returnRequestStatus === 'EXPIRED'
-                    ? `Phiếu số ${queue.queueNumber ?? '—'} ngày ${queue.workDate ? new Date(`${queue.workDate}T00:00:00`).toLocaleDateString('vi-VN') : 'trước'} đã kết thúc. Các dịch vụ chưa thực hiện được ghi nhận là bỏ lượt.`
+                    ? `Lượt khám ngày ${queue.workDate ? new Date(`${queue.workDate}T00:00:00`).toLocaleDateString('vi-VN') : 'trước'} đã kết thúc. Các dịch vụ chưa thực hiện được ghi nhận là bỏ lượt.`
                     : 'Nếu bạn đã quay lại trong hôm nay, vui lòng đến quầy lễ tân. Lễ tân sẽ xác nhận có mặt và đưa bạn trở lại hàng chờ.'}</p>
                 {queue.returnRequestStatus === 'EXPIRED' && bookingPath && <Link className={styles.bookingLink} to={bookingPath}>Đặt lịch khám mới</Link>}
             </div>
         </div>}
         {queue?.roomName && !skipped && <>
             <div className={styles.ticketSummary}>
-                <span><small>Số phiếu</small><strong>{queue.queueNumber ?? '—'}</strong></span>
                 <span><small>Vị trí hiện tại</small><strong>{queue.waitingPosition ? `Thứ ${queue.waitingPosition}` : '—'}</strong></span>
                 {queue.priorityLabel && <em data-priority={queue.priorityCategory || 'REGULAR'}>{queue.priorityLabel}</em>}
             </div>

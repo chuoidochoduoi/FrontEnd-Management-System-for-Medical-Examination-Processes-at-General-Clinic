@@ -34,13 +34,10 @@
       "responseLabel": "Phản hồi từ phòng khám",
       "noResponse": "Chưa có phản hồi",
       "responseDate": "Phản hồi lúc",
-      "doctorExplanation": "Giải trình từ bác sĩ",
-      "contactRequested": "Bạn đã yêu cầu được liên hệ hồi âm",
       "statusNew": "Mới",
       "statusInReview": "Đang xử lý",
       "statusProcessing": "Đang xử lý",
       "statusResponded": "Đã phản hồi",
-      "statusWaitingInternal": "Chờ xử lý nội bộ",
       "statusClosed": "Đã đóng"
     }
   }

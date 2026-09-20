@@ -65,13 +65,10 @@
       "responseLabel": "Clinic response",
       "noResponse": "No response yet",
       "responseDate": "Responded on",
-      "doctorExplanation": "Doctor's explanation",
-      "contactRequested": "You requested a follow-up contact",
       "statusNew": "New",
       "statusInReview": "In review",
       "statusProcessing": "Processing",
       "statusResponded": "Responded",
-      "statusWaitingInternal": "Pending internal",
       "statusClosed": "Closed"
     }
   }

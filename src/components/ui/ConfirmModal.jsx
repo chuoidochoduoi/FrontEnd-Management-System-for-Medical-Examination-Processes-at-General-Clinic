@@ -11,6 +11,7 @@ export default function ConfirmModal({
   cancelText = "Hủy",
   isDanger = true,
   isLoading = false,
+  confirmDisabled = false,
   children,
   panelClassName = '',
   maxWidth
@@ -74,7 +75,7 @@ export default function ConfirmModal({
         <div className="bg-gray-50 px-6 py-4 sm:flex sm:flex-row-reverse gap-3">
           <button
             type="button"
-            disabled={isLoading}
+            disabled={isLoading || confirmDisabled}
             className={`inline-flex w-full justify-center rounded-xl px-4 py-2 text-sm font-medium text-white shadow-sm sm:w-auto transition-colors disabled:opacity-60 ${
               isDanger ? 'bg-red-600 hover:bg-red-500' : 'bg-blue-600 hover:bg-blue-500'
             }`}

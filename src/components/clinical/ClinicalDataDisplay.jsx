@@ -59,6 +59,16 @@ const omissionText = omission => omission?.reasonDetail || ({
     OTHER: 'Lý do khác',
 })[omission?.reasonCode] || 'Không thực hiện';
 
+const flagLabel = flag => ({
+    NORMAL: 'Bình thường',
+    LOW: 'Thấp',
+    HIGH: 'Cao',
+    ABNORMAL: 'Bất thường',
+    CRITICAL_LOW: 'Thấp nguy hiểm',
+    CRITICAL_HIGH: 'Cao nguy hiểm',
+    NOT_EVALUATED: 'Chưa đánh giá',
+})[flag] || flag;
+
 export default function ClinicalDataDisplay({
     clinicalForm,
     schema = clinicalForm?.schema,
@@ -119,7 +129,7 @@ export default function ClinicalDataDisplay({
                                 </dd>
                                 {reference && !omission && <p className="mt-1 text-[11px] text-slate-400">Tham chiếu: {reference}</p>}
                                 {flag && !omission && <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${critical ? 'text-red-700' : abnormal ? 'text-amber-700' : flag === 'NORMAL' ? 'text-emerald-700' : 'text-slate-500'}`}>
-                                    {abnormal ? <AlertCircle size={12}/> : <CheckCircle2 size={12}/>} {flag}
+                                    {abnormal ? <AlertCircle size={12}/> : <CheckCircle2 size={12}/>} {flagLabel(flag)}
                                 </span>}
                             </div>;
                         })}

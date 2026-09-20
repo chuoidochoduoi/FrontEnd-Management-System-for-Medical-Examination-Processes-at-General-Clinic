@@ -1,8 +1,19 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import InfoLayout from '@/components/layout/InfoLayout';
-import { HeartPulse, UserCheck, Stethoscope, Clock } from 'lucide-react';
+import { Building2, Clock, HeartPulse, Mail, MapPin, Phone, ReceiptText, Stethoscope, UserCheck } from 'lucide-react';
+import { getPublicClinicInformation } from '@/services/clinicInformationService';
 
 const AboutPage = () => {
+  const [clinic, setClinic] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    getPublicClinicInformation()
+      .then(data => { if (active) setClinic(data); })
+      .catch(() => { /* The introduction remains available if public clinic data is unavailable. */ });
+    return () => { active = false; };
+  }, []);
+
   return (
     <InfoLayout>
       <div className="mb-10">
@@ -53,6 +64,45 @@ const AboutPage = () => {
             <p className="text-slate-500 font-light leading-relaxed">Quy trình khoa học, thủ tục đơn giản, không gian khang trang và phục vụ chu đáo.</p>
           </div>
         </div>
+
+        {clinic && <section className="rounded-2xl border border-primary-100 bg-primary-50/40 p-6">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-primary-600 shadow-sm">
+              <Building2 className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Thông tin pháp lý</h2>
+              <p className="mt-0.5 text-sm text-slate-500">Thông tin công khai của {clinic.clinicName}</p>
+            </div>
+          </div>
+
+          <dl className="grid gap-x-8 gap-y-5 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-slate-500">Tên pháp lý</dt>
+              <dd className="mt-1 font-semibold text-slate-800">{clinic.legalName}</dd>
+            </div>
+            <div>
+              <dt className="flex items-center gap-1.5 text-slate-500"><ReceiptText size={15}/>Mã số thuế</dt>
+              <dd className="mt-1 font-semibold text-slate-800">{clinic.taxCode}</dd>
+            </div>
+            {clinic.operatingLicense && <div>
+              <dt className="text-slate-500">Giấy phép hoạt động khám bệnh, chữa bệnh</dt>
+              <dd className="mt-1 font-semibold text-slate-800">{clinic.operatingLicense}</dd>
+            </div>}
+            <div>
+              <dt className="flex items-center gap-1.5 text-slate-500"><MapPin size={15}/>Địa chỉ</dt>
+              <dd className="mt-1 font-semibold text-slate-800">{clinic.address}</dd>
+            </div>
+            <div>
+              <dt className="flex items-center gap-1.5 text-slate-500"><Phone size={15}/>Hotline</dt>
+              <dd className="mt-1 font-semibold text-slate-800">{clinic.phone}</dd>
+            </div>
+            <div>
+              <dt className="flex items-center gap-1.5 text-slate-500"><Mail size={15}/>Email hỗ trợ</dt>
+              <dd className="mt-1 break-all font-semibold text-slate-800">{clinic.supportEmail}</dd>
+            </div>
+          </dl>
+        </section>}
       </div>
     </InfoLayout>
   );

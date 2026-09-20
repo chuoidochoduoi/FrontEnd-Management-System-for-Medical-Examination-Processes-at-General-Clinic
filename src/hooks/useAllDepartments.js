@@ -76,7 +76,7 @@ export function useAllDepartments() {
         });
 
         if (!res.ok) {
-            throw new Error('Failed to fetch doctors');
+            throw new Error('Không thể tải danh sách bác sĩ');
         }
 
         const data = await res.json();
@@ -108,7 +108,7 @@ export function useAllDepartments() {
 
         if (!res.ok) {
             const errorText = await res.text();
-            throw new Error(errorText || 'Failed to create department');
+            throw new Error(errorText || 'Không thể tạo phòng');
         }
 
         // Refresh departments after create

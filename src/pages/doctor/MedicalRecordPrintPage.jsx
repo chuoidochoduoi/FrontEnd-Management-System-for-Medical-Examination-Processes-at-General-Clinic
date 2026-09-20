@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, Loader2, Printer, RefreshCw } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Download, Loader2, Printer, RefreshCw } from 'lucide-react';
+import { toast } from 'react-toastify';
 import useClinicInformation from '@/hooks/useClinicInformation';
+import { downloadElementAsPdf } from '@/utils/pdfDownload';
 
 const stored = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const show = (value) => value === null || value === undefined || value === '' ? '—' : value;
@@ -43,6 +45,7 @@ export default function MedicalRecordPrintPage() {
     const [allergies, setAllergies] = useState(null);
     const [loading, setLoading] = useState(isCustomer);
     const [error, setError] = useState('');
+    const [downloading, setDownloading] = useState(false);
 
     const loadCustomerRecord = async () => {
         setLoading(true);
@@ -89,12 +92,22 @@ export default function MedicalRecordPrintPage() {
     const recordCode = record.recordCode || recordId.slice(0, 8).toUpperCase();
     const serviceName = data.serviceName || record.serviceName || 'Khám bệnh';
     const department = [data.departmentName || record.departmentName, data.roomCode || record.roomCode].filter(Boolean).join(' · ');
+    const downloadPdf = async () => {
+        setDownloading(true);
+        try {
+            await downloadElementAsPdf(document.getElementById('medical-record-pdf'), `benh-an-${recordCode}`);
+        } catch (downloadError) {
+            toast.error(downloadError?.message || 'Không thể tạo tệp PDF. Vui lòng thử lại.');
+        } finally {
+            setDownloading(false);
+        }
+    };
 
     return <div className="min-h-screen bg-gray-100 py-6 print:bg-white print:py-0">
         <style>{`@page{size:A4;margin:16mm 12mm 14mm}.print-block{break-inside:avoid;page-break-inside:avoid}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}@media print{.no-print{display:none!important}.record-sheet{box-shadow:none!important;width:100%!important;max-width:none!important;min-height:auto!important;margin:0!important;padding:0!important}.repeat-print-header{display:flex!important;position:fixed;top:-11mm;left:0;right:0;border-bottom:1px solid #9ca3af;padding-bottom:2mm;font-size:9px;background:white}}`}</style>
         <div className="repeat-print-header hidden items-center justify-between"><span>{clinicInformation.clinicName || 'CareS'}</span><strong>{serviceName}</strong><span>{recordCode}</span></div>
-        <div className="no-print mx-auto mb-4 flex w-[210mm] max-w-[calc(100vw-32px)] justify-between"><button onClick={() => navigate(-1)} className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm shadow"><ArrowLeft size={16}/>Quay lại</button><button onClick={() => window.print()} className="flex items-center gap-2 rounded-lg bg-teal-700 px-5 py-2 text-sm font-semibold text-white"><Printer size={16}/>In bệnh án</button></div>
-        <article className="record-sheet mx-auto min-h-[297mm] w-[210mm] max-w-[calc(100vw-32px)] bg-white px-[13mm] py-[11mm] text-[12px] leading-relaxed text-gray-900 shadow-lg">
+        <div className="no-print mx-auto mb-4 flex w-[210mm] max-w-[calc(100vw-32px)] justify-between"><button onClick={() => navigate(-1)} className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm shadow"><ArrowLeft size={16}/>Quay lại</button>{isCustomer ? <button disabled={downloading} onClick={downloadPdf} className="flex items-center gap-2 rounded-lg bg-teal-700 px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"><Download size={16}/>{downloading ? 'Đang tạo PDF...' : 'Tải bệnh án PDF'}</button> : <button onClick={() => window.print()} className="flex items-center gap-2 rounded-lg bg-teal-700 px-5 py-2 text-sm font-semibold text-white"><Printer size={16}/>In bệnh án</button>}</div>
+        <article id="medical-record-pdf" className="record-sheet mx-auto min-h-[297mm] w-[210mm] max-w-[calc(100vw-32px)] bg-white px-[13mm] py-[11mm] text-[12px] leading-relaxed text-gray-900 shadow-lg">
             <header className="grid grid-cols-[64px_1fr_140px] items-center border-b-2 border-teal-800 pb-3"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 text-3xl font-bold text-teal-700">+</div><div className="text-center"><p className="text-lg font-bold uppercase">{clinicInformation.clinicName || 'CareS'}</p>{clinicInformation.legalName && <p>{clinicInformation.legalName}</p>}<p className="text-[10px]">Địa chỉ: {show(clinicInformation.address)} · Điện thoại: {show(clinicInformation.phone)}</p></div><div className="text-right text-[10px]"><p>Mã bệnh án</p><p className="text-xs font-bold">{recordCode}</p><p className="mt-1">Mã lượt: {show(data.visitCode)}</p></div></header>
             <div className="my-4 text-center"><h1 className="text-xl font-bold uppercase">Phiếu khám bệnh ngoại trú</h1><p className="mt-1 text-base font-bold text-teal-800">{serviceName}</p></div>
             <section className="print-block grid grid-cols-2 gap-x-8 gap-y-1 border border-gray-500 p-3"><Field label="Họ và tên">{patient?.fullName}</Field><Field label="Giới tính">{genderLabel(patient?.gender)}</Field><Field label="Ngày sinh">{patient?.dateOfBirth}</Field><Field label="Điện thoại">{patient?.phone}</Field><Field label="Địa chỉ" wide>{patient?.address}</Field><Field label="Ngày khám">{completedDate.toLocaleString('vi-VN')}</Field><Field label="Phòng khám">{department}</Field><Field label="Bác sĩ" wide>{record.doctorConfirmedByName || record.doctorName}</Field></section>

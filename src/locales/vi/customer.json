@@ -80,7 +80,7 @@
       "statusUpcoming": "SẮP DIỄN RA",
       "statusScheduled": "ĐÃ ĐẶT LỊCH",
       "statusCancelled": "ĐÃ HỦY",
-      "statusCheckedIn": "ĐÃ CHECK-IN"
+      "statusCheckedIn": "ĐÃ TIẾP NHẬN"
     },
     "loading": "Đang tải hồ sơ...",
     "errors": {

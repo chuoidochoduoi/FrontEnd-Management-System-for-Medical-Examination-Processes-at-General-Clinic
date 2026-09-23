@@ -69,7 +69,6 @@ export const ROUTES = {
     ADMIN_PUBLIC_ANNOUNCEMENTS: '/admin/public-announcements',
     ADMIN_CLINIC_INFORMATION: '/admin/clinic-information',
     ADMIN_MEMBERSHIP_POLICY: '/admin/membership-policy',
-    CLINICAL_FORM_TEMPLATES: '/manager/clinical-form-templates',
 
     OWNER_SCHEDULE: '/owner/schedule',
     OWNER_REPORT: '/owner/report',

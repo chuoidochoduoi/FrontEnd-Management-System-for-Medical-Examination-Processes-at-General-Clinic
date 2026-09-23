@@ -1,7 +1,6 @@
 {
   "scheduleManagement": {
     "pageTitle": "Quản lý lịch trực theo tuần",
-    "systemStatus": "Lịch trực CareS · Admin và Clinic Manager dùng chung",
     "week": "Tuần trực:",
     "copyLastWeek": "Sao chép tuần trước",
     "applyTemplate": "Áp dụng mẫu",

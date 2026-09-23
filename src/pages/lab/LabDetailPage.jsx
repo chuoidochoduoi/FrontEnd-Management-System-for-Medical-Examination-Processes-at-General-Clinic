@@ -276,7 +276,7 @@ function FileUpload({
                             </p>
 
                             <p className="mt-0.5 text-xs text-slate-400">
-                                PDF tối đa 10 MB
+                                PDF hoặc ảnh, tối đa 10 MB
                             </p>
                         </div>
 
@@ -307,7 +307,7 @@ function FileUpload({
                 ref={inputRef}
                 type="file"
                 className="hidden"
-                accept="application/pdf,.pdf"
+                accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp"
                 disabled={disabled}
                 onChange={(event) => {
                     const selectedFiles = Array.from(event.target.files || []);
@@ -728,15 +728,9 @@ function SingleLabDetailPage() {
         if (!canUpload) {
             return toast.error('Bạn không có quyền tải kết quả tại phòng thực hiện này');
         }
-        if (
-            selectedFile.type !==
-            'application/pdf' &&
-            !selectedFile.name
-                ?.toLowerCase()
-                .endsWith('.pdf')
-        ) {
+        if (!['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(selectedFile.type)) {
             return toast.error(
-                'Chỉ chấp nhận phiếu kết quả định dạng PDF'
+                'Chỉ chấp nhận tệp PDF hoặc ảnh JPG, PNG, WEBP'
             );
         }
 

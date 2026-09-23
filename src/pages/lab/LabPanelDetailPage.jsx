@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, FlaskConical, LockKeyhole, Save, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, FileText, FlaskConical, LockKeyhole, Save, TriangleAlert, Upload } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 import api from '@/lib/axios';
@@ -26,6 +26,9 @@ export default function LabPanelDetailPage() {
     const [sampleType, setSampleType] = useState('');
     const [sampleStatus, setSampleStatus] = useState('ACCEPTED');
     const [conclusion, setConclusion] = useState('');
+    const [resultFileUrl, setResultFileUrl] = useState('');
+    const [resultFileName, setResultFileName] = useState('');
+    const [uploading, setUploading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -49,6 +52,15 @@ export default function LabPanelDetailPage() {
         try {
             const response = await api.get(`/api/v1/test-requests/${id}/panel-workbench`);
             hydrate(response.data);
+            try {
+                const resultResponse = await api.get(`/api/v1/test-requests/${id}/result`);
+                setResultFileUrl(resultResponse.data?.imageUrl || '');
+                setResultFileName(resultResponse.data?.fileName || '');
+            } catch (resultError) {
+                if (resultError.response?.status !== 404) throw resultError;
+                setResultFileUrl('');
+                setResultFileName('');
+            }
         } catch (requestError) {
             setError(requestError.response?.data?.message || 'Không thể tải phiếu xét nghiệm. Vui lòng thử lại.');
         } finally {
@@ -73,9 +85,39 @@ export default function LabPanelDetailPage() {
         sampleType: sampleType || null,
         sampleStatus: sampleStatus || null,
         conclusion: conclusion || '',
+        imageUrl: resultFileUrl || null,
         formTemplateVersionId: panel?.formTemplateVersionId || null,
         performedById: getStaffId(),
     });
+
+    const uploadResultFile = async (file) => {
+        if (!file) return;
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            toast.error('Chỉ chấp nhận tệp PDF hoặc ảnh JPG, PNG, WEBP.');
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error('Tệp kết quả không được vượt quá 10 MB.');
+            return;
+        }
+        setUploading(true);
+        setSaveError('');
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await api.post(`/api/v1/test-requests/${id}/upload`, formData);
+            setResultFileUrl(response.data?.imageUrl || '');
+            setResultFileName(response.data?.fileName || file.name);
+            toast.success('Tải tệp kết quả thành công. Hãy lưu nháp hoặc hoàn thành phiếu để ghi nhận tệp.');
+        } catch (uploadError) {
+            const message = uploadError.response?.data?.message || 'Không thể tải tệp kết quả.';
+            setSaveError(message);
+            toast.error(message);
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const validateSubmission = (complete) => {
         const nextErrors = validateClinicalForm(panel?.clinicalForm?.schema, values, complete, purchasedFieldKeys);
@@ -142,7 +184,7 @@ export default function LabPanelDetailPage() {
                         </section>
 
                         <section className="mt-5 grid gap-5 xl:grid-cols-[330px_minmax(0,1fr)]">
-                            <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h2 className="font-bold text-slate-900">Mẫu bệnh phẩm dùng chung</h2><p className="mt-1 text-sm text-slate-500">Một thông tin mẫu được dùng nhất quán cho các chỉ số đã mua trong phiếu này.</p><label className="mt-4 block text-sm font-semibold text-slate-700">Mã mẫu<input disabled={!canEdit} value={sampleId} onChange={(event) => setSampleId(event.target.value)} placeholder="SMP-..." className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-200 px-3 text-sm disabled:bg-slate-100" /></label><div className="mt-3 text-sm font-semibold text-slate-700">Loại mẫu<div className="mt-1.5 flex min-h-11 items-center rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-medium text-slate-700">{sampleTypeLabel(sampleType)}</div><p className="mt-1 text-xs font-normal text-slate-500">Được xác định tự động theo dịch vụ xét nghiệm.</p></div><label className="mt-3 block text-sm font-semibold text-slate-700">Tình trạng mẫu<select disabled={!canEdit} value={sampleStatus} onChange={(event) => setSampleStatus(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-200 px-3 text-sm disabled:bg-slate-100">{SAMPLE_STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><div className="mt-5 rounded-xl bg-slate-50 p-3 text-xs text-slate-600"><LockKeyhole className="mb-1 text-slate-500" size={15} /> Những chỉ số chưa mua vẫn hiện trong bảng để đối chiếu phạm vi gói, nhưng không thể nhập hoặc ký.</div></aside>
+                            <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h2 className="font-bold text-slate-900">Mẫu bệnh phẩm dùng chung</h2><p className="mt-1 text-sm text-slate-500">Một thông tin mẫu được dùng nhất quán cho các chỉ số đã mua trong phiếu này.</p><label className="mt-4 block text-sm font-semibold text-slate-700">Mã mẫu<input disabled={!canEdit} value={sampleId} onChange={(event) => setSampleId(event.target.value)} placeholder="SMP-..." className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-200 px-3 text-sm disabled:bg-slate-100" /></label><div className="mt-3 text-sm font-semibold text-slate-700">Loại mẫu<div className="mt-1.5 flex min-h-11 items-center rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-medium text-slate-700">{sampleTypeLabel(sampleType)}</div><p className="mt-1 text-xs font-normal text-slate-500">Được xác định tự động theo dịch vụ xét nghiệm.</p></div><label className="mt-3 block text-sm font-semibold text-slate-700">Tình trạng mẫu<select disabled={!canEdit} value={sampleStatus} onChange={(event) => setSampleStatus(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-200 px-3 text-sm disabled:bg-slate-100">{SAMPLE_STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><div className="mt-5 rounded-xl border border-slate-200 p-3"><p className="text-sm font-bold text-slate-800">Tệp kết quả</p>{resultFileName ? <div className="mt-2 flex items-center gap-2 rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-800"><FileText size={17} className="shrink-0" /><span className="min-w-0 flex-1 truncate" title={resultFileName}>{resultFileName}</span></div> : <p className="mt-1 text-xs text-slate-500">Chưa có tệp kết quả được tải lên.</p>}<label className={`mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-teal-300 px-3 text-sm font-bold text-teal-700 ${!canEdit || uploading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-teal-50'}`}><Upload size={16} />{uploading ? 'Đang tải lên...' : resultFileName ? 'Thay tệp kết quả' : 'Tải ảnh hoặc PDF'}<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp" disabled={!canEdit || uploading} className="hidden" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; uploadResultFile(file); }} /></label><p className="mt-2 text-xs text-slate-500">Nhận PDF, JPG, PNG hoặc WEBP; tối đa 10 MB.</p></div><div className="mt-5 rounded-xl bg-slate-50 p-3 text-xs text-slate-600"><LockKeyhole className="mb-1 text-slate-500" size={15} /> Những chỉ số chưa mua vẫn hiện trong bảng để đối chiếu phạm vi gói, nhưng không thể nhập hoặc ký.</div></aside>
                             <div><DynamicClinicalForm schema={panel?.clinicalForm?.schema} value={values} onChange={(next, changedFieldKey) => { setValues(next); setSaveError(''); setFormErrors((current) => {
                                 if (!changedFieldKey) return {};
                                 const nextErrors = { ...current };

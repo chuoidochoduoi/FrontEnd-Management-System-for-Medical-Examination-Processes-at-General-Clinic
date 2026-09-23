@@ -40,12 +40,10 @@ export default function AdminLayout({ children }) {
             { to: ROUTES.ADMIN_SERVICES, icon: Tag, label: t('sidebar.services') },
             { to: ROUTES.ADMIN_CAPABILITIES, icon: Wrench, label: tCommon('sidebar.capabilities') },
             { to: ROUTES.ADMIN_SHIFTS, icon: Clock, label: tCommon('sidebar.shiftConfig') },
-            { to: ROUTES.ADMIN_SCHEDULE, icon: CalendarDays, label: 'Phân công lịch trực' },
         ] },
         { label: 'Hệ thống', items: [
             { to: ROUTES.ADMIN_ACCOUNTS, icon: Users, label: t('sidebar.accounts') },
             { to: ROUTES.ADMIN_CLINIC_INFORMATION, icon: MapPin, label: 'Thông tin phòng khám' },
-            { to: ROUTES.ADMIN_MEMBERSHIP_POLICY, icon: WalletCards, label: 'Chính sách thẻ CareS' },
             { to: ROUTES.ADMIN_PUBLIC_ANNOUNCEMENTS, icon: BellRing, label: 'Thông báo công khai' },
             { to: ROUTES.ADMIN_AUDIT_LOGS, icon: Activity, label: tCommon('sidebar.auditLogs') },
         ] },
@@ -73,3 +71,5 @@ export default function AdminLayout({ children }) {
         <section className="cares-workspace-main"><header className="cares-workspace-toolbar"><div><span>Quản trị hệ thống CareS</span><strong>Xin chào, {displayName}</strong></div><div><AppPreferencesMenu/><NotificationBell/><button type="button" className="cares-workspace-profile" onClick={() => navigate(ROUTES.STAFF_PROFILE)} aria-label="Mở hồ sơ"><UserRound size={20}/></button></div></header><main className="cares-workspace-content"><div className="cares-workspace-page cares-admin-page">{children}</div></main></section>
     </div>;
 }
+
+

@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { CalendarDays, Globe2, LogIn, Mail, MapPin, Menu, Phone, X } from 'lucide-react';
 import logoUrl from '@/assets/logo.jpg';
 import useClinicInformation from '@/hooks/useClinicInformation';
+import ChatWidget from '@/components/ui/ChatWidget';
 
 const get = key => localStorage.getItem(key) || sessionStorage.getItem(key);
 
@@ -83,12 +84,16 @@ export default function PublicSiteShell({ children, pageClassName = '' }) {
             <div className="cares-public-brand cares-public-footer-brand"><img src={logoUrl} alt="" /><div><strong>{clinic.clinicName || 'CareS'}</strong><span>Chăm sóc rõ ràng, tận tâm</span></div></div>
             <p>{clinic.shortDescription || 'Phòng khám đa khoa đồng hành cùng bạn trong từng bước chăm sóc sức khỏe.'}</p>
           </div>
-          <div><h3>Liên hệ</h3><p><Phone size={16} /> {clinic.phone || '1900 1234'}</p><p><Mail size={16} /> {clinic.supportEmail || 'lienhe@caresclinic.vn'}</p><p><MapPin size={16} /> {clinic.address || 'Khu Công nghệ cao Hòa Lạc, Hà Nội'}</p></div>
+          <div><h3>Liên hệ</h3><p><Phone size={16} /> {clinic.phone || '0968161266'}</p><p><Mail size={16} /> {clinic.supportEmail || 'phongkhamcares@gmail.com'}</p><p><MapPin size={16} /> {clinic.address || 'Thôn 1, Canh Nậu, Thạch Thất, Hà Nội'}</p></div>
           <div><h3>Truy cập nhanh</h3><Link to="/services">Danh mục dịch vụ</Link><Link to="/doctors">Đội ngũ bác sĩ</Link><Link to="/schedule">Lịch khám theo khoa</Link><Link to="/appointment">Đặt lịch khám không cần tài khoản</Link><Link to="/guest/journey">Tra cứu lượt khám (không cần đăng nhập)</Link><Link to="/contact">Gửi thông tin liên hệ</Link></div>
           <div><h3>Kết nối</h3>{clinic.facebookUrl ? <a href={clinic.facebookUrl} target="_blank" rel="noreferrer"><Globe2 size={17} /> Facebook</a> : <span><Globe2 size={17} /> CareS Clinic</span>}</div>
         </div>
         <div className="cares-public-container cares-public-copyright">© {new Date().getFullYear()} {clinic.clinicName || 'CareS'}. Thông tin lịch khám có thể được điều chỉnh theo hoạt động thực tế.</div>
       </footer>
+
+      <div className="print:hidden">
+        <ChatWidget />
+      </div>
     </div>
   );
 }

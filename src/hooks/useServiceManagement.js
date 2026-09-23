@@ -21,7 +21,7 @@ export function useServiceManagement() {
 
     const fetchStats = useCallback(async () => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services/stats`, { headers: bearer() });
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services/stats?primaryOnly=true`, { headers: bearer() });
             if (res.ok) {
                 const data = await res.json();
                 setStats({
@@ -49,6 +49,7 @@ export function useServiceManagement() {
             }
             if (page) query.append('page', page - 1);
             query.append('size', PAGE_SIZE);
+            query.append('primaryOnly', 'true');
 
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services?${query.toString()}`, { headers: bearer() });
             if (!res.ok) throw new Error('Không thể tải danh sách dịch vụ');
@@ -120,19 +121,19 @@ export function useServiceManagement() {
     };
 
     const createService = async (payload) => {
-        const apiType = payload.type;
+        const apiType = 'EXAMINATION';
         const body = {
             serviceCode: payload.code,
             name: payload.name,
             departmentType: apiType,
             price: payload.price,
-            requiredSpecializationId: apiType === 'EXAMINATION' ? payload.specialtyId : null,
+            requiredSpecializationId: payload.specialtyId,
             workflowPriority: Number(payload.workflowPriority ?? 1),
-            requiresSpecimen: payload.requiresSpecimen === true,
+            requiresSpecimen: false,
             minimumAge: Number(payload.minimumAge),
             maximumAge: Number(payload.maximumAge),
             allowedGender: payload.allowedGender || null,
-            requiredCapabilityId: payload.type === 'EXAMINATION' ? null : (payload.capabilityId || null),
+            requiredCapabilityId: null,
         };
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services`, {
             method: 'POST',
@@ -154,6 +155,32 @@ export function useServiceManagement() {
         };
 
         const apiType = payload.type;
+
+        // Active services accept price changes only. Status changes use the
+        // dedicated deactivate endpoint so the fixed catalogue remains locked.
+        if (payload.currentStatus === 'active') {
+            const priceResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services/${id}`, {
+                method: 'PUT',
+                headers: { ...bearer(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ price: Number(payload.price) }),
+            });
+            if (!priceResponse.ok) {
+                const data = await priceResponse.json().catch(() => null);
+                throw new Error(data?.message || 'Cập nhật giá dịch vụ thất bại');
+            }
+            if (payload.status === 'suspended') {
+                const statusResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-services/${id}/deactivate`, {
+                    method: 'PATCH',
+                    headers: bearer(),
+                });
+                if (!statusResponse.ok) {
+                    const data = await statusResponse.json().catch(() => null);
+                    throw new Error(data?.message || 'Tạm ngưng dịch vụ thất bại');
+                }
+            }
+            fetchServices();
+            return;
+        }
 
         // Dịch vụ đã hoạt động là dữ liệu vận hành: chỉ gửi trường giá.
         // Trạng thái được thay đổi bằng endpoint publish/deactivate riêng.

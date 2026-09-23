@@ -8,6 +8,7 @@ const analyteParentLabel = code => {
     if (normalized.startsWith('AN-LIV-')) return 'Chức năng gan';
     if (normalized.startsWith('AN-REN-')) return 'Chức năng thận';
     if (normalized.startsWith('AN-URI-')) return 'Nước tiểu';
+    if (normalized.startsWith('AN-CRP')) return 'Xét nghiệm CRP';
     return 'dịch vụ xét nghiệm';
 };
 

@@ -275,7 +275,7 @@ export default function SchedulePage() {
         ? staff.filter(person => person.departmentId === departmentId && ['BS', 'YT'].includes(person.role))
         : staff.filter(person => ['RECEPTIONIST', 'CASHIER', 'CLINIC_MANAGER', 'LT', 'TN', 'QL'].includes(person.role));
     const systemRole = localStorage.getItem('systemRole') || sessionStorage.getItem('systemRole');
-    const Layout = systemRole === 'ADMIN' ? AdminLayout : OwnerLayout;
+    const Layout = OwnerLayout;
 
     return (
         <Layout>
@@ -286,9 +286,6 @@ export default function SchedulePage() {
                         <h1 className="text-base font-semibold text-gray-900">Phân công lịch trực</h1>
                         <p className="mt-1 text-xs text-gray-400">Nhân sự thuộc phòng được cấu hình trước, sau đó mới phân vào từng ngày và ca.</p>
                     </div>
-                    <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700">
-                        {t('scheduleManagement.systemStatus')}
-                    </span>
                 </div>
 
                 {/* Toolbar */}
@@ -503,3 +500,4 @@ export default function SchedulePage() {
         </Layout>
     );
 }
+

@@ -427,6 +427,7 @@ function LabServicePicker({
                 : String(service.serviceCode || '').startsWith('AN-LIV-') ? 'Chỉ số lẻ · Chức năng gan'
                     : String(service.serviceCode || '').startsWith('AN-REN-') ? 'Chỉ số lẻ · Chức năng thận'
                         : String(service.serviceCode || '').startsWith('AN-URI-') ? 'Chỉ số lẻ · Nước tiểu'
+                            : String(service.serviceCode || '').startsWith('AN-CRP') ? 'Chỉ số lẻ · Xét nghiệm CRP'
                             : null;
         const group = analytePanel || service.departmentName || service.requiredCapabilityName || 'Cận lâm sàng';
         if (!result[group]) result[group] = [];

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarDays, Eye, FilePlus, Filter, LoaderCircle, Printer, Search, X } from 'lucide-react';
+import { CalendarDays, Eye, FilePlus, Filter, LoaderCircle, Printer, Search } from 'lucide-react';
 import ReceptionistLayout from '@/components/layout/ReceptionistLayout';
 import { ROUTES } from '@/constants/routes';
+import logoUrl from '@/assets/logo.jpg';
 
 const get = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const PAGE_SIZE = 10;
@@ -25,7 +26,9 @@ const visitCode = (visit) => visit?.visitId ? `PK${visit.visitId.replaceAll('-',
 const printVisit = (visit) => {
     const popup = window.open('', '_blank', 'width=840,height=720');
     if (!popup) return;
-    popup.document.write(`<!doctype html><html lang="vi"><head><meta charset="utf-8"/><title>Phiếu khám ${visitCode(visit)}</title><style>body{font:14px Arial,sans-serif;color:#111;margin:36px}h1{text-align:center;font-size:22px;margin:4px 0 24px}.clinic{text-align:center;font-weight:700;font-size:16px}.line{border-top:2px solid #111;margin:18px 0}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #777;padding:10px;text-align:left}th{background:#f3f4f6}.meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;line-height:1.7}.sign{display:flex;justify-content:space-between;text-align:center;margin-top:70px}@media print{body{margin:20px}}</style></head><body><div class="clinic">CareS – PHÒNG KHÁM ĐA KHOA</div><h1>PHIẾU KHÁM</h1><div class="meta"><div><b>Mã phiếu:</b> ${visitCode(visit)}<br/><b>Họ tên:</b> ${visit.customerName || 'Khách vãng lai'}<br/><b>Số điện thoại:</b> ${visit.patientPhone || '—'}</div><div><b>Thời gian tạo:</b> ${formatDateTime(visit.checkInTime || visit.createdAt)}<br/><b>Trạng thái:</b> ${STATUS_LABELS[visit.status] || visit.status || '—'}<br/><b>Thanh toán:</b> ${INVOICE_LABELS[visit.invoiceStatus] || 'Chưa có thông tin'}</div></div><div class="line"></div><table><thead><tr><th>STT</th><th>Dịch vụ đăng ký</th></tr></thead><tbody><tr><td>1</td><td>${visit.serviceSummary || 'Chưa có dịch vụ'}</td></tr></tbody></table><div class="sign"><div>Người lập phiếu<br/><br/><br/>(Ký, ghi rõ họ tên)</div><div>Bệnh nhân<br/><br/><br/>(Ký, ghi rõ họ tên)</div></div><script>window.onload=()=>window.print();<\/script></body></html>`);
+    popup.document.write(`<!doctype html><html lang="vi"><head><meta charset="utf-8"/><title>Phiếu khám ${visitCode(visit)}</title><style>
+        @page{size:A4;margin:14mm}*{box-sizing:border-box}body{font:13px Arial,sans-serif;color:#172033;margin:0;background:#fff}.sheet{width:100%;max-width:190mm;margin:auto}.header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #0f9488;padding-bottom:12px}.brand{display:flex;align-items:center;gap:12px}.brand img{width:52px;height:52px;object-fit:contain;border-radius:10px}.brand strong{display:block;color:#087d74;font-size:22px}.brand span{display:block;color:#526277;margin-top:3px}.contact{text-align:right;color:#526277;font-size:11px;line-height:1.55}h1{text-align:center;font-size:22px;margin:22px 0 5px;letter-spacing:.8px}.subtitle{text-align:center;color:#64748b;margin-bottom:22px}.meta{display:grid;grid-template-columns:1fr 1fr;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden}.meta div{padding:9px 12px;border-bottom:1px solid #e2e8f0}.meta div:nth-child(odd){border-right:1px solid #e2e8f0}.meta div:nth-last-child(-n+2){border-bottom:0}.label{display:inline-block;min-width:110px;color:#64748b}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:10px;text-align:left}th{background:#e8f7f5;color:#0f766e}.number{width:52px;text-align:center}.notice{margin-top:16px;padding:10px 12px;border-left:4px solid #0f9488;background:#f0fdfa;color:#475569}.sign{display:flex;justify-content:space-between;text-align:center;margin-top:55px;padding:0 28px}.sign div{width:210px}.sign small{display:block;color:#64748b;margin-top:4px}@media print{.sheet{max-width:none}}
+    </style></head><body><main class="sheet"><header class="header"><div class="brand"><img src="${logoUrl}" alt="CareS"/><div><strong>CareS</strong><span>Phòng khám đa khoa</span></div></div><div class="contact">Thôn 1, Canh Nậu, Thạch Thất, Hà Nội<br/>Hotline: 0968 161 266<br/>Email: phongkhamcares@gmail.com</div></header><h1>PHIẾU KHÁM</h1><p class="subtitle">Thông tin tiếp nhận bệnh nhân</p><section class="meta"><div><span class="label">Mã phiếu:</span><b>${visitCode(visit)}</b></div><div><span class="label">Ngày tiếp nhận:</span><b>${formatDateTime(visit.checkInTime || visit.createdAt)}</b></div><div><span class="label">Họ và tên:</span><b>${visit.customerName || 'Khách vãng lai'}</b></div><div><span class="label">Mã bệnh nhân:</span><b>${visit.patientCode || '—'}</b></div><div><span class="label">Số điện thoại:</span><b>${visit.patientPhone || '—'}</b></div><div><span class="label">Trạng thái:</span><b>${STATUS_LABELS[visit.status] || visit.status || '—'}</b></div></section><table><thead><tr><th class="number">STT</th><th>Dịch vụ đăng ký</th><th>Thanh toán</th></tr></thead><tbody><tr><td class="number">1</td><td>${visit.serviceSummary || 'Chưa có dịch vụ'}</td><td>${INVOICE_LABELS[visit.invoiceStatus] || 'Chưa có thông tin'}</td></tr></tbody></table><div class="notice">Vui lòng giữ phiếu và theo dõi hướng dẫn của lễ tân trong quá trình khám.</div><div class="sign"><div><b>Người lập phiếu</b><small>(Ký và ghi rõ họ tên)</small></div><div><b>Bệnh nhân</b><small>(Ký và ghi rõ họ tên)</small></div></div></main><script>window.onload=()=>window.print();<\/script></body></html>`);
     popup.document.close();
 };
 
@@ -54,7 +57,13 @@ export default function VisitManagementPage() {
     const [status, setStatus] = useState('');
     const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
     const [page, setPage] = useState(0);
-    const [selectedVisit, setSelectedVisit] = useState(null);
+
+    const openMedicalRecord = (visit) => {
+        if (!visit.customerId || !visit.visitId) return;
+        navigate(ROUTES.RECEPTIONIST_PATIENT_VISIT_DETAIL
+            .replace(':id', visit.customerId)
+            .replace(':visitId', visit.visitId));
+    };
 
     const loadVisits = useCallback(async () => {
         setLoading(true); setError('');
@@ -101,55 +110,19 @@ export default function VisitManagementPage() {
 
             <div className="cares-reception-table-card">
                 <div className="cares-reception-visit-table overflow-x-auto"><table className="min-w-[1050px] w-full text-left text-sm"><thead className="border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500"><tr><th className="px-5 py-4">Mã phiếu</th><th className="px-5 py-4">Bệnh nhân</th><th className="px-5 py-4">Số điện thoại</th><th className="px-5 py-4">Dịch vụ</th><th className="px-5 py-4">Ngày tạo</th><th className="px-5 py-4">Trạng thái</th><th className="px-5 py-4 text-right">Thao tác</th></tr></thead>
-                    <tbody className="divide-y divide-gray-100">{loading ? <tr><td colSpan="7" className="px-5 py-14 text-center text-gray-400"><LoaderCircle className="mx-auto mb-2 animate-spin" size={22} />Đang tải phiếu khám...</td></tr> : error ? <tr><td colSpan="7" className="px-5 py-12 text-center text-red-600">{error}</td></tr> : visibleVisits.length === 0 ? <tr><td colSpan="7" className="px-5 py-14 text-center text-gray-400">Không có phiếu khám phù hợp.</td></tr> : visibleVisits.map(visit => <tr key={visit.visitId} className="hover:bg-gray-50/70"><td className="px-5 py-4 font-semibold text-gray-700">{visitCode(visit)}<p className="mt-1 text-[11px] font-normal text-gray-400">{visit.patientCode || '—'}</p></td><td className="px-5 py-4"><p className="font-semibold text-gray-900">{visit.customerName || 'Khách vãng lai'}</p></td><td className="px-5 py-4 text-gray-600">{visit.patientPhone || '—'}</td><td className="max-w-[220px] px-5 py-4 text-gray-700"><p className="line-clamp-2" title={visit.serviceSummary || ''}>{visit.serviceSummary || 'Chưa có dịch vụ'}</p></td><td className="px-5 py-4 text-gray-600">{formatDateTime(visit.checkInTime || visit.createdAt)}</td><td className="px-5 py-4"><StatusBadge visit={visit} /></td><td className="px-5 py-4 text-right"><div className="flex justify-end gap-1"><button onClick={() => setSelectedVisit(visit)} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50"><Eye size={16} />Xem chi tiết</button><button onClick={() => printVisit(visit)} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"><Printer size={16} />In phiếu</button></div></td></tr>)}</tbody></table></div>
+                    <tbody className="divide-y divide-gray-100">{loading ? <tr><td colSpan="7" className="px-5 py-14 text-center text-gray-400"><LoaderCircle className="mx-auto mb-2 animate-spin" size={22} />Đang tải phiếu khám...</td></tr> : error ? <tr><td colSpan="7" className="px-5 py-12 text-center text-red-600">{error}</td></tr> : visibleVisits.length === 0 ? <tr><td colSpan="7" className="px-5 py-14 text-center text-gray-400">Không có phiếu khám phù hợp.</td></tr> : visibleVisits.map(visit => <tr key={visit.visitId} className="hover:bg-gray-50/70"><td className="px-5 py-4 font-semibold text-gray-700">{visitCode(visit)}<p className="mt-1 text-[11px] font-normal text-gray-400">{visit.patientCode || '—'}</p></td><td className="px-5 py-4"><p className="font-semibold text-gray-900">{visit.customerName || 'Khách vãng lai'}</p></td><td className="px-5 py-4 text-gray-600">{visit.patientPhone || '—'}</td><td className="max-w-[220px] px-5 py-4 text-gray-700"><p className="line-clamp-2" title={visit.serviceSummary || ''}>{visit.serviceSummary || 'Chưa có dịch vụ'}</p></td><td className="px-5 py-4 text-gray-600">{formatDateTime(visit.checkInTime || visit.createdAt)}</td><td className="px-5 py-4"><StatusBadge visit={visit} /></td><td className="px-5 py-4 text-right"><div className="flex justify-end gap-1"><button onClick={() => openMedicalRecord(visit)} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-primary-700 hover:bg-primary-50"><Eye size={16} />Xem hồ sơ bệnh án</button><button onClick={() => printVisit(visit)} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"><Printer size={16} />In phiếu</button></div></td></tr>)}</tbody></table></div>
                 <div className="cares-reception-visit-mobile-list">
                     {loading ? <div className="cares-reception-state"><LoaderCircle className="animate-spin" size={24} />Đang tải phiếu khám...</div> : error ? <div className="cares-reception-state is-error"><strong>{error}</strong></div> : visibleVisits.length === 0 ? <div className="cares-reception-state"><strong>Không có phiếu khám phù hợp.</strong></div> : visibleVisits.map(visit => <article key={visit.visitId}>
                         <div><strong>{visitCode(visit)}</strong><StatusBadge visit={visit} /></div>
                         <h3>{visit.customerName || 'Khách vãng lai'}</h3>
                         <p>{visit.patientPhone || 'Chưa có SĐT'} · {formatDateTime(visit.checkInTime || visit.createdAt)}</p>
                         <small>{visit.serviceSummary || 'Chưa có dịch vụ'}</small>
-                        <footer><button onClick={() => setSelectedVisit(visit)}><Eye size={17} />Xem chi tiết</button><button onClick={() => printVisit(visit)}><Printer size={17} />In phiếu</button></footer>
+                        <footer><button onClick={() => openMedicalRecord(visit)}><Eye size={17} />Xem hồ sơ bệnh án</button><button onClick={() => printVisit(visit)}><Printer size={17} />In phiếu</button></footer>
                     </article>)}
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-5 py-3 text-sm text-gray-500"><span>Hiển thị {total ? `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, total)} trên tổng số ${total}` : '0'} kết quả</span><div className="flex gap-2"><button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="rounded-lg border px-3 py-1.5 disabled:opacity-40">Trước</button><span className="rounded-lg bg-gray-900 px-3 py-1.5 text-white">{page + 1}</span><button disabled={page + 1 >= totalPages} onClick={() => setPage(p => p + 1)} className="rounded-lg border px-3 py-1.5 disabled:opacity-40">Sau</button></div></div>
             </div>
         </div>
 
-        {selectedVisit && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/40 px-4 backdrop-blur-sm">
-                <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
-                    <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-                        <h2 className="text-lg font-bold text-gray-900">Chi tiết Phiếu Khám</h2>
-                        <button onClick={() => setSelectedVisit(null)} className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"><X size={20}/></button>
-                    </div>
-                    <div className="p-5 space-y-4 text-sm text-gray-600">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div><span className="block text-xs font-medium text-gray-400">Mã phiếu</span><strong className="text-gray-900">{visitCode(selectedVisit)}</strong></div>
-                            <div><span className="block text-xs font-medium text-gray-400">Ngày tạo</span><strong className="text-gray-900">{formatDateTime(selectedVisit.checkInTime || selectedVisit.createdAt)}</strong></div>
-                            <div><span className="block text-xs font-medium text-gray-400">Bệnh nhân</span><strong className="text-gray-900">{selectedVisit.customerName || 'Khách vãng lai'}</strong></div>
-                            <div><span className="block text-xs font-medium text-gray-400">SĐT</span><strong className="text-gray-900">{selectedVisit.patientPhone || '—'}</strong></div>
-                        </div>
-                        <div className="rounded-xl bg-gray-50 p-4 border border-gray-100">
-                            <span className="block text-xs font-medium text-gray-500 mb-1">Dịch vụ đăng ký</span>
-                            <p className="font-medium text-gray-900">{selectedVisit.serviceSummary || 'Chưa có dịch vụ'}</p>
-                        </div>
-                        <div className="flex items-center justify-between rounded-xl bg-gray-50 p-4 border border-gray-100">
-                            <div>
-                                <span className="block text-xs font-medium text-gray-500 mb-1">Trạng thái khám</span>
-                                <StatusBadge visit={selectedVisit} />
-                            </div>
-                            {selectedVisit.customerId && selectedVisit.visitId && (
-                                <button onClick={() => navigate(ROUTES.RECEPTIONIST_PATIENT_VISIT_DETAIL.replace(':id', selectedVisit.customerId).replace(':visitId', selectedVisit.visitId))} className="rounded-lg bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-100 transition-colors">
-                                    Vào hồ sơ bệnh án &rarr;
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                    <div className="border-t border-gray-100 px-5 py-4 text-right">
-                        <button onClick={() => setSelectedVisit(null)} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50">Đóng</button>
-                    </div>
-                </div>
-            </div>
-        )}
     </ReceptionistLayout>;
 }

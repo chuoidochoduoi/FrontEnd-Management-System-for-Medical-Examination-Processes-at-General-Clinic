@@ -1,7 +1,6 @@
 {
   "scheduleManagement": {
     "pageTitle": "Weekly staff schedule",
-    "systemStatus": "Shared CareS schedule · Admin and Clinic Manager",
     "week": "Week:",
     "copyLastWeek": "Copy previous week",
     "applyTemplate": "Apply template",

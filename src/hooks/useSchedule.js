@@ -40,7 +40,20 @@ export function useSchedule() {
                 ([key, people]) => [key, (people ?? []).map(normalizePerson)]
             )));
             setShifts(data.shifts ?? []);
-            setStaff((data.staff ?? []).map(normalizePerson));
+            const scheduleStaff = (data.staff ?? []).map(normalizePerson);
+            setStaff(previous => {
+                if (previous.length === 0) return scheduleStaff;
+
+                // The schedule response can contain only the people currently
+                // assigned to the selected view. Keep the complete picker list
+                // loaded from /staff/list so it does not become empty after
+                // assigning the first receptionist/cashier.
+                const byId = new Map(previous.map(person => [person.id, person]));
+                scheduleStaff.forEach(person => {
+                    byId.set(person.id, { ...byId.get(person.id), ...person });
+                });
+                return Array.from(byId.values());
+            });
             setCoverage(data.coverage ?? {});
             setWeekStart(week);
         } catch (err) { setError(err.message); }

@@ -19,6 +19,10 @@ const STATUS_CFG = {
 
 const SERVICE_TYPES = ['EXAMINATION', 'PARACLINICAL'];
 const SERVICE_TYPE_LABELS = { EXAMINATION: 'Khám bệnh', PARACLINICAL: 'Cận lâm sàng' };
+const getServiceTypeLabel = (service) => {
+    if (service.type === 'EXAMINATION') return 'Khám bệnh';
+    return service.requiresSpecimen ? 'Xét nghiệm' : 'Chẩn đoán hình ảnh';
+};
 const STATUSES      = ['active', 'suspended', 'draft'];
 
 const inputCls  = 'w-full h-10 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-gray-500 bg-white';
@@ -104,7 +108,7 @@ function ConfigModal({ service, onClose, onSubmit, t }) {
             return;
         }
         setSubmitting(true); setError('');
-        try { await onSubmit(service.id, { status, price: Number(price) }); onClose(); }
+        try { await onSubmit(service.id, { status, price: Number(price), currentStatus: service.status }); onClose(); }
         catch (err) { setError(err.message); }
         finally { setSubmitting(false); }
     };
@@ -131,7 +135,7 @@ function ConfigModal({ service, onClose, onSubmit, t }) {
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className={labelCls}>{t('serviceManagement.configModal.serviceType')}</label>
-                    <p className="text-sm text-gray-900">{SERVICE_TYPE_LABELS[service.type] || service.type || '—'}</p>
+                    <p className="text-sm text-gray-900">{getServiceTypeLabel(service)}</p>
                 </div>
                 <div>
                     <label className={labelCls}>Chuyên khoa phục vụ</label>
@@ -808,7 +812,7 @@ function AddModal({
     const [form, setForm] = useState({
         code: '',
         name: '',
-        type: '',
+        type: 'EXAMINATION',
         price: '',
         status: 'draft',
 
@@ -985,55 +989,10 @@ function AddModal({
                                 Loại dịch vụ
                             </label>
 
-                            <select
-                                value={form.type}
-                                onChange={(e) =>
-                                    setForm((prev) => ({
-                                        ...prev,
-
-                                        type:
-                                        e.target
-                                            .value,
-
-                                        specialtyId:
-                                            '',
-
-                                        capabilityId:
-                                            '',
-
-                                        requiresSpecimen:
-                                            e.target
-                                                .value ===
-                                            'PARACLINICAL'
-                                                ? prev.requiresSpecimen
-                                                : false,
-                                    }))
-                                }
-                                className={inputCls}
-                            >
-                                <option value="">
-                                    -- Chọn loại dịch vụ --
-                                </option>
-
-                                {SERVICE_TYPES.map(
-                                    (serviceType) => (
-                                        <option
-                                            key={
-                                                serviceType
-                                            }
-                                            value={
-                                                serviceType
-                                            }
-                                        >
-                                            {
-                                                SERVICE_TYPE_LABELS[
-                                                    serviceType
-                                                    ]
-                                            }
-                                        </option>
-                                    )
-                                )}
-                            </select>
+                            <input value="Khám bệnh" disabled className={`${inputCls} bg-gray-50 text-gray-600`} />
+                            <p className="mt-1 text-xs text-gray-400">
+                                Xét nghiệm và chẩn đoán hình ảnh được cấu hình sẵn theo danh mục CareS.
+                            </p>
                         </div>
 
                         {/* NAME */}
@@ -1250,7 +1209,7 @@ function AddModal({
 
                 <div className="border-t border-gray-100" />
 
-                <section>
+                {form.type === 'PARACLINICAL' && <section>
                     <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-primary-700">
                         Đặc tính thực hiện
                     </h3>
@@ -1307,7 +1266,7 @@ function AddModal({
                         </label>
 
                     </div>
-                </section>
+                </section>}
 
                 <div className="border-t border-gray-100" />
 
@@ -1427,6 +1386,8 @@ export default function ServiceManagementPage() {
     const { services, stats, loading, error, total, page, PAGE_SIZE, fetchServices, createService, updateService, deleteService } = useServiceManagement();
     const { specializations } = useSpecializations();
     const { capabilities } = useCapabilities();
+    const systemRole = localStorage.getItem('systemRole') || sessionStorage.getItem('systemRole');
+    const canManage = systemRole === 'ADMIN';
 
     const [search,    setSearch]    = useState('');
     const [typeF,     setTypeF]     = useState('');
@@ -1546,10 +1507,10 @@ export default function ServiceManagementPage() {
                         </select>
                     </div>
                     <div className="flex flex-col gap-2 shrink-0">
-                        <button onClick={() => setShowAdd(true)}
+                        {canManage && <button onClick={() => setShowAdd(true)}
                                 className="h-9 px-4 border border-gray-200 text-sm text-gray-700 rounded-lg hover:border-gray-400 transition-colors whitespace-nowrap">
                             {t('serviceManagement.filter.addBtn')}
-                        </button>
+                        </button>}
                         <button onClick={handleSearch}
                                 className="h-9 px-5 bg-gray-900 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors">
                             {t('serviceManagement.filter.searchBtn')}
@@ -1594,7 +1555,7 @@ export default function ServiceManagementPage() {
                                     </td>
                                     <td className={tdCls}>
                       <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
-                        {SERVICE_TYPE_LABELS[svc.type] || svc.type}
+                        {getServiceTypeLabel(svc)}
                       </span>
                                     </td>
                                     <td className={tdCls + ' text-gray-500 text-xs'}>{svc.type === 'EXAMINATION' ? (svc.specialty || 'Chưa cấu hình') : 'Không áp dụng'}</td>
@@ -1605,7 +1566,13 @@ export default function ServiceManagementPage() {
                       </span>
                                     </td>
                                     <td className={tdCls}>
-                                        {isDraft ? (
+                                        {!canManage ? (
+                                            <span className="text-xs text-gray-400">Chỉ xem</span>
+                                        ) : isDraft && svc.type !== 'EXAMINATION' ? (
+                                            <span className="block max-w-[190px] text-xs leading-5 text-amber-700">
+                                                Dịch vụ cận lâm sàng được cấu hình từ dữ liệu hệ thống
+                                            </span>
+                                        ) : isDraft ? (
                                             <div className="flex items-center gap-3">
                                                 <button onClick={() => setEditSvc(svc)}
                                                         className="text-xs text-gray-600 hover:text-primary-500 font-medium transition-colors">

@@ -71,7 +71,6 @@ const WaitingRoomPage = lazy(() => import('@/pages/customer/WaitingRoomPage'))
 const GuestJourneyPage = lazy(() => import('@/pages/guest/GuestJourneyPage'))
 const ManagerStaffPage = lazy(() => import('@/pages/owner/ManagerStaffPage'))
 const ManagerPatientsPage = lazy(() => import('@/pages/owner/ManagerPatientsPage'))
-const ClinicalFormTemplatePage = lazy(() => import('@/pages/owner/ClinicalFormTemplatePage'))
 
 
 function App() {
@@ -270,23 +269,12 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path={ROUTES.ADMIN_MEMBERSHIP_POLICY} element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'CLINIC_MANAGER']}><MembershipPolicyPage /></ProtectedRoute>
+          <ProtectedRoute allowedRoles={['CLINIC_MANAGER']}><MembershipPolicyPage /></ProtectedRoute>
         } />
-        <Route path={ROUTES.CLINICAL_FORM_TEMPLATES} element={
-          <ProtectedRoute allowedRoles={['CLINIC_MANAGER']}>
-            <ClinicalFormTemplatePage />
-          </ProtectedRoute>
-        } />
-
         <Route path={ROUTES.ADMIN_SERVICES} element={<ProtectedRoute allowedRoles={['ADMIN', 'CLINIC_MANAGER']}><ServiceManagementPage /></ProtectedRoute>} />
         <Route path={ROUTES.ADMIN_CAPABILITIES} element={<ProtectedRoute allowedRoles={['ADMIN', 'CLINIC_MANAGER']}><CapabilityManagementPage /></ProtectedRoute>} />
         <Route path={ROUTES.OWNER_SCHEDULE} element={
           <ProtectedRoute allowedRoles={['CLINIC_MANAGER']}>
-            <SchedulePage />
-          </ProtectedRoute>
-        } />
-        <Route path={ROUTES.ADMIN_SCHEDULE} element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
             <SchedulePage />
           </ProtectedRoute>
         } />
@@ -306,12 +294,12 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path={ROUTES.ROOM_QUEUE_DISPLAY} element={
-          <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'RECEPTIONIST', 'ADMIN', 'CLINIC_MANAGER']}>
+          <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'RECEPTIONIST', 'CLINIC_MANAGER']}>
             <RoomQueueDisplayPage />
           </ProtectedRoute>
         } />
         <Route path={ROUTES.ALL_QUEUE_DISPLAY} element={
-          <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'RECEPTIONIST', 'ADMIN', 'CLINIC_MANAGER']}>
+          <ProtectedRoute allowedRoles={['NURSE', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'RECEPTIONIST', 'CLINIC_MANAGER']}>
             <RoomQueueDisplayPage />
           </ProtectedRoute>
         } />
@@ -324,12 +312,12 @@ function App() {
         </ProtectedRoute>
       } />
       <Route path={ROUTES.STAFF_PROFILE} element={
-        <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CASHIER', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'NURSE', 'CLINIC_MANAGER', 'ADMIN']}>
+        <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CASHIER', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'NURSE', 'CLINIC_MANAGER']}>
           <StaffProfilePage />
         </ProtectedRoute>
       } />
       <Route path={ROUTES.SETTINGS} element={
-        <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CASHIER', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'NURSE', 'CLINIC_MANAGER', 'ADMIN']}>
+        <ProtectedRoute allowedRoles={['RECEPTIONIST', 'CASHIER', 'DOCTOR', 'GENERAL_DOCTOR', 'SPECIALIST_DOCTOR', 'NURSE', 'CLINIC_MANAGER']}>
           <SettingsPage />
         </ProtectedRoute>
       } />
@@ -369,3 +357,6 @@ function App() {
   )
 }
 export default App;
+
+
+

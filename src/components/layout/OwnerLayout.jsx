@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Activity, BarChart2, BellRing, Building2, CalendarDays, ClipboardList, Clock, FilePlus, FileText, FolderOpen, LifeBuoy, ListChecks, LogOut, MapPin, MapPinned, Menu, MessageSquare, MonitorUp, Settings, ShieldCheck, Tag, UserRound, Users, WalletCards, Wrench, X } from 'lucide-react';
+import { Activity, BarChart2, BellRing, Building2, CalendarDays, ClipboardList, Clock, FilePlus, FileText, FolderOpen, LifeBuoy, LogOut, MapPin, MapPinned, Menu, MessageSquare, MonitorUp, Settings, ShieldCheck, Tag, UserRound, Users, WalletCards, Wrench, X } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import NotificationBell from '@/components/ui/NotificationBell';
 import SidebarBrand from './SidebarBrand';
@@ -39,7 +39,6 @@ export default function OwnerLayout({ children }) {
             { to: ROUTES.ADMIN_SERVICES, icon: Tag, label: 'Quản lý dịch vụ' },
             { to: ROUTES.ADMIN_CAPABILITIES, icon: Wrench, label: 'Danh mục kỹ thuật' },
             { to: ROUTES.ADMIN_SHIFTS, icon: Clock, label: 'Cấu hình ca' },
-            { to: ROUTES.CLINICAL_FORM_TEMPLATES, icon: ListChecks, label: 'Biểu mẫu kết quả CLS' },
             { to: ROUTES.ADMIN_CLINIC_INFORMATION, icon: MapPin, label: 'Thông tin phòng khám' },
         ] },
         { label: 'Nhân sự và hệ thống', items: [

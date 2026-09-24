@@ -77,9 +77,6 @@ export default function RecordsManagementPage() {
     const handleFilter = () => fetchRecords({ search, gender, age, bloodType, page: 1 });
     const handlePage   = (p) => fetchRecords({ search, gender, age, bloodType, page: p });
 
-    const from = (page - 1) * PAGE_SIZE + 1;
-    const to   = Math.min(page * PAGE_SIZE, total);
-
     return (
         <ReceptionistLayout>
             <div className="cares-reception-screen">
@@ -187,10 +184,7 @@ export default function RecordsManagementPage() {
 
                 {/* Pagination */}
                 {total > 0 && (
-                    <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-400">
-                            Hiển thị {from}–{to} trên tổng số {total} hồ sơ
-                        </p>
+                    <div className="flex items-center justify-end">
                         <Pagination page={page} total={total} pageSize={PAGE_SIZE} onChange={handlePage} />
                     </div>
                 )}

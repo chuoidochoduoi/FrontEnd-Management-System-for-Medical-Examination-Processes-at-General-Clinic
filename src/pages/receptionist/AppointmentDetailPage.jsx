@@ -561,7 +561,7 @@ export default function AppointmentDetailPage() {
                 try {
                     const res =
                         await fetch(
-                            `${import.meta.env.VITE_API_URL}/api/v1/medical-services?status=ACTIVE&primaryOnly=true&size=1000`,
+                            `${import.meta.env.VITE_API_URL}/api/v1/medical-services?status=ACTIVE&primaryOnly=false&size=1000`,
                             { headers: { Authorization: `Bearer ${getToken()}` } }
                         );
 

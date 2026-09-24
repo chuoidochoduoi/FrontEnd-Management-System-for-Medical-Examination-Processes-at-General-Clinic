@@ -192,16 +192,6 @@ export default function LabRequestListPage() {
         Math.ceil(total / PAGE_SIZE)
     );
 
-    const from =
-        total === 0
-            ? 0
-            : (page - 1) * PAGE_SIZE + 1;
-
-    const to = Math.min(
-        page * PAGE_SIZE,
-        total
-    );
-
     return (
         <MedicalStaffLayout>
             <div className="flex-1 overflow-y-auto bg-slate-50 px-5 py-5">
@@ -606,12 +596,7 @@ export default function LabRequestListPage() {
 
                     {total > 0 && (
 
-                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-
-                            <p className="text-xs text-slate-400">
-                                Hiển thị {from}–{to} trong tổng số {total} yêu cầu
-                            </p>
-
+                        <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
                             <div className="flex items-center gap-1">
 
                                 <button

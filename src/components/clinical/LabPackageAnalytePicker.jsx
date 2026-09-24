@@ -16,7 +16,11 @@ export const isAnalyteService = service => serviceCodeOf(service).startsWith('AN
 export const isLaboratoryPanel = service => relationsOf(service).some(relation =>
     relation.type === 'INCLUDES'
     && String(relation.targetServiceCode || '').toUpperCase().startsWith('AN-'));
-export const isPackageOrAnalyteService = service => isAnalyteService(service) || isLaboratoryPanel(service);
+export const isStandaloneLaboratoryService = service => serviceCodeOf(service).startsWith('LAB-')
+    && !isLaboratoryPanel(service);
+export const isPackageOrAnalyteService = service => isAnalyteService(service)
+    || isLaboratoryPanel(service)
+    || isStandaloneLaboratoryService(service);
 
 // Count what the user sees in the catalogue: one panel is one offering, while
 // standalone analytes that do not belong to any panel remain individual items.
@@ -30,7 +34,8 @@ export const countLaboratoryOfferings = services => {
     );
     const standaloneAnalytes = normalized.filter(service =>
         isAnalyteService(service) && !analyteCodesInPanels.has(serviceCodeOf(service)));
-    return panels.length + standaloneAnalytes.length;
+    const standaloneLaboratoryServices = normalized.filter(isStandaloneLaboratoryService);
+    return panels.length + standaloneAnalytes.length + standaloneLaboratoryServices.length;
 };
 
 const panelMeta = service => {
@@ -94,6 +99,14 @@ export default function LabPackageAnalytePicker({
         if (view === 'ANALYTES' && !analytes.some(matches)) return false;
         return matches(panel) || analytes.some(matches);
     });
+
+    const visibleStandaloneLaboratoryServices = normalized
+        .filter(isStandaloneLaboratoryService)
+        .filter(service => {
+            if (view === 'ANALYTES') return false;
+            if (view === 'SELECTED' && !selectedSet.has(String(serviceIdOf(service)))) return false;
+            return matches(service);
+        });
 
     const toggle = service => {
         const state = stateOf(service);
@@ -238,6 +251,46 @@ export default function LabPackageAnalytePicker({
                     );
                 })}
 
+                {!loading && visibleStandaloneLaboratoryServices.map(service => {
+                    const id = String(serviceIdOf(service));
+                    const selected = selectedSet.has(id);
+                    const state = stateOf(service);
+                    return (
+                        <article key={id} className={`rounded-xl border p-3 ${selected
+                            ? 'border-teal-300 bg-teal-50/30'
+                            : 'border-gray-200 bg-white'}`}>
+                            <div className="flex flex-col gap-3">
+                                <div className="flex min-w-0 items-start gap-3">
+                                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-teal-700">
+                                        <Beaker size={18} />
+                                    </span>
+                                    <span className="min-w-0">
+                                        <strong className="block text-sm text-slate-900">
+                                            {service.name} <span className="font-medium text-slate-500">({serviceCodeOf(service)})</span>
+                                        </strong>
+                                        <span className="mt-0.5 block text-xs leading-5 text-slate-500">
+                                            Xét nghiệm đơn · 1 chỉ số{panelMeta(service) ? ` · ${panelMeta(service)}` : ''}
+                                        </span>
+                                    </span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-2.5">
+                                    <span className="rounded-lg bg-white px-2.5 py-1.5 text-xs text-slate-600 ring-1 ring-slate-200">
+                                        Giá xét nghiệm <strong className="ml-1 text-teal-700">{money(service.price)}</strong>
+                                    </span>
+                                    <button type="button" disabled={disabled || state.disabled}
+                                        onClick={() => toggle(service)}
+                                        className={`min-h-9 rounded-lg px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${selected
+                                            ? 'border border-teal-300 bg-teal-50 text-teal-800'
+                                            : 'bg-teal-600 text-white hover:bg-teal-700'}`}>
+                                        {selected ? 'Đã chọn xét nghiệm' : 'Chọn xét nghiệm'}
+                                    </button>
+                                </div>
+                                {state.label && <p className="text-[14px] font-semibold text-amber-700">{state.label}</p>}
+                            </div>
+                        </article>
+                    );
+                })}
+
                 {!loading && orphanAnalytes.length > 0 && (
                     <article className="rounded-2xl border border-slate-200 bg-white p-4">
                         <h3 className="text-base font-bold text-slate-900">Chỉ số xét nghiệm khác</h3>
@@ -259,7 +312,9 @@ export default function LabPackageAnalytePicker({
                     </article>
                 )}
 
-                {!loading && visibleGroups.length === 0 && orphanAnalytes.filter(matches).length === 0 && (
+                {!loading && visibleGroups.length === 0
+                    && visibleStandaloneLaboratoryServices.length === 0
+                    && orphanAnalytes.filter(matches).length === 0 && (
                     <p className="py-10 text-center text-[15px] text-slate-500">Không tìm thấy gói hoặc chỉ số phù hợp.</p>
                 )}
             </div>

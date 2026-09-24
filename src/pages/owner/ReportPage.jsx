@@ -14,9 +14,18 @@ const panel = 'rounded-2xl border border-slate-200 bg-white p-5 dark:border-slat
 const control = 'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900';
 const tabs = [['overview', 'Tổng quan'], ['payments', 'Thu tiền & hóa đơn'], ['rooms', 'Hoạt động phòng']];
 
+function addDays(value, days) {
+    const date = new Date(`${value}T00:00:00+07:00`);
+    date.setDate(date.getDate() + days);
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+}
+
 function rangeFor(period, year, month, quarter) {
     const day = today();
     if (period === 'day') return { from: day, to: day };
+    if (period === 'last7') return { from: addDays(day, -6), to: day };
+    if (period === 'last30') return { from: addDays(day, -29), to: day };
+    if (period === 'last60') return { from: addDays(day, -59), to: day };
     let first = period === 'year' ? 1 : period === 'quarter' ? (quarter - 1) * 3 + 1 : month;
     let last = period === 'year' ? 12 : period === 'quarter' ? first + 2 : month;
     const lastDay = new Date(Date.UTC(year, last, 0)).getUTCDate();
@@ -31,16 +40,48 @@ function DataTable({ headers, rows, unit }) {
     return <><div className="overflow-x-auto"><table className="w-full text-left text-sm">
         <thead className="bg-slate-50 text-slate-500 dark:bg-slate-800 dark:text-slate-300"><tr>{headers.map(h => <th className="whitespace-nowrap px-3 py-3 font-medium" key={h}>{h}</th>)}</tr></thead>
         <tbody>{rows.length ? slice.rows.map((row, i) => <tr key={i} className="border-t border-slate-100 dark:border-slate-800">{row.map((value, j) => <td key={j} className="px-3 py-3 tabular-nums">{value}</td>)}</tr>) : <tr><td className="p-8 text-center text-slate-500" colSpan={headers.length}>Không có dữ liệu phù hợp với tìm kiếm và khoảng ngày đã chọn.</td></tr>}</tbody>
-    </table></div>{rows.length > 0 && <nav aria-label={'Phân trang ' + unit} className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <span>{slice.from}–{slice.to} / {slice.total} {unit}</span><div className="flex items-center gap-3"><button className={control + ' disabled:opacity-40'} disabled={slice.page === 1} onClick={() => setPage(slice.page - 1)}>Trang trước</button><span>Trang {slice.page} / {slice.pages}</span><button className={control + ' disabled:opacity-40'} disabled={slice.page === slice.pages} onClick={() => setPage(slice.page + 1)}>Trang sau</button></div>
+    </table></div>{rows.length > 0 && <nav aria-label={'Phân trang ' + unit} className="mt-4 flex flex-wrap items-center justify-end gap-3 text-sm">
+        <div className="flex items-center gap-3"><button className={control + ' disabled:opacity-40'} disabled={slice.page === 1} onClick={() => setPage(slice.page - 1)}>Trang trước</button><span>Trang {slice.page} / {slice.pages}</span><button className={control + ' disabled:opacity-40'} disabled={slice.page === slice.pages} onClick={() => setPage(slice.page + 1)}>Trang sau</button></div>
     </nav>}</>;
 }
-function Trend({ points }) {
-    const max = Math.max(1, ...points.map(p => Number(p.amount)));
-    return <div className="overflow-x-auto pb-2"><div className="flex h-52 items-end gap-3" style={{ minWidth: Math.max(280, points.length * 55) }}>
-        {points.map(p => <div key={p.label} className="flex h-full min-w-10 flex-1 flex-col justify-end text-center" title={p.label + ': ' + money(p.amount)}>
-            <div className="mx-auto w-7 rounded-t bg-teal-600" style={{ height: Number(p.amount) ? Math.max(2, Number(p.amount) / max * 165) : 0 }} />
-            <span className="mt-2 text-[10px] text-slate-500">{p.label.slice(5)}</span><span className="sr-only">{money(p.amount)}</span>
+const shortMoney = value => {
+    const amount = Number(value ?? 0);
+    if (amount >= 1_000_000) return `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(amount / 1_000_000)}tr`;
+    if (amount >= 1_000) return `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(amount / 1_000)}k`;
+    return number(amount);
+};
+const shortDate = value => value.length === 7 ? value.slice(5) + '/' + value.slice(0, 4) : `${value.slice(8, 10)}/${value.slice(5, 7)}`;
+function chartPoints(points, period) {
+    if (['quarter', 'year'].includes(period)) {
+        const months = new Map();
+        points.forEach(point => {
+            const key = point.label.slice(0, 7);
+            months.set(key, (months.get(key) ?? 0) + Number(point.amount ?? 0));
+        });
+        return [...months].map(([label, amount]) => ({ label, amount, displayLabel: shortDate(label) }));
+    }
+    if (points.length <= 31 || points.some(point => point.label.length === 7)) {
+        return points.map(point => ({ ...point, displayLabel: shortDate(point.label) }));
+    }
+    const groups = [];
+    for (let index = 0; index < points.length; index += 7) {
+        const entries = points.slice(index, index + 7);
+        groups.push({
+            label: `${entries[0].label} – ${entries.at(-1).label}`,
+            displayLabel: `${shortDate(entries[0].label)}–${shortDate(entries.at(-1).label)}`,
+            amount: entries.reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0),
+        });
+    }
+    return groups;
+}
+function Trend({ points, period }) {
+    const columns = chartPoints(points, period);
+    const max = Math.max(1, ...columns.map(p => Number(p.amount)));
+    return <div className="overflow-x-auto pb-2"><div className="flex h-64 items-end gap-3 border-b border-slate-200 px-2 dark:border-slate-700" style={{ minWidth: Math.max(520, columns.length * 92) }}>
+        {columns.map(p => <div key={p.label} className="flex h-full min-w-16 flex-1 flex-col justify-end text-center" title={p.label + ': ' + money(p.amount)}>
+            <span className="mb-1 whitespace-nowrap text-[11px] font-semibold tabular-nums text-slate-700 dark:text-slate-200">{shortMoney(p.amount)}</span>
+            <div className={'mx-auto w-10 rounded-t ' + (Number(p.amount) ? 'bg-teal-600' : 'bg-slate-200 dark:bg-slate-700')} style={{ height: Number(p.amount) ? Math.max(6, Number(p.amount) / max * 165) : 3 }} />
+            <span className="mt-2 min-h-8 text-[10px] leading-4 text-slate-500">{p.displayLabel}</span>
         </div>)}
     </div></div>;
 }
@@ -48,7 +89,7 @@ function Trend({ points }) {
 export default function ReportPage() {
     const initialDay = today();
     const [tab, setTab] = useState('overview');
-    const [period, setPeriod] = useState('day');
+    const [period, setPeriod] = useState('last60');
     const [year, setYear] = useState(Number(initialDay.slice(0, 4)));
     const [month, setMonth] = useState(Number(initialDay.slice(5, 7)));
     const [quarter, setQuarter] = useState(Math.ceil(Number(initialDay.slice(5, 7)) / 3));
@@ -60,6 +101,9 @@ export default function ReportPage() {
     const [roomSearch, setRoomSearch] = useState('');
     const [exportMode, setExportMode] = useState(null);
     const range = period === 'custom' ? applied : rangeFor(period, year, month, quarter);
+    const chartUnit = period === 'month' ? 'ngày trong tháng'
+        : ['quarter', 'year'].includes(period) ? 'tháng trong kỳ'
+            : period === 'last60' ? 'nhóm 7 ngày' : 'ngày trong kỳ';
     const { data, loading, error, refresh } = useReport(range.from, range.to);
     const serviceRows = useMemo(() => filterReportRows(data?.services ?? [], search)
         .sort((a, b) => Number(b.patientAmount) - Number(a.patientAmount)), [data, search]);
@@ -95,11 +139,12 @@ export default function ReportPage() {
         </header>
         <div className={panel + ' report-controls flex flex-wrap items-center gap-3'}>
             <label className="text-sm">Khoảng thời gian <select className={control + ' ml-2'} value={period} onChange={e => { setPeriod(e.target.value); setRangeError(''); }}>
-                <option value="day">Hôm nay</option><option value="month">Tháng</option><option value="quarter">Quý</option><option value="year">Năm</option><option value="custom">Tùy chọn</option></select></label>
-            {!['day', 'custom'].includes(period) && <select aria-label="Năm" className={control} value={year} onChange={e => setYear(Number(e.target.value))}>{Array.from({ length: 10 }, (_, i) => Number(initialDay.slice(0, 4)) - i).map(y => <option key={y}>{y}</option>)}</select>}
+                <option value="day">Hôm nay</option><option value="last7">7 ngày gần nhất</option><option value="last30">30 ngày gần nhất</option><option value="last60">60 ngày gần nhất</option><option value="month">Theo tháng</option><option value="quarter">Theo quý</option><option value="year">Theo năm</option><option value="custom">Tùy chọn</option></select></label>
+            {['month', 'quarter', 'year'].includes(period) && <select aria-label="Năm" className={control} value={year} onChange={e => setYear(Number(e.target.value))}>{Array.from({ length: 10 }, (_, i) => Number(initialDay.slice(0, 4)) - i).map(y => <option key={y}>{y}</option>)}</select>}
             {period === 'month' && <select aria-label="Tháng" className={control} value={month} onChange={e => setMonth(Number(e.target.value))}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i + 1}>Tháng {i + 1}</option>)}</select>}
             {period === 'quarter' && <select aria-label="Quý" className={control} value={quarter} onChange={e => setQuarter(Number(e.target.value))}>{[1, 2, 3, 4].map(q => <option key={q} value={q}>Quý {q}</option>)}</select>}
             {period === 'custom' && <><input aria-label="Từ ngày" className={control} type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} /><input aria-label="Đến ngày" className={control} type="date" value={customTo} onChange={e => setCustomTo(e.target.value)} /><button className={control} onClick={applyCustom}>Áp dụng</button></>}
+            <span className="rounded-lg bg-teal-50 px-3 py-2 text-xs font-medium text-teal-800 dark:bg-teal-950 dark:text-teal-200">Áp dụng chung: {range.from} – {range.to}</span>
             {rangeError && <p role="alert" className="text-sm text-red-600">{rangeError}</p>}
         </div>
         <nav className="report-controls flex gap-2 overflow-x-auto" aria-label="Nhóm thống kê">{tabs.map(([key, label]) => <button key={key} aria-current={tab === key ? 'page' : undefined} onClick={() => setTab(key)} className={'whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-medium ' + (tab === key ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200')}>{label}</button>)}</nav>
@@ -114,7 +159,7 @@ export default function ReportPage() {
                 <Stat label="Bệnh án hoàn thành" value={number(a.completedExaminations)} note="Mỗi dịch vụ khám một bệnh án; tính theo completedAt." />
                 <Stat label="Yêu cầu CLS hoàn thành" value={number(a.completedTests)} note="Có bản kết quả đã ký; chỉ số lẻ là yêu cầu riêng, không phải lượt gọi." />
                 <Stat label="Thanh toán dịch vụ" value={money(f.collected)} note={`${f.successfulPayments} giao dịch thành công theo ngày thanh toán.`} />
-            </div><section className={panel}><h3 className="font-semibold">Thanh toán dịch vụ theo thời gian</h3><p className="my-2 text-xs text-slate-500">Di chuột vào cột để xem số tiền. Ngày không phát sinh giữ giá trị 0.</p><Trend points={data.paymentChart} /></section></>}
+            </div><section className={panel}><div className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="font-semibold">Thanh toán dịch vụ theo thời gian</h3><span className="text-xs font-medium text-teal-700 dark:text-teal-300">Mỗi cột: {chartUnit}</span></div><p className="my-2 text-xs text-slate-500">Số trên đầu cột là số tiền đã thu. Theo tháng hiển thị từng ngày; theo quý hiển thị 3 tháng; theo năm hiển thị 12 tháng. Cột không phát sinh hiển thị 0.</p><Trend points={data.paymentChart} period={period} /></section></>}
             {tab === 'payments' && <><div className="grid gap-4 md:grid-cols-2"><Stat label="Thanh toán trong kỳ" value={money(f.collected)} note="Giao dịch SUCCESS theo paidAt, kể cả hóa đơn lập ngoài kỳ. Không tính giao dịch hủy/thất bại." />
                 <section className={panel}><h3 className="mb-3 font-semibold">Phương thức thanh toán</h3>{data.paymentMethods.length ? data.paymentMethods.map(p => <p key={p.label} className="flex justify-between gap-3 py-1 text-sm"><span>{methods[p.label] ?? p.label}</span><span>{money(p.amount)}</span></p>) : <p className="text-sm text-slate-500">Chưa có giao dịch thành công.</p>}</section></div>
                 <p className="text-sm text-slate-500">Bao gồm giá trị thanh toán bằng thẻ CareS, không cộng tiền nạp thẻ lần nữa. Đây không phải báo cáo tiền mặt ròng hoặc báo cáo hoàn tiền theo ngày.</p>

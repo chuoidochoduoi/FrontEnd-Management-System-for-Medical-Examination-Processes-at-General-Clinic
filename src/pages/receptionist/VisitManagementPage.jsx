@@ -120,7 +120,7 @@ export default function VisitManagementPage() {
                         <footer><button onClick={() => openMedicalRecord(visit)}><Eye size={17} />Xem hồ sơ bệnh án</button><button onClick={() => printVisit(visit)}><Printer size={17} />In phiếu</button></footer>
                     </article>)}
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-5 py-3 text-sm text-gray-500"><span>Hiển thị {total ? `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, total)} trên tổng số ${total}` : '0'} kết quả</span><div className="flex gap-2"><button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="rounded-lg border px-3 py-1.5 disabled:opacity-40">Trước</button><span className="rounded-lg bg-gray-900 px-3 py-1.5 text-white">{page + 1}</span><button disabled={page + 1 >= totalPages} onClick={() => setPage(p => p + 1)} className="rounded-lg border px-3 py-1.5 disabled:opacity-40">Sau</button></div></div>
+                <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 px-5 py-3 text-sm text-gray-500"><div className="flex gap-2"><button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="rounded-lg border px-3 py-1.5 disabled:opacity-40">Trước</button><span className="rounded-lg bg-gray-900 px-3 py-1.5 text-white">{page + 1}</span><button disabled={page + 1 >= totalPages} onClick={() => setPage(p => p + 1)} className="rounded-lg border px-3 py-1.5 disabled:opacity-40">Sau</button></div></div>
             </div>
         </div>
 

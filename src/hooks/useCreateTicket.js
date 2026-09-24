@@ -21,7 +21,7 @@ export function useCreateTicket() {
             setError('');
             try {
                 const resSvc = await fetch(
-                    `${import.meta.env.VITE_API_URL}/api/v1/medical-services?status=ACTIVE&primaryOnly=true&size=1000`,
+                    `${import.meta.env.VITE_API_URL}/api/v1/medical-services?status=ACTIVE&primaryOnly=false&size=1000`,
                     { headers: bearer() }
                 );
                 if (!resSvc.ok) throw new Error('Không thể tải danh sách dịch vụ.');

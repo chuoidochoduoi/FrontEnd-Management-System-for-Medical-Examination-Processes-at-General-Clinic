@@ -205,7 +205,6 @@ export default function PatientJourneyPage() {
                 : listError ? <div className={styles.error} role="alert"><p>{listError}</p><button type="button" className={styles.button} onClick={refresh}>Thử lại</button></div>
                 : !shown.length && <p className={styles.message}>{overdue ? 'Không có lượt tồn đọng qua ngày.' : 'Hôm nay chưa có bệnh nhân phù hợp.'}</p>}
             {!loading && !listError && total > 0 && <nav className={styles.pagination} aria-label="Phân trang hành trình">
-                <span>{query.page * PAGE_SIZE + 1}–{Math.min((query.page + 1) * PAGE_SIZE, total)} / {total}</span>
                 <div><button type="button" disabled={query.page === 0} onClick={() => changeQuery({ page: query.page - 1 })} aria-label="Trang trước">‹</button>{pages.map(index => <button type="button" key={index} onClick={() => changeQuery({ page: index })} aria-label={'Trang ' + (index + 1)} aria-current={query.page === index ? 'page' : undefined}>{index + 1}</button>)}<button type="button" disabled={query.page + 1 >= pageCount} onClick={() => changeQuery({ page: query.page + 1 })} aria-label="Trang sau">›</button></div>
             </nav>}
         </section>

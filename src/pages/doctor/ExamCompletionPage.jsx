@@ -17,11 +17,22 @@ export default function ExamCompletionPage() {
         try { return JSON.parse(sessionStorage.getItem(`exam-completion:${recordId}`)); } catch { return null; }
     }, [location.state, recordId]);
 
+    const [visitDetail, setVisitDetail] = useState(null);
+
     useEffect(() => {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-records/${recordId}/patient-allergies`, {
             headers: { Authorization: `Bearer ${token}` },
         }).then(response => response.ok ? response.json() : null).then(value => value && setAllergies(value)).catch(() => {});
+
+        fetch(`${import.meta.env.VITE_API_URL}/api/v1/medical-records/${recordId}/visit-detail`, {
+            headers: { Authorization: `Bearer ${token}` },
+        }).then(response => response.ok ? response.json() : null).then(value => {
+            if (value) {
+                const result = value.data ?? value.result ?? value;
+                setVisitDetail(result);
+            }
+        }).catch(() => {});
     }, [recordId]);
 
     if (!data?.record) return <MedicalStaffLayout><div className="p-10 text-center text-gray-500">Không tìm thấy thông tin ca khám.</div></MedicalStaffLayout>;
@@ -49,11 +60,31 @@ export default function ExamCompletionPage() {
 
                 <PatientAllergyBanner value={allergies} currentLabel/>
 
-                <div className="grid gap-5 lg:grid-cols-2">
-                    <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Chẩn đoán</h2>{diagnoses.length ? diagnoses.map(d => <p key={d.code} className="mb-2 rounded-lg bg-gray-50 p-3 text-sm"><b>{d.code}</b> – {d.codeName || d.name}</p>) : <p>-</p>}</section>
-                    <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Kết luận và hướng điều trị</h2><p className="whitespace-pre-wrap text-sm text-gray-700">{text(record.conclusion)}</p></section>
-                    <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Khám lâm sàng</h2><p className="whitespace-pre-wrap text-sm text-gray-700">{text(record.clinicalFindings)}</p></section>
-                    <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Đơn thuốc</h2><p className="text-sm text-gray-700">{medicines.length ? `${medicines.length} loại thuốc đã kê` : 'Không kê thuốc'}</p></section>
+                <div className="space-y-8">
+                    {(visitDetail?.examinations?.length > 0 
+                        ? visitDetail.examinations.filter(e => e.status === 'COMPLETED' || e.recordId === recordId)
+                        : [record]
+                    ).map((exam, index) => {
+                        const examMedicines = Array.from(exam.prescriptionItems ?? []);
+                        const examDiagnoses = Array.from(exam.icdSelections ?? exam.diagnoses ?? []);
+                        
+                        return (
+                            <div key={exam.recordId || index} className="space-y-4">
+                                {(visitDetail?.examinations?.length > 1 || exam.serviceName) && (
+                                    <h2 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-2">
+                                        {exam.serviceName || 'Khám bệnh'}
+                                        {exam.doctorName && <span className="ml-2 text-sm font-normal text-gray-500">({exam.doctorName})</span>}
+                                    </h2>
+                                )}
+                                <div className="grid gap-5 lg:grid-cols-2">
+                                    <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Chẩn đoán</h2>{examDiagnoses.length ? examDiagnoses.map(d => <p key={d.code} className="mb-2 rounded-lg bg-gray-50 p-3 text-sm"><b>{d.code}</b> – {d.codeName || d.name}</p>) : <p>-</p>}</section>
+                                    <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Kết luận và hướng điều trị</h2><p className="whitespace-pre-wrap text-sm text-gray-700">{text(exam.conclusion || exam.treatmentPlan)}</p></section>
+                                    <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Khám lâm sàng</h2><p className="whitespace-pre-wrap text-sm text-gray-700">{text(exam.clinicalFindings || exam.clinicalResult)}</p></section>
+                                    <section className="rounded-2xl border border-gray-200 bg-white p-6"><h2 className="mb-3 font-bold">Đơn thuốc</h2><p className="text-sm text-gray-700">{examMedicines.length ? `${examMedicines.length} loại thuốc đã kê` : 'Không kê thuốc'}</p></section>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {record.vitalSigns && <section className="rounded-2xl border border-gray-200 bg-white p-6">

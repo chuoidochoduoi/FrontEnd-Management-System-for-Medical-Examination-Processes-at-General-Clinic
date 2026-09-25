@@ -75,6 +75,40 @@ const calculateAge = dob => {
     return age;
 };
 
+const normalizeGender = value => value
+    ? ({
+        Nam: 'MALE',
+        Nữ: 'FEMALE',
+        Khác: 'OTHER',
+        male: 'MALE',
+        female: 'FEMALE',
+        other: 'OTHER',
+    }[value] || String(value).toUpperCase())
+    : '';
+
+const serviceEligibilityForPatient = (service, patient, fallbackAge = '', fallbackGender = '') => {
+    const patientAge = patient
+        ? (patient.age ?? (patient.dateOfBirth ? calculateAge(patient.dateOfBirth) : null))
+        : (fallbackAge === '' ? null : Number(fallbackAge));
+    const patientGender = normalizeGender(patient?.gender || fallbackGender);
+    const minAge = service.minimumAge ?? 0;
+    const maxAge = service.maximumAge ?? 120;
+
+    if (patientAge == null || Number.isNaN(patientAge)) {
+        return { eligible: false, reason: 'Cập nhật ngày sinh để kiểm tra dịch vụ' };
+    }
+    if (patientAge < minAge || patientAge > maxAge) {
+        return { eligible: false, reason: `Chỉ áp dụng từ ${minAge}–${maxAge} tuổi` };
+    }
+    if (service.allowedGender && !patientGender) {
+        return { eligible: false, reason: 'Cập nhật giới tính để kiểm tra dịch vụ' };
+    }
+    if (service.allowedGender && service.allowedGender !== patientGender) {
+        return { eligible: false, reason: 'Không phù hợp với giới tính trong hồ sơ' };
+    }
+    return { eligible: true, reason: '' };
+};
+
 export default function CustomerAppointmentPage() {
     const { t } = useTranslation('appointment');
     const { t: tCommon } = useTranslation('common');
@@ -175,10 +209,18 @@ export default function CustomerAppointmentPage() {
             initialState.initialShiftId || ''
         );
 
-    const selectedServiceKey = useMemo(
-        () => selectedServices.map(service => service.id).sort().join(','),
-        [selectedServices]
-    );
+    const selectedServiceKey = useMemo(() => {
+        if (bookingMode !== 'group') {
+            return selectedServices.map(service => service.id).sort().join(',');
+        }
+        const currentMap = {
+            ...groupServiceMap,
+            ...(editingGroupPatientId ? { [editingGroupPatientId]: selectedServices } : {}),
+        };
+        return [...new Set(groupPatientIds.flatMap(id =>
+            (currentMap[id] || []).map(service => service.id)
+        ))].sort().join(',');
+    }, [bookingMode, editingGroupPatientId, groupPatientIds, groupServiceMap, selectedServices]);
 
     useEffect(() => {
         setShiftId('');
@@ -245,97 +287,8 @@ export default function CustomerAppointmentPage() {
     // =========================================================
     // ELIGIBILITY
     // =========================================================
-    const getServiceEligibility = service => {
-        const patientAge =
-            bookingPatient
-                ? (
-                    bookingPatient.age ??
-                    (
-                        bookingPatient.dateOfBirth
-                            ? calculateAge(
-                                bookingPatient.dateOfBirth
-                            )
-                            : null
-                    )
-                )
-                : (
-                    age === ''
-                        ? null
-                        : Number(age)
-                );
-
-        const rawGender =
-            bookingPatient?.gender ||
-            gender;
-
-        const patientGender =
-            rawGender
-                ? (
-                    {
-                        Nam: 'MALE',
-                        Nữ: 'FEMALE',
-                        Khác: 'OTHER',
-                        male: 'MALE',
-                        female: 'FEMALE',
-                        other: 'OTHER'
-                    }[rawGender] ||
-                    rawGender.toUpperCase()
-                )
-                : '';
-
-        const minAge =
-            service.minimumAge ?? 0;
-
-        const maxAge =
-            service.maximumAge ?? 120;
-
-        if (patientAge == null) {
-            return {
-                eligible: false,
-                reason:
-                    'Cập nhật ngày sinh để kiểm tra dịch vụ'
-            };
-        }
-
-        if (
-            patientAge < minAge ||
-            patientAge > maxAge
-        ) {
-            return {
-                eligible: false,
-                reason:
-                    `Chỉ áp dụng từ ${minAge}–${maxAge} tuổi`
-            };
-        }
-
-        if (
-            service.allowedGender &&
-            !patientGender
-        ) {
-            return {
-                eligible: false,
-                reason:
-                    'Cập nhật giới tính để kiểm tra dịch vụ'
-            };
-        }
-
-        if (
-            service.allowedGender &&
-            service.allowedGender !==
-            patientGender
-        ) {
-            return {
-                eligible: false,
-                reason:
-                    'Không phù hợp với giới tính trong hồ sơ'
-            };
-        }
-
-        return {
-            eligible: true,
-            reason: ''
-        };
-    };
+    const getServiceEligibility = service =>
+        serviceEligibilityForPatient(service, bookingPatient, age, gender);
 
     // =========================================================
     // TOTAL
@@ -378,6 +331,19 @@ export default function CustomerAppointmentPage() {
         };
     }), [bookingMode, effectiveGroupServiceMap, groupPatientIds, patientOptions]);
 
+    const findGroupEligibilityIssue = serviceMap => {
+        for (const patientId of groupPatientIds) {
+            const patient = patientOptions.find(item => item.patientProfileId === patientId);
+            for (const service of serviceMap[patientId] || []) {
+                const eligibility = serviceEligibilityForPatient(service, patient);
+                if (!eligibility.eligible) {
+                    return { patient, service, reason: eligibility.reason };
+                }
+            }
+        }
+        return null;
+    };
+
     // =========================================================
     // OPEN MODAL
     // =========================================================
@@ -389,6 +355,13 @@ export default function CustomerAppointmentPage() {
         if (bookingMode === 'group' && groupPatientIds.some(id => !(effectiveGroupServiceMap[id]?.length))) {
             toast.error('Mỗi người trong nhóm phải có ít nhất một dịch vụ.');
             return;
+        }
+        if (bookingMode === 'group') {
+            const issue = findGroupEligibilityIssue(effectiveGroupServiceMap);
+            if (issue) {
+                toast.error(`${issue.service.name} không phù hợp với ${issue.patient?.fullName || 'thành viên'}: ${issue.reason}.`);
+                return;
+            }
         }
         if (bookingMode !== 'group' && selectedServices.length === 0) {
             toast.error(
@@ -427,6 +400,11 @@ export default function CustomerAppointmentPage() {
             }));
             if (groupBookings.some(item => item.services.length === 0)) {
                 toast.error('Mỗi thành viên cần được chọn ít nhất một dịch vụ.');
+                return;
+            }
+            const issue = findGroupEligibilityIssue(currentMap);
+            if (issue) {
+                toast.error(`${issue.service.name} không phù hợp với ${issue.patient?.fullName || 'thành viên'}: ${issue.reason}.`);
                 return;
             }
             const success = await bookGroup({ date, shiftId, members: groupBookings });
@@ -516,6 +494,9 @@ export default function CustomerAppointmentPage() {
                     setEditingGroupPatientId(null);
                     setSelectedServices([]);
                 }
+            } else if (!editingGroupPatientId) {
+                setEditingGroupPatientId(patientProfileId);
+                setSelectedServices(groupServiceMap[patientProfileId] || []);
             }
             return next;
         });
@@ -533,6 +514,17 @@ export default function CustomerAppointmentPage() {
         if (!selectedServices.length || groupPatientIds.length < 2) {
             toast.error('Hãy chọn người và dịch vụ trước khi áp dụng cho cả nhóm.');
             return;
+        }
+        for (const patientId of groupPatientIds) {
+            const patient = patientOptions.find(item => item.patientProfileId === patientId);
+            const incompatible = selectedServices.find(service =>
+                !serviceEligibilityForPatient(service, patient).eligible
+            );
+            if (incompatible) {
+                const eligibility = serviceEligibilityForPatient(incompatible, patient);
+                toast.error(`Không thể áp dụng ${incompatible.name} cho ${patient?.fullName || 'thành viên'}: ${eligibility.reason}.`);
+                return;
+            }
         }
         setGroupServiceMap(Object.fromEntries(groupPatientIds.map(id => [id, [...selectedServices]])));
         toast.success('Đã áp dụng danh sách dịch vụ cho tất cả thành viên.');

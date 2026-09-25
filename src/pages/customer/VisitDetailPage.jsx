@@ -16,7 +16,6 @@ import {
     RotateCcw,
     Star,
     Stethoscope,
-    X,
 } from 'lucide-react';
 
 import PatientLayout from '@/components/layout/CustomerLayout';
@@ -624,7 +623,7 @@ function TestDetail({
                             className="inline-flex h-10 items-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-medium text-white transition hover:bg-gray-700"
                         >
                             <FileText size={16} />
-                            Xem trước phiếu kết quả
+                            Tải phiếu kết quả
                         </button>
                     </div>
                 )}
@@ -669,17 +668,10 @@ export default function VisitDetailPage() {
     const [activeTest, setActiveTest] =
         useState(0);
 
-    const [previewPdf, setPreviewPdf] =
-        useState('');
-
     const [showRating, setShowRating] =
         useState(false);
 
     const [activeTab, setActiveTab] = useState('EXAMINATIONS');
-
-    useEffect(() => () => {
-        if (previewPdf?.startsWith('blob:')) URL.revokeObjectURL(previewPdf);
-    }, [previewPdf]);
 
     useEffect(() => {
         fetchVisit();
@@ -822,9 +814,9 @@ export default function VisitDetailPage() {
        PDF
     ===================================================== */
 
-    const openPdfPreview = async (url) => {
+    const downloadResultPdf = async (url) => {
         if (!url || typeof url !== 'string') {
-            toast.error('Phiếu kết quả chưa có tệp PDF để xem trước');
+            toast.error('Phiếu kết quả chưa có tệp PDF để tải');
             return;
         }
 
@@ -847,7 +839,7 @@ export default function VisitDetailPage() {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
             });
             if (!response.ok) {
-                let message = 'Không thể mở phiếu kết quả PDF';
+                let message = 'Không thể tải phiếu kết quả PDF';
                 try {
                     const errorBody = await response.json();
                     message = errorBody.message || message;
@@ -861,16 +853,18 @@ export default function VisitDetailPage() {
             const blob = downloadedBlob.type.toLowerCase().includes('pdf')
                 ? downloadedBlob
                 : new Blob([downloadedBlob], { type: 'application/pdf' });
-            if (previewPdf?.startsWith('blob:')) URL.revokeObjectURL(previewPdf);
-            setPreviewPdf(URL.createObjectURL(blob));
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = 'phieu-ket-qua.pdf';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(objectUrl);
         } catch (err) {
             console.error(err);
-            toast.error(err?.message || 'Không thể mở phiếu kết quả PDF');
+            toast.error(err?.message || 'Không thể tải phiếu kết quả PDF');
         }
-    };
-
-    const closePdfPreview = () => {
-        setPreviewPdf('');
     };
 
     /* =====================================================
@@ -1295,7 +1289,7 @@ export default function VisitDetailPage() {
                             { key: 'SKIPPED', label: 'Dịch vụ bỏ lượt', count: skippedServices.length, icon: CircleSlash2 },
                         ].map((tab) => {
                             const Icon = tab.icon;
-                            return <button key={tab.key} type="button" role="tab" aria-selected={activeTab === tab.key} onClick={() => setActiveTab(tab.key)} className={`inline-flex min-h-12 items-center gap-2 rounded-xl px-5 text-base font-semibold transition ${activeTab === tab.key ? 'bg-teal-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}><Icon size={19}/>{tab.label}<span className={`rounded-full px-2 py-0.5 text-sm ${activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>{tab.count}</span></button>;
+                            return <button key={tab.key} type="button" role="tab" aria-selected={activeTab === tab.key} onClick={() => setActiveTab(tab.key)} className={`inline-flex min-h-12 items-center gap-2 rounded-xl px-5 text-base font-semibold transition ${activeTab === tab.key ? 'bg-teal-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}><Icon size={19}/>{tab.label}<span className={`min-w-7 rounded-full px-2 py-0.5 text-center text-sm font-bold ${activeTab === tab.key ? 'bg-teal-800 text-white ring-1 ring-white/40' : 'bg-gray-100 text-gray-600'}`}>{tab.count}</span></button>;
                         })}
                     </div>
                 </div>
@@ -1473,9 +1467,7 @@ export default function VisitDetailPage() {
                     {/* TEST DETAIL */}
                     <TestDetail
                         test={selectedTest}
-                        onOpenPdf={
-                            openPdfPreview
-                        }
+                            onOpenPdf={downloadResultPdf}
                     />
                 </div>
                 )}
@@ -1495,7 +1487,7 @@ export default function VisitDetailPage() {
                                 <div className="mb-2 text-xs font-medium text-blue-800">
                                     Nguồn: {item.sourceVisitCode} · {item.sourceExaminationServiceName || 'Lượt khám trước'}
                                 </div>
-                                <TestDetail test={item} onOpenPdf={openPdfPreview} />
+                                <TestDetail test={item} onOpenPdf={downloadResultPdf} />
                             </div>
                         ))}
                     </section>
@@ -1570,31 +1562,6 @@ export default function VisitDetailPage() {
             ================================================= */}
 
             {showRating && <RatingModal />}
-
-            {previewPdf && (
-                <div className="cares-pdf-preview-layer" role="dialog" aria-modal="true" aria-label="Xem trước phiếu kết quả">
-                    <button type="button" className="cares-pdf-preview-backdrop" onClick={closePdfPreview} aria-label="Đóng xem trước" />
-                    <section className="cares-pdf-preview-modal">
-                        <header>
-                            <div>
-                                <span className="cares-customer-eyebrow"><FileText size={15} /> Phiếu kết quả</span>
-                                <h2>Xem trước tài liệu</h2>
-                            </div>
-                            <div>
-                                <a href={previewPdf} download="phieu-ket-qua.pdf" className="cares-customer-secondary-button">
-                                    <Download size={16} /> Tải PDF
-                                </a>
-                                <button type="button" className="cares-pdf-preview-close" onClick={closePdfPreview} aria-label="Đóng">
-                                    <X size={20} />
-                                </button>
-                            </div>
-                        </header>
-                        <iframe id="customer-result-pdf-frame" src={previewPdf} title="Phiếu kết quả PDF" />
-                    </section>
-                </div>
-            )}
-
-
 
             <style>
                 {`

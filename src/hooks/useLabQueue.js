@@ -7,13 +7,13 @@ import createLogger from '@/utils/logger';
 const PAGE_SIZE = 7;
 const logger = createLogger('useLabQueue');
 
-export function useLabQueue(initialDepartmentId = null) {
+export function useLabQueue(initialDepartmentId = null, initialStatus = '') {
     const { t } = useTranslation('lab');
     
     // Manage all fetch parameters in state
     const [params, setParams] = useState({
         search: '',
-        status: '',
+        status: initialStatus,
         /*
          * Danh sach yeu cau CLS khong co bo chon ngay, nen khong duoc ngam dinh
          * loc theo ngay cua trinh duyet. Neu server va may nguoi dung khac ngay,
@@ -108,7 +108,11 @@ export function useLabQueue(initialDepartmentId = null) {
                 });
                 throw error;
             }
-        }
+        },
+        // WebSocket là luồng cập nhật chính. Polling nhẹ là phương án dự phòng
+        // nếu trình duyệt bỏ lỡ sự kiện trong lúc mạng chập chờn/tab vừa ngủ.
+        refetchInterval: 15000,
+        refetchIntervalInBackground: false,
     });
 
     // Replace the imperative fetchOrders with a state updater

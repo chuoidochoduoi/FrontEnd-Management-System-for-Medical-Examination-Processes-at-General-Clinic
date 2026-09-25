@@ -258,6 +258,7 @@ export default function DynamicClinicalForm({
     if (!fields.length) return <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">{emptyMessage}</div>;
 
     const setField = (field, nextValue) => {
+        if (lockedFieldKeys.includes(field.key)) return;
         const clean = { ...(value || {}) };
         delete clean._meta;
         const nextOmissions = { ...(clean._omissions || {}) };
@@ -272,6 +273,7 @@ export default function DynamicClinicalForm({
     };
 
     const setOmission = (field, reasonCode = 'INSUFFICIENT_SAMPLE', reasonDetail = '') => {
+        if (lockedFieldKeys.includes(field.key)) return;
         const clean = { ...(value || {}) };
         delete clean._meta;
         delete clean[field.key];
@@ -283,6 +285,7 @@ export default function DynamicClinicalForm({
     };
 
     const restoreField = (field) => {
+        if (lockedFieldKeys.includes(field.key)) return;
         const clean = { ...(value || {}) };
         delete clean._meta;
         const nextOmissions = { ...(clean._omissions || {}) };
@@ -384,11 +387,11 @@ export default function DynamicClinicalForm({
                         })}</tbody>
                     </table>
                 </div> : <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{groupFields.map((field) => {
-                    const current = rawValue(field, value), flag = flags[field.key]?.status, error = errors[field.key];
+                    const current = rawValue(field, value), flag = flags[field.key]?.status, error = errors[field.key], locked = lockedFieldKeys.includes(field.key);
                     const abnormal = ['HIGH', 'LOW', 'ABNORMAL', 'CRITICAL_LOW', 'CRITICAL_HIGH'].includes(flag);
-                    return <label key={field.key} className={field.type === 'TEXTAREA' ? 'md:col-span-2' : ''}>
-                        <span className="text-xs font-semibold text-slate-700">{field.label}{(field.required || field.requiredOnSign) ? ' *' : ''}</span>
-                        <FieldControl field={field} current={current} setField={setField} disabled={disabled} error={error} />
+                    return <label key={field.key} className={`${field.type === 'TEXTAREA' ? 'md:col-span-2 ' : ''}${locked ? 'opacity-60' : ''}`}>
+                        <span className="flex items-center gap-2 text-xs font-semibold text-slate-700">{field.label}{!locked && (field.required || field.requiredOnSign) ? ' *' : ''}{locked && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">Chưa mua</span>}</span>
+                        <FieldControl field={field} current={current} setField={setField} disabled={disabled || locked} error={error} />
                         {field.unit && <span className="mt-1 block text-[11px] text-slate-400">Đơn vị: {field.unit}</span>}
                         {validationHint(field) && <span className={`mt-1 block text-[11px] ${error ? 'text-red-700' : 'text-slate-500'}`}>{validationHint(field)}</span>}
                         {error && <span className="mt-1 block text-[11px] font-medium text-red-600">{error}</span>}

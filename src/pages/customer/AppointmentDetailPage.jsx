@@ -3,13 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'react-toastify';
 
 import {
     ArrowLeft,
     CalendarDays,
     Clock3,
-    Download,
     FileText,
     Info,
     UserRound,
@@ -19,7 +17,6 @@ import PatientLayout from '@/components/layout/CustomerLayout';
 import { useAppointmentDetail } from '@/hooks/useAppointmentsCustomer';
 import { ROUTES } from '@/constants/routes';
 import CancelConfirmModal from '@/components/ui/CancelConfirmModal';
-import { downloadElementAsPdf } from '@/utils/pdfDownload';
 
 /* =========================================================
    HELPERS
@@ -124,7 +121,6 @@ export default function AppointmentDetailPage() {
         showCancelModal,
         setShowCancelModal,
     ] = useState(false);
-    const [downloadingPdf, setDownloadingPdf] = useState(false);
 
     /* =====================================================
        LOAD
@@ -627,40 +623,6 @@ export default function AppointmentDetailPage() {
                         )}
                     </div>
 
-                    {/* =================================================
-                        FOOTER
-                    ================================================= */}
-
-                    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 bg-gray-50 px-6 py-4">
-
-                        <p className="text-xs text-gray-400">
-                            {t(
-                                'appointmentDetail.footer'
-                            )}
-                        </p>
-
-                        <button
-                            type="button"
-                            disabled={downloadingPdf}
-                            onClick={async () => {
-                                setDownloadingPdf(true);
-                                try {
-                                    await downloadElementAsPdf(
-                                        document.getElementById('appointment-print-area'),
-                                        `phieu-hen-${detail?.appointmentCode || id}`,
-                                    );
-                                } catch (downloadError) {
-                                    toast.error(downloadError?.message || 'Không thể tạo tệp PDF. Vui lòng thử lại.');
-                                } finally {
-                                    setDownloadingPdf(false);
-                                }
-                            }}
-                            className="inline-flex items-center gap-2 text-xs font-medium text-gray-600 transition hover:text-gray-900 disabled:opacity-60"
-                        >
-                            <Download size={15}/>
-                            {downloadingPdf ? 'Đang tạo PDF...' : 'Tải phiếu hẹn PDF'}
-                        </button>
-                    </div>
                 </div>
 
                 {/* =================================================

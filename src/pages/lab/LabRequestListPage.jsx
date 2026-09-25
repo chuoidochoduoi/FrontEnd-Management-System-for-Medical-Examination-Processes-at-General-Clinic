@@ -1,5 +1,5 @@
 // src/pages/lab/LabRequestListPage.jsx
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -50,6 +50,11 @@ const DEFAULT_STATUS = {
     label: 'Chờ xử lý',
     cls: 'bg-amber-50 text-amber-700',
     labelKey: 'pending',
+};
+
+const SKIPPED_QUEUE_STATUS = {
+    label: 'Vắng mặt',
+    cls: 'bg-red-50 text-red-600',
 };
 
 /* =========================================================
@@ -103,12 +108,8 @@ const TABS = [
         label: 'Tất cả',
     },
     {
-        key: 'PENDING',
-        label: 'Chờ xử lý',
-    },
-    {
-        key: 'IN_PROGRESS',
-        label: 'Đang xử lý',
+        key: 'ACTIVE',
+        label: 'Cần xử lý',
     },
     {
         key: 'COMPLETED',
@@ -117,6 +118,10 @@ const TABS = [
     {
         key: 'CANCELLED',
         label: 'Đã hủy',
+    },
+    {
+        key: 'SKIPPED',
+        label: 'Vắng mặt',
     },
 ];
 
@@ -138,8 +143,42 @@ export default function LabRequestListPage() {
     } = useLabQueue(departmentId);
 
     const [search, setSearch] = useState('');
-    const [activeTab, setActiveTab] = useState('');
+    const [activeTab, setActiveTab] = useState('ACTIVE');
     const [sort, setSort] = useState('newest');
+
+    // TestRequest vẫn PENDING khi bệnh nhân bị đánh vắng để không làm mất
+    // phiếu đã thanh toán. Tuy nhiên phiếu vắng không phải công việc cần xử lý,
+    // nên không hiển thị trong tab "Cần xử lý".
+    const visibleOrders = useMemo(
+        () => {
+            let filtered;
+            if (activeTab === 'ACTIVE') {
+                filtered = orders.filter((order) =>
+                    ['PENDING', 'IN_PROGRESS'].includes(order.status)
+                    && order.queueStatus !== 'SKIPPED'
+                );
+            } else if (activeTab === 'SKIPPED') {
+                filtered = orders.filter((order) => order.queueStatus === 'SKIPPED');
+            } else {
+                filtered = orders;
+            }
+
+            const priority = (order) => {
+                if (order.queueStatus === 'SKIPPED') return 2;
+                return {
+                    IN_PROGRESS: 0,
+                    PENDING: 1,
+                    COMPLETED: 3,
+                    CANCELLED: 4,
+                }[order.status] ?? 5;
+            };
+
+            return [...filtered].sort((left, right) => priority(left) - priority(right));
+        },
+        [activeTab, orders]
+    );
+
+    const requestStatusForTab = (tab) => ['ACTIVE', 'SKIPPED'].includes(tab) ? '' : tab;
 
     /* =========================================================
        HANDLERS
@@ -150,7 +189,7 @@ export default function LabRequestListPage() {
 
         fetchOrders({
             search,
-            status: key,
+            status: requestStatusForTab(key),
             sort,
             page: 1,
             departmentId,
@@ -162,7 +201,7 @@ export default function LabRequestListPage() {
 
         fetchOrders({
             search: value,
-            status: activeTab,
+            status: requestStatusForTab(activeTab),
             sort,
             page: 1,
             departmentId,
@@ -172,7 +211,7 @@ export default function LabRequestListPage() {
     const handleRefresh = () =>
         fetchOrders({
             search,
-            status: activeTab,
+            status: requestStatusForTab(activeTab),
             sort,
             page,
             departmentId,
@@ -181,7 +220,7 @@ export default function LabRequestListPage() {
     const handlePage = (targetPage) =>
         fetchOrders({
             search,
-            status: activeTab,
+            status: requestStatusForTab(activeTab),
             sort,
             page: targetPage,
             departmentId,
@@ -324,7 +363,7 @@ export default function LabRequestListPage() {
                             </div>
 
                             <span className="rounded-lg bg-primary-50 px-3 py-1.5 text-sm font-medium text-primary-700">
-                                {total} phiếu xét nghiệm
+                                {['ACTIVE', 'SKIPPED'].includes(activeTab) ? visibleOrders.length : total} phiếu xét nghiệm
                             </span>
 
                         </div>
@@ -369,7 +408,7 @@ export default function LabRequestListPage() {
 
                         {!loading &&
                             !error &&
-                            orders.length === 0 && (
+                            visibleOrders.length === 0 && (
 
                                 <div className="px-5 py-12 text-center">
 
@@ -391,7 +430,7 @@ export default function LabRequestListPage() {
 
                         {!loading &&
                             !error &&
-                            orders.length > 0 && (
+                            visibleOrders.length > 0 && (
 
                                 <div className="w-full overflow-x-auto">
 
@@ -435,18 +474,17 @@ export default function LabRequestListPage() {
 
                                         <tbody className="divide-y divide-slate-100">
 
-                                        {orders.map(
+                                        {visibleOrders.map(
                                             (
                                                 order,
                                                 idx
                                             ) => {
 
                                                 const statusCfg =
-                                                    STATUS[
-                                                        order
-                                                            .status
-                                                        ] ??
-                                                    DEFAULT_STATUS;
+                                                    order.queueStatus === 'SKIPPED'
+                                                    && !['COMPLETED', 'CANCELLED'].includes(order.status)
+                                                        ? SKIPPED_QUEUE_STATUS
+                                                        : STATUS[order.status] ?? DEFAULT_STATUS;
 
                                                 return (
 

@@ -4291,9 +4291,10 @@ export default function ExaminationPage() {
                                             onToggle={toggleLabService}
                                             onCustomizePanel={customizeLabPanel}
                                             onReset={() => labOrders.setSelected([])}
+                                            allowAnalyteSelection={false}
                                             compact
-                                            title="Gói và chỉ số xét nghiệm"
-                                            helper="Tìm kiếm rồi chọn gói đầy đủ hoặc các chỉ số thực sự cần làm."
+                                            title="Gói xét nghiệm"
+                                            helper="Chọn xét nghiệm theo gói; các chỉ số được nhập chung trong một phiếu kết quả."
                                         />
                                     )}
                                     {otherParaclinicalServices.length > 0 && (

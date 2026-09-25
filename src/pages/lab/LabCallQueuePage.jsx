@@ -12,6 +12,7 @@ import { toast } from 'react-toastify';
 import MedicalStaffLayout from '@/components/layout/MedicalStaffLayout';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { useLabQueue } from '@/hooks/useLabQueue';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import { ROUTES } from '@/constants/routes';
 import { openAuthenticatedTab } from '@/utils/openAuthenticatedTab';
 
@@ -46,7 +47,23 @@ export default function LabCallQueuePage() {
         refetch,
     } = useLabQueue(departmentId);
 
+    // Đồng bộ ngay khi có phiếu cận lâm sàng mới hoặc trạng thái hàng chờ
+    // thay đổi. onConnect giúp bù lại các sự kiện phát ra lúc mất kết nối.
+    useWebSocket(
+        departmentId ? `/topic/department-${departmentId}-lab-queue` : null,
+        null,
+        refetch,
+        { authenticated: true, onConnect: refetch }
+    );
+    useWebSocket(
+        departmentId ? `/topic/department-${departmentId}-queue` : null,
+        null,
+        refetch,
+        { authenticated: true }
+    );
+
     const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('WAITING');
     const [showReleaseConfirm, setShowReleaseConfirm] = useState(false);
     const [releasing, setReleasing] = useState(false);
 
@@ -144,6 +161,9 @@ export default function LabCallQueuePage() {
             groups.filter(
                 (group) =>
                     group.status !== 'IN_PROGRESS'
+            ).sort((left, right) =>
+                (left.number ?? Number.MAX_SAFE_INTEGER) -
+                (right.number ?? Number.MAX_SAFE_INTEGER)
             ),
         [groups]
     );
@@ -153,6 +173,18 @@ export default function LabCallQueuePage() {
             group.status === 'WAITING' ||
             group.status === 'CALLED'
     ).length;
+
+    const filteredWaitingGroups = useMemo(() => {
+        if (statusFilter === 'ALL') return waitingGroups;
+        if (statusFilter === 'WAITING') {
+            // Người đã được gọi vẫn phải nằm trong nhóm chờ để nhân viên có
+            // thể bấm Bắt đầu hoặc gọi lại mà không cần đổi bộ lọc.
+            return waitingGroups.filter((group) =>
+                ['WAITING', 'CALLED'].includes(group.status)
+            );
+        }
+        return waitingGroups.filter((group) => group.status === statusFilter);
+    }, [waitingGroups, statusFilter]);
 
     /* =========================================================
        ACTION
@@ -401,7 +433,11 @@ export default function LabCallQueuePage() {
                                             const nextRequest = currentPatient.requests.find(request =>
                                                 !['COMPLETED', 'DONE', 'CANCELLED'].includes(request.status));
                                             if (nextRequest?.testRequestId) {
-                                                navigate(ROUTES.DOCTOR_LAB_DETAIL.replace(':id', nextRequest.testRequestId));
+                                                const detailPath = ROUTES.DOCTOR_LAB_DETAIL.replace(
+                                                    ':id',
+                                                    nextRequest.testRequestId
+                                                );
+                                                navigate(`${detailPath}${nextRequest.grouped ? '?panel=1' : ''}`);
                                             }
                                         }}
                                         disabled={!currentPatient.requests.some(request =>
@@ -457,7 +493,9 @@ export default function LabCallQueuePage() {
 
                         <div className="flex flex-wrap items-end justify-between gap-4">
 
-                            <div className="min-w-[280px] max-w-xl flex-1">
+                            <div className="flex min-w-[420px] max-w-3xl flex-1 flex-wrap items-end gap-3">
+
+                                <div className="min-w-[260px] flex-1">
 
                                 <label className="mb-1 block text-xs font-medium text-slate-500">
                                     Tìm bệnh nhân
@@ -481,6 +519,24 @@ export default function LabCallQueuePage() {
                                         className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-primary-400"
                                     />
 
+                                </div>
+
+                                </div>
+
+                                <div className="w-48">
+                                    <label className="mb-1 block text-xs font-medium text-slate-500">
+                                        Trạng thái
+                                    </label>
+                                    <select
+                                        value={statusFilter}
+                                        onChange={(event) => setStatusFilter(event.target.value)}
+                                        className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-primary-400"
+                                    >
+                                        <option value="WAITING">Đang chờ gọi</option>
+                                        <option value="SKIPPED">Vắng mặt</option>
+                                        <option value="BLOCKED">Chưa đến lượt</option>
+                                        <option value="ALL">Tất cả trạng thái</option>
+                                    </select>
                                 </div>
 
                             </div>
@@ -530,7 +586,7 @@ export default function LabCallQueuePage() {
                                 Đang tải...
                             </div>
 
-                        ) : waitingGroups.length === 0 ? (
+                        ) : filteredWaitingGroups.length === 0 ? (
 
                             <div className="px-5 py-10 text-center">
 
@@ -582,7 +638,7 @@ export default function LabCallQueuePage() {
 
                                     <tbody className="divide-y divide-slate-100">
 
-                                    {waitingGroups.map(
+                                    {filteredWaitingGroups.map(
                                         (group) => (
 
                                             <tr

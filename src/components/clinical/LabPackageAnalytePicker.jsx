@@ -56,6 +56,7 @@ export default function LabPackageAnalytePicker({
     getServiceState,
     onReset,
     onCustomizePanel,
+    allowAnalyteSelection = true,
     title = 'Chọn gói và chỉ số xét nghiệm',
     helper = 'Có thể chọn gói đầy đủ, chỉ số lẻ hoặc kết hợp cả hai.',
     compact = false,
@@ -140,7 +141,7 @@ export default function LabPackageAnalytePicker({
                         {[
                             ['ALL', 'Tất cả'],
                             ['PACKAGES', 'Gói xét nghiệm'],
-                            ['ANALYTES', 'Chỉ số lẻ'],
+                            ...(allowAnalyteSelection ? [['ANALYTES', 'Chỉ số lẻ']] : []),
                             ['SELECTED', `Đã chọn (${selectedSet.size})`],
                         ].map(([value, label]) => (
                             <button key={value} type="button" onClick={() => setView(value)}
@@ -198,13 +199,15 @@ export default function LabPackageAnalytePicker({
                                                 : 'bg-teal-600 text-white hover:bg-teal-700'}`}>
                                             {panelSelected ? `Đã chọn gói · ${analytes.length}/${analytes.length}` : 'Chọn cả gói'}
                                         </button>
-                                        <button type="button" disabled={disabled || panelState.disabled}
-                                            onClick={() => {
-                                                setExpanded(current => ({ ...current, [panelCode]: true }));
-                                            }}
-                                            className="min-h-9 rounded-lg border border-teal-300 bg-white px-3 text-sm font-semibold text-teal-700 hover:bg-teal-50 disabled:opacity-50">
-                                            Tùy chỉnh chỉ số
-                                        </button>
+                                        {allowAnalyteSelection && (
+                                            <button type="button" disabled={disabled || panelState.disabled}
+                                                onClick={() => {
+                                                    setExpanded(current => ({ ...current, [panelCode]: true }));
+                                                }}
+                                                className="min-h-9 rounded-lg border border-teal-300 bg-white px-3 text-sm font-semibold text-teal-700 hover:bg-teal-50 disabled:opacity-50">
+                                                Tùy chỉnh chỉ số
+                                            </button>
+                                        )}
                                         <button type="button" onClick={() => setExpanded(current => ({ ...current, [panelCode]: !isExpanded }))}
                                             className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label={isExpanded ? 'Thu gọn chỉ số' : 'Mở danh sách chỉ số'}>
                                             {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -218,7 +221,8 @@ export default function LabPackageAnalytePicker({
                                 <div className="border-t border-slate-200 bg-white px-4 py-2">
                                     {panelSelected && (
                                         <p className="my-2 rounded-xl bg-teal-50 px-3 py-2 text-[14px] text-teal-800">
-                                            Gói đầy đủ đã bao gồm toàn bộ {analytes.length} chỉ số. Chuyển sang tùy chỉnh nếu cần bỏ bớt.
+                                            Gói đầy đủ đã bao gồm toàn bộ {analytes.length} chỉ số.
+                                            {allowAnalyteSelection ? ' Chuyển sang tùy chỉnh nếu cần bỏ bớt.' : ' Các chỉ số được ghi nhận chung trên một phiếu kết quả.'}
                                         </p>
                                     )}
                                     <div className="divide-y divide-slate-100">
@@ -227,20 +231,24 @@ export default function LabPackageAnalytePicker({
                                             const checked = panelSelected || selectedSet.has(id);
                                             const itemState = stateOf(analyte);
                                             return (
-                                                <label key={id} className={`flex min-h-14 items-center gap-3 rounded-lg px-2 py-2 transition ${disabled || itemState.disabled ? 'cursor-not-allowed opacity-65' : 'cursor-pointer hover:bg-teal-50/60'}`}>
-                                                    <input type="checkbox" checked={checked}
-                                                        disabled={disabled || itemState.disabled}
-                                                        onChange={() => panelSelected && onCustomizePanel
-                                                            ? onCustomizePanel(panel, analytes, serviceIdOf(analyte))
-                                                            : toggle(analyte)}
-                                                        className="h-5 w-5 shrink-0 cursor-pointer accent-teal-600 disabled:cursor-not-allowed" />
+                                                <label key={id} className={`flex min-h-14 items-center gap-3 rounded-lg px-2 py-2 transition ${!allowAnalyteSelection || disabled || itemState.disabled ? 'cursor-default' : 'cursor-pointer hover:bg-teal-50/60'}`}>
+                                                    {allowAnalyteSelection && (
+                                                        <input type="checkbox" checked={checked}
+                                                            disabled={disabled || itemState.disabled}
+                                                            onChange={() => panelSelected && onCustomizePanel
+                                                                ? onCustomizePanel(panel, analytes, serviceIdOf(analyte))
+                                                                : toggle(analyte)}
+                                                            className="h-5 w-5 shrink-0 cursor-pointer accent-teal-600 disabled:cursor-not-allowed" />
+                                                    )}
                                                     <span className="min-w-0 flex-1">
                                                         <strong className="text-[15px] text-slate-900">{analyte.name}</strong>
                                                         <span className="ml-2 text-[14px] text-slate-500">{serviceCodeOf(analyte)}</span>
                                                         <span className="mt-0.5 block text-[13px] text-slate-500">Thuộc {panel.name}</span>
                                                         {itemState.label && <span className="block text-[13px] font-semibold text-amber-700">{itemState.label}</span>}
                                                     </span>
-                                                    <strong className="shrink-0 text-[15px] text-teal-700">{money(analyte.price)}</strong>
+                                                    {allowAnalyteSelection && (
+                                                        <strong className="shrink-0 text-[15px] text-teal-700">{money(analyte.price)}</strong>
+                                                    )}
                                                 </label>
                                             );
                                         })}

@@ -22,8 +22,7 @@ const bloodLabels = { A_POSITIVE: 'A+', A_NEGATIVE: 'A-', B_POSITIVE: 'B+', B_NE
 
 export default function FamilyMembersPage() {
     const navigate = useNavigate();
-    const [includeInactive, setIncludeInactive] = useState(false);
-    const { members, loading, saving, error, createMember, updateMember, archiveMember, restoreMember } = useFamilyMembers(includeInactive);
+    const { members, loading, saving, error, createMember, updateMember, archiveMember, restoreMember } = useFamilyMembers(false);
     const [editing, setEditing] = useState(null);
     const [form, setForm] = useState(emptyForm);
 
@@ -118,7 +117,6 @@ export default function FamilyMembersPage() {
 
                 <div className="mb-4 flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
                     <span className="text-sm font-semibold text-slate-700">Danh sách hồ sơ</span>
-                    <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={includeInactive} onChange={event => setIncludeInactive(event.target.checked)} className="accent-primary-600" /> Hiện thành viên đã lưu trữ</label>
                 </div>
 
                 {error && <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
